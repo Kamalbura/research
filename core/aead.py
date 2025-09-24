@@ -1,175 +1,263 @@
 """
-AES-GCM AEAD framing with header authentication and replay protection.
+AEAD framing for PQC drone-GCS secure proxy.
 
-Provides Sender and Receiver classes for encrypted packet framing with:
-- Header as Associated Additional Data (AAD)
-- Deterministic counter-based nonces
-- Sliding window replay protection
-- Epoch support for rekeying
+Provides authenticated encryption (AES-256-GCM) with wire header bound as AAD,
+deterministic 96-bit counter IVs, sliding replay window, and epoch support for rekeys.
 """
 
 import struct
-from typing import Optional, Set, Dict
+from dataclasses import dataclass
+from typing import Optional
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.exceptions import InvalidTag
 
+from .config import CONFIG
 from .suites import header_ids_for_suite
 
-# Header format: version(1) | kem_id(1) | kem_param(1) | sig_id(1) | sig_param(1) | session_id(8) | seq(8) | epoch(1)
-HDR_FMT = "!BBBBB8sQB"   # 5xB, 8s, Q, B -> 23 bytes  
-HDR_LEN = struct.calcsize(HDR_FMT)
-IV_LEN = 12  # AES-GCM requires 96-bit (12-byte) nonce
+
+# Exception types
+class HeaderMismatch(Exception):
+    """Header validation failed (version, IDs, or session_id mismatch)."""
+    pass
 
 
+class AeadAuthError(Exception):
+    """AEAD authentication failed during decryption."""
+    pass
+
+
+class ReplayError(Exception):
+    """Packet replay detected or outside acceptable window."""
+    pass
+
+
+# Constants
+HEADER_STRUCT = "!BBBBB8sQB"
+HEADER_LEN = 22
+IV_LEN = 12
+
+
+@dataclass(frozen=True)
+class AeadIds:
+    kem_id: int
+    kem_param: int
+    sig_id: int
+    sig_param: int
+
+    def __post_init__(self):
+        for field_name, value in [("kem_id", self.kem_id), ("kem_param", self.kem_param), 
+                                  ("sig_id", self.sig_id), ("sig_param", self.sig_param)]:
+            if not isinstance(value, int) or not (0 <= value <= 255):
+                raise NotImplementedError(f"{field_name} must be int in range 0-255")
+
+
+@dataclass
 class Sender:
-    """Encrypts and frames packets with AES-GCM.
-    
-    Uses header as AAD and deterministic counter nonces for security.
-    """
-    
-    def __init__(self, key: bytes, suite: Dict, session_id: bytes, epoch: int = 0):
-        """Initialize sender with encryption key and session context.
+    version: int
+    ids: AeadIds
+    session_id: bytes
+    epoch: int
+    key_send: bytes
+    _seq: int = 0
+
+    def __post_init__(self):
+        if not isinstance(self.version, int) or self.version != CONFIG["WIRE_VERSION"]:
+            raise NotImplementedError(f"version must equal CONFIG WIRE_VERSION ({CONFIG['WIRE_VERSION']})")
         
-        Args:
-            key: 32-byte AES-256 key
-            suite: Suite configuration dictionary with algorithm IDs
-            session_id: 8-byte session identifier
-            epoch: Current epoch number for rekeying
-        """
-        if len(key) != 32:
-            raise ValueError("Key must be 32 bytes for AES-256")
-        if len(session_id) != 8:
-            raise ValueError("Session ID must be 8 bytes")
-            
-        self.aes = AESGCM(key)
-        self.suite = suite
-        self.session_id = session_id
-        self.seq = 0
-        self.epoch = epoch
+        if not isinstance(self.ids, AeadIds):
+            raise NotImplementedError("ids must be AeadIds instance")
         
-        # Compute header IDs from suite configuration
-        self.kem_id, self.kem_param_id, self.sig_id, self.sig_param_id = header_ids_for_suite(suite)
-    
-    def pack(self, plaintext: bytes) -> bytes:
-        """Encrypt and frame a packet.
+        if not isinstance(self.session_id, bytes) or len(self.session_id) != 8:
+            raise NotImplementedError("session_id must be exactly 8 bytes")
         
-        Args:
-            plaintext: Data to encrypt
-            
-        Returns:
-            Framed packet: header || iv || ciphertext_with_tag
-        """
-        # Construct header with current sequence and epoch
-        hdr = struct.pack(
-            HDR_FMT,
-            1,  # version
-            self.kem_id, 
-            self.kem_param_id,
-            self.sig_id, 
-            self.sig_param_id,
+        if not isinstance(self.epoch, int) or not (0 <= self.epoch <= 255):
+            raise NotImplementedError("epoch must be int in range 0-255")
+        
+        if not isinstance(self.key_send, bytes) or len(self.key_send) != 32:
+            raise NotImplementedError("key_send must be exactly 32 bytes")
+        
+        if not isinstance(self._seq, int) or self._seq < 0:
+            raise NotImplementedError("_seq must be non-negative int")
+        
+        self._aesgcm = AESGCM(self.key_send)
+
+    def pack_header(self, seq: int) -> bytes:
+        """Pack header with given sequence number."""
+        if not isinstance(seq, int) or seq < 0:
+            raise NotImplementedError("seq must be non-negative int")
+        
+        return struct.pack(
+            HEADER_STRUCT,
+            self.version,
+            self.ids.kem_id,
+            self.ids.kem_param, 
+            self.ids.sig_id,
+            self.ids.sig_param,
             self.session_id,
-            self.seq,
+            seq,
             self.epoch
         )
+
+    def encrypt(self, plaintext: bytes) -> bytes:
+        """
+        Returns wire bytes: header || iv(12) || ciphertext+tag
+        Increments internal seq on success.
+        """
+        if not isinstance(plaintext, bytes):
+            raise NotImplementedError("plaintext must be bytes")
         
-        # Deterministic counter IV - never reuse with same key
-        iv = int(self.seq).to_bytes(IV_LEN, "big")
+        # Check for sequence overflow before using
+        if self._seq >= (2**96 - 1):
+            raise NotImplementedError("packet_seq overflow")
         
-        # Encrypt with header as AAD  
-        ct = self.aes.encrypt(iv, plaintext, hdr)
+        # Pack header with current sequence
+        header = self.pack_header(self._seq)
         
-        # Increment sequence counter
-        self.seq += 1
+        # Generate deterministic 96-bit IV from sequence
+        iv = self._seq.to_bytes(IV_LEN, "big")
         
-        return hdr + iv + ct
+        # Encrypt with header as AAD
+        try:
+            ciphertext = self._aesgcm.encrypt(iv, plaintext, header)
+        except Exception as e:
+            raise NotImplementedError(f"AEAD encryption failed: {e}")
+        
+        # Increment sequence on success
+        self._seq += 1
+        
+        # Return wire format: header || iv || ciphertext+tag
+        return header + iv + ciphertext
+
+    def bump_epoch(self) -> None:
+        """epoch += 1 (mod 256), reset _seq to 0"""
+        self.epoch = (self.epoch + 1) % 256
+        self._seq = 0
 
 
+@dataclass
 class Receiver:
-    """Decrypts and validates framed packets with replay protection.
-    
-    Maintains sliding window to detect replayed or out-of-order packets.
-    """
-    
-    def __init__(self, key: bytes, window: int = 1024):
-        """Initialize receiver with decryption key and replay window.
+    version: int
+    ids: AeadIds
+    session_id: bytes
+    epoch: int
+    key_recv: bytes
+    window: int
+    _high: int = -1
+    _mask: int = 0
+
+    def __post_init__(self):
+        if not isinstance(self.version, int) or self.version != CONFIG["WIRE_VERSION"]:
+            raise NotImplementedError(f"version must equal CONFIG WIRE_VERSION ({CONFIG['WIRE_VERSION']})")
         
-        Args:
-            key: 32-byte AES-256 key
-            window: Size of replay protection sliding window
-        """
-        if len(key) != 32:
-            raise ValueError("Key must be 32 bytes for AES-256")
-            
-        self.aes = AESGCM(key)
-        self.high = -1  # Highest sequence number seen
-        self.window = window
-        self.received: Set[tuple] = set()  # Track (session_id, seq, epoch) tuples
-    
-    def unpack(self, wire: bytes) -> Optional[bytes]:
-        """Decrypt and validate a framed packet.
+        if not isinstance(self.ids, AeadIds):
+            raise NotImplementedError("ids must be AeadIds instance")
         
-        Args:
-            wire: Framed packet bytes
-            
-        Returns:
-            Decrypted plaintext or None if packet invalid/replayed
-        """
-        # Verify minimum packet size
-        min_size = HDR_LEN + IV_LEN + 16  # header + iv + minimum GCM tag
-        if len(wire) < min_size:
-            return None
-            
-        # Parse packet components
-        hdr = wire[:HDR_LEN]
-        iv = wire[HDR_LEN:HDR_LEN+IV_LEN]
-        ct = wire[HDR_LEN+IV_LEN:]
+        if not isinstance(self.session_id, bytes) or len(self.session_id) != 8:
+            raise NotImplementedError("session_id must be exactly 8 bytes")
         
-        # Unpack header fields
+        if not isinstance(self.epoch, int) or not (0 <= self.epoch <= 255):
+            raise NotImplementedError("epoch must be int in range 0-255")
+        
+        if not isinstance(self.key_recv, bytes) or len(self.key_recv) != 32:
+            raise NotImplementedError("key_recv must be exactly 32 bytes")
+        
+        if not isinstance(self.window, int) or self.window < 64:
+            raise NotImplementedError(f"window must be int >= 64")
+        
+        if not isinstance(self._high, int):
+            raise NotImplementedError("_high must be int")
+        
+        if not isinstance(self._mask, int) or self._mask < 0:
+            raise NotImplementedError("_mask must be non-negative int")
+        
+        self._aesgcm = AESGCM(self.key_recv)
+
+    def _check_replay(self, seq: int) -> None:
+        """Check if sequence number should be accepted (anti-replay)."""
+        if seq > self._high:
+            # Future packet - shift window forward
+            shift = seq - self._high
+            if shift >= self.window:
+                # Window completely shifts
+                self._mask = 1  # Only mark the current position
+            else:
+                # Partial shift
+                self._mask = (self._mask << shift) | 1
+                # Mask to window size to prevent overflow
+                self._mask &= (1 << self.window) - 1
+            self._high = seq
+        elif seq > self._high - self.window:
+            # Within window - check if already seen
+            offset = self._high - seq
+            bit_pos = offset
+            if self._mask & (1 << bit_pos):
+                raise ReplayError(f"duplicate packet seq={seq}")
+            # Mark as seen
+            self._mask |= (1 << bit_pos)
+        else:
+            # Too old - outside window
+            raise ReplayError(f"packet too old seq={seq}, high={self._high}, window={self.window}")
+
+    def decrypt(self, wire: bytes) -> bytes:
+        """Validates header, anti-replay, and returns plaintext on success."""
+        if not isinstance(wire, bytes):
+            raise NotImplementedError("wire must be bytes")
+        
+        if len(wire) < HEADER_LEN + IV_LEN:
+            raise NotImplementedError("wire too short for header + IV")
+        
+        # Extract header
+        header = wire[:HEADER_LEN]
+        
+        # Unpack and validate header
         try:
-            fields = struct.unpack(HDR_FMT, hdr)
-        except struct.error:
-            return None
-            
-        version, kem_id, kem_param, sig_id, sig_param, session_id, seq, epoch = fields
+            fields = struct.unpack(HEADER_STRUCT, header)
+            version, kem_id, kem_param, sig_id, sig_param, session_id, seq, epoch = fields
+        except struct.error as e:
+            raise NotImplementedError(f"header unpack failed: {e}")
         
-        # Basic header validation
-        if version != 1:
-            return None
-            
-        # Replay window check
-        if self.high == -1:
-            self.high = seq
+        # Validate header fields
+        if version != self.version:
+            raise HeaderMismatch(f"version mismatch: expected {self.version}, got {version}")
         
-        # Drop packets too far behind the window
-        if seq + self.window < self.high:
-            return None
-            
-        # Update high water mark
-        if seq > self.high:
-            self.high = seq
-            
-        # Check for duplicate using (session_id, seq, epoch) tuple
-        packet_key = (session_id, seq, epoch)
-        if packet_key in self.received:
-            return None  # Drop duplicate
-            
-        # Attempt decryption with header as AAD
+        if (kem_id, kem_param, sig_id, sig_param) != (self.ids.kem_id, self.ids.kem_param, self.ids.sig_id, self.ids.sig_param):
+            raise HeaderMismatch(f"crypto ID mismatch")
+        
+        if session_id != self.session_id:
+            raise HeaderMismatch(f"session_id mismatch")
+        
+        if epoch != self.epoch:
+            raise HeaderMismatch(f"epoch mismatch: expected {self.epoch}, got {epoch}")
+        
+        # Check replay protection
+        self._check_replay(seq)
+        
+        # Extract IV and ciphertext
+        iv = wire[HEADER_LEN:HEADER_LEN + IV_LEN]
+        ciphertext = wire[HEADER_LEN + IV_LEN:]
+        
+        # Validate IV matches expected deterministic value
+        expected_iv = seq.to_bytes(IV_LEN, "big")
+        if iv != expected_iv:
+            raise HeaderMismatch(f"IV mismatch: expected deterministic IV from seq")
+        
+        # Decrypt with header as AAD
         try:
-            plaintext = self.aes.decrypt(iv, ct, hdr)
+            plaintext = self._aesgcm.decrypt(iv, ciphertext, header)
         except InvalidTag:
-            return None  # Drop packets that fail authentication
-        
-        # Mark packet as received after successful decryption
-        self.received.add(packet_key)
-        
-        # Clean up old entries to prevent memory growth
-        if len(self.received) > self.window * 2:
-            # Remove entries older than current window
-            cutoff_seq = max(0, self.high - self.window)
-            self.received = {
-                (sid, s, e) for (sid, s, e) in self.received 
-                if s >= cutoff_seq
-            }
+            raise AeadAuthError("AEAD authentication failed")
+        except Exception as e:
+            raise NotImplementedError(f"AEAD decryption failed: {e}")
         
         return plaintext
+
+    def reset_replay(self) -> None:
+        """Clear replay protection state."""
+        self._high = -1
+        self._mask = 0
+
+    def bump_epoch(self) -> None:
+        """epoch += 1 (mod 256), reset replay state"""
+        self.epoch = (self.epoch + 1) % 256
+        self.reset_replay()

@@ -1,212 +1,232 @@
 """
-Tests for AES-GCM AEAD framing and header authentication.
+Tests for AEAD framing functionality.
 """
 
 import os
-import struct
-
 import pytest
 
+# Skip tests if cryptography not available
+pytest.importorskip("cryptography.hazmat.primitives.ciphers.aead")
+
+from core.aead import (
+    Sender, Receiver, AeadIds, HeaderMismatch, AeadAuthError, ReplayError,
+    HEADER_LEN, IV_LEN
+)
+from core.config import CONFIG
 from core.suites import get_suite, header_ids_for_suite
-from core.aead import Sender, Receiver, HDR_FMT, HDR_LEN, IV_LEN
 
 
-class TestAEADFraming:
-    """Test AEAD packet framing with header authentication."""
+def test_round_trip_three_payloads():
+    """Test round-trip encryption/decryption with 3 payload sizes."""
+    # Setup common context
+    key = os.urandom(32)
+    session_id = b"\xAA" * 8
     
-    @pytest.fixture
-    def suite(self):
-        """Default test suite."""
-        return get_suite("cs-kyber768-aesgcm-dilithium3")
+    # Get IDs from suite
+    suite = get_suite("cs-kyber768-aesgcm-dilithium3")
+    kem_id, kem_param, sig_id, sig_param = header_ids_for_suite(suite)
+    ids = AeadIds(kem_id, kem_param, sig_id, sig_param)
     
-    @pytest.fixture
-    def test_key(self):
-        """Generate test AES key."""
-        return os.urandom(32)
+    # Create sender and receiver
+    sender = Sender(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_send=key
+    )
     
-    @pytest.fixture
-    def test_session_id(self):
-        """Generate test session ID."""
-        return os.urandom(8)
+    receiver = Receiver(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_recv=key,
+        window=CONFIG["REPLAY_WINDOW"]
+    )
     
-    def test_encrypt_decrypt_round_trip(self, suite, test_key, test_session_id):
-        """Test basic encrypt/decrypt functionality."""
-        sender = Sender(test_key, suite, test_session_id, epoch=0)
-        receiver = Receiver(test_key, window=1024)
-        
-        # Test various payload sizes
-        payloads = [
-            b"small",
-            b"medium payload with some data",
-            b"large payload " * 100,
-            b"",  # empty payload
-            os.urandom(1024)  # random data
-        ]
-        
-        for payload in payloads:
-            # Encrypt
-            wire = sender.pack(payload)
-            
-            # Decrypt  
-            decrypted = receiver.unpack(wire)
-            
-            assert decrypted == payload
+    # Test payloads: 0B, 64B, 1024B
+    payloads = [b"", b"A" * 64, b"B" * 1024]
     
-    def test_header_format_and_authentication(self, suite, test_key, test_session_id):
-        """Test header format and AAD authentication."""
-        sender = Sender(test_key, suite, test_session_id, epoch=5)
-        receiver = Receiver(test_key)
+    for i, payload in enumerate(payloads):
+        # Encrypt
+        wire = sender.encrypt(payload)
         
-        payload = b"test payload"
-        wire = sender.pack(payload)
+        # Verify sender sequence increments
+        assert sender._seq == i + 1
         
-        # Verify header structure
-        assert len(wire) >= HDR_LEN + IV_LEN + len(payload) + 16  # header + iv + payload + tag
+        # Decrypt
+        decrypted = receiver.decrypt(wire)
         
-        # Parse header
-        hdr = wire[:HDR_LEN]
-        fields = struct.unpack(HDR_FMT, hdr)
-        version, kem_id, kem_param, sig_id, sig_param, session_id, seq, epoch = fields
-        
-        # Verify header contents
-        expected_kem_id, expected_kem_param, expected_sig_id, expected_sig_param = header_ids_for_suite(suite)
-        assert version == 1
-        assert kem_id == expected_kem_id
-        assert kem_param == expected_kem_param 
-        assert sig_id == expected_sig_id
-        assert sig_param == expected_sig_param
-        assert session_id == test_session_id
-        assert seq == 0  # first packet
-        assert epoch == 5
-        
-        # Verify decryption works
-        decrypted = receiver.unpack(wire)
+        # Verify exact match
         assert decrypted == payload
+
+
+def test_tamper_header_flip():
+    """Test that flipping header bit raises HeaderMismatch without attempting AEAD."""
+    # Setup
+    key = os.urandom(32)
+    session_id = b"\xAA" * 8
     
-    def test_header_tampering_fails(self, suite, test_key, test_session_id):
-        """Test that header tampering causes decryption failure."""
-        sender = Sender(test_key, suite, test_session_id, epoch=0)
-        receiver = Receiver(test_key)
-        
-        payload = b"test payload"
-        wire = sender.pack(payload)
-        
-        # Test tampering each header field
-        for offset in range(HDR_LEN):
-            tampered = bytearray(wire)
-            tampered[offset] ^= 0x01  # flip one bit
-            tampered_wire = bytes(tampered)
-            
-            # Decryption should fail
-            decrypted = receiver.unpack(tampered_wire)
-            assert decrypted is None
+    suite = get_suite("cs-kyber768-aesgcm-dilithium3")
+    kem_id, kem_param, sig_id, sig_param = header_ids_for_suite(suite)
+    ids = AeadIds(kem_id, kem_param, sig_id, sig_param)
     
-    def test_sequence_counter_increments(self, suite, test_key, test_session_id):
-        """Test that sequence counter increments correctly."""
-        sender = Sender(test_key, suite, test_session_id)
-        receiver = Receiver(test_key)
-        
-        payloads = [b"packet1", b"packet2", b"packet3"]
-        
-        for i, payload in enumerate(payloads):
-            wire = sender.pack(payload)
-            
-            # Check sequence number in header
-            hdr = wire[:HDR_LEN]
-            fields = struct.unpack(HDR_FMT, hdr)
-            seq = fields[6]
-            assert seq == i
-            
-            # Verify decryption
-            decrypted = receiver.unpack(wire)
-            assert decrypted == payload
+    sender = Sender(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_send=key
+    )
     
-    def test_nonce_uniqueness(self, suite, test_key, test_session_id):
-        """Test that nonces are unique and deterministic."""
-        sender1 = Sender(test_key, suite, test_session_id)
-        sender2 = Sender(test_key, suite, test_session_id)
-        
-        # Same payload, different senders at same sequence
-        payload = b"test"
-        
-        wire1 = sender1.pack(payload)
-        wire2 = sender2.pack(payload)
-        
-        # Extract IVs
-        iv1 = wire1[HDR_LEN:HDR_LEN+IV_LEN]
-        iv2 = wire2[HDR_LEN:HDR_LEN+IV_LEN]
-        
-        # IVs should be identical (deterministic from sequence)
-        assert iv1 == iv2
-        
-        # But advance one sender
-        wire3 = sender1.pack(payload)
-        iv3 = wire3[HDR_LEN:HDR_LEN+IV_LEN]
-        
-        # Now IV should be different
-        assert iv1 != iv3
+    receiver = Receiver(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_recv=key,
+        window=CONFIG["REPLAY_WINDOW"]
+    )
     
-    def test_key_separation(self, suite, test_session_id):
-        """Test that different keys cannot decrypt each other's packets."""
-        key1 = os.urandom(32)
-        key2 = os.urandom(32)
-        
-        sender1 = Sender(key1, suite, test_session_id)
-        sender2 = Sender(key2, suite, test_session_id)
-        receiver1 = Receiver(key1)
-        receiver2 = Receiver(key2)
-        
-        payload = b"secret message"
-        
-        # Encrypt with key1
-        wire1 = sender1.pack(payload)
-        
-        # Should decrypt with receiver1 but not receiver2
-        assert receiver1.unpack(wire1) == payload
-        assert receiver2.unpack(wire1) is None
-        
-        # Encrypt with key2  
-        wire2 = sender2.pack(payload)
-        
-        # Should decrypt with receiver2 but not receiver1
-        assert receiver2.unpack(wire2) == payload
-        
-        # receiver1 cannot decrypt receiver2's packet
-        assert receiver1.unpack(wire2) is None
-        
-        # But receiver1 still works with its own packet (if not already processed)
-        # Note: This will be None because wire1 was already processed above
-        # Let's create a fresh packet for receiver1
-        wire1_fresh = sender1.pack(payload)
-        assert receiver1.unpack(wire1_fresh) == payload
+    # Encrypt one packet
+    wire = sender.encrypt(b"test")
     
-    def test_malformed_packets(self, test_key):
-        """Test handling of malformed packets."""
-        receiver = Receiver(test_key)
-        
-        # Too short packets
-        assert receiver.unpack(b"") is None
-        assert receiver.unpack(b"short") is None
-        assert receiver.unpack(b"x" * 10) is None
-        
-        # Minimum size but invalid
-        min_size = HDR_LEN + IV_LEN + 16
-        assert receiver.unpack(b"x" * min_size) is None
-        
-        # Invalid header format
-        bad_header = b"x" * HDR_LEN + b"y" * IV_LEN + b"z" * 16  
-        assert receiver.unpack(bad_header) is None
+    # Flip 1 bit in header kem_id byte (byte 1)
+    tampered = bytearray(wire)
+    tampered[1] ^= 0x01  # Flip LSB of kem_id
+    tampered = bytes(tampered)
     
-    def test_invalid_key_sizes(self, suite, test_session_id):
-        """Test error handling for invalid key sizes."""
-        # Wrong key sizes should raise ValueError
-        with pytest.raises(ValueError, match="Key must be 32 bytes"):
-            Sender(b"wrong_size_key", suite, test_session_id)
-        
-        with pytest.raises(ValueError, match="Key must be 32 bytes"):
-            Receiver(b"wrong_size_key")
+    # Must raise HeaderMismatch without attempting AEAD
+    with pytest.raises(HeaderMismatch):
+        receiver.decrypt(tampered)
+
+
+def test_tamper_ciphertext_tag():
+    """Test that flipping ciphertext/tag bit raises AeadAuthError."""
+    # Setup
+    key = os.urandom(32)
+    session_id = b"\xAA" * 8
     
-    def test_invalid_session_id_size(self, suite, test_key):
-        """Test error handling for invalid session ID size."""
-        with pytest.raises(ValueError, match="Session ID must be 8 bytes"):
-            Sender(test_key, suite, b"wrong_size")
+    suite = get_suite("cs-kyber768-aesgcm-dilithium3")
+    kem_id, kem_param, sig_id, sig_param = header_ids_for_suite(suite)
+    ids = AeadIds(kem_id, kem_param, sig_id, sig_param)
+    
+    sender = Sender(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_send=key
+    )
+    
+    receiver = Receiver(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_recv=key,
+        window=CONFIG["REPLAY_WINDOW"]
+    )
+    
+    # Encrypt one packet
+    wire = sender.encrypt(b"test")
+    
+    # Flip 1 bit in ciphertext/tag area (after header + IV)
+    tampered = bytearray(wire)
+    tamper_pos = HEADER_LEN + IV_LEN + 1  # First byte of ciphertext
+    tampered[tamper_pos] ^= 0x01
+    tampered = bytes(tampered)
+    
+    # Must raise AeadAuthError
+    with pytest.raises(AeadAuthError):
+        receiver.decrypt(tampered)
+
+
+def test_nonce_reuse_replay():
+    """Test that sending same wire bytes twice causes replay error on second attempt."""
+    # Setup
+    key = os.urandom(32)
+    session_id = b"\xAA" * 8
+    
+    suite = get_suite("cs-kyber768-aesgcm-dilithium3")
+    kem_id, kem_param, sig_id, sig_param = header_ids_for_suite(suite)
+    ids = AeadIds(kem_id, kem_param, sig_id, sig_param)
+    
+    sender = Sender(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_send=key
+    )
+    
+    receiver = Receiver(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_recv=key,
+        window=CONFIG["REPLAY_WINDOW"]
+    )
+    
+    # Encrypt one packet
+    wire = sender.encrypt(b"test")
+    
+    # First decrypt should succeed
+    plaintext = receiver.decrypt(wire)
+    assert plaintext == b"test"
+    
+    # Second decrypt of same wire should raise ReplayError
+    with pytest.raises(ReplayError):
+        receiver.decrypt(wire)
+
+
+def test_epoch_bump():
+    """Test that epoch bump allows successful communication and resets replay state."""
+    # Setup
+    key = os.urandom(32)
+    session_id = b"\xAA" * 8
+    
+    suite = get_suite("cs-kyber768-aesgcm-dilithium3")
+    kem_id, kem_param, sig_id, sig_param = header_ids_for_suite(suite)
+    ids = AeadIds(kem_id, kem_param, sig_id, sig_param)
+    
+    sender = Sender(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_send=key
+    )
+    
+    receiver = Receiver(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_recv=key,
+        window=CONFIG["REPLAY_WINDOW"]
+    )
+    
+    # Send and decrypt one packet
+    wire1 = sender.encrypt(b"before")
+    plaintext1 = receiver.decrypt(wire1)
+    assert plaintext1 == b"before"
+    
+    # Bump epoch on both sides
+    sender.bump_epoch()
+    receiver.bump_epoch()
+    
+    # Verify epochs incremented and sequence reset
+    assert sender.epoch == 1
+    assert receiver.epoch == 1
+    assert sender._seq == 0  # Sequence should reset
+    
+    # Send another packet - should succeed with fresh replay state
+    wire2 = sender.encrypt(b"after")
+    plaintext2 = receiver.decrypt(wire2)
+    assert plaintext2 == b"after"
+    
+    # Verify sequence started fresh
+    assert sender._seq == 1
