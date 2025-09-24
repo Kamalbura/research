@@ -1,0 +1,24 @@
+TITLE: Replay Defense and Rekey Strategy
+VERSION: 1.0
+
+Replay Defense:
+- Sliding window size: 1024 (configurable).
+- Accept if seq > high - window and not yet seen; then mark and update high.
+- Duplicate or old packets are silently dropped.
+
+Rekey Triggers:
+- Time-based (e.g., every 15–30 minutes).
+- Packet-count based (e.g., every 2^20 packets).
+- Reactive: spike in tag failures or policy change (RL “rekey now”).
+
+Parallel Rekey (two-phase):
+1) Controller publishes /algo/desired = <suite_id>.
+2) GCS performs new handshake (session_id_new), publishes /algo/phase/gcs = "gcs_ready".
+3) Drone completes handshake and publishes /algo/phase/drone = "drone_ready".
+4) Both sides flip to epoch+1 / new session at next cutover tick; publish /algo/ack.
+5) On timeout at any step, rollback to previous epoch.
+
+Counter Reset:
+- epoch bump resets per-direction seq counters to 0 for the new keys.
+
+END

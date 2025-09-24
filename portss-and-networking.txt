@@ -1,0 +1,35 @@
+TITLE: RL/Bandit Controller for Suite and Policy Adaptation
+VERSION: 1.0
+
+Observations (1 Hz):
+- System: cpu_pct, mem_free_mb, pi_temp_c
+- Link: rtt_ms, loss_pct, jitter_ms, throughput_pktps
+- Crypto: aead_p95_us, handshake_ms_last, rekeys_10m
+- Queues: tx_q, rx_q, drops_s
+- DDoS: xgb_score, tst_score, ddos_state (0/1/2), pps_in
+- Mission: min_security_level (L1/L3/L5), priority (0..1)
+
+Actions:
+- Suite: {L1, L3-default, L5, L3-smallSig, L3-conservative}
+- Rekey now: {yes/no}
+- Telemetry rate: {1.0, 0.7, 0.4}
+- Ingress limiter: {off, 2kpps, 1kpps}
+
+Reward (example):
+r = +2.0*SLA_ok -1.0*CPU -0.5*loss -0.3*(p95/target) +0.2*SecScore -0.3*ddos_state -0.1*rekey_penalty
+
+Safety Guardrails:
+- Never below mission minimum level.
+- Two-phase cutover only; rollback on timeout.
+- Commands unthrottled; telemetry adjustable only.
+- If ddos_state>=1, lock suite >= min and prefer limiter/downsample.
+
+Implementation:
+- Start with rules; drop-in LinUCB (linucb.py) for contextual bandit.
+- Optional offline PPO → distilled small policy for runtime.
+
+Topics:
+- Reads: /health/#, /ddos/state
+- Writes: /algo/desired, /algo/rekey_now, /policy/*, /rl/log
+
+END

@@ -1,0 +1,28 @@
+TITLE: How We Measure and What We Report
+VERSION: 1.0
+
+KPIs:
+- Handshake latency (ms) and bytes
+- Per-packet added latency p50/p95 (µs/ms) by payload size
+- Throughput (pkts/s, Mbps)
+- CPU% (RPi 4B) and energy/packet (mJ) → estimated flight-time delta
+- DDoS metrics: AUC/PR-AUC, FPR@TPR=0.99, detection latency, CPU under attack
+- RL metrics: reward vs baselines, suite timeline, SLA violations
+
+Methods:
+- Latency: embed send-timestamp in plaintext payload before encrypt, echo back; subtract on receive.
+- Energy: USB inline meter (or power hooks) → (avg_power_active - idle) * duration / packets.
+- CPU: psutil or top sampling at 1 Hz.
+- Net impairments: tc/netem (delay, loss, reorder) for reproducibility.
+
+Figures (suggested):
+- Latency CDF per suite (64/256/512/1024B)
+- Handshake ms/bytes table across suites
+- CPU% and mJ/packet bars
+- DDoS ROC/PR curves; time-series under attack
+- RL action timeline overlaid with loss/latency
+
+Ground Truth:
+- Keep raw CSVs in benchmarks/results; regenerate figures from CSVs only.
+
+END

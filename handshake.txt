@@ -1,0 +1,33 @@
+TITLE: Authenticated PQC Handshake (TCP)
+VERSION: 1.0
+
+Flow (3 messages):
+1) Drone -> GCS: ClientHello(epk_D, client_random, alg_ids, session_id)
+2) GCS  -> Drone: ServerHello(epk_G, server_random, ct1, SIG_GCS(transcript))
+3) Drone -> GCS: ClientFinished(ct2 [, SIG_DRONE(transcript) if mutual])
+
+Transcript to sign (hash of):
+client_random || server_random || session_id || alg_ids || epk_D || epk_G
+
+Shared secrets:
+- GCS encapsulates to epk_D => (ct1, ss1)
+- Drone decaps ct1 => ss1
+- Drone encapsulates to epk_G => (ct2, ss2)
+- GCS decaps ct2 => ss2
+- master_secret = ss1 || ss2 (or only ss1 if single-encap)
+
+Key derivation (HKDF-SHA256):
+PRK = HKDF-Extract(salt=client_random||server_random, IKM=master_secret)
+Expand with info = "pq-drone-gcs:"||session_id||alg_ids||purpose
+Purposes: g2d_key, d2g_key, g2d_nonce, d2g_nonce (we use counter IVs; nonce seeds optional)
+
+Validation:
+- Verify signature with pinned GCS public key (and DRONE if mutual).
+- Refuse downgrade if negotiated algs < mission minimum.
+- Abort on any mismatch or verification failure.
+
+Transport:
+- Single TCP port (default 5800).
+- Rekey repeats the same flow with a new session_id; cutover only after both sides ready.
+
+END

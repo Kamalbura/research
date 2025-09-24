@@ -1,0 +1,100 @@
+TITLE: Post-Quantum Crypto in the Drone↔GCS Secure Proxy
+VERSION: 1.0
+
+1) PURPOSE
+This document explains exactly how our proxy makes the link quantum-safe, what
+algorithms we implement (NIST FIPS 203/204/205 + draft 206), and the hardening
+choices that keep the design safe on Raspberry Pi 4B.
+
+2) THREAT MODEL (SHORT)
+- Network adversary controls the channel (read/modify/inject/drop/replay).
+- “Harvest-now, decrypt-later” risk is real: protect confidentiality long-term.
+- Goal: authenticated control (no spoofing), confidentiality, replay defense,
+  predictable overhead, resilience under loss/jitter.
+
+3) CRYPTO BUILDING BLOCKS
+- KEM (Key Exchange): ML-KEM / Kyber [FIPS 203]
+  Levels: 512 (L1), 768 (L3 default), 1024 (L5).
+- Signatures: ML-DSA / Dilithium [FIPS 204] as default (44/L2, 65/L3, 87/L5).
+  Options: FN-DSA / Falcon [draft FIPS 206] (compact sigs, tricky impl),
+           SLH-DSA / SPHINCS+ [FIPS 205] (very large sigs, conservative).
+- AEAD: AES-256-GCM for streaming packets.
+- KDF: HKDF-SHA256 to derive transport keys from KEM output (never use raw KEM output).
+
+4) HIGH-LEVEL PROTOCOL
+- Handshake over TCP (single port, default 5800):
+  * Exchange ephemeral KEM keys.
+  * GCS signs transcript (both ephemeral KEM pubkeys, algorithm IDs, randoms,
+    session_id) with long-term signature key; Drone verifies.
+  * KEM produces shared secret(s); HKDF derives per-direction keys + nonce seeds.
+- Streaming over UDP:
+  * Every packet encrypted with AES-GCM.
+  * Deterministic 96-bit nonce from a per-direction counter (seq).
+  * Small clear header (used as AAD) binds context and prevents splicing.
+  * Sliding replay window (default: 1024) drops duplicates/old packets.
+- Rekey:
+  * Periodic or on-demand; increments epoch; two-phase “parallel rekey”
+    ensures zero-loss cutover and rollback on timeout.
+
+5) PACKET HEADER (AAD) FORMAT
+  version(1) | kem_id(1) | kem_param(1) | sig_id(1) | sig_param(1) |
+  session_id(8) | seq(8) | epoch(1)
+- Entire header is AAD to AES-GCM. Any header tamper causes decryption failure.
+- seq is the per-direction 64-bit counter (never reuse per key).
+
+6) NONCE STRATEGY
+- AES-GCM nonce (12 bytes) = big-endian encoding of seq (96-bit counter).
+- Unique per encryption per direction. No random nonces, no reuse.
+
+7) KEY SCHEDULE (HKDF)
+- IKM = KEM shared secret (or concatenation for hybrid).
+- salt = client_random || server_random.
+- info = "pq-drone-gcs:" || session_id || kem/sig IDs || direction/purpose.
+- Derive:
+  * K_send (32B), K_recv (32B),
+  * nonce_seed (optional), but we use the pure counter.
+- Separate keys per direction to isolate failures.
+
+8) SUITES WE SHIP (INITIAL)
+- L1: kyber512 + dilithium2
+- L3 default: kyber768 + dilithium3
+- L5: kyber1024 + dilithium5
+- L3-smallSig: kyber768 + falcon512 (optional; enable behind flag)
+- L3-conservative: kyber768 + sphincs-128f (use sparingly; large sigs)
+
+9) HARDENING CHOICES
+- Use liboqs / oqs-python that pulls PQClean-derived constant-time code paths.
+- No branching on secrets; no table lookups on secrets; avoid custom math.
+- Sign the handshake transcript to bind identity and prevent downgrade.
+- Reject any mismatch between negotiated suite and policy minimums.
+- Replay window enabled by default; window size tunable.
+- Rekey schedule capped; epoch bump resets counters.
+
+10) ERROR & ATTACK HANDLING
+- Nonce reuse: impossible under seq logic; tests assert monotonic seq.
+- Tag failure: packet dropped; metrics incremented; potential rekey if spikes.
+- Too many invalid handshakes or ciphertexts: throttle peer; trigger rekey.
+- UDP fragmentation: we keep large signatures in TCP handshake only.
+
+11) TESTS TO PASS (NEGATIVE TESTS)
+- Tamper header → decrypt fails.
+- Replay packet (old seq) → dropped.
+- Downgrade attempt (alg IDs altered) → signature check fails; abort handshake.
+- Nonce reuse (simulated) → decrypt fails.
+- Parallel rekey: cutover only after both sides ACK; rollback works.
+
+12) PERFORMANCE EXPECTATIONS (RPi 4B GUIDANCE)
+- Added p95 latency: ~1–3 ms (L3), ~2–5 ms (L5) for 256–512B payloads.
+- Handshake: tens of ms (L3), higher for L5/SPHINCS+.
+- CPU overhead: single-digit to low-teens % at typical telemetry rates.
+
+13) HYBRID OPTION (PRODUCTION)
+- Optional: X25519 + ML-KEM-768 with IKM = concat(shared1, shared2) before HKDF.
+
+14) IMPLEMENTATION FILES
+- core/handshake.py (KEM + signature transcript + HKDF)
+- core/aead.py (AES-GCM with AAD, nonce counters, replay window)
+- core/suites.py (suite registry and IDs)
+- core/async_proxy.py (UDP tunnels, parallel rekey)
+
+END

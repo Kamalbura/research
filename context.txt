@@ -1,0 +1,148 @@
+===========references====================
+# Create a single, consolidated project context file the user can give to their GitHub Copilot agent.
+# It captures architecture, directory layout, crypto invariants, ports, topics, RL, DDoS, testing,
+# and strict anti-hallucination guardrails for the agent.
+
+PROJECT: Quantum‑Safe UAV C2 (Drone ⇄ GCS) — PQC Tunnel + DDoS Shield + RL Policy
+
+GOAL (what “done” means)
+- A reproducible, quantum‑safe command/telemetry tunnel between UAV (Raspberry Pi 4B + Pixhawk 2.4.8) and GCS (PC).
+- Suites covering NIST Levels L1/L3/L5 using ML‑KEM (Kyber) for KEM and ML‑DSA (Dilithium) / Falcon / SPHINCS+ for signature.
+- Authenticated handshake; AES‑GCM data plane with AAD‑bound headers, 12‑byte counter nonces, replay protection, safe rekey.
+- Two‑stage DDoS detection (Stage‑1 XGBoost → Stage‑2 TST) that can rate‑limit/drop low‑priority telemetry without affecting commands.
+- Lightweight RL (contextual bandit) to select suites and mitigations under constraints (never drop below mission’s required security).
+- Benchmarks + figures (latency p50/p95/p99, handshake ms/bytes, CPU%, energy/packet, DDoS ROC/PR, policy timeline).
+
+HARDWARE / SOFTWARE
+- Drone: Raspberry Pi 4B (64‑bit OS), Pixhawk 2.4.8 via USB, Wi‑Fi link to router.
+- GCS: Linux/Windows PC (Python 3.10+; Conda env “gcs-env” ok).
+- Python: liboqs via oqs-python, pyca/cryptography, pymavlink+MAVProxy, paho‑mqtt, numpy/pandas, psutil, scapy, xgboost, torch (for TST).
+
+REPO LAYOUT (single repo; both sides share core)
+pqc-drone-gcs/
+├─ docs/
+│  ├─ OVERVIEW.md, PORTS_AND_FLOW.md, SECURITY_DESIGN.md, NIST_LEVELS.md, MEASUREMENT_METHODS.md
+├─ core/                             # SINGLE source of truth for crypto & transport
+│  ├─ run_proxy.py                   # CLI: --role {gcs,drone} --suite <id> --bind ... --peer ...
+│  ├─ async_proxy.py                 # UDP loops, backpressure, thread/async wrappers
+│  ├─ handshake.py                   # KEM + signed transcript + HKDF derivation
+│  ├─ aead.py                        # AES‑GCM pack/decrypt with header AAD, replay window, epochs
+│  ├─ suites.py                      # registry: suite_id → {kem, sig, aead, kdf, params, nist_level}
+│  ├─ config.py                      # ports, IPs, topics; env overrides; shared by both sides
+│  ├─ logging_utils.py               # structured logs (JSON), metrics hooks
+│  └─ utils_netem.py                 # helpers for controlled impairments in tests
+├─ drone/
+│  ├─ wrappers/                      # thin launchers (one file per “named suite”)
+│  │  ├─ drone_kyber_512.py ... drone_sphincs_* .py (all variants call core/run_proxy.py)
+│  └─ scripts/ start_suite.sh, env_check.py
+├─ gcs/
+│  ├─ wrappers/ (mirrors drone)      # gcs_kyber_512.py ... gcs_sphincs_*.py
+│  └─ scripts/ start_suite.sh, env_check.py
+├─ ddos/
+│  ├─ stage1_xgb.py                  # features + XGBoost binary loading/inference
+│  ├─ stage2_tst.py                  # PyTorch TST confirmatory model
+│  ├─ features.py, datasets/README.md, train/*.ipynb (optional offline)
+│  └─ run_ddos_daemon.py             # publishes /ddos JSON (scores, state) via MQTT
+├─ rl/
+│  ├─ linucb.py                      # contextual bandit
+│  ├─ agent_runtime.py               # observations → action → safe switch via MQTT
+│  └─ schema.py                      # JSON schema for /health and /ddos messages
+├─ tools/
+│  ├─ bench_cli.py, power_hooks.py, wireshark/pqc_tunnel.lua
+├─ tests/
+│  ├─ test_handshake.py, test_aead_framing.py, test_replay_window.py, test_rekey_epoch.py, test_loss_dup_oom.py
+├─ benchmarks/ matrix.yaml, run_matrix.py, results/*.csv
+├─ requirements.txt, environment.yml, README.md, LICENSE
+
+CONFIG (core/config.py)
+- This file is the single source of truth for IPs, ports, MQTT topics, and suite IDs.
+- Example defaults (override with env vars or CLI):
+  GCS_IP="192.168.1.10"; DRONE_IP="192.168.1.20"
+  TCP_HANDSHAKE_PORT=5800                         # KEM+signature handshake over TCP
+  UDP_DRONE_RX=5810; UDP_GCS_RX=5811              # encrypted data plane (UDP)
+  UDP_FC_IN=14550; UDP_FC_OUT=14551               # MAVLink to/from flight controller
+  MQTT_BROKER="192.168.1.5"; MQTT_PORT=1883
+  TOPIC_HEALTH="/health"; TOPIC_DDOS="/ddos"
+  TOPIC_ALGO_DESIRED="/algo/desired"; TOPIC_ALGO_ACK="/algo/ack"
+  TOPIC_POLICY_TEL_RATE="/policy/telemetry_downsample"
+  TOPIC_POLICY_LIMIT="/policy/ingress_limit"
+
+CRYPTO INVARIANTS (NON‑NEGOTIABLE)
+1) Handshake must be authenticated: GCS signs transcript T = (session_id || kem_name || gcs_pub) with selected signature (Dilithium/Falcon/SPHINCS+). Drone verifies against provisioned GCS signature public key.
+2) KEM → shared secret → HKDF‑SHA256 → derive K_send, K_recv, nonce_seed; never use raw KEM secret directly.
+3) AES‑GCM with deterministic 96‑bit counter nonces (per direction). Never reuse nonces.
+4) Per‑packet header is AAD (authenticated, not encrypted):
+   version(1) | kem_id(1) | kem_param(1) | sig_id(1) | sig_param(1) | session_id(8) | seq(8) | epoch(1)
+5) Sliding replay window (e.g., size 1024) per direction; drop duplicates/old.
+6) Rekey periodically (by time or packets); bump epoch; safe parallel cutover (new session established before flip).
+7) Minimum NIST level enforced from mission profile; never downgrade below it.
+
+SUITES (suites.py / YAML)
+- Provide these named suites (at least):
+  cs-kyber512-aesgcm-dilithium2   (L1)
+  cs-kyber768-aesgcm-dilithium3   (L3)  ← default
+  cs-kyber1024-aesgcm-dilithium5  (L5)
+  cs-kyber768-aesgcm-falcon512    (L3, smaller signatures)
+  cs-kyber768-chacha20-sphincs128f (L3, conservative, larger signatures)
+- Each suite defines: kem_name, sig_name, aead="AES-256-GCM", hkdf="HKDF-SHA256", nist_level, rekey_policy.
+
+DATA PLANE (core/aead.py)
+- Sender packs header (AAD), uses seq (uint64) as nonce counter → 12‑byte big‑endian IV.
+- Receiver verifies tag with header as AAD; checks replay window; returns plaintext.
+- Expose metrics (p50/p95 encrypt/decrypt μs, drops_s, rtt, loss) via /health.
+
+DDoS (ddos/)
+- Stage‑1 XGBoost: cheap features computed from pre‑decrypt queues: pps, burstiness, unique 5‑tuples, SYN/UDP ratios, etc. Emits score ∈ [0,1].
+- Stage‑2 TST (PyTorch): run only when Stage‑1 score exceeds threshold; confirm anomaly with short time window. Emits score ∈ [0,1].
+- Combiner → ddos_state ∈ {0 ok, 1 suspect, 2 attack}; publish JSON to /ddos.
+- Mitigations are executed by proxy when instructed: ingress limiter (off/2kpps/1kpps); telemetry downsample (1.0/0.7/0.4). Never throttle command path.
+
+RL (rl/)
+- Observations (normalized): cpu_pct, loss_pct, aead_p95_us, rtt_ms, xgb_score, tst_score, mission.priority, mission.min_sec.
+- Actions: {suite L1/L3/L5 or L3‑smallSig/L3‑conservative, rekey_now, telemetry_downsample {1.0,0.7,0.4}, ingress_limit {off,2k,1k}}.
+- Reward r = 2*SLA_ok − 1*CPU_norm − 0.5*loss − 0.3*p95 + 0.2*SecScore − 0.3*ddos_state − 0.1*rekey_cost.
+- Safety shield: enforce mission.min_sec; freeze suite under ddos_state≥1; prioritize command channel.
+
+TESTS (must pass before “done”)
+- test_handshake: MitM swap fails; wrong signature fails; derive keys match (K_send/recv) on both sides.
+- test_aead_framing: tampered header or nonce reuse → decryption fails.
+- test_replay_window: duplicate/old seq dropped.
+- test_rekey_epoch: epoch increments; counters reset; parallel cutover success.
+- test_loss_dup_oom: tolerates 10% loss, out‑of‑order within window, and backpressure without deadlocks.
+
+BENCHMARKS (benchmarks/)
+- Report latency p50/p95/p99 per payload size (64/256/512/1024B), handshake ms/bytes, CPU%, mJ/packet, DDoS ROC/PR, RL reward/timeline.
+- Store CSVs in benchmarks/results/ and generate all figures from CSVs.
+
+RUN BOOK (quick start)
+1) Install oqs-python + pyca/cryptography in both envs; verify core/scripts/env_check.py passes.
+2) Start ddos/run_ddos_daemon.py on both sides (publishes /ddos).
+3) Launch GCS proxy: python core/run_proxy.py --role gcs --suite cs-kyber768-aesgcm-dilithium3 --bind 0.0.0.0:5811 --peer DRONE_IP:5810
+4) Launch Drone proxy: python core/run_proxy.py --role drone --suite cs-kyber768-aesgcm-dilithium3 --bind 0.0.0.0:5810 --peer GCS_IP:5811
+5) Connect MAVProxy/pymavlink to local plaintext ports that the proxy exposes for the FC.
+6) Optional: start rl/agent_runtime.py (GCS side) to manage suite and mitigations via MQTT.
+
+STYLE / CONTRIBUTION RULES FOR THE AI AGENT (STRICT)
+- DO NOT fabricate code, paths, or results. If unknown, say “UNKNOWN: needs human input.”
+- NO placeholders that pretend to be implemented. If a function is stubbed, it MUST raise NotImplementedError.
+- Every new module must include a minimal self‑test or unit test.
+- Keep all crypto in core/*.py; wrappers in drone/gcs/wrappers must not re‑implement crypto.
+- All wire changes MUST update docs/PORTS_AND_FLOW.md and tests.
+- NEVER weaken crypto for convenience (e.g., random nonces, skipping AAD, skipping signature).
+- Always use suites.py registry for algorithm names; no hardcoded strings elsewhere.
+- External references (papers/repos) must be added to docs/REFERENCES.md when first used.
+
+DEFINITION OF DONE (DOD)
+- All tests pass; end‑to‑end encrypt→decrypt loop verified; replay & tamper tests pass.
+- Benchmarks run across the suite matrix and emit CSVs; figures regenerate.
+- README shows exact commands to reproduce the demo.
+- No TODO/FIXME strings in production code; stubs are isolated behind feature flags.
+
+SECURITY NOTES
+- Provision the GCS signature public key on the drone out‑of‑band.
+- Log only metadata (session_id, suite, seq ranges, timings), never secrets or raw plaintexts.
+- Ensure time‑constant comparisons where needed (e.g., tags).
+
+LICENSE & ATTRIBUTION
+- Respect upstream licenses for oqs‑python, cryptography, MAVLink, XGBoost, PyTorch, etc. Document in LICENSE/NOTICE.
+

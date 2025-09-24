@@ -1,0 +1,31 @@
+TITLE: AES-GCM Packetization and Framing
+VERSION: 1.0
+
+Header (AAD):
+version(1) | kem_id(1) | kem_param(1) | sig_id(1) | sig_param(1) |
+session_id(8) | seq(8) | epoch(1)
+
+IV / Nonce:
+- 12 bytes = big-endian seq (counter).
+- Per-direction counter starts at 0 after handshake or epoch change.
+
+Encryption:
+- ct = AESGCM(K_send).encrypt(iv=seq_counter, plaintext=payload, aad=header)
+- wire = header || iv || ct
+
+Decryption:
+- Parse header, iv, ct.
+- Check replay window with seq.
+- pt = AESGCM(K_recv).decrypt(iv, ct, header)
+- If decrypt fails, drop; do not signal attacker with rich error details.
+
+Replay Window:
+- Keep 'high' (highest seq seen) and 1024-bit bitmap for recent seqs.
+- Drop duplicates or seqs older than window.
+
+Edge Cases:
+- Out-of-order delivery: accept if within window.
+- Packet loss: tolerated; no retransmit at this layer.
+- Fragmentation: keep large crypto artifacts out of UDP (handshake uses TCP).
+
+END

@@ -1,0 +1,150 @@
+===============mqtt+mtls==============
+TITLE: MQTT + mTLS Control-Plane for Health, DDoS, and RL Policy
+VERSION: 1.0
+
+1) PURPOSE
+We isolate control messages (health metrics, DDoS signals, RL policy changes)
+from the high-rate UDP data-plane. MQTT with mutual TLS (mTLS) provides simple,
+secure pub/sub and explicit access control lists (ACLs).
+
+2) SCOPE
+- Topics for telemetry of the proxy itself (/health), DDoS outputs (/ddos),
+  suite switching (/algo/*), and policy knobs (/policy/*).
+- mTLS (TLS 1.3) with a small private CA; client certs for “gcs”, “drone”,
+  and (optionally) “controller” (RL process).
+- Strict ACLs so only allowed clients can publish/subscribe to each topic.
+
+3) TOPIC NAMESPACE (examples)
+- /health/gcs           (JSON, 1 Hz)
+- /health/drone         (JSON, 1 Hz)
+- /ddos/state           (JSON, on change + 1 Hz heartbeat)
+- /algo/desired         (string suite_id, published by controller)
+- /algo/phase/gcs       ("gcs_ready" with session info)
+- /algo/phase/drone     ("drone_ready")
+- /algo/ack             (both sides publish when cutover succeeds)
+- /algo/rekey_now       ("1" to request rekey)
+- /policy/ingress_limit ("off" | "2k" | "1k")
+- /policy/telemetry_rate("1.0" | "0.7" | "0.4")
+- /rl/log               (agent actions + reward @1 Hz)
+- Retain: generally NO. Will messages: optional heartbeat loss notice.
+
+4) SECURITY MODEL
+- TLS 1.3 with server cert and client certs (mTLS). No anonymous clients.
+- Minimal CA: one root CA issues certs for broker and clients.
+- Strong ciphers; disable TLS 1.2 if possible.
+- Certificates short-lived (e.g., 30–90 days) or pin in challenge setting.
+
+5) BROKER CHOICES
+- Mosquitto (simple, robust) or EMQX (feature-rich).
+- For fast setup, use Mosquitto with TLS 1.3, mTLS, and an ACL file.
+
+6) MINIMUM BROKER CONFIG (mosquitto.conf excerpt)
+listener 8883 0.0.0.0
+cafile /etc/mosquitto/certs/ca.crt
+certfile /etc/mosquitto/certs/broker.crt
+keyfile /etc/mosquitto/certs/broker.key
+require_certificate true
+use_identity_as_username true
+allow_anonymous false
+# Optional: TLS 1.3 only
+# ciphers TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+# tls_version tlsv1.3
+acl_file /etc/mosquitto/aclfile
+
+7) ACL FILE (aclfile example)
+# Drone may publish its health, subscribe to algo/policy
+user drone
+topic write /health/drone
+topic read  /algo/desired
+topic read  /policy/#
+topic write /algo/phase/drone
+topic write /algo/ack
+
+# GCS similar
+user gcs
+topic write /health/gcs
+topic read  /algo/desired
+topic read  /policy/#
+topic write /algo/phase/gcs
+topic write /algo/ack
+
+# Controller (RL/DDOS)
+user controller
+topic read  /health/#
+topic read  /ddos/#
+topic write /algo/desired
+topic write /policy/#
+topic write /algo/rekey_now
+
+8) CA AND CERT GENERATION (quick, illustrative)
+# Create a small CA (OpenSSL)
+openssl genrsa -out ca.key 4096
+openssl req -x509 -new -nodes -key ca.key -sha256 -days 3650 -out ca.crt -subj "/CN=pq-mqtt-ca"
+# Broker cert
+openssl genrsa -out broker.key 4096
+openssl req -new -key broker.key -out broker.csr -subj "/CN=mqtt-broker"
+openssl x509 -req -in broker.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out broker.crt -days 365 -sha256
+# Client certs (drone, gcs, controller): same pattern, CN must match ACL "user"
+openssl genrsa -out drone.key 4096
+openssl req -new -key drone.key -out drone.csr -subj "/CN=drone"
+openssl x509 -req -in drone.csr -CA ca.crt -CAkey ca.key -CAserial ca.srl -out drone.crt -days 180 -sha256
+# Repeat for gcs, controller
+
+9) PYTHON CLIENT SNIPPET (paho-mqtt)
+import paho.mqtt.client as mqtt
+c = mqtt.Client(client_id="drone", clean_session=True)
+c.tls_set(ca_certs="ca.crt", certfile="drone.crt", keyfile="drone.key")
+c.tls_insecure_set(False)
+c.username_pw_set("drone")  # broker maps CN to username; keep consistent
+c.connect("BROKER_IP_OR_NAME", 8883, 60)
+c.publish("/health/drone", payload=json.dumps(drone_health), qos=0, retain=False)
+
+10) PAYLOAD SCHEMAS (JSON)
+/health/*:
+{
+  "node":"drone|gcs",
+  "suite":"kyber768+dilithium3",
+  "cpu_pct": 23.1,
+  "aead_p50_us": 210,
+  "aead_p95_us": 350,
+  "rtt_ms": 22.4,
+  "loss_pct": 0.8,
+  "tx_q": 2,
+  "rx_q": 1,
+  "drops_s": 0,
+  "handshake_ms_last": 11.2,
+  "epoch": 3,
+  "ts": 1712345678
+}
+
+/ddos/state:
+{
+  "state": 0,          # 0 ok, 1 suspect, 2 attack
+  "xgb_score": 0.02,
+  "tst_score": 0.01,
+  "pps_in": 1800,
+  "ts": 1712345678
+}
+
+11) QOS AND RETAIN
+- QoS 0 is fine for health (1 Hz, lossy).
+- QoS 1 suggested for /algo/* and /policy/* (state changes).
+- Avoid retained messages unless explicitly needed (e.g., last desired suite).
+- Use Last Will (LWT) to publish a “node offline” note on disconnect, optional.
+
+12) AUTHZ AND SEPARATION
+- Separate broker network from UDP data-plane if possible (VLANs/ports).
+- Consider binding broker to control subnet only.
+- Keep certs on read-only FS where feasible.
+
+13) PQC FOR MQTT? (OPTIONAL)
+- For a demo week, use standard TLS 1.3 with mTLS (practical, robust).
+- For research extension, try OpenSSL oqs-provider (hybrid TLS ciphersuites),
+  but note operational complexity.
+
+14) FAILURE MODES
+- Broker down: proxies keep last policy; data-plane continues.
+- Cert expired: clients fail fast; keep a renewal plan (cron + deploy).
+- Packet storms: broker ACLs prevent unauthorized publishes; rate-limit.
+
+END

@@ -1,0 +1,57 @@
+
+pqc-drone-gcs/
+  core/
+    handshake.py        # KEM+signature transcript, HKDF
+    aead.py             # AES-GCM + AAD header + counters + replay
+    suites.py           # suite registry (Kyber/Dilithium/Falcon/SPHINCS+)
+    async_proxy.py      # UDP loops, parallel rekey, cutover FSM
+    project_config.py   # IPs, ports, MQTT topics, env overrides
+    logging_utils.py    # structured logs and metrics
+  drone/
+    wrappers/
+      drone_kyber_512.py
+      drone_kyber_768.py
+      drone_kyber_1024.py
+      drone_dilithium2.py
+      drone_dilithium3.py
+      drone_dilithium5.py
+      drone_falcon512.py
+      drone_falcon1024.py
+      drone_sphincs_sha2_128f.py
+      drone_sphincs_sha2_256f.py
+    scripts/
+      start_suite.sh
+      env_check.py
+  gcs/
+    wrappers/
+      gcs_kyber_512.py
+      gcs_kyber_768.py
+      gcs_kyber_1024.py
+      gcs_dilithium2.py
+      gcs_dilithium3.py
+      gcs_dilithium5.py
+      gcs_falcon512.py
+      gcs_falcon1024.py
+      gcs_sphincs_sha2_128f.py
+      gcs_sphincs_sha2_256f.py
+      
+    scripts/
+      start_suite.sh
+      env_check.py
+  ddos/
+    features.py  xgb_stage1.py  tst_stage2.py  mitigations.py
+  rl/
+    linucb.py  agent_runtime.py  safety.py
+  tools/
+    bench_cli.py  wireshark/pqc_tunnel.lua  power_hooks.py
+  tests/
+    test_handshake.py  test_aead_framing.py  test_replay_window.py
+    test_rekey_epoch.py test_loss_dup_oom.py
+  benchmarks/
+    matrix.yaml  run_matrix.py  results/
+  docs/
+    *.txt (this folder)
+  requirements.txt
+  environment.yml
+  README.md
+
