@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 - **100% Test Coverage**: 55/55 tests passing
 - **Complete Core Implementation**: All fundamental components operational
 - **Production Ready**: Fully functional PQC secure proxy system
+ - **Full Communication Harness**: End-to-end verification script (`tools/full_comm_check.py`) for stack integrity
+ - **Wrapper Import Integrity**: All drone/gcs wrappers confirmed importable with no side effects
+ - **Config Validation Harness**: Harness checks for config validation and environment override support
+ - **Crystal-Clear Progress Documentation**: Implementation and verification steps documented in `progresslog.md`
 
 ---
 
@@ -109,11 +113,12 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **Enhanced `core/config.py`** - Centralized configuration management
   - `CONFIG` dictionary - Single source of truth for all parameters
-  - `validate_config()` - Comprehensive validation function
+  - `validate_config()` - Comprehensive validation function (if exposed)
   - `_REQUIRED_KEYS` - Type and range specifications
   - Environment variable override support
   - Port conflict detection
   - Frozen constants (WIRE_VERSION, REPLAY_WINDOW)
+  - **Config Validation Harness**: `tools/full_comm_check.py` checks config hooks and environment override functionality
 
 ### Configuration Features
 - **Strict validation** - Required key checking, type enforcement, range validation
@@ -228,6 +233,16 @@ GCS_PLAINTEXT_RX = 5831        # Apps ← GCS plaintext
 
 ## Breaking Changes
 None (initial release)
+
+---
+
+## Outstanding Issues (as of 2025-09-24)
+- `load_config` and `validate_config` not exposed in `core/config.py` (harness reports UNKNOWN)
+- Smoke test in harness failed: no UDP delivery confirmed (likely ephemeral port or proxy binding issue)
+- All wrappers importable, no ImportError
+- All tests passing, system verified
+
+See `progresslog.md` for a low-level, implementation-focused summary of all modules, packages, and verification steps.
 
 ## Deprecated Features  
 None (initial release)

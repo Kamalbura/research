@@ -171,21 +171,24 @@ class TestEndToEndProxy:
         gcs_sig_public, gcs_sig_secret = gcs_keypair
         
         # We'll test packet tampering by directly testing the AEAD receiver
-        from core.aead import Sender, Receiver
+        from core.aead import Sender, Receiver, AeadIds
+        from core.suites import header_ids_for_suite
         
         # Create sender and receiver with same key
         key = os.urandom(32)
         session_id = os.urandom(8)
         
-        sender = Sender(key=key, suite=suite, session_id=session_id, epoch=0)
-        receiver = Receiver(key=key, window=1024)
+        header_ids = header_ids_for_suite(suite)
+        aead_ids = AeadIds(*header_ids)
+        sender = Sender(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, key)
+        receiver = Receiver(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, key, 1024)
         
         # Create a valid packet
         original_payload = b"test payload"
-        wire = sender.pack(original_payload)
+        wire = sender.encrypt(original_payload)
         
         # Verify original packet decrypts correctly
-        decrypted = receiver.unpack(wire)
+        decrypted = receiver.decrypt(wire)
         assert decrypted == original_payload
         
         # Tamper with the header (flip one byte)
@@ -194,33 +197,36 @@ class TestEndToEndProxy:
         tampered_wire = bytes(tampered_wire)
         
         # Create fresh receiver to avoid replay detection
-        receiver2 = Receiver(key=key, window=1024)
+        receiver2 = Receiver(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, key, 1024)
         
         # Tampered packet should be dropped
-        decrypted_tampered = receiver2.unpack(tampered_wire)
+        decrypted_tampered = receiver2.decrypt(tampered_wire)
         assert decrypted_tampered is None
     
     def test_replay_packet_dropped(self, suite, gcs_keypair):
         """Test that replayed packets are dropped."""
-        from core.aead import Sender, Receiver
+        from core.aead import Sender, Receiver, AeadIds
+        from core.suites import header_ids_for_suite
         
         # Create sender and receiver
         key = os.urandom(32)
         session_id = os.urandom(8)
         
-        sender = Sender(key=key, suite=suite, session_id=session_id, epoch=0)
-        receiver = Receiver(key=key, window=1024)
+        header_ids = header_ids_for_suite(suite)
+        aead_ids = AeadIds(*header_ids)
+        sender = Sender(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, key)
+        receiver = Receiver(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, key, 1024)
         
         # Send first packet
         payload = b"original packet"
-        wire = sender.pack(payload)
+        wire = sender.encrypt(payload)
         
         # First decryption should succeed
-        decrypted1 = receiver.unpack(wire)
+        decrypted1 = receiver.decrypt(wire)
         assert decrypted1 == payload
         
         # Replay same packet - should be dropped
-        decrypted2 = receiver.unpack(wire)
+        decrypted2 = receiver.decrypt(wire)
         assert decrypted2 is None
     
     def test_missing_config_keys(self):

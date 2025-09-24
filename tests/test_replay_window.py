@@ -39,9 +39,10 @@ def test_accept_out_of_order_in_window():
         session_id=session_id,
         epoch=0,
         key_recv=key,
-        window=64
+        window=64,
+        strict_mode=True
     )
-    
+
     # Generate packets in order: 0, 1, 2, 3, 4
     packets = []
     for i in range(5):
@@ -103,9 +104,10 @@ def test_reject_old_beyond_window():
         session_id=session_id,
         epoch=0,
         key_recv=key,
-        window=64
+        window=64,
+        strict_mode=True
     )
-    
+
     # Generate and store packets
     packets = []
     

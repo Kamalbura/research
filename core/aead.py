@@ -82,6 +82,11 @@ class Sender:
         
         self._aesgcm = AESGCM(self.key_send)
 
+    @property
+    def seq(self):
+        """Current sequence number."""
+        return self._seq
+
     def pack_header(self, seq: int) -> bytes:
         """Pack header with given sequence number."""
         if not isinstance(seq, int) or seq < 0:
@@ -143,6 +148,7 @@ class Receiver:
     epoch: int
     key_recv: bytes
     window: int
+    strict_mode: bool = False  # True = raise exceptions, False = return None
     _high: int = -1
     _mask: int = 0
 
@@ -219,19 +225,28 @@ class Receiver:
         
         # Validate header fields
         if version != self.version:
-            raise HeaderMismatch(f"version mismatch: expected {self.version}, got {version}")
+            if self.strict_mode:
+                raise HeaderMismatch(f"version mismatch: expected {self.version}, got {version}")
+            return None
         
         if (kem_id, kem_param, sig_id, sig_param) != (self.ids.kem_id, self.ids.kem_param, self.ids.sig_id, self.ids.sig_param):
-            raise HeaderMismatch(f"crypto ID mismatch")
+            if self.strict_mode:
+                raise HeaderMismatch(f"crypto ID mismatch")
+            return None
         
         if session_id != self.session_id:
-            raise HeaderMismatch(f"session_id mismatch")
+            return None  # Wrong session - always fail silently for security
         
         if epoch != self.epoch:
-            raise HeaderMismatch(f"epoch mismatch: expected {self.epoch}, got {epoch}")
+            return None  # Wrong epoch - always fail silently for rekeying
         
         # Check replay protection
-        self._check_replay(seq)
+        try:
+            self._check_replay(seq)
+        except ReplayError:
+            if self.strict_mode:
+                raise
+            return None
         
         # Extract IV and ciphertext
         iv = wire[HEADER_LEN:HEADER_LEN + IV_LEN]
@@ -240,13 +255,17 @@ class Receiver:
         # Validate IV matches expected deterministic value
         expected_iv = seq.to_bytes(IV_LEN, "big")
         if iv != expected_iv:
-            raise HeaderMismatch(f"IV mismatch: expected deterministic IV from seq")
+            if self.strict_mode:
+                raise HeaderMismatch(f"IV mismatch: expected deterministic IV from seq")
+            return None
         
         # Decrypt with header as AAD
         try:
             plaintext = self._aesgcm.decrypt(iv, ciphertext, header)
         except InvalidTag:
-            raise AeadAuthError("AEAD authentication failed")
+            if self.strict_mode:
+                raise AeadAuthError("AEAD authentication failed")
+            return None
         except Exception as e:
             raise NotImplementedError(f"AEAD decryption failed: {e}")
         

@@ -42,7 +42,8 @@ def test_round_trip_three_payloads():
         session_id=session_id,
         epoch=0,
         key_recv=key,
-        window=CONFIG["REPLAY_WINDOW"]
+        window=CONFIG["REPLAY_WINDOW"],
+        strict_mode=True
     )
     
     # Test payloads: 0B, 64B, 1024B
@@ -86,12 +87,13 @@ def test_tamper_header_flip():
         session_id=session_id,
         epoch=0,
         key_recv=key,
-        window=CONFIG["REPLAY_WINDOW"]
+        window=CONFIG["REPLAY_WINDOW"],
+        strict_mode=True
     )
-    
+
     # Encrypt one packet
     wire = sender.encrypt(b"test")
-    
+
     # Flip 1 bit in header kem_id byte (byte 1)
     tampered = bytearray(wire)
     tampered[1] ^= 0x01  # Flip LSB of kem_id
@@ -126,12 +128,13 @@ def test_tamper_ciphertext_tag():
         session_id=session_id,
         epoch=0,
         key_recv=key,
-        window=CONFIG["REPLAY_WINDOW"]
+        window=CONFIG["REPLAY_WINDOW"],
+        strict_mode=True
     )
-    
+
     # Encrypt one packet
     wire = sender.encrypt(b"test")
-    
+
     # Flip 1 bit in ciphertext/tag area (after header + IV)
     tampered = bytearray(wire)
     tamper_pos = HEADER_LEN + IV_LEN + 1  # First byte of ciphertext
@@ -167,17 +170,16 @@ def test_nonce_reuse_replay():
         session_id=session_id,
         epoch=0,
         key_recv=key,
-        window=CONFIG["REPLAY_WINDOW"]
+        window=CONFIG["REPLAY_WINDOW"],
+        strict_mode=True
     )
-    
+
     # Encrypt one packet
     wire = sender.encrypt(b"test")
-    
+
     # First decrypt should succeed
     plaintext = receiver.decrypt(wire)
-    assert plaintext == b"test"
-    
-    # Second decrypt of same wire should raise ReplayError
+    assert plaintext == b"test"    # Second decrypt of same wire should raise ReplayError
     with pytest.raises(ReplayError):
         receiver.decrypt(wire)
 
@@ -206,14 +208,15 @@ def test_epoch_bump():
         session_id=session_id,
         epoch=0,
         key_recv=key,
-        window=CONFIG["REPLAY_WINDOW"]
+        window=CONFIG["REPLAY_WINDOW"],
+        strict_mode=True
     )
-    
+
     # Send and decrypt one packet
     wire1 = sender.encrypt(b"before")
     plaintext1 = receiver.decrypt(wire1)
     assert plaintext1 == b"before"
-    
+
     # Bump epoch on both sides
     sender.bump_epoch()
     receiver.bump_epoch()

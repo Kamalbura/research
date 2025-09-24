@@ -196,12 +196,18 @@ def run_proxy(*, role: str, suite: dict, cfg: dict,
     k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id = handshake_result
     
     # Setup AEAD endpoints based on role
+    from core.suites import header_ids_for_suite
+    from core.aead import AeadIds
+    
+    header_ids = header_ids_for_suite(suite)
+    aead_ids = AeadIds(*header_ids)
+    
     if role == "drone":
-        sender = Sender(key=k_d2g, suite=suite, session_id=session_id, epoch=0)
-        receiver = Receiver(key=k_g2d, window=cfg["REPLAY_WINDOW"])
+        sender = Sender(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_d2g)
+        receiver = Receiver(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_g2d, cfg["REPLAY_WINDOW"])
     else:  # gcs
-        sender = Sender(key=k_g2d, suite=suite, session_id=session_id, epoch=0) 
-        receiver = Receiver(key=k_d2g, window=cfg["REPLAY_WINDOW"])
+        sender = Sender(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_g2d)
+        receiver = Receiver(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_d2g, cfg["REPLAY_WINDOW"])
     
     # Setup UDP sockets and run main loop
     with _setup_sockets(role, cfg) as sockets:
@@ -235,7 +241,7 @@ def run_proxy(*, role: str, suite: dict, cfg: dict,
                             counters.ptx_in += 1
                             
                             # Encrypt payload
-                            wire = sender.pack(payload)
+                            wire = sender.encrypt(payload)
                             
                             # Send to encrypted peer
                             try:

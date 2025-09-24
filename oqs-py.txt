@@ -1,0 +1,12 @@
+(gcs-env) PS C:\Users\burak\Desktop\research> python tests/test-oqs.py
+Imported oqs.oqs from C:\Users\burak\miniconda3\envs\gcs-env\Lib\site-packages\oqs\oqs.py
+Attributes in oqs.oqs: ['Any', 'ClassVar', 'Final', 'KeyEncapsulation', 'MechanismNotEnabledError', 'MechanismNotSupportedError', 'OQS_ERROR', 'OQS_SUCCESS', 'OQS_VERSION', 'Optional', 'Path', 'Signature', 'StatefulSignature', 'TKeyEncapsulation', 'TSignature', 'TStatefulSignature', 'TYPE_CHECKING', 'TypeVar', 'Union', '_KEM_alg_ids', '__annotations__', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', '_check_alg', '_countdown', '_enabled_KEMs', '_enabled_sigs', '_enabled_stateful_sigs', '_filter_stfl_names', '_install_liboqs', '_liboqs', '_load_liboqs', '_load_shared_obj', '_sig_alg_ids', '_supported_KEMs', '_supported_sigs', '_supported_stateful_sigs', 'annotations', 'cast', 'ct', 'ctu', 'environ', 'get_enabled_kem_mechanisms', 'get_enabled_sig_mechanisms', 'get_enabled_stateful_sig_mechanisms', 'get_supported_kem_mechanisms', 'get_supported_sig_mechanisms', 'get_supported_stateful_sig_mechanisms', 'importlib', 'is_kem_enabled', 'is_sig_enabled', 'is_stateful_sig_enabled', 'logger', 'logging', 'native', 'oqs_python_ver', 'oqs_python_ver_major', 'oqs_python_ver_minor', 'oqs_python_ver_patch', 'oqs_python_version', 'oqs_ver', 'oqs_ver_major', 'oqs_ver_minor', 'oqs_ver_patch', 'oqs_version', 'platform', 'sig_supports_context', 'stdout', 'subprocess', 'tempfile', 'time', 'tomllib', 'version', 'warnings']
+KeyEncapsulation available: True
+Signature available: True
+KEM Kyber512 instantiated successfully.
+Signature Dilithium2 instantiated successfully.
+Could not import liboqs: No module named 'liboqs'
+Imported oqs from C:\Users\burak\miniconda3\envs\gcs-env\Lib\site-packages\oqs\__init__.py
+Attributes in oqs: ['ExpressionInput', 'FunctionNode', 'OQSInterpreter', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__path__', '__spec__', 'built_in_functions', 'constants', 'engine', 'errors', 'interpreter', 'nodes', 'oqs', 'oqs_engine', 'parser', 'utils']
+KeyEncapsulation available: False
+Signature available: False
