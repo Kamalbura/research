@@ -30,7 +30,7 @@ class TestHandshake:
     @pytest.fixture
     def gcs_keypair(self, suite):
         """Generate GCS signature keypair."""
-        sig = Signature(suite["sig"])
+        sig = Signature(suite["sig_name"])
         gcs_sig_pub = sig.generate_keypair()
         gcs_sig_secret = sig.export_secret_key()
         return gcs_sig_pub, gcs_sig_secret
@@ -153,8 +153,8 @@ class TestHandshake:
                 tampered_sig[0] ^= 0x01
                 tampered_sig = bytes(tampered_sig)
                 
-                # Verify KEM name 
-                expected_kem = suite["kem"].encode('ascii')
+                # Verify KEM name
+                expected_kem = suite["kem_name"].encode('ascii')
                 if kem_name != expected_kem:
                     raise HandshakeError(f"KEM mismatch")
                 
@@ -162,7 +162,7 @@ class TestHandshake:
                 transcript = session_id + kem_name + gcs_kem_pub
                 
                 # Try to verify tampered signature
-                sig = Signature(suite["sig"])
+                sig = Signature(suite["sig_name"])
                 if not sig.verify(transcript, tampered_sig, gcs_sig_pub):
                     raise SignatureVerifyError("GCS signature verification failed")
                 
@@ -182,12 +182,11 @@ class TestHandshake:
         """Test error handling for unsupported crypto suite."""
         # Create fake suite with unsupported algorithms
         fake_suite = {
-            "kem": "FAKE-KEM-999",
-            "sig": "FAKE-SIG-999", 
-            "kem_id": 99,
-            "kem_param": 99,
-            "sig_id": 99,
-            "sig_param": 99
+            "kem_name": "FAKE-KEM-999",
+            "sig_name": "FAKE-SIG-999", 
+            "aead": "AES-256-GCM",
+            "kdf": "HKDF-SHA256",
+            "nist_level": "L1"
         }
         
         server_sock, client_sock = socket.socketpair()

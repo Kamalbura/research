@@ -14,6 +14,8 @@ from typing import Optional, Set, Dict
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.exceptions import InvalidTag
 
+from .suites import header_ids_for_suite
+
 # Header format: version(1) | kem_id(1) | kem_param(1) | sig_id(1) | sig_param(1) | session_id(8) | seq(8) | epoch(1)
 HDR_FMT = "!BBBBB8sQB"   # 5xB, 8s, Q, B -> 23 bytes  
 HDR_LEN = struct.calcsize(HDR_FMT)
@@ -45,6 +47,9 @@ class Sender:
         self.session_id = session_id
         self.seq = 0
         self.epoch = epoch
+        
+        # Compute header IDs from suite configuration
+        self.kem_id, self.kem_param_id, self.sig_id, self.sig_param_id = header_ids_for_suite(suite)
     
     def pack(self, plaintext: bytes) -> bytes:
         """Encrypt and frame a packet.
@@ -59,10 +64,10 @@ class Sender:
         hdr = struct.pack(
             HDR_FMT,
             1,  # version
-            self.suite["kem_id"], 
-            self.suite["kem_param"],
-            self.suite["sig_id"], 
-            self.suite["sig_param"],
+            self.kem_id, 
+            self.kem_param_id,
+            self.sig_id, 
+            self.sig_param_id,
             self.session_id,
             self.seq,
             self.epoch

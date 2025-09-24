@@ -131,8 +131,8 @@ def client_drone_handshake(sock: socket.socket, suite: Dict, gcs_sig_pub: bytes)
     """
     try:
         # Initialize KEM for this suite
-        kem = KeyEncapsulation(suite["kem"])
-        sig = Signature(suite["sig"])
+        kem = KeyEncapsulation(suite["kem_name"])
+        sig = Signature(suite["sig_name"])
     except (RuntimeError, MechanismNotSupportedError) as e:
         raise NotImplementedError(f"Suite not supported by local oqs build: {e}")
     
@@ -143,7 +143,7 @@ def client_drone_handshake(sock: socket.socket, suite: Dict, gcs_sig_pub: bytes)
     signature = _recv_len_prefixed(sock, "!I")
     
     # Verify KEM name matches suite
-    expected_kem = suite["kem"].encode('ascii')
+    expected_kem = suite["kem_name"].encode('ascii')
     if kem_name != expected_kem:
         raise HandshakeError(f"KEM mismatch: expected {expected_kem}, got {kem_name}")
     
@@ -192,8 +192,8 @@ def server_gcs_handshake(conn: socket.socket, suite: Dict, gcs_sig_secret: bytes
     
     try:
         # Initialize KEM and signature for this suite
-        kem = KeyEncapsulation(suite["kem"])
-        sig = Signature(suite["sig"])
+        kem = KeyEncapsulation(suite["kem_name"])
+        sig = Signature(suite["sig_name"])
     except (RuntimeError, MechanismNotSupportedError) as e:
         raise NotImplementedError(f"Suite not supported by local oqs build: {e}")
     
@@ -204,7 +204,7 @@ def server_gcs_handshake(conn: socket.socket, suite: Dict, gcs_sig_secret: bytes
     session_id = os.urandom(8)
     
     # Prepare KEM name
-    kem_name = suite["kem"].encode('ascii')
+    kem_name = suite["kem_name"].encode('ascii')
     
     # Construct transcript for signing
     # T = session_id || kem_name || gcs_kem_pub  
@@ -213,7 +213,7 @@ def server_gcs_handshake(conn: socket.socket, suite: Dict, gcs_sig_secret: bytes
     # Sign transcript with GCS long-term key  
     try:
         # Create signature object with provided secret key
-        sig_obj = Signature(suite["sig"], secret_key=gcs_sig_secret)
+        sig_obj = Signature(suite["sig_name"], secret_key=gcs_sig_secret)
         signature = sig_obj.sign(transcript)
     except Exception as e:
         raise HandshakeError(f"Signature generation failed: {e}")

@@ -29,7 +29,7 @@ class TestEndToEndProxy:
     @pytest.fixture
     def gcs_keypair(self, suite):
         """Generate GCS signature keypair."""
-        sig = Signature(suite["sig"])
+        sig = Signature(suite["sig_name"])
         gcs_sig_public = sig.generate_keypair()
         gcs_sig_secret = sig.export_secret_key()
         return gcs_sig_public, gcs_sig_secret

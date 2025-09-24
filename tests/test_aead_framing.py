@@ -7,7 +7,7 @@ import struct
 
 import pytest
 
-from core.suites import get_suite
+from core.suites import get_suite, header_ids_for_suite
 from core.aead import Sender, Receiver, HDR_FMT, HDR_LEN, IV_LEN
 
 
@@ -69,11 +69,12 @@ class TestAEADFraming:
         version, kem_id, kem_param, sig_id, sig_param, session_id, seq, epoch = fields
         
         # Verify header contents
+        expected_kem_id, expected_kem_param, expected_sig_id, expected_sig_param = header_ids_for_suite(suite)
         assert version == 1
-        assert kem_id == suite["kem_id"]
-        assert kem_param == suite["kem_param"] 
-        assert sig_id == suite["sig_id"]
-        assert sig_param == suite["sig_param"]
+        assert kem_id == expected_kem_id
+        assert kem_param == expected_kem_param 
+        assert sig_id == expected_sig_id
+        assert sig_param == expected_sig_param
         assert session_id == test_session_id
         assert seq == 0  # first packet
         assert epoch == 5
