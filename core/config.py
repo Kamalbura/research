@@ -53,6 +53,10 @@ _ENV_OVERRIDABLE = {
     "TCP_HANDSHAKE_PORT",
     "UDP_DRONE_RX", 
     "UDP_GCS_RX",
+    "DRONE_PLAINTEXT_TX",  # Added for testing/benchmarking flexibility
+    "DRONE_PLAINTEXT_RX",  # Added for testing/benchmarking flexibility  
+    "GCS_PLAINTEXT_TX",    # Added for testing/benchmarking flexibility
+    "GCS_PLAINTEXT_RX",    # Added for testing/benchmarking flexibility
     "DRONE_HOST",
     "GCS_HOST"
 }

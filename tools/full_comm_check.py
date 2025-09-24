@@ -28,13 +28,13 @@ def _clone_config_with_ports(base_cfg: dict) -> dict:
         cfg["GCS_PLAINTEXT_RX"] = _free_udp_port()
 
     # Encrypted RX ports (must be distinct)
-    cfg["DRONE_ENC_RX"] = _free_udp_port()
-    cfg["GCS_ENC_RX"] = _free_udp_port()
-    while cfg["GCS_ENC_RX"] == cfg["DRONE_ENC_RX"]:
-        cfg["GCS_ENC_RX"] = _free_udp_port()
+    cfg["DRONE_ENCRYPTED_RX"] = _free_udp_port()
+    cfg["GCS_ENCRYPTED_RX"] = _free_udp_port()
+    while cfg["GCS_ENCRYPTED_RX"] == cfg["DRONE_ENCRYPTED_RX"]:
+        cfg["GCS_ENCRYPTED_RX"] = _free_udp_port()
 
     # Handshake TCP port
-    cfg["HANDSHAKE_TCP_PORT"] = max(5800, _free_udp_port())
+    cfg["TCP_HANDSHAKE_PORT"] = max(5800, _free_udp_port())
     return cfg
 
 # --------- step 1: pytest ---------
@@ -51,8 +51,9 @@ def run_pytests() -> dict:
 def smoke_loopback() -> dict:
     try:
         from core.async_proxy import run_proxy
+        from oqs.oqs import Signature
     except Exception as e:
-        return {"status": "ERROR", "detail": f"cannot import run_proxy: {e}"}
+        return {"status": "ERROR", "detail": f"cannot import required modules: {e}"}
 
     # Load baseline config
     try:
@@ -74,6 +75,14 @@ def smoke_loopback() -> dict:
             return {"status": "ERROR", "detail": f"cannot load config: {e2}"}
 
     cfg = _clone_config_with_ports(base_cfg)
+    
+    # Generate REAL cryptographic keys for testing - SECURITY CRITICAL
+    try:
+        suite_dict = {"kem_name":"ML-KEM-768","kem_param":768,"sig_name":"ML-DSA-65","sig_param":65,"aead":"AES-256-GCM","kdf":"HKDF-SHA256","nist_level":3}
+        sig = Signature(suite_dict["sig_name"])
+        gcs_sig_public = sig.generate_keypair()
+    except Exception as e:
+        return {"status": "ERROR", "detail": f"failed to generate keys: {e}"}
 
     # Storage for proxy results and errors
     gcs_err = {"error": None}
@@ -83,9 +92,9 @@ def smoke_loopback() -> dict:
         try:
             run_proxy(
                 role="gcs",
-                suite={"kem_name":"ML-KEM-768","kem_param":768,"sig_name":"ML-DSA-65","sig_param":65,"aead":"AES-256-GCM","kdf":"HKDF-SHA256","nist_level":3},
+                suite=suite_dict,
                 cfg=cfg,
-                gcs_sig_secret=os.urandom(64),  # tests allow dummy bytes
+                gcs_sig_secret=sig,  # Real signature object - SECURITY CRITICAL
                 gcs_sig_public=None,
                 stop_after_seconds=2.0,
             )
@@ -97,10 +106,10 @@ def smoke_loopback() -> dict:
             time.sleep(0.2)  # let GCS bind first
             run_proxy(
                 role="drone",
-                suite={"kem_name":"ML-KEM-768","kem_param":768,"sig_name":"ML-DSA-65","sig_param":65,"aead":"AES-256-GCM","kdf":"HKDF-SHA256","nist_level":3},
+                suite=suite_dict,
                 cfg=cfg,
                 gcs_sig_secret=None,
-                gcs_sig_public=os.urandom(64),
+                gcs_sig_public=gcs_sig_public,  # Real public key - SECURITY CRITICAL
                 stop_after_seconds=2.0,
             )
         except Exception as e:
@@ -166,9 +175,9 @@ def smoke_loopback() -> dict:
                     "DRONE_RX": cfg["DRONE_PLAINTEXT_RX"],
                     "GCS_TX": cfg["GCS_PLAINTEXT_TX"],
                     "GCS_RX": cfg["GCS_PLAINTEXT_RX"],
-                    "ENC_DRONE": cfg["DRONE_ENC_RX"],
-                    "ENC_GCS": cfg["GCS_ENC_RX"],
-                    "HS_TCP": cfg["HANDSHAKE_TCP_PORT"],
+                    "ENC_DRONE": cfg["DRONE_ENCRYPTED_RX"],
+                    "ENC_GCS": cfg["GCS_ENCRYPTED_RX"],
+                    "HS_TCP": cfg["TCP_HANDSHAKE_PORT"],
                 }
             }}
 
@@ -196,8 +205,8 @@ def config_checks() -> dict:
         env["DRONE_PLAINTEXT_RX"] = "14651"
         env["GCS_PLAINTEXT_TX"] = "15652"
         env["GCS_PLAINTEXT_RX"] = "15653"
-        env["DRONE_ENC_RX"] = "6810"
-        env["GCS_ENC_RX"] = "6811"
+        env["DRONE_ENCRYPTED_RX"] = "6810"
+        env["GCS_ENCRYPTED_RX"] = "6811"
         cfg2 = load_config(env)  # type: ignore
         validate_config(cfg2)  # type: ignore
         out["env_override"] = "OK"

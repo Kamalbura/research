@@ -1,8 +1,8 @@
-import os, time
-from core.aead import Sender, Receiver
-from core.suites import header_ids_for_suite, AeadIds
+import os, time, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.aead import Sender, Receiver, AeadIds
+from core.suites import header_ids_for_suite
 from core.config import CONFIG
-import os as _os
 def main():
     suite = {"kem_name":"ML-KEM-768","sig_name":"ML-DSA-65","aead":"AES-256-GCM","kdf":"HKDF-SHA256","kem_param":768,"sig_param":65}
     ids = AeadIds(*header_ids_for_suite(suite))

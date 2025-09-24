@@ -264,7 +264,7 @@ def run_proxy(*, role: str, suite: dict, cfg: dict,
                             
                             # Decrypt payload
                             try:
-                                plaintext = receiver.unpack(wire)
+                                plaintext = receiver.decrypt(wire)
                                 if plaintext is None:
                                     # Replay or tampered packet
                                     counters.drops += 1

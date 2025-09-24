@@ -3,7 +3,8 @@
 Demonstration of strict_mode behavior in PQC AEAD layer
 """
 import os
-from core.aead import Sender, Receiver, CONFIG, HeaderMismatch, AeadAuthError, ReplayError, AeadIds
+from core.aead import Sender, Receiver, HeaderMismatch, AeadAuthError, ReplayError, AeadIds
+from core.config import CONFIG
 from core.suites import get_suite, header_ids_for_suite
 
 def demo_strict_mode():

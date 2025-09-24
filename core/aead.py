@@ -112,15 +112,15 @@ class Sender:
         if not isinstance(plaintext, bytes):
             raise NotImplementedError("plaintext must be bytes")
         
-        # Check for sequence overflow before using
-        if self._seq >= (2**96 - 1):
-            raise NotImplementedError("packet_seq overflow")
+        # Check for sequence overflow - header uses uint64, so check that limit
+        if self._seq > (2**64 - 1):
+            raise NotImplementedError("packet_seq overflow (uint64)")
         
         # Pack header with current sequence
         header = self.pack_header(self._seq)
         
-        # Generate deterministic 96-bit IV from sequence
-        iv = self._seq.to_bytes(IV_LEN, "big")
+        # Generate IV = epoch (1 byte) || seq (11 bytes) to prevent reuse across epochs
+        iv = bytes([self.epoch & 0xFF]) + self._seq.to_bytes(11, "big")
         
         # Encrypt with header as AAD
         try:
@@ -253,10 +253,10 @@ class Receiver:
         ciphertext = wire[HEADER_LEN + IV_LEN:]
         
         # Validate IV matches expected deterministic value
-        expected_iv = seq.to_bytes(IV_LEN, "big")
+        expected_iv = bytes([epoch & 0xFF]) + seq.to_bytes(11, "big")
         if iv != expected_iv:
             if self.strict_mode:
-                raise HeaderMismatch(f"IV mismatch: expected deterministic IV from seq")
+                raise HeaderMismatch("IV mismatch: expected epoch||seq format")
             return None
         
         # Decrypt with header as AAD

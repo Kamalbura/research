@@ -66,7 +66,7 @@ def main():
     if args.role == "gcs":
         # Generate fresh GCS signing keypair for testing
         try:
-            sig = Signature(suite["sig"])
+            sig = Signature(suite["sig_name"])
             gcs_sig_public = sig.generate_keypair()
             gcs_sig_secret = sig.export_secret_key()
             
