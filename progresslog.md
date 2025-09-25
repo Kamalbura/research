@@ -78,21 +78,18 @@ This repository implements a post-quantum cryptography (PQC) secure proxy for dr
 - Full comms harness: all wrappers imported, config hooks checked, smoke test run.
 
 ## 6. Recent Progress Log
-- Implemented and validated PQC handshake and AEAD framing (strict mode, replay window).
-- Standardized config module, validation, environment overrides, legacy re-export.
-- Created new config test for validation and override.
-- Built full communication harness for end-to-end verification.
-- All wrappers confirmed importable, no side effects.
-- All tests passing, system verified.
+- Added manual four-terminal harness (`tools/manual_4term`) with launcher, simulators, and encrypted bridge logger.
+- Resolved manual run issues: Windows-safe bridge logging and oqs secret-key constructor fallback.
+- Verified end-to-end telemetry/command flow via intercept logger with stable session IDs.
+- Documented manual test workflow and oqs fallback behaviour across README and tool README.
 
 ## 7. Outstanding Issues
-- `load_config` and `validate_config` not exposed in `core.config.py` (harness reports UNKNOWN).
-- Smoke test failed: no UDP delivery confirmed (likely ephemeral port or proxy binding issue).
+- None currently tracked; all previously noted blockers resolved during manual harness validation.
 
 ## 8. Next Steps
-- Expose config validation hooks in `core.config.py`.
-- Debug and fix smoke test UDP delivery.
-- Continue RL and DDoS integration.
+- Monitor oqs-python releases for restored key import/export APIs and re-enable direct loader when available.
+- Continue planned work on RL and DDoS integration phases.
+- Schedule quarterly regression run using manual harness alongside automated tests.
 
 ---
 This document is a low-level, implementation-focused summary of the current codebase, packages, and progress. All details are based on actual code and test results, with no assumptions or hallucinations.

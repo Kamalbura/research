@@ -2,7 +2,7 @@
 
 ## 🎯 **Project Completion Status: FULLY OPERATIONAL**
 
-**Last Updated**: September 24, 2025  
+**Last Updated**: September 25, 2025  
 **Test Coverage**: 55/55 tests passing (100%)  
 **Implementation Status**: All core components complete and validated  
 
@@ -73,6 +73,17 @@
   - Consistent field name usage across codebase
 
 **Testing**: 19 tests for configuration validation, suite integrity, header stability
+
+### Manual End-to-End Verification ✅ **COMPLETE**
+**Objective**: Provide reproducible, observer-friendly validation outside automated tests.
+
+**Deliverables**:
+- ✅ **Launcher** (`tools/manual_4term/launch_manual_test.py`) orchestrates proxies, simulators, and optional intercept logger.
+- ✅ **Simulators** stream representative commands and telemetry (`gcs_ground_station_sim.py`, `drone_autopilot_sim.py`).
+- ✅ **Encrypted bridge logger** now emits Windows-compatible ASCII output while forwarding ciphertext.
+- ✅ **oqs fallback loading** automatically instantiates Dilithium secrets via constructor when import/export APIs are absent.
+
+**Status**: Successful multi-minute telemetry/command exchange with intercept logging on September 25, 2025.
 
 ---
 
@@ -201,6 +212,15 @@ source pqc_drone_env/bin/activate  # Linux/Mac
 
 # Install dependencies
 pip install oqs cryptography paho-mqtt pytest
+```
+
+### Manual Test Harness
+```bash
+# Launch full four-terminal manual test with intercept logger
+python tools/manual_4term/launch_manual_test.py --with-intercept
+
+# Rerun without logger (uses direct proxy ports)
+python tools/manual_4term/launch_manual_test.py --suite cs-kyber768-aesgcm-dilithium3
 ```
 
 ### Running the Proxy

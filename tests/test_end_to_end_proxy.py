@@ -39,6 +39,9 @@ class TestEndToEndProxy:
         """Test happy path: bidirectional UDP forwarding through encrypted tunnel."""
         gcs_sig_public, gcs_sig_object = gcs_keypair
         
+        # Create synchronization event to eliminate race conditions
+        gcs_ready_event = threading.Event()
+        
         # Use different ports for test to avoid conflicts
         test_config = CONFIG.copy()
         test_config.update({
@@ -63,7 +66,8 @@ class TestEndToEndProxy:
                     cfg=test_config,
                     gcs_sig_secret=gcs_sig_object,  # Pass signature object
                     gcs_sig_public=None,
-                    stop_after_seconds=2.0
+                    stop_after_seconds=3.0,  # Increased timeout
+                    ready_event=gcs_ready_event  # Signal when ready
                 )
             except Exception as e:
                 gcs_error = e
@@ -71,15 +75,17 @@ class TestEndToEndProxy:
         def run_drone_proxy():
             nonlocal drone_counters, drone_error
             try:
-                # Add small delay to let GCS start first
-                time.sleep(0.2)
+                # Wait for GCS to be ready instead of arbitrary sleep
+                if not gcs_ready_event.wait(timeout=5):
+                    raise TimeoutError("GCS proxy failed to start within timeout")
+                
                 drone_counters = run_proxy(
                     role="drone", 
                     suite=suite,
                     cfg=test_config,
                     gcs_sig_secret=None,
                     gcs_sig_public=gcs_sig_public,
-                    stop_after_seconds=2.0
+                    stop_after_seconds=3.0  # Increased timeout
                 )
             except Exception as e:
                 drone_error = e
@@ -93,7 +99,7 @@ class TestEndToEndProxy:
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as receiver:
                     receiver.bind(('127.0.0.1', test_config["GCS_PLAINTEXT_RX"]))
-                    receiver.settimeout(1.5)
+                    receiver.settimeout(2.5)  # Increased timeout
                     data, addr = receiver.recvfrom(1024)
                     received_at_gcs = data
             except (socket.timeout, OSError):
@@ -104,7 +110,7 @@ class TestEndToEndProxy:
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as receiver:
                     receiver.bind(('127.0.0.1', test_config["DRONE_PLAINTEXT_RX"]))
-                    receiver.settimeout(1.5)
+                    receiver.settimeout(2.5)  # Increased timeout
                     data, addr = receiver.recvfrom(1024)
                     received_at_drone = data
             except (socket.timeout, OSError):

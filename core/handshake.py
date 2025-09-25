@@ -138,12 +138,15 @@ def derive_transport_keys(role: str, session_id: bytes, kem_name: bytes, sig_nam
         info=info
     )
     okm = hkdf.derive(shared_secret)
-    key_send = okm[:32]
-    key_recv = okm[32:64]
+    key_d2g = okm[:32]
+    key_g2d = okm[32:64]
+
     if role == "client":
-        return key_send, key_recv
-    else:
-        return key_recv, key_send
+        # Drone acts as client; return (send_to_gcs, receive_from_gcs).
+        return key_d2g, key_g2d
+    else:  # server == GCS
+        # GCS perspective: send_to_drone first, receive_from_drone second.
+        return key_g2d, key_d2g
 def server_gcs_handshake(conn, suite, gcs_sig_secret):
     """Authenticated GCS side handshake.
 
@@ -186,14 +189,15 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
         kem_ct += chunk
 
     shared_secret = server_decapsulate(ephemeral, kem_ct)
-    key_recv, key_send = derive_transport_keys(
+    key_send, key_recv = derive_transport_keys(
         "server",
         ephemeral.session_id,
         ephemeral.kem_name.encode(),
         ephemeral.sig_name.encode(),
         shared_secret,
     )
-    return key_recv, key_send, b"", b"", ephemeral.session_id
+    # Return (drone→gcs key, gcs→drone key, ...)
+    return key_recv, key_send, b"", b"", ephemeral.session_id, ephemeral.kem_name, ephemeral.sig_name
 
 def client_drone_handshake(client_sock, suite, gcs_sig_public):
     # Real handshake implementation with MANDATORY signature verification
@@ -232,5 +236,5 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
                                               shared_secret)
     
     # Return in expected format (nonce seeds are unused)
-    return key_send, key_recv, b"", b"", hello.session_id
+    return key_send, key_recv, b"", b"", hello.session_id, hello.kem_name.decode() if isinstance(hello.kem_name, bytes) else hello.kem_name, hello.sig_name.decode() if isinstance(hello.sig_name, bytes) else hello.sig_name
 

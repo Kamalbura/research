@@ -1,0 +1,6 @@
+oqs>=0.10.0
+cryptography>=45.0
+
+[test]
+pytest
+pytest-anyio

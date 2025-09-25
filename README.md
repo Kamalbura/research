@@ -66,6 +66,9 @@ python core/run_proxy.py --role drone --suite cs-kyber768-aesgcm-dilithium3 --pe
 
 # Terminal 3: Test the connection
 python -m pytest tests/test_end_to_end_proxy.py -v
+
+# Manual four-terminal harness with intercept logger (validated Sep 25, 2025)
+python tools/manual_4term/launch_manual_test.py --suite cs-kyber768-aesgcm-dilithium3 --with-intercept
 ```
 
 ### Configuration Options
@@ -285,6 +288,7 @@ python core/run_proxy.py --role gcs --suite cs-kyber768-aesgcm-dilithium3
 
 - [**Project Status**](PROJECT_STATUS.md) - Detailed implementation status and roadmap
 - [**Changelog**](CHANGELOG.md) - Complete history of changes and additions
+- [**Manual test harness guide**](tools/manual_4term/README.md) - Four-terminal launcher, simulators, and intercept logger usage
 - [**AI Instructions**](.github/copilot-instructions.md) - Development guidelines for AI coding agents
 - [**API Reference**](docs/api.md) - Detailed API documentation (planned)
 - [**Security Guide**](docs/security.md) - Security considerations and best practices (planned)

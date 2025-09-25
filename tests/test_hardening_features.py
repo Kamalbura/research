@@ -1,13 +1,9 @@
-"""Tests for hardening features: rate limit    def test_capacity_limits(self):
-        \"\"\"Test that capacity is respected.\"\"\"
-        bucket = _TokenBucket(capacity=1, refill_per_sec=0.1)  # Very slow refill
-        
-        # First request allowed
-        assert bucket.allow(\"192.168.1.100\") is True
-        
-        # Second request blocked (capacity = 1)
-        assert bucket.allow(\"192.168.1.100\") is False
-        assert bucket.allow(\"192.168.1.100\") is False, and epoch guard."""
+"""
+Tests for hardening features: rate limiter, drop classifier, and epoch guard.
+
+Validates token bucket rate limiting, granular packet drop classification,
+and epoch wrap safety guard functionality.
+"""
 
 import pytest
 import time

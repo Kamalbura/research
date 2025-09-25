@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: pqc_proxy
+Version: 0.1.0
+Summary: An adaptive PQC secure proxy for drone communications.
+Requires-Python: >=3.10
+Requires-Dist: oqs>=0.10.0
+Requires-Dist: cryptography>=45.0
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-anyio; extra == "test"
