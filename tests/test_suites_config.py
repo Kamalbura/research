@@ -11,7 +11,16 @@ import os
 import pytest
 
 from core.config import CONFIG, validate_config, _REQUIRED_KEYS
-from core.suites import SUITES, list_suites, get_suite, header_ids_for_suite
+from core.suites import (
+    SUITES,
+    build_suite_id,
+    enabled_kems,
+    enabled_sigs,
+    get_suite,
+    header_ids_for_suite,
+    list_suites,
+    suite_bytes_for_hkdf,
+)
 
 
 class TestConfig:
@@ -120,20 +129,27 @@ class TestConfig:
 class TestSuites:
     """Test suite registry integrity and header ID mapping."""
     
-    def test_suite_count_exact(self):
-        """Test exactly 7 suites are defined."""
+    def test_suite_catalog_cross_product(self):
+        """Test registry spans full KEM × SIG cross product for AES-GCM."""
+
         suites = list_suites()
+
+        kems = ["ML-KEM-512", "ML-KEM-768", "ML-KEM-1024"]
+        sigs = [
+            "ML-DSA-44",
+            "ML-DSA-65",
+            "ML-DSA-87",
+            "Falcon-512",
+            "Falcon-1024",
+            "SLH-DSA-SHA2-128f",
+            "SLH-DSA-SHA2-256f",
+        ]
+
         expected_suites = {
-            "cs-kyber512-aesgcm-dilithium2",
-            "cs-kyber768-aesgcm-dilithium3", 
-            "cs-kyber1024-aesgcm-dilithium5",
-            "cs-kyber768-aesgcm-falcon512",
-            "cs-kyber1024-aesgcm-falcon1024",
-            "cs-kyber512-aesgcm-sphincs128f_sha2",
-            "cs-kyber1024-aesgcm-sphincs256f_sha2"
+            build_suite_id(kem, "AES-256-GCM", sig) for kem in kems for sig in sigs
         }
-        
-        assert len(suites) == 7
+
+        assert len(suites) == len(expected_suites)
         assert set(suites.keys()) == expected_suites
     
     def test_suite_fields_complete(self):
@@ -142,7 +158,7 @@ class TestSuites:
         
         for suite_id in list_suites():
             suite = get_suite(suite_id)
-            assert set(suite.keys()) >= required_fields, \
+            assert set(suite.keys()) >= required_fields | {"suite_id"}, \
                 f"Suite {suite_id} missing required fields"
             
             # Check field types
@@ -174,17 +190,30 @@ class TestSuites:
     def test_specific_suite_mappings(self):
         """Test specific expected header ID mappings."""
         # Test a few key suites have expected header IDs
-        test_cases = [
-            ("cs-kyber768-aesgcm-dilithium3", (1, 2, 1, 2)),  # ML-KEM-768 + ML-DSA-65
-            ("cs-kyber768-aesgcm-falcon512", (1, 2, 2, 1)),   # ML-KEM-768 + Falcon-512
-            ("cs-kyber512-aesgcm-sphincs128f_sha2", (1, 1, 3, 1)),  # ML-KEM-512 + SLH-DSA-SHA2-128f
+        canonical_cases = [
+            ("cs-mlkem768-aesgcm-mldsa65", (1, 2, 1, 2)),
+            ("cs-mlkem768-aesgcm-falcon512", (1, 2, 2, 1)),
+            ("cs-mlkem512-aesgcm-sphincs128fsha2", (1, 1, 3, 1)),
         ]
-        
-        for suite_id, expected_ids in test_cases:
+
+        legacy_ids = [
+            "cs-kyber768-aesgcm-dilithium3",
+            "cs-kyber768-aesgcm-falcon512",
+            "cs-kyber512-aesgcm-sphincs128f_sha2",
+        ]
+
+        for (suite_id, expected_ids), legacy_id in zip(canonical_cases, legacy_ids):
             suite = get_suite(suite_id)
+            legacy_suite = get_suite(legacy_id)
             actual_ids = header_ids_for_suite(suite)
-            assert actual_ids == expected_ids, \
+            legacy_ids_tuple = header_ids_for_suite(legacy_suite)
+
+            assert actual_ids == expected_ids, (
                 f"Suite {suite_id} should map to {expected_ids}, got {actual_ids}"
+            )
+            assert legacy_ids_tuple == expected_ids, (
+                f"Legacy alias {legacy_id} should map to {expected_ids}, got {legacy_ids_tuple}"
+            )
     
     def test_registry_immutability(self):
         """Test that returned suite dicts cannot mutate the registry."""
@@ -203,6 +232,40 @@ class TestSuites:
         """Test that unknown suite IDs raise NotImplementedError."""
         with pytest.raises(NotImplementedError, match="unknown suite_id: fake-suite"):
             get_suite("fake-suite")
+
+    def test_build_suite_id_synonyms(self):
+        """build_suite_id should accept synonym inputs."""
+
+        suite_id = build_suite_id("Kyber768", "aesgcm", "Dilithium3")
+        assert suite_id == "cs-mlkem768-aesgcm-mldsa65"
+
+        suite = get_suite(suite_id)
+        assert suite["kem_name"] == "ML-KEM-768"
+        assert suite["sig_name"] == "ML-DSA-65"
+
+    def test_suite_bytes_for_hkdf_matches_canonical_id(self):
+        """suite_bytes_for_hkdf should return canonical identifier bytes."""
+
+        legacy_suite = get_suite("cs-kyber768-aesgcm-dilithium3")
+        canonical_suite = get_suite("cs-mlkem768-aesgcm-mldsa65")
+
+        assert suite_bytes_for_hkdf(legacy_suite) == b"cs-mlkem768-aesgcm-mldsa65"
+        assert suite_bytes_for_hkdf(canonical_suite) == b"cs-mlkem768-aesgcm-mldsa65"
+
+    def test_enabled_helper_functions(self, monkeypatch):
+        """enabled_kems/sigs should surface oqs capability lists."""
+
+        monkeypatch.setattr(
+            "core.suites._safe_get_enabled_kem_mechanisms",
+            lambda: ["ML-KEM-512", "ML-KEM-768"],
+        )
+        monkeypatch.setattr(
+            "core.suites._safe_get_enabled_sig_mechanisms",
+            lambda: ["ML-DSA-44", "Falcon-512"],
+        )
+
+        assert enabled_kems() == ("ML-KEM-512", "ML-KEM-768")
+        assert enabled_sigs() == ("ML-DSA-44", "Falcon-512")
     
     def test_header_version_stability(self):
         """Test header packing stability across all suites."""

@@ -25,4 +25,49 @@ Figures (suggested):
 Ground Truth:
 - Keep raw CSVs in benchmarks/results; regenerate figures from CSVs only.
 
+External Power Mode:
+- Harness the benchmark runner to align 1 kHz power rigs with proxy runs.
+- Emit START/END markers (file/serial/udp) carrying `<run_id> <wall_time_ns>`.
+- Persist per-run manifests with suite metadata, wall/perf clocks, counters JSON paths, and optional WPR ETLs.
+- Optional WPR capture (`--wpr on`) wraps each run with `GeneralProfile.Light` traces on Windows.
+
+Workflow (Windows PowerShell):
+
+```powershell
+# 1) Prepare identity keys per signature (if not already generated)
+python -m core.run_proxy init-identity --sig ML-DSA-65
+
+# 2) Run a timed capture with serial markers (COM3) and 5 s arming delay
+python benchmarks/run_matrix.py `
+	--suite cs-mlkem768-aesgcm-mldsa65 `
+	--duration 30 `
+	--repeat 1 `
+	--start-delay 5 `
+	--marker serial `
+	--marker-serial-port COM3 `
+	--outdir benchmarks/out `
+	--wpr on
+
+# 3) Merge power meter CSV (timestamp_ns, power_w columns) with manifests
+python tools/merge_power_csv.py `
+	--manifest-dir benchmarks/out `
+	--meter-csv C:\PowerLogs\meter_capture.csv `
+	--out benchmarks/out/merged.csv
+```
+
+Artifacts per run live under `benchmarks/out/<UTC_stamp>/<run_id>/`:
+- `manifest.json` — suite metadata, timing anchors, psutil stats, WPR filename if captured.
+- `gcs.json` / `drone.json` — runtime counters emitted via `--json-out`.
+- `gcs.log` / `drone.log` — stdout/err transcripts.
+- `system_trace.etl` (optional) — Windows Performance Recorder capture.
+
+Marker formats:
+- File: `START <run_id> <wall_ns>` / `END <run_id> <wall_ns>` per line (UTF-8).
+- Serial/UDP: ASCII line or datagram with the same payload for downstream acquisition.
+
+Merging notes:
+- `merge_power_csv.py` slices the meter CSV to manifest timestamps and computes samples, avg/p95/max watts, joules, and duration.
+- Override `--time-col` / `--power-col` if the meter schema differs; timestamps must be nanoseconds.
+- Ensure system clocks (PC vs power rig) are synchronized (e.g., `w32tm /resync`) before captures.
+
 END

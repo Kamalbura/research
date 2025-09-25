@@ -6,4 +6,6 @@ dependencies:
   - pip:
       - cryptography>=41
       - oqs-python
+  - psutil
       - pytest
+  - pyserial

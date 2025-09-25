@@ -13,6 +13,8 @@ import sys
 import argparse
 import signal
 import os
+import json
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -36,6 +38,21 @@ def create_secrets_dir():
     secrets_dir = Path("secrets")
     secrets_dir.mkdir(exist_ok=True)
     return secrets_dir
+
+
+def write_json_report(json_path: Optional[str], payload: dict) -> None:
+    """Persist counters payload to JSON if a path is provided."""
+
+    if not json_path:
+        return
+
+    try:
+        path = Path(json_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        print(f"Wrote JSON report to {path}")
+    except Exception as exc:
+        print(f"Warning: Failed to write JSON output to {json_path}: {exc}")
 
 
 def init_identity_command(args):
@@ -100,6 +117,7 @@ def gcs_command(args):
     
     gcs_sig_secret = None
     gcs_sig_public = None
+    json_out_path = getattr(args, "json_out", None)
     
     if args.ephemeral:
         print("⚠️  WARNING: Using EPHEMERAL keys - not suitable for production!")
@@ -223,6 +241,15 @@ def gcs_command(args):
         print("GCS proxy stopped. Final counters:")
         for key, value in counters.items():
             print(f"  {key}: {value}")
+
+        suite_id = suite.get("suite_id") or args.suite
+        payload = {
+            "role": "gcs",
+            "suite": suite_id,
+            "counters": counters,
+            "ts_stop_ns": time.time_ns(),
+        }
+        write_json_report(json_out_path, payload)
             
     except KeyboardInterrupt:
         print("\nGCS proxy stopped by user.")
@@ -241,6 +268,7 @@ def drone_command(args):
     
     # Get GCS public key
     gcs_sig_public = None
+    json_out_path = getattr(args, "json_out", None)
     
     try:
         if args.peer_pubkey_file:
@@ -284,6 +312,15 @@ def drone_command(args):
         print("Drone proxy stopped. Final counters:")
         for key, value in counters.items():
             print(f"  {key}: {value}")
+
+        suite_id = suite.get("suite_id") or args.suite
+        payload = {
+            "role": "drone",
+            "suite": suite_id,
+            "counters": counters,
+            "ts_stop_ns": time.time_ns(),
+        }
+        write_json_report(json_out_path, payload)
             
     except KeyboardInterrupt:
         print("\nDrone proxy stopped by user.")
@@ -320,6 +357,8 @@ def main():
                            help="Use ephemeral keys (development only - prints warning)")
     gcs_parser.add_argument("--stop-seconds", type=float,
                            help="Auto-stop after N seconds (for testing)")
+    gcs_parser.add_argument("--json-out",
+                           help="Optional path to write counters JSON on shutdown")
     
     # drone subcommand
     drone_parser = subparsers.add_parser('drone', help='Start drone proxy')
@@ -331,6 +370,8 @@ def main():
                              help="GCS public key as hex string")
     drone_parser.add_argument("--stop-seconds", type=float,
                              help="Auto-stop after N seconds (for testing)")
+    drone_parser.add_argument("--json-out",
+                              help="Optional path to write counters JSON on shutdown")
     
     args = parser.parse_args()
     

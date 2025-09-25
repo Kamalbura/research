@@ -1,44 +1,46 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Output File: C:\Users\burak\Desktop\research\project_structure_20250925_182338.txt
-Generated: 2025-09-25 18:23:38
+Output File: C:\Users\burak\Desktop\research\project_structure_20250925_222749.txt
+Generated: 2025-09-25 22:27:49
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Generated: 2025-09-25 18:23:38
+Generated: 2025-09-25 22:27:49
 
 ├── __pycache__/
+│   ├── diagnose_handshake.cpython-313.pyc (3,003 bytes)
 │   └── strict_mode_demo.cpython-313.pyc (4,035 bytes)
 ├── benchmarks/
 │   ├── matrix.yaml (159 bytes)
-│   └── run_matrix.py (133 bytes)
+│   └── run_matrix.py (11,095 bytes)
 ├── core/
 │   ├── __pycache__/
 │   │   ├── __init__.cpython-313.pyc (273 bytes)
 │   │   ├── aead.cpython-313.pyc (13,736 bytes)
 │   │   ├── async_proxy.cpython-313.pyc (20,572 bytes)
 │   │   ├── config.cpython-313.pyc (4,378 bytes)
-│   │   ├── handshake.cpython-313.pyc (11,720 bytes)
+│   │   ├── handshake.cpython-313.pyc (11,730 bytes)
 │   │   ├── logging_utils.cpython-313.pyc (4,574 bytes)
 │   │   ├── policy_engine.cpython-313.pyc (983 bytes)
 │   │   ├── project_config.cpython-313.pyc (220 bytes)
-│   │   ├── run_proxy.cpython-313.pyc (13,799 bytes)
+│   │   ├── run_proxy.cpython-313.pyc (18,155 bytes)
 │   │   ├── runner.cpython-313.pyc (1,158 bytes)
-│   │   └── suites.cpython-313.pyc (3,944 bytes)
+│   │   └── suites.cpython-313.pyc (11,609 bytes)
 │   ├── __init__.py (121 bytes)
 │   ├── aead.py (10,889 bytes)
 │   ├── async_proxy.py (18,859 bytes)
 │   ├── config.py (5,603 bytes)
-│   ├── handshake.py (9,073 bytes)
+│   ├── handshake.py (9,289 bytes)
 │   ├── logging_utils.py (2,011 bytes)
 │   ├── policy_engine.py (990 bytes)
 │   ├── project_config.py (168 bytes)
-│   ├── run_proxy.py (11,353 bytes)
-│   ├── suites.py (4,453 bytes)
+│   ├── project_structure_20250925_190910.txt (88,724 bytes)
+│   ├── run_proxy.py (15,318 bytes)
+│   ├── suites.py (11,602 bytes)
 │   └── temp-file.py (18,859 bytes)
 ├── ddos/
 │   ├── features.py (107 bytes)
@@ -52,7 +54,7 @@ Generated: 2025-09-25 18:23:38
 │   ├── ddos-pipeline.txt (927 bytes)
 │   ├── deep-research.txt (62,258 bytes)
 │   ├── handshake.txt (1,237 bytes)
-│   ├── measurement-and-results.txt (1,066 bytes)
+│   ├── measurement-and-results.txt (3,068 bytes)
 │   ├── mqtt.txt (5,415 bytes)
 │   ├── oqs-py.txt (2,211 bytes)
 │   ├── plan.md (19,727 bytes)
@@ -102,7 +104,7 @@ Generated: 2025-09-25 18:23:38
 │   │   ├── test_packet_types.cpython-313-pytest-8.4.2.pyc (7,081 bytes)
 │   │   ├── test_rekey_epoch.cpython-313-pytest-8.4.2.pyc (30,548 bytes)
 │   │   ├── test_replay_window.cpython-313-pytest-8.4.2.pyc (7,516 bytes)
-│   │   └── test_suites_config.cpython-313-pytest-8.4.2.pyc (31,988 bytes)
+│   │   └── test_suites_config.cpython-313-pytest-8.4.2.pyc (39,783 bytes)
 │   ├── __init__.py (54 bytes)
 │   ├── test-oqs.py (2,821 bytes)
 │   ├── test_aead_framing.py (6,589 bytes)
@@ -116,16 +118,23 @@ Generated: 2025-09-25 18:23:38
 │   ├── test_packet_types.py (4,208 bytes)
 │   ├── test_rekey_epoch.py (11,882 bytes)
 │   ├── test_replay_window.py (3,723 bytes)
-│   └── test_suites_config.py (10,656 bytes)
+│   └── test_suites_config.py (12,691 bytes)
 ├── tools/
 │   ├── manual_4term/
 │   │   ├── __pycache__/
-│   │   │   └── comprehensive_flow_test.cpython-313-pytest-8.4.2.pyc (19,426 bytes)
+│   │   │   ├── drone_autopilot_sim.cpython-313.pyc (6,509 bytes)
+│   │   │   ├── encrypted_bridge_logger.cpython-313.pyc (7,713 bytes)
+│   │   │   ├── gcs_ground_station_sim.cpython-313.pyc (6,496 bytes)
+│   │   │   ├── launch_manual_test.cpython-313-pytest-8.4.2.pyc (15,131 bytes)
+│   │   │   └── launch_manual_test.cpython-313.pyc (14,205 bytes)
 │   │   ├── keys/
 │   │   │   ├── gcs_pub.bin (1,952 bytes)
 │   │   │   └── gcs_sec.bin (4,032 bytes)
-│   │   ├── comprehensive_flow_test.py (14,230 bytes)
-│   │   └── project_structure_20250925_170530.txt (15,820 bytes)
+│   │   ├── drone_autopilot_sim.py (3,933 bytes)
+│   │   ├── encrypted_bridge_logger.py (4,355 bytes)
+│   │   ├── gcs_ground_station_sim.py (3,927 bytes)
+│   │   ├── launch_manual_test.py (9,824 bytes)
+│   │   └── README.md (4,171 bytes)
 │   ├── wireshark/
 │   │   └── pqc_tunnel.lua (1,267 bytes)
 │   ├── bench_cli.py (841 bytes)
@@ -133,26 +142,31 @@ Generated: 2025-09-25 18:23:38
 │   ├── encrypted_sniffer.py (1,570 bytes)
 │   ├── full_comm_check.py (9,657 bytes)
 │   ├── generate_identity.py (2,266 bytes)
+│   ├── markers.py (3,323 bytes)
+│   ├── merge_power_csv.py (5,656 bytes)
 │   ├── packet_interceptor.py (2,494 bytes)
 │   ├── power_hooks.py (208 bytes)
 │   └── scaffold_repo.py (17,074 bytes)
 ├── CHANGELOG.md (10,969 bytes)
-├── environment.yml (155 bytes)
+├── diagnose_aead.py (620 bytes)
+├── diagnose_handshake.py (1,566 bytes)
+├── environment.yml (179 bytes)
 ├── log_project_structure.py (7,038 bytes)
 ├── PR1_IMPLEMENTATION_SUMMARY.md (6,636 bytes)
-├── progresslog.md (5,496 bytes)
-├── PROJECT_STATUS.md (10,648 bytes)
-├── project_structure_20250925_182338.txt (0 bytes)
+├── progresslog.md (5,537 bytes)
+├── PROJECT_STATUS.md (11,726 bytes)
+├── project_structure_20250925_222749.txt (0 bytes)
 ├── pyproject.toml (455 bytes)
-├── README.md (14,475 bytes)
-└── strict_mode_demo.py (3,479 bytes)
+├── README.md (14,790 bytes)
+├── strict_mode_demo.py (3,479 bytes)
+└── tlog.log (70,350 bytes)
 
 
 ================================================================================
 PYTHON FILE CONTENTS
 ================================================================================
 
-Found 46 Python files:
+Found 53 Python files:
    1. benchmarks\run_matrix.py
    2. core\__init__.py
    3. core\aead.py
@@ -169,52 +183,364 @@ Found 46 Python files:
   14. ddos\mitigations.py
   15. ddos\tst_stage2.py
   16. ddos\xgb_stage1.py
-  17. drone\scripts\env_check.py
-  18. gcs\scripts\env_check.py
-  19. log_project_structure.py
-  20. rl\agent_runtime.py
-  21. rl\linucb.py
-  22. rl\safety.py
-  23. strict_mode_demo.py
-  24. tests\__init__.py
-  25. tests\test-oqs.py
-  26. tests\test_aead_framing.py
-  27. tests\test_cli_identity.py
-  28. tests\test_end_to_end_proxy.py
-  29. tests\test_handshake.py
-  30. tests\test_handshake_downgrade.py
-  31. tests\test_hardening_features.py
-  32. tests\test_kdf_roles.py
-  33. tests\test_loss_dup_oom.py
-  34. tests\test_packet_types.py
-  35. tests\test_rekey_epoch.py
-  36. tests\test_replay_window.py
-  37. tests\test_suites_config.py
-  38. tools\bench_cli.py
-  39. tools\check_ports.py
-  40. tools\encrypted_sniffer.py
-  41. tools\full_comm_check.py
-  42. tools\generate_identity.py
-  43. tools\manual_4term\comprehensive_flow_test.py
-  44. tools\packet_interceptor.py
-  45. tools\power_hooks.py
-  46. tools\scaffold_repo.py
+  17. diagnose_aead.py
+  18. diagnose_handshake.py
+  19. drone\scripts\env_check.py
+  20. gcs\scripts\env_check.py
+  21. log_project_structure.py
+  22. rl\agent_runtime.py
+  23. rl\linucb.py
+  24. rl\safety.py
+  25. strict_mode_demo.py
+  26. tests\__init__.py
+  27. tests\test-oqs.py
+  28. tests\test_aead_framing.py
+  29. tests\test_cli_identity.py
+  30. tests\test_end_to_end_proxy.py
+  31. tests\test_handshake.py
+  32. tests\test_handshake_downgrade.py
+  33. tests\test_hardening_features.py
+  34. tests\test_kdf_roles.py
+  35. tests\test_loss_dup_oom.py
+  36. tests\test_packet_types.py
+  37. tests\test_rekey_epoch.py
+  38. tests\test_replay_window.py
+  39. tests\test_suites_config.py
+  40. tools\bench_cli.py
+  41. tools\check_ports.py
+  42. tools\encrypted_sniffer.py
+  43. tools\full_comm_check.py
+  44. tools\generate_identity.py
+  45. tools\manual_4term\drone_autopilot_sim.py
+  46. tools\manual_4term\encrypted_bridge_logger.py
+  47. tools\manual_4term\gcs_ground_station_sim.py
+  48. tools\manual_4term\launch_manual_test.py
+  49. tools\markers.py
+  50. tools\merge_power_csv.py
+  51. tools\packet_interceptor.py
+  52. tools\power_hooks.py
+  53. tools\scaffold_repo.py
 
 --------------------------------------------------------------------------------
 
-FILE 1/46: benchmarks\run_matrix.py
+FILE 1/53: benchmarks\run_matrix.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\benchmarks\run_matrix.py
-Size: 133 bytes
-Modified: 2025-09-24 15:32:25
+Size: 11,095 bytes
+Modified: 2025-09-25 21:56:07
 ------------------------------------------------------------
-def main():
-    raise NotImplementedError("Bench harness will be added later; keeping repo honest.")
-if __name__=="__main__": main()
+"""Benchmark driver for orchestrated multi-run measurements.
+
+Runs paired GCS/Drone proxies for a fixed duration, emits external power
+markers, optionally captures Windows Performance Recorder traces, and writes a
+manifest describing each run artifact.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import platform
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import psutil
+
+from core.suites import get_suite
+from tools.markers import FileMarker, MarkerSink, NullMarker, SerialMarker, UdpMarker
+
+
+DEFAULT_OUTDIR = Path("benchmarks/out")
+GCS_JSON_NAME = "gcs.json"
+DRONE_JSON_NAME = "drone.json"
+GCS_LOG_NAME = "gcs.log"
+DRONE_LOG_NAME = "drone.log"
+WPR_FILE_NAME = "system_trace.etl"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run PQC proxy benchmarks with external power markers")
+    parser.add_argument("--suite", required=True, help="Suite identifier to run (e.g., cs-mlkem768-aesgcm-mldsa65)")
+    parser.add_argument("--duration", required=True, type=float, help="Measurement duration in seconds")
+    parser.add_argument("--repeat", type=int, default=1, help="Number of repetitions for the suite")
+    parser.add_argument("--start-delay", type=float, default=0.0, help="Optional delay before emitting START marker")
+    parser.add_argument("--marker", choices=["null", "file", "serial", "udp"], default="null", help="Marker sink backend")
+    parser.add_argument("--marker-file", help="Path for file marker output")
+    parser.add_argument("--marker-serial-port", help="Serial port (e.g., COM3) for marker emission")
+    parser.add_argument("--marker-udp", help="host:port for UDP marker emission")
+    parser.add_argument("--outdir", default=str(DEFAULT_OUTDIR), help="Base output directory for artifacts")
+    parser.add_argument("--wpr", choices=["on", "off"], default="off", help="Enable Windows Performance Recorder capture")
+    parser.add_argument("--gcs-args", help="Additional arguments appended to the GCS command")
+    parser.add_argument("--drone-args", help="Additional arguments appended to the drone command")
+    return parser.parse_args()
+
+
+def sanitize_run_id(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", value)
+
+
+def resolve_marker(args: argparse.Namespace) -> MarkerSink:
+    marker_type = args.marker
+    if marker_type == "null":
+        return NullMarker()
+    if marker_type == "file":
+        if not args.marker_file:
+            raise SystemExit("--marker-file is required when --marker=file")
+        Path(args.marker_file).parent.mkdir(parents=True, exist_ok=True)
+        return FileMarker(args.marker_file)
+    if marker_type == "serial":
+        if not args.marker_serial_port:
+            raise SystemExit("--marker-serial-port is required when --marker=serial")
+        return SerialMarker(args.marker_serial_port)
+    if marker_type == "udp":
+        if not args.marker_udp:
+            raise SystemExit("--marker-udp is required when --marker=udp")
+        return UdpMarker(args.marker_udp)
+    raise SystemExit(f"Unknown marker type: {marker_type}")
+
+
+def maybe_split_args(arg_string: Optional[str]) -> List[str]:
+    if not arg_string:
+        return []
+    return shlex.split(arg_string)
+
+
+def build_command(role: str, suite_id: str, stop_seconds: float, json_path: Path, extra_args: List[str]) -> List[str]:
+    base_cmd = [
+        sys.executable,
+        "-m",
+        "core.run_proxy",
+        role,
+        "--suite",
+        suite_id,
+        "--stop-seconds",
+        f"{stop_seconds:.3f}",
+        "--json-out",
+        str(json_path),
+    ]
+    return base_cmd + extra_args
+
+
+def start_wpr(run_dir: Path) -> Tuple[bool, Optional[Path]]:
+    if shutil.which("wpr") is None:
+        print("Warning: wpr.exe not found in PATH; skipping WPR capture.")
+        return False, None
+
+    print("Starting Windows Performance Recorder (GeneralProfile.Light)...")
+    subprocess.run(["wpr", "-start", "GeneralProfile.Light", "-filemode"], check=False)
+    return True, run_dir / WPR_FILE_NAME
+
+
+def stop_wpr(etl_path: Optional[Path]) -> None:
+    if not etl_path:
+        return
+    args = ["wpr", "-stop", str(etl_path)]
+    subprocess.run(args, check=False)
+
+
+def init_psutil_process(pid: int) -> Optional[psutil.Process]:
+    try:
+        proc = psutil.Process(pid)
+        proc.cpu_percent(None)  # prime
+        return proc
+    except psutil.Error:
+        return None
+
+
+def sample_stats(process: Optional[psutil.Process]) -> Tuple[Optional[float], Optional[int]]:
+    if process is None:
+        return None, None
+    try:
+        cpu = process.cpu_percent(None)
+        rss = process.memory_info().rss
+        return cpu, rss
+    except psutil.Error:
+        return None, None
+
+
+def summarise(samples: List[float]) -> Dict[str, Optional[float]]:
+    if not samples:
+        return {"avg": None, "max": None, "p95": None}
+    sorted_samples = sorted(samples)
+    avg = sum(sorted_samples) / len(sorted_samples)
+    max_val = sorted_samples[-1]
+    p95_index = max(0, min(len(sorted_samples) - 1, math.floor(0.95 * (len(sorted_samples) - 1))))
+    return {"avg": avg, "max": max_val, "p95": sorted_samples[p95_index]}
+
+
+def ensure_run_dir(base_outdir: Path) -> Path:
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    run_root = base_outdir / timestamp
+    run_root.mkdir(parents=True, exist_ok=True)
+    return run_root
+
+
+def write_manifest(run_dir: Path, manifest: Dict[str, object]) -> None:
+    manifest_path = run_dir / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print(f"Wrote manifest to {manifest_path}")
+
+
+def orchestrate_run(
+    args: argparse.Namespace,
+    suite_info: Dict[str, object],
+    run_root: Path,
+    repeat_idx: int,
+    marker: MarkerSink,
+) -> None:
+    suite_id = suite_info["suite_id"]
+    run_id = sanitize_run_id(f"{suite_id}_rep{repeat_idx}")
+    run_dir = run_root / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    gcs_json_path = run_dir / GCS_JSON_NAME
+    drone_json_path = run_dir / DRONE_JSON_NAME
+    gcs_log_path = run_dir / GCS_LOG_NAME
+    drone_log_path = run_dir / DRONE_LOG_NAME
+
+    stop_seconds = args.duration + 2.0
+    gcs_cmd = build_command("gcs", suite_id, stop_seconds, gcs_json_path, maybe_split_args(args.gcs_args))
+    drone_cmd = build_command("drone", suite_id, stop_seconds, drone_json_path, maybe_split_args(args.drone_args))
+
+    wpr_enabled = args.wpr == "on"
+    wpr_started = False
+    wpr_path: Optional[Path] = None
+
+    print(f"\n=== Run {repeat_idx}/{args.repeat} :: {suite_id} ===")
+    print(f"Output directory: {run_dir}")
+    print(f"GCS command: {' '.join(gcs_cmd)}")
+    print(f"Drone command: {' '.join(drone_cmd)}")
+
+    if wpr_enabled:
+        wpr_started, wpr_path = start_wpr(run_dir)
+
+    if args.start_delay > 0:
+        print(f"Waiting {args.start_delay:.2f}s before start marker...")
+        time.sleep(args.start_delay)
+
+    wall_start_ns = time.time_ns()
+    perf_start_ns = time.perf_counter_ns()
+    marker.start(run_id, wall_start_ns)
+
+    with open(gcs_log_path, "w", encoding="utf-8", buffering=1) as gcs_log, open(
+        drone_log_path, "w", encoding="utf-8", buffering=1
+    ) as drone_log:
+        gcs_proc = subprocess.Popen(gcs_cmd, stdout=gcs_log, stderr=subprocess.STDOUT)
+        drone_proc = subprocess.Popen(drone_cmd, stdout=drone_log, stderr=subprocess.STDOUT)
+
+        gcs_ps = init_psutil_process(gcs_proc.pid)
+        drone_ps = init_psutil_process(drone_proc.pid)
+
+        deadline = time.perf_counter() + args.duration
+        cpu_samples = {"gcs": [], "drone": []}
+        rss_samples = {"gcs": [], "drone": []}
+
+        try:
+            while True:
+                now = time.perf_counter()
+                if now >= deadline:
+                    break
+                to_sleep = min(1.0, deadline - now)
+                if to_sleep > 0:
+                    time.sleep(to_sleep)
+                gcs_cpu, gcs_rss = sample_stats(gcs_ps)
+                drone_cpu, drone_rss = sample_stats(drone_ps)
+                if gcs_cpu is not None:
+                    cpu_samples["gcs"].append(gcs_cpu)
+                if drone_cpu is not None:
+                    cpu_samples["drone"].append(drone_cpu)
+                if gcs_rss is not None:
+                    rss_samples["gcs"].append(gcs_rss)
+                if drone_rss is not None:
+                    rss_samples["drone"].append(drone_rss)
+        finally:
+            wall_end_ns = time.time_ns()
+            perf_end_ns = time.perf_counter_ns()
+            marker.end(run_id, wall_end_ns)
+
+            for proc_name, proc in {"gcs": gcs_proc, "drone": drone_proc}.items():
+                try:
+                    proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    print(f"{proc_name.upper()} still running; terminating...")
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        print(f"{proc_name.upper()} unresponsive; killing...")
+                        proc.kill()
+
+    if wpr_started:
+        stop_wpr(wpr_path)
+
+    gcs_exit = gcs_proc.returncode
+    drone_exit = drone_proc.returncode
+
+    manifest: Dict[str, object] = {
+        "run_id": run_id,
+        "kem": suite_info["kem_name"],
+        "sig": suite_info["sig_name"],
+        "aead": suite_info["aead"],
+        "suite": suite_id,
+        "duration_s": args.duration,
+        "repeat_idx": repeat_idx,
+        "host": platform.system(),
+        "start_wall_ns": wall_start_ns,
+        "end_wall_ns": wall_end_ns,
+        "start_perf_ns": perf_start_ns,
+        "end_perf_ns": perf_end_ns,
+        "gcs_json": GCS_JSON_NAME,
+        "drone_json": DRONE_JSON_NAME,
+        "gcs_log": GCS_LOG_NAME,
+        "drone_log": DRONE_LOG_NAME,
+        "wpr_etl": WPR_FILE_NAME if wpr_started else None,
+        "gcs_exit_code": gcs_exit,
+        "drone_exit_code": drone_exit,
+        "gcs_cmd": gcs_cmd,
+        "drone_cmd": drone_cmd,
+        "notes": "external-power-mode",
+        "cpu_stats": {
+            "gcs": summarise(cpu_samples["gcs"]),
+            "drone": summarise(cpu_samples["drone"]),
+        },
+        "rss_stats": {
+            "gcs_max": max(rss_samples["gcs"]) if rss_samples["gcs"] else None,
+            "drone_max": max(rss_samples["drone"]) if rss_samples["drone"] else None,
+        },
+    }
+
+    write_manifest(run_dir, manifest)
+
+
+def main() -> None:
+    args = parse_args()
+    suite_info = get_suite(args.suite)
+    run_root = ensure_run_dir(Path(args.outdir))
+    marker = resolve_marker(args)
+
+    try:
+        for repeat_idx in range(1, args.repeat + 1):
+            orchestrate_run(args, suite_info, run_root, repeat_idx, marker)
+    except KeyboardInterrupt:
+        print("\nBenchmark interrupted by user.")
+    finally:
+        marker.close()
+
+
+if __name__ == "__main__":
+    main()
 
 ============================================================
 
-FILE 2/46: core\__init__.py
+FILE 2/53: core\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\__init__.py
 Size: 121 bytes
@@ -228,7 +554,7 @@ Provides post-quantum cryptography secure communication components.
 
 ============================================================
 
-FILE 3/46: core\aead.py
+FILE 3/53: core\aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\aead.py
 Size: 10,889 bytes
@@ -529,7 +855,7 @@ class Receiver:
 
 ============================================================
 
-FILE 4/46: core\async_proxy.py
+FILE 4/53: core\async_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\async_proxy.py
 Size: 18,859 bytes
@@ -1010,7 +1336,7 @@ def run_proxy(
 
 ============================================================
 
-FILE 5/46: core\config.py
+FILE 5/53: core\config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\config.py
 Size: 5,603 bytes
@@ -1167,11 +1493,11 @@ validate_config(CONFIG)
 
 ============================================================
 
-FILE 6/46: core\handshake.py
+FILE 6/53: core\handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\handshake.py
-Size: 9,073 bytes
-Modified: 2025-09-25 17:30:42
+Size: 9,289 bytes
+Modified: 2025-09-25 19:07:57
 ------------------------------------------------------------
 from dataclasses import dataclass
 import os
@@ -1313,12 +1639,15 @@ def derive_transport_keys(role: str, session_id: bytes, kem_name: bytes, sig_nam
         info=info
     )
     okm = hkdf.derive(shared_secret)
-    key_send = okm[:32]
-    key_recv = okm[32:64]
+    key_d2g = okm[:32]
+    key_g2d = okm[32:64]
+
     if role == "client":
-        return key_send, key_recv
-    else:
-        return key_recv, key_send
+        # Drone acts as client; return (send_to_gcs, receive_from_gcs).
+        return key_d2g, key_g2d
+    else:  # server == GCS
+        # GCS perspective: send_to_drone first, receive_from_drone second.
+        return key_g2d, key_d2g
 def server_gcs_handshake(conn, suite, gcs_sig_secret):
     """Authenticated GCS side handshake.
 
@@ -1361,13 +1690,14 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
         kem_ct += chunk
 
     shared_secret = server_decapsulate(ephemeral, kem_ct)
-    key_recv, key_send = derive_transport_keys(
+    key_send, key_recv = derive_transport_keys(
         "server",
         ephemeral.session_id,
         ephemeral.kem_name.encode(),
         ephemeral.sig_name.encode(),
         shared_secret,
     )
+    # Return (drone→gcs key, gcs→drone key, ...)
     return key_recv, key_send, b"", b"", ephemeral.session_id, ephemeral.kem_name, ephemeral.sig_name
 
 def client_drone_handshake(client_sock, suite, gcs_sig_public):
@@ -1412,7 +1742,7 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
 
 ============================================================
 
-FILE 7/46: core\logging_utils.py
+FILE 7/53: core\logging_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\logging_utils.py
 Size: 2,011 bytes
@@ -1476,7 +1806,7 @@ METRICS = Metrics()
 
 ============================================================
 
-FILE 8/46: core\policy_engine.py
+FILE 8/53: core\policy_engine.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\policy_engine.py
 Size: 990 bytes
@@ -1512,7 +1842,7 @@ def handle_control(buf: bytes) -> Optional[bytes]:
 
 ============================================================
 
-FILE 9/46: core\project_config.py
+FILE 9/53: core\project_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\project_config.py
 Size: 168 bytes
@@ -1525,11 +1855,11 @@ __all__ = ["CONFIG"]
 
 ============================================================
 
-FILE 10/46: core\run_proxy.py
+FILE 10/53: core\run_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\run_proxy.py
-Size: 11,353 bytes
-Modified: 2025-09-25 15:24:44
+Size: 15,318 bytes
+Modified: 2025-09-25 21:56:07
 ------------------------------------------------------------
 """
 Unified CLI entrypoint for the PQC drone-GCS proxy.
@@ -1546,6 +1876,8 @@ import sys
 import argparse
 import signal
 import os
+import json
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -1571,6 +1903,21 @@ def create_secrets_dir():
     return secrets_dir
 
 
+def write_json_report(json_path: Optional[str], payload: dict) -> None:
+    """Persist counters payload to JSON if a path is provided."""
+
+    if not json_path:
+        return
+
+    try:
+        path = Path(json_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        print(f"Wrote JSON report to {path}")
+    except Exception as exc:
+        print(f"Warning: Failed to write JSON output to {json_path}: {exc}")
+
+
 def init_identity_command(args):
     """Create GCS signing identity and save to persistent files."""
     # Use custom output_dir if provided, otherwise default secrets directory
@@ -1590,8 +1937,7 @@ def init_identity_command(args):
     public_path = secrets_dir / "gcs_signing.pub"
     
     if secret_path.exists() or public_path.exists():
-        print("Error: Identity files already exist. Remove them first if you want to regenerate.")
-        sys.exit(1)
+        print("Warning: Identity files already exist. Overwriting with a new keypair.")
     
     try:
         sig = Signature(suite["sig_name"])
@@ -1634,6 +1980,7 @@ def gcs_command(args):
     
     gcs_sig_secret = None
     gcs_sig_public = None
+    json_out_path = getattr(args, "json_out", None)
     
     if args.ephemeral:
         print("⚠️  WARNING: Using EPHEMERAL keys - not suitable for production!")
@@ -1662,22 +2009,79 @@ def gcs_command(args):
             print("or use --ephemeral for development only.")
             sys.exit(1)
             
+        secret_bytes = None
         try:
-            sig = Signature(suite["sig_name"])
-            if hasattr(sig, 'import_secret_key'):
-                secret_bytes = secret_path.read_bytes()
-                gcs_sig_public = sig.import_secret_key(secret_bytes)
-                gcs_sig_secret = sig
-                print("Loaded GCS signing key from file.")
-                print(f"Public key (hex): {gcs_sig_public.hex()}")
-                print()
-            else:
-                print("Error: oqs build lacks key import/export; use --ephemeral or upgrade oqs-python.")
-                sys.exit(1)
-                
-        except Exception as e:
-            print(f"Error loading secret key: {e}")
+            secret_bytes = secret_path.read_bytes()
+        except Exception as exc:
+            print(f"Error reading secret key file: {exc}")
             sys.exit(1)
+
+        load_errors = []
+        imported_public: Optional[bytes] = None
+        load_method: Optional[str] = None
+
+        try:
+            primary_sig = Signature(suite["sig_name"])
+        except Exception as exc:
+            load_errors.append(f"Signature ctor failed: {exc}")
+            primary_sig = None  # type: ignore
+
+        if primary_sig is not None and hasattr(primary_sig, "import_secret_key"):
+            try:
+                imported_public = primary_sig.import_secret_key(secret_bytes)
+                gcs_sig_secret = primary_sig
+                load_method = "import_secret_key"
+            except Exception as exc:
+                load_errors.append(f"import_secret_key failed: {exc}")
+
+        if gcs_sig_secret is None:
+            try:
+                fallback_sig = Signature(suite["sig_name"], secret_key=secret_bytes)
+                gcs_sig_secret = fallback_sig
+                load_method = "ctor_secret_key"
+            except TypeError as exc:
+                load_errors.append(f"ctor secret_key unsupported: {exc}")
+            except Exception as exc:
+                load_errors.append(f"ctor secret_key failed: {exc}")
+
+        if gcs_sig_secret is None:
+            print("Error: oqs build lacks usable key import. Tried import_secret_key and constructor fallback without success.")
+            if load_errors:
+                print("Details:")
+                for err in load_errors:
+                    print(f"  - {err}")
+            print("Consider running with --ephemeral or upgrading oqs-python/liboqs with key import support.")
+            sys.exit(1)
+
+        print("Loaded GCS signing key from file.")
+        if load_method == "ctor_secret_key":
+            print("Using constructor-based fallback because import/export APIs are unavailable.")
+
+        gcs_sig_public = imported_public
+        if gcs_sig_public is None:
+            public_candidates = []
+            if secret_path.suffix:
+                public_candidates.append(secret_path.with_suffix(".pub"))
+            public_candidates.append(secret_path.parent / "gcs_signing.pub")
+            seen = set()
+            for candidate in public_candidates:
+                key = str(candidate.resolve()) if candidate.exists() else str(candidate)
+                if key in seen:
+                    continue
+                seen.add(key)
+                if candidate.exists():
+                    try:
+                        gcs_sig_public = candidate.read_bytes()
+                        print(f"Loaded public key from {candidate}.")
+                    except Exception as exc:
+                        load_errors.append(f"public key read failed ({candidate}): {exc}")
+                    break
+
+        if gcs_sig_public is not None:
+            print(f"Public key (hex): {gcs_sig_public.hex()}")
+        else:
+            print("Warning: Could not locate public key file for display. Ensure the drone has the matching public key.")
+        print()
     
     try:
         print(f"Starting GCS proxy with suite {args.suite}")
@@ -1700,6 +2104,15 @@ def gcs_command(args):
         print("GCS proxy stopped. Final counters:")
         for key, value in counters.items():
             print(f"  {key}: {value}")
+
+        suite_id = suite.get("suite_id") or args.suite
+        payload = {
+            "role": "gcs",
+            "suite": suite_id,
+            "counters": counters,
+            "ts_stop_ns": time.time_ns(),
+        }
+        write_json_report(json_out_path, payload)
             
     except KeyboardInterrupt:
         print("\nGCS proxy stopped by user.")
@@ -1718,6 +2131,7 @@ def drone_command(args):
     
     # Get GCS public key
     gcs_sig_public = None
+    json_out_path = getattr(args, "json_out", None)
     
     try:
         if args.peer_pubkey_file:
@@ -1761,6 +2175,15 @@ def drone_command(args):
         print("Drone proxy stopped. Final counters:")
         for key, value in counters.items():
             print(f"  {key}: {value}")
+
+        suite_id = suite.get("suite_id") or args.suite
+        payload = {
+            "role": "drone",
+            "suite": suite_id,
+            "counters": counters,
+            "ts_stop_ns": time.time_ns(),
+        }
+        write_json_report(json_out_path, payload)
             
     except KeyboardInterrupt:
         print("\nDrone proxy stopped by user.")
@@ -1797,6 +2220,8 @@ def main():
                            help="Use ephemeral keys (development only - prints warning)")
     gcs_parser.add_argument("--stop-seconds", type=float,
                            help="Auto-stop after N seconds (for testing)")
+    gcs_parser.add_argument("--json-out",
+                           help="Optional path to write counters JSON on shutdown")
     
     # drone subcommand
     drone_parser = subparsers.add_parser('drone', help='Start drone proxy')
@@ -1808,6 +2233,8 @@ def main():
                              help="GCS public key as hex string")
     drone_parser.add_argument("--stop-seconds", type=float,
                              help="Auto-stop after N seconds (for testing)")
+    drone_parser.add_argument("--json-out",
+                              help="Optional path to write counters JSON on shutdown")
     
     args = parser.parse_args()
     
@@ -1842,138 +2269,408 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 11/46: core\suites.py
+FILE 11/53: core\suites.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\suites.py
-Size: 4,453 bytes
-Modified: 2025-09-25 08:18:20
+Size: 11,602 bytes
+Modified: 2025-09-25 21:56:07
 ------------------------------------------------------------
-"""
-PQC cryptographic suite registry and algorithm ID mapping.
+"""PQC cryptographic suite registry and algorithm ID mapping.
 
-Single source of truth for all cryptographic suites with frozen header IDs.
-No crypto imports - pure metadata and mapping logic only.
+Provides a composable {KEM × AEAD × SIG} registry with synonym resolution and
+helpers for querying oqs availability.
 """
 
-from typing import Dict, Tuple
+from __future__ import annotations
+
+from itertools import product
 from types import MappingProxyType
+from typing import Dict, Iterable, Tuple
 
 
-# Frozen header ID mappings
-# Suite registry - embed header ID bytes directly to avoid split mappings
-_SUITES_MUTABLE = {
-    "cs-kyber512-aesgcm-dilithium2": {
-        "kem_name": "ML-KEM-512", "kem_id": 1, "kem_param_id": 1,
-        "sig_name": "ML-DSA-44", "sig_id": 1, "sig_param_id": 1,
-        "nist_level": "L1", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
+def _normalize_alias(value: str) -> str:
+    """Normalize alias strings for case- and punctuation-insensitive matching."""
+
+    return "".join(ch for ch in value.lower() if ch.isalnum())
+
+
+_KEM_REGISTRY = {
+    "mlkem512": {
+        "oqs_name": "ML-KEM-512",
+        "token": "mlkem512",
+        "nist_level": "L1",
+        "kem_id": 1,
+        "kem_param_id": 1,
+        "aliases": (
+            "ML-KEM-512",
+            "ml-kem-512",
+            "mlkem512",
+            "kyber512",
+            "kyber-512",
+            "kyber_512",
+        ),
     },
-    "cs-kyber768-aesgcm-dilithium3": {
-        "kem_name": "ML-KEM-768", "kem_id": 1, "kem_param_id": 2,
-        "sig_name": "ML-DSA-65", "sig_id": 1, "sig_param_id": 2,
-        "nist_level": "L3", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
+    "mlkem768": {
+        "oqs_name": "ML-KEM-768",
+        "token": "mlkem768",
+        "nist_level": "L3",
+        "kem_id": 1,
+        "kem_param_id": 2,
+        "aliases": (
+            "ML-KEM-768",
+            "ml-kem-768",
+            "mlkem768",
+            "kyber768",
+            "kyber-768",
+            "kyber_768",
+        ),
     },
-    "cs-kyber1024-aesgcm-dilithium5": {
-        "kem_name": "ML-KEM-1024", "kem_id": 1, "kem_param_id": 3,
-        "sig_name": "ML-DSA-87", "sig_id": 1, "sig_param_id": 3,
-        "nist_level": "L5", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
+    "mlkem1024": {
+        "oqs_name": "ML-KEM-1024",
+        "token": "mlkem1024",
+        "nist_level": "L5",
+        "kem_id": 1,
+        "kem_param_id": 3,
+        "aliases": (
+            "ML-KEM-1024",
+            "ml-kem-1024",
+            "mlkem1024",
+            "kyber1024",
+            "kyber-1024",
+            "kyber_1024",
+        ),
     },
-    "cs-kyber768-aesgcm-falcon512": {
-        "kem_name": "ML-KEM-768", "kem_id": 1, "kem_param_id": 2,
-        "sig_name": "Falcon-512", "sig_id": 2, "sig_param_id": 1,
-        "nist_level": "L3", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
-    },
-    "cs-kyber1024-aesgcm-falcon1024": {
-        "kem_name": "ML-KEM-1024", "kem_id": 1, "kem_param_id": 3,
-        "sig_name": "Falcon-1024", "sig_id": 2, "sig_param_id": 2,
-        "nist_level": "L5", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
-    },
-    "cs-kyber512-aesgcm-sphincs128f_sha2": {
-        "kem_name": "ML-KEM-512", "kem_id": 1, "kem_param_id": 1,
-        "sig_name": "SLH-DSA-SHA2-128f", "sig_id": 3, "sig_param_id": 1,
-        "nist_level": "L1", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
-    },
-    "cs-kyber1024-aesgcm-sphincs256f_sha2": {
-        "kem_name": "ML-KEM-1024", "kem_id": 1, "kem_param_id": 3,
-        "sig_name": "SLH-DSA-SHA2-256f", "sig_id": 3, "sig_param_id": 2,
-        "nist_level": "L5", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
-    }
 }
 
-# Immutable suite registry
-SUITES = MappingProxyType({
-    suite_id: MappingProxyType(suite_config)
-    for suite_id, suite_config in _SUITES_MUTABLE.items()
-})
+
+_SIG_REGISTRY = {
+    "mldsa44": {
+        "oqs_name": "ML-DSA-44",
+        "token": "mldsa44",
+        "sig_id": 1,
+        "sig_param_id": 1,
+        "aliases": (
+            "ML-DSA-44",
+            "ml-dsa-44",
+            "mldsa44",
+            "dilithium2",
+            "dilithium-2",
+        ),
+    },
+    "mldsa65": {
+        "oqs_name": "ML-DSA-65",
+        "token": "mldsa65",
+        "sig_id": 1,
+        "sig_param_id": 2,
+        "aliases": (
+            "ML-DSA-65",
+            "ml-dsa-65",
+            "mldsa65",
+            "dilithium3",
+            "dilithium-3",
+        ),
+    },
+    "mldsa87": {
+        "oqs_name": "ML-DSA-87",
+        "token": "mldsa87",
+        "sig_id": 1,
+        "sig_param_id": 3,
+        "aliases": (
+            "ML-DSA-87",
+            "ml-dsa-87",
+            "mldsa87",
+            "dilithium5",
+            "dilithium-5",
+        ),
+    },
+    "falcon512": {
+        "oqs_name": "Falcon-512",
+        "token": "falcon512",
+        "sig_id": 2,
+        "sig_param_id": 1,
+        "aliases": (
+            "Falcon-512",
+            "falcon512",
+            "falcon-512",
+        ),
+    },
+    "falcon1024": {
+        "oqs_name": "Falcon-1024",
+        "token": "falcon1024",
+        "sig_id": 2,
+        "sig_param_id": 2,
+        "aliases": (
+            "Falcon-1024",
+            "falcon1024",
+            "falcon-1024",
+        ),
+    },
+    "sphincs128fsha2": {
+        "oqs_name": "SLH-DSA-SHA2-128f",
+        "token": "sphincs128fsha2",
+        "sig_id": 3,
+        "sig_param_id": 1,
+        "aliases": (
+            "SLH-DSA-SHA2-128f",
+            "sphincs+-sha2-128f-simple",
+            "sphincs128fsha2",
+            "sphincs128f_sha2",
+        ),
+    },
+    "sphincs256fsha2": {
+        "oqs_name": "SLH-DSA-SHA2-256f",
+        "token": "sphincs256fsha2",
+        "sig_id": 3,
+        "sig_param_id": 2,
+        "aliases": (
+            "SLH-DSA-SHA2-256f",
+            "sphincs+-sha2-256f-simple",
+            "sphincs256fsha2",
+            "sphincs256f_sha2",
+        ),
+    },
+}
+
+
+_AEAD_REGISTRY = {
+    "aesgcm": {
+        "display_name": "AES-256-GCM",
+        "token": "aesgcm",
+        "kdf": "HKDF-SHA256",
+        "aliases": (
+            "AES-256-GCM",
+            "aes-256-gcm",
+            "aesgcm",
+            "aes256gcm",
+            "aes-gcm",
+        ),
+    },
+}
+
+
+def _build_alias_map(registry: Dict[str, Dict]) -> Dict[str, str]:
+    alias_map: Dict[str, str] = {}
+    for key, entry in registry.items():
+        for alias in entry["aliases"]:
+            normalized = _normalize_alias(alias)
+            alias_map[normalized] = key
+        alias_map[_normalize_alias(entry["oqs_name"]) if "oqs_name" in entry else _normalize_alias(entry["display_name"])] = key
+        alias_map[_normalize_alias(entry["token"])] = key
+    return alias_map
+
+
+_KEM_ALIASES = _build_alias_map(_KEM_REGISTRY)
+_SIG_ALIASES = _build_alias_map(_SIG_REGISTRY)
+_AEAD_ALIASES = _build_alias_map(_AEAD_REGISTRY)
+
+
+def _resolve_kem_key(name: str) -> str:
+    lookup = _KEM_ALIASES.get(_normalize_alias(name))
+    if lookup is None:
+        raise NotImplementedError(f"unknown KEM: {name}")
+    return lookup
+
+
+def _resolve_sig_key(name: str) -> str:
+    lookup = _SIG_ALIASES.get(_normalize_alias(name))
+    if lookup is None:
+        raise NotImplementedError(f"unknown signature: {name}")
+    return lookup
+
+
+def _resolve_aead_key(name: str) -> str:
+    lookup = _AEAD_ALIASES.get(_normalize_alias(name))
+    if lookup is None:
+        raise NotImplementedError(f"unknown AEAD: {name}")
+    return lookup
+
+
+def build_suite_id(kem: str, aead: str, sig: str) -> str:
+    """Build canonical suite identifier from component aliases."""
+
+    kem_key = _resolve_kem_key(kem)
+    aead_key = _resolve_aead_key(aead)
+    sig_key = _resolve_sig_key(sig)
+
+    kem_entry = _KEM_REGISTRY[kem_key]
+    aead_entry = _AEAD_REGISTRY[aead_key]
+    sig_entry = _SIG_REGISTRY[sig_key]
+
+    return f"cs-{kem_entry['token']}-{aead_entry['token']}-{sig_entry['token']}"
+
+
+_LEGACY_SUITE_ALIASES: Tuple[Tuple[str, str, str], ...] = (
+    ("ML-KEM-512", "AES-256-GCM", "ML-DSA-44"),
+    ("ML-KEM-768", "AES-256-GCM", "ML-DSA-65"),
+    ("ML-KEM-1024", "AES-256-GCM", "ML-DSA-87"),
+    ("ML-KEM-768", "AES-256-GCM", "Falcon-512"),
+    ("ML-KEM-1024", "AES-256-GCM", "Falcon-1024"),
+    ("ML-KEM-512", "AES-256-GCM", "SLH-DSA-SHA2-128f"),
+    ("ML-KEM-1024", "AES-256-GCM", "SLH-DSA-SHA2-256f"),
+)
+
+
+_SUITE_ALIASES = {
+    legacy_id: build_suite_id(*components)
+    for legacy_id, components in {
+        "cs-kyber512-aesgcm-dilithium2": _LEGACY_SUITE_ALIASES[0],
+        "cs-kyber768-aesgcm-dilithium3": _LEGACY_SUITE_ALIASES[1],
+        "cs-kyber1024-aesgcm-dilithium5": _LEGACY_SUITE_ALIASES[2],
+        "cs-kyber768-aesgcm-falcon512": _LEGACY_SUITE_ALIASES[3],
+        "cs-kyber1024-aesgcm-falcon1024": _LEGACY_SUITE_ALIASES[4],
+        "cs-kyber512-aesgcm-sphincs128f_sha2": _LEGACY_SUITE_ALIASES[5],
+        "cs-kyber1024-aesgcm-sphincs256f_sha2": _LEGACY_SUITE_ALIASES[6],
+    }.items()
+}
+
+
+def _compose_suite(kem_key: str, aead_key: str, sig_key: str) -> Dict[str, object]:
+    kem_entry = _KEM_REGISTRY[kem_key]
+    aead_entry = _AEAD_REGISTRY[aead_key]
+    sig_entry = _SIG_REGISTRY[sig_key]
+
+    suite_id = f"cs-{kem_entry['token']}-{aead_entry['token']}-{sig_entry['token']}"
+
+    return {
+        "suite_id": suite_id,
+        "kem_name": kem_entry["oqs_name"],
+        "kem_id": kem_entry["kem_id"],
+        "kem_param_id": kem_entry["kem_param_id"],
+        "sig_name": sig_entry["oqs_name"],
+        "sig_id": sig_entry["sig_id"],
+        "sig_param_id": sig_entry["sig_param_id"],
+        "nist_level": kem_entry["nist_level"],
+        "aead": aead_entry["display_name"],
+        "kdf": aead_entry["kdf"],
+    }
+
+
+def _canonicalize_suite_id(suite_id: str) -> str:
+    if not suite_id:
+        raise NotImplementedError("suite_id cannot be empty")
+
+    candidate = suite_id.strip()
+    if candidate in _SUITE_ALIASES:
+        return _SUITE_ALIASES[candidate]
+
+    if not candidate.startswith("cs-"):
+        raise NotImplementedError(f"unknown suite_id: {suite_id}")
+
+    parts = candidate[3:].split("-")
+    if len(parts) < 3:
+        raise NotImplementedError(f"unknown suite_id: {suite_id}")
+
+    kem_part = parts[0]
+    aead_part = parts[1]
+    sig_part = "-".join(parts[2:])
+
+    try:
+        return build_suite_id(kem_part, aead_part, sig_part)
+    except NotImplementedError as exc:
+        raise NotImplementedError(f"unknown suite_id: {suite_id}") from exc
+
+
+def _generate_suite_registry() -> MappingProxyType:
+    suites: Dict[str, MappingProxyType] = {}
+    for kem_key, sig_key in product(_KEM_REGISTRY.keys(), _SIG_REGISTRY.keys()):
+        suite_dict = _compose_suite(kem_key, "aesgcm", sig_key)
+        suites[suite_dict["suite_id"]] = MappingProxyType(suite_dict)
+    return MappingProxyType(suites)
+
+
+SUITES = _generate_suite_registry()
 
 
 def list_suites() -> Dict[str, Dict]:
-    """Return all available suites as immutable mapping.
-    
-    Returns:
-        Dictionary mapping suite IDs to suite configurations
-    """
-    return dict(SUITES)
+    """Return all available suites as immutable mapping."""
+
+    return {suite_id: dict(config) for suite_id, config in SUITES.items()}
 
 
 def get_suite(suite_id: str) -> Dict:
-    """Get suite configuration by ID.
-    
-    Args:
-        suite_id: Suite identifier string
-        
-    Returns:
-        Immutable suite configuration dictionary
-        
-    Raises:
-        NotImplementedError: If suite_id not found in registry
-    """
-    if suite_id not in SUITES:
+    """Get suite configuration by ID, resolving legacy aliases and synonyms."""
+
+    canonical_id = _canonicalize_suite_id(suite_id)
+
+    if canonical_id not in SUITES:
         raise NotImplementedError(f"unknown suite_id: {suite_id}")
-    
-    suite = SUITES[suite_id]
-    
-    # Validate suite has all required fields
+
+    suite = SUITES[canonical_id]
+
     required_fields = {"kem_name", "sig_name", "aead", "kdf", "nist_level"}
     missing_fields = required_fields - set(suite.keys())
     if missing_fields:
         raise NotImplementedError(f"malformed suite {suite_id}: missing fields {missing_fields}")
-    
-    return dict(suite)  # Return mutable copy
+
+    return dict(suite)
+
+
+def _safe_get_enabled_kem_mechanisms() -> Iterable[str]:
+    from oqs.oqs import get_enabled_KEM_mechanisms
+
+    return get_enabled_KEM_mechanisms()
+
+
+def _safe_get_enabled_sig_mechanisms() -> Iterable[str]:
+    from oqs.oqs import get_enabled_sig_mechanisms
+
+    return get_enabled_sig_mechanisms()
+
+
+def enabled_kems() -> Tuple[str, ...]:
+    """Return tuple of oqs KEM mechanism names supported by the runtime."""
+
+    mechanisms = {_normalize_alias(name) for name in _safe_get_enabled_kem_mechanisms()}
+    result = [
+        entry["oqs_name"]
+        for entry in _KEM_REGISTRY.values()
+        if _normalize_alias(entry["oqs_name"]) in mechanisms
+    ]
+    return tuple(result)
+
+
+def enabled_sigs() -> Tuple[str, ...]:
+    """Return tuple of oqs signature mechanism names supported by the runtime."""
+
+    mechanisms = {_normalize_alias(name) for name in _safe_get_enabled_sig_mechanisms()}
+    result = [
+        entry["oqs_name"]
+        for entry in _SIG_REGISTRY.values()
+        if _normalize_alias(entry["oqs_name"]) in mechanisms
+    ]
+    return tuple(result)
 
 
 def header_ids_for_suite(suite: Dict) -> Tuple[int, int, int, int]:
     """Return embedded header ID bytes for provided suite dict copy."""
+
     try:
         return (
-            suite["kem_id"], suite["kem_param_id"],
-            suite["sig_id"], suite["sig_param_id"],
+            suite["kem_id"],
+            suite["kem_param_id"],
+            suite["sig_id"],
+            suite["sig_param_id"],
         )
     except KeyError as e:
         raise NotImplementedError(f"suite missing embedded id field: {e}")
 
 
 def suite_bytes_for_hkdf(suite: Dict) -> bytes:
-    """Generate deterministic bytes from suite for HKDF info parameter.
-    
-    Args:
-        suite: Suite configuration dictionary
-        
-    Returns:
-        UTF-8 encoded suite ID bytes for use in HKDF info parameter
-        
-    Raises:
-        NotImplementedError: If suite not found in registry
-    """
-    # Find suite ID by matching configuration
-    for suite_id, stored_suite in SUITES.items():
-        if dict(stored_suite) == suite:
-            return suite_id.encode('utf-8')
-    
-    raise NotImplementedError("Suite configuration not found in registry")
+    """Generate deterministic bytes from suite for HKDF info parameter."""
+
+    if "suite_id" in suite:
+        return suite["suite_id"].encode("utf-8")
+
+    try:
+        suite_id = build_suite_id(suite["kem_name"], suite["aead"], suite["sig_name"])
+    except (KeyError, NotImplementedError) as exc:
+        raise NotImplementedError("Suite configuration not found in registry") from exc
+
+    return suite_id.encode("utf-8")
 
 ============================================================
 
-FILE 12/46: core\temp-file.py
+FILE 12/53: core\temp-file.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\temp-file.py
 Size: 18,859 bytes
@@ -2454,7 +3151,7 @@ def run_proxy(
 
 ============================================================
 
-FILE 13/46: ddos\features.py
+FILE 13/53: ddos\features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\features.py
 Size: 107 bytes
@@ -2465,7 +3162,7 @@ def extract_features(pkt_batch):
 
 ============================================================
 
-FILE 14/46: ddos\mitigations.py
+FILE 14/53: ddos\mitigations.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\mitigations.py
 Size: 112 bytes
@@ -2476,7 +3173,7 @@ def apply(action):
 
 ============================================================
 
-FILE 15/46: ddos\tst_stage2.py
+FILE 15/53: ddos\tst_stage2.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\tst_stage2.py
 Size: 104 bytes
@@ -2487,7 +3184,7 @@ def confirm(features):
 
 ============================================================
 
-FILE 16/46: ddos\xgb_stage1.py
+FILE 16/53: ddos\xgb_stage1.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\xgb_stage1.py
 Size: 106 bytes
@@ -2498,7 +3195,95 @@ def score(features):
 
 ============================================================
 
-FILE 17/46: drone\scripts\env_check.py
+FILE 17/53: diagnose_aead.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\diagnose_aead.py
+Size: 620 bytes
+Modified: 2025-09-25 19:07:57
+------------------------------------------------------------
+from core.suites import get_suite, header_ids_for_suite
+from core.aead import Sender, Receiver, AeadIds
+from diagnose_handshake import keys  # reuse from handshake script
+from core.config import CONFIG
+
+suite = get_suite("cs-kyber768-aesgcm-dilithium3")
+ids = AeadIds(*header_ids_for_suite(suite))
+
+session_id = b'ABCDEFGH'
+
+sender = Sender(CONFIG["WIRE_VERSION"], ids, session_id, 0, keys['client_send'])
+receiver = Receiver(CONFIG["WIRE_VERSION"], ids, session_id, 0, keys['server_recv'], CONFIG['REPLAY_WINDOW'])
+
+wire = sender.encrypt(b"hello")
+plain = receiver.decrypt(wire)
+print("decrypt", plain)
+
+============================================================
+
+FILE 18/53: diagnose_handshake.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\diagnose_handshake.py
+Size: 1,566 bytes
+Modified: 2025-09-25 19:07:57
+------------------------------------------------------------
+import threading
+import socket
+from core.suites import get_suite
+from core.handshake import server_gcs_handshake, client_drone_handshake
+from oqs.oqs import Signature
+from core.config import CONFIG
+
+suite = get_suite("cs-kyber768-aesgcm-dilithium3")
+
+keys = {}
+errors = {}
+
+ready = threading.Event()
+
+def server_thread():
+    sig = Signature(suite["sig_name"])
+    pub = sig.generate_keypair()
+    keys['pub'] = pub
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.bind(('127.0.0.1', CONFIG['TCP_HANDSHAKE_PORT']))
+    srv.listen(1)
+    ready.set()
+    conn, addr = srv.accept()
+    with conn:
+        k_recv, k_send, *_ = server_gcs_handshake(conn, suite, sig)
+        keys['server_recv'] = k_recv
+        keys['server_send'] = k_send
+    srv.close()
+
+
+def client_thread():
+    if not ready.wait(timeout=3):
+        errors['client'] = 'timeout'
+        return
+    pub = keys['pub']
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(('127.0.0.1', CONFIG['TCP_HANDSHAKE_PORT']))
+    k_send, k_recv, *_ = client_drone_handshake(sock, suite, pub)
+    keys['client_send'] = k_send
+    keys['client_recv'] = k_recv
+    sock.close()
+
+threads = [threading.Thread(target=server_thread), threading.Thread(target=client_thread)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+
+print('errors', errors)
+for name, value in keys.items():
+    if isinstance(value, bytes):
+        print(name, len(value), value[:8].hex())
+    else:
+        print(name, type(value))
+
+============================================================
+
+FILE 19/53: drone\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\drone\scripts\env_check.py
 Size: 396 bytes
@@ -2520,7 +3305,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 18/46: gcs\scripts\env_check.py
+FILE 20/53: gcs\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\gcs\scripts\env_check.py
 Size: 396 bytes
@@ -2542,7 +3327,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 19/46: log_project_structure.py
+FILE 21/53: log_project_structure.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\log_project_structure.py
 Size: 7,038 bytes
@@ -2733,7 +3518,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 20/46: rl\agent_runtime.py
+FILE 22/53: rl\agent_runtime.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\agent_runtime.py
 Size: 117 bytes
@@ -2744,7 +3529,7 @@ if __name__ == "__main__": main()
 
 ============================================================
 
-FILE 21/46: rl\linucb.py
+FILE 23/53: rl\linucb.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\linucb.py
 Size: 107 bytes
@@ -2755,7 +3540,7 @@ class LinUCB:
 
 ============================================================
 
-FILE 22/46: rl\safety.py
+FILE 24/53: rl\safety.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\safety.py
 Size: 105 bytes
@@ -2765,7 +3550,7 @@ def guard(action, mission): raise NotImplementedError("RL safety shield not impl
 
 ============================================================
 
-FILE 23/46: strict_mode_demo.py
+FILE 25/53: strict_mode_demo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\strict_mode_demo.py
 Size: 3,479 bytes
@@ -2859,7 +3644,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 24/46: tests\__init__.py
+FILE 26/53: tests\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\__init__.py
 Size: 54 bytes
@@ -2871,7 +3656,7 @@ Test package for PQC Drone-GCS Secure Proxy.
 
 ============================================================
 
-FILE 25/46: tests\test-oqs.py
+FILE 27/53: tests\test-oqs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test-oqs.py
 Size: 2,821 bytes
@@ -2945,7 +3730,7 @@ try_import_all()
 
 ============================================================
 
-FILE 26/46: tests\test_aead_framing.py
+FILE 28/53: tests\test_aead_framing.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_aead_framing.py
 Size: 6,589 bytes
@@ -3189,7 +3974,7 @@ def test_epoch_bump():
 
 ============================================================
 
-FILE 27/46: tests\test_cli_identity.py
+FILE 29/53: tests\test_cli_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_cli_identity.py
 Size: 13,002 bytes
@@ -3513,7 +4298,7 @@ class TestCLIHelpAndUsage:
 
 ============================================================
 
-FILE 28/46: tests\test_end_to_end_proxy.py
+FILE 30/53: tests\test_end_to_end_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_end_to_end_proxy.py
 Size: 11,044 bytes
@@ -3806,7 +4591,7 @@ class TestEndToEndProxy:
 
 ============================================================
 
-FILE 29/46: tests\test_handshake.py
+FILE 31/53: tests\test_handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake.py
 Size: 2,734 bytes
@@ -3883,7 +4668,7 @@ def test_mismatched_role_kdf():
 
 ============================================================
 
-FILE 30/46: tests\test_handshake_downgrade.py
+FILE 32/53: tests\test_handshake_downgrade.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake_downgrade.py
 Size: 1,430 bytes
@@ -3923,7 +4708,7 @@ def test_version_mismatch_signed_transcript_blocks_downgrade():
 
 ============================================================
 
-FILE 31/46: tests\test_hardening_features.py
+FILE 33/53: tests\test_hardening_features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_hardening_features.py
 Size: 7,879 bytes
@@ -4129,7 +4914,7 @@ class TestEpochGuard:
 
 ============================================================
 
-FILE 32/46: tests\test_kdf_roles.py
+FILE 34/53: tests\test_kdf_roles.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_kdf_roles.py
 Size: 1,630 bytes
@@ -4179,7 +4964,7 @@ def test_empty_kem_sig_name():
 
 ============================================================
 
-FILE 33/46: tests\test_loss_dup_oom.py
+FILE 35/53: tests\test_loss_dup_oom.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_loss_dup_oom.py
 Size: 149 bytes
@@ -4192,7 +4977,7 @@ def test_loss_dup_oom():
 
 ============================================================
 
-FILE 34/46: tests\test_packet_types.py
+FILE 36/53: tests\test_packet_types.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_packet_types.py
 Size: 4,208 bytes
@@ -4323,7 +5108,7 @@ def test_packet_type_disabled():
 
 ============================================================
 
-FILE 35/46: tests\test_rekey_epoch.py
+FILE 37/53: tests\test_rekey_epoch.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_rekey_epoch.py
 Size: 11,882 bytes
@@ -4614,7 +5399,7 @@ class TestRekeyEpoch:
 
 ============================================================
 
-FILE 36/46: tests\test_replay_window.py
+FILE 38/53: tests\test_replay_window.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_replay_window.py
 Size: 3,723 bytes
@@ -4753,11 +5538,11 @@ def test_reject_old_beyond_window():
 
 ============================================================
 
-FILE 37/46: tests\test_suites_config.py
+FILE 39/53: tests\test_suites_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_suites_config.py
-Size: 10,656 bytes
-Modified: 2025-09-24 05:58:35
+Size: 12,691 bytes
+Modified: 2025-09-25 21:56:07
 ------------------------------------------------------------
 """
 Tests for configuration validation and suite registry integrity.
@@ -4772,7 +5557,16 @@ import os
 import pytest
 
 from core.config import CONFIG, validate_config, _REQUIRED_KEYS
-from core.suites import SUITES, list_suites, get_suite, header_ids_for_suite
+from core.suites import (
+    SUITES,
+    build_suite_id,
+    enabled_kems,
+    enabled_sigs,
+    get_suite,
+    header_ids_for_suite,
+    list_suites,
+    suite_bytes_for_hkdf,
+)
 
 
 class TestConfig:
@@ -4881,20 +5675,27 @@ class TestConfig:
 class TestSuites:
     """Test suite registry integrity and header ID mapping."""
     
-    def test_suite_count_exact(self):
-        """Test exactly 7 suites are defined."""
+    def test_suite_catalog_cross_product(self):
+        """Test registry spans full KEM × SIG cross product for AES-GCM."""
+
         suites = list_suites()
+
+        kems = ["ML-KEM-512", "ML-KEM-768", "ML-KEM-1024"]
+        sigs = [
+            "ML-DSA-44",
+            "ML-DSA-65",
+            "ML-DSA-87",
+            "Falcon-512",
+            "Falcon-1024",
+            "SLH-DSA-SHA2-128f",
+            "SLH-DSA-SHA2-256f",
+        ]
+
         expected_suites = {
-            "cs-kyber512-aesgcm-dilithium2",
-            "cs-kyber768-aesgcm-dilithium3", 
-            "cs-kyber1024-aesgcm-dilithium5",
-            "cs-kyber768-aesgcm-falcon512",
-            "cs-kyber1024-aesgcm-falcon1024",
-            "cs-kyber512-aesgcm-sphincs128f_sha2",
-            "cs-kyber1024-aesgcm-sphincs256f_sha2"
+            build_suite_id(kem, "AES-256-GCM", sig) for kem in kems for sig in sigs
         }
-        
-        assert len(suites) == 7
+
+        assert len(suites) == len(expected_suites)
         assert set(suites.keys()) == expected_suites
     
     def test_suite_fields_complete(self):
@@ -4903,7 +5704,7 @@ class TestSuites:
         
         for suite_id in list_suites():
             suite = get_suite(suite_id)
-            assert set(suite.keys()) >= required_fields, \
+            assert set(suite.keys()) >= required_fields | {"suite_id"}, \
                 f"Suite {suite_id} missing required fields"
             
             # Check field types
@@ -4935,17 +5736,30 @@ class TestSuites:
     def test_specific_suite_mappings(self):
         """Test specific expected header ID mappings."""
         # Test a few key suites have expected header IDs
-        test_cases = [
-            ("cs-kyber768-aesgcm-dilithium3", (1, 2, 1, 2)),  # ML-KEM-768 + ML-DSA-65
-            ("cs-kyber768-aesgcm-falcon512", (1, 2, 2, 1)),   # ML-KEM-768 + Falcon-512
-            ("cs-kyber512-aesgcm-sphincs128f_sha2", (1, 1, 3, 1)),  # ML-KEM-512 + SLH-DSA-SHA2-128f
+        canonical_cases = [
+            ("cs-mlkem768-aesgcm-mldsa65", (1, 2, 1, 2)),
+            ("cs-mlkem768-aesgcm-falcon512", (1, 2, 2, 1)),
+            ("cs-mlkem512-aesgcm-sphincs128fsha2", (1, 1, 3, 1)),
         ]
-        
-        for suite_id, expected_ids in test_cases:
+
+        legacy_ids = [
+            "cs-kyber768-aesgcm-dilithium3",
+            "cs-kyber768-aesgcm-falcon512",
+            "cs-kyber512-aesgcm-sphincs128f_sha2",
+        ]
+
+        for (suite_id, expected_ids), legacy_id in zip(canonical_cases, legacy_ids):
             suite = get_suite(suite_id)
+            legacy_suite = get_suite(legacy_id)
             actual_ids = header_ids_for_suite(suite)
-            assert actual_ids == expected_ids, \
+            legacy_ids_tuple = header_ids_for_suite(legacy_suite)
+
+            assert actual_ids == expected_ids, (
                 f"Suite {suite_id} should map to {expected_ids}, got {actual_ids}"
+            )
+            assert legacy_ids_tuple == expected_ids, (
+                f"Legacy alias {legacy_id} should map to {expected_ids}, got {legacy_ids_tuple}"
+            )
     
     def test_registry_immutability(self):
         """Test that returned suite dicts cannot mutate the registry."""
@@ -4964,6 +5778,40 @@ class TestSuites:
         """Test that unknown suite IDs raise NotImplementedError."""
         with pytest.raises(NotImplementedError, match="unknown suite_id: fake-suite"):
             get_suite("fake-suite")
+
+    def test_build_suite_id_synonyms(self):
+        """build_suite_id should accept synonym inputs."""
+
+        suite_id = build_suite_id("Kyber768", "aesgcm", "Dilithium3")
+        assert suite_id == "cs-mlkem768-aesgcm-mldsa65"
+
+        suite = get_suite(suite_id)
+        assert suite["kem_name"] == "ML-KEM-768"
+        assert suite["sig_name"] == "ML-DSA-65"
+
+    def test_suite_bytes_for_hkdf_matches_canonical_id(self):
+        """suite_bytes_for_hkdf should return canonical identifier bytes."""
+
+        legacy_suite = get_suite("cs-kyber768-aesgcm-dilithium3")
+        canonical_suite = get_suite("cs-mlkem768-aesgcm-mldsa65")
+
+        assert suite_bytes_for_hkdf(legacy_suite) == b"cs-mlkem768-aesgcm-mldsa65"
+        assert suite_bytes_for_hkdf(canonical_suite) == b"cs-mlkem768-aesgcm-mldsa65"
+
+    def test_enabled_helper_functions(self, monkeypatch):
+        """enabled_kems/sigs should surface oqs capability lists."""
+
+        monkeypatch.setattr(
+            "core.suites._safe_get_enabled_kem_mechanisms",
+            lambda: ["ML-KEM-512", "ML-KEM-768"],
+        )
+        monkeypatch.setattr(
+            "core.suites._safe_get_enabled_sig_mechanisms",
+            lambda: ["ML-DSA-44", "Falcon-512"],
+        )
+
+        assert enabled_kems() == ("ML-KEM-512", "ML-KEM-768")
+        assert enabled_sigs() == ("ML-DSA-44", "Falcon-512")
     
     def test_header_version_stability(self):
         """Test header packing stability across all suites."""
@@ -5008,7 +5856,7 @@ class TestSuites:
 
 ============================================================
 
-FILE 38/46: tools\bench_cli.py
+FILE 40/53: tools\bench_cli.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\bench_cli.py
 Size: 841 bytes
@@ -5035,7 +5883,7 @@ if __name__=="__main__": main()
 
 ============================================================
 
-FILE 39/46: tools\check_ports.py
+FILE 41/53: tools\check_ports.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_ports.py
 Size: 3,618 bytes
@@ -5138,7 +5986,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 40/46: tools\encrypted_sniffer.py
+FILE 42/53: tools\encrypted_sniffer.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\encrypted_sniffer.py
 Size: 1,570 bytes
@@ -5194,7 +6042,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 41/46: tools\full_comm_check.py
+FILE 43/53: tools\full_comm_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\full_comm_check.py
 Size: 9,657 bytes
@@ -5463,7 +6311,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 42/46: tools\generate_identity.py
+FILE 44/53: tools\generate_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\generate_identity.py
 Size: 2,266 bytes
@@ -5536,375 +6384,932 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 43/46: tools\manual_4term\comprehensive_flow_test.py
+FILE 45/53: tools\manual_4term\drone_autopilot_sim.py
 ============================================================
-Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\comprehensive_flow_test.py
-Size: 14,230 bytes
-Modified: 2025-09-25 17:22:20
+Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_autopilot_sim.py
+Size: 3,933 bytes
+Modified: 2025-09-25 19:29:08
 ------------------------------------------------------------
-#!/usr/bin/env python3
-"""
-Comprehensive 4-Thread PQC Proxy Flow Test
-==========================================
+"""Drone-side simulator for manual quad-terminal tests.
 
-This single script tests the complete PQC proxy flow using 4 threads:
-1. GCS Proxy Thread - Starts GCS proxy and waits for drone connection
-2. Drone Proxy Thread - Connects to GCS and establishes PQC tunnel
-3. GCS Commands Thread - Sends commands from GCS to Drone
-4. Drone Telemetry Thread - Sends telemetry from Drone to GCS
-
-The test verifies:
-- PQC handshake establishment
-- GCS → Drone command flow (working)
-- Drone → GCS telemetry flow (broken - needs fix)
+Generates telemetry frames towards the drone proxy and prints any
+commands received from the GCS proxy.
 """
-import os
-import sys
-import time
-import threading
+from __future__ import annotations
+
+import argparse
 import socket
-from pathlib import Path
+import sys
+import threading
+import time
+from typing import List
 
-# Add project root to path
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
+_TELEMETRY_FRAMES: List[str] = [
+    "TELEM:POS:37.7749,-122.4194,ALT=120",
+    "TELEM:ATT:ROLL=1.2,PITCH=-0.3,YAW=90",
+    "TELEM:VEL:N=5.1,E=0.4,D=-0.2",
+    "TELEM:BAT:V=23.9,I=12.3,SOC=87",
+]
 
-# Import core modules
-from core.async_proxy import run_proxy
-from core.suites import get_suite
-from core.config import CONFIG
+_BUFFER_SIZE = 2048
 
-# Test configuration
-SUITE_ID = "cs-kyber768-aesgcm-dilithium3"
-CFG = {**CONFIG}
-CFG.update({
-    "TCP_HANDSHAKE_PORT": 45800,
-    "UDP_DRONE_RX":       45801,
-    "UDP_GCS_RX":         45802,
-    "DRONE_PLAINTEXT_TX": 45803,
-    "DRONE_PLAINTEXT_RX": 45804,
-    "GCS_PLAINTEXT_TX":   45805,
-    "GCS_PLAINTEXT_RX":   45806,
-    "DRONE_HOST":         "127.0.0.1",
-    "GCS_HOST":           "127.0.0.1",
-})
 
-# Global synchronization
-handshake_complete = threading.Event()
-test_results = {
-    "gcs_proxy_started": False,
-    "drone_proxy_connected": False,
-    "handshake_session_id": None,
-    "gcs_commands_sent": 0,
-    "drone_commands_received": 0,
-    "drone_telemetry_sent": 0,
-    "gcs_telemetry_received": 0,
-}
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Simulate a drone autopilot connected to the proxy")
+    parser.add_argument("--send-port", type=int, required=True, help="Port where drone proxy listens for plaintext telemetry")
+    parser.add_argument("--recv-port", type=int, required=True, help="Port where drone proxy delivers decrypted commands")
+    parser.add_argument("--host", default="127.0.0.1", help="Loopback host for both directions (default: %(default)s)")
+    parser.add_argument("--interval", type=float, default=1.5, help="Seconds between telemetry frames (default: %(default)s)")
+    parser.add_argument("--loop", action="store_true", help="Loop telemetry frames forever (default: stop after one pass)")
+    return parser.parse_args()
 
-class TestResults:
-    def __init__(self):
-        self.lock = threading.Lock()
-        self.log = []
-    
-    def add_result(self, thread_name: str, message: str, success: bool = True):
+
+def telemetry_loop(sock: socket.socket, host: str, port: int, interval: float, loop: bool, shutdown: threading.Event) -> None:
+    print(f"[DRONE] Sending telemetry to {host}:{port}")
+    while not shutdown.is_set():
+        for frame in _TELEMETRY_FRAMES:
+            try:
+                payload = frame.encode("utf-8")
+                sock.sendto(payload, (host, port))
+                timestamp = time.strftime("%H:%M:%S")
+                print(f"[DRONE] {timestamp} -> {frame}")
+            except OSError as exc:
+                print(f"[DRONE] Send error: {exc}")
+                shutdown.set()
+                break
+            if shutdown.wait(interval):
+                break
+        if not loop:
+            break
+    print("[DRONE] Telemetry loop stopped")
+
+
+def command_loop(sock: socket.socket, shutdown: threading.Event) -> None:
+    print("[DRONE] Listening for decrypted commands...")
+    sock.settimeout(0.5)
+    while not shutdown.is_set():
+        try:
+            data, addr = sock.recvfrom(_BUFFER_SIZE)
+        except socket.timeout:
+            continue
+        except OSError as exc:
+            if not shutdown.is_set():
+                print(f"[DRONE] Receive error: {exc}")
+            break
         timestamp = time.strftime("%H:%M:%S")
-        status = "✅" if success else "❌"
-        with self.lock:
-            self.log.append(f"[{timestamp}] {thread_name}: {status} {message}")
-            print(f"[{timestamp}] {thread_name}: {status} {message}")
-    
-    def print_summary(self):
-        print("\n" + "="*80)
-        print("TEST SUMMARY")
-        print("="*80)
-        for entry in self.log:
-            print(entry)
-        
-        # Analyze results
-        success_count = sum(1 for entry in self.log if "✅" in entry)
-        total_count = len(self.log)
-        print(f"\nOverall: {success_count}/{total_count} tests passed")
-        
-        if test_results["handshake_session_id"]:
-            print(f"Session ID: {test_results['handshake_session_id']}")
-        
-        print("\nFlow Analysis:")
-        if test_results["gcs_commands_sent"] > 0 and test_results["drone_commands_received"] > 0:
-            print(f"  GCS→Drone Commands: ✅ {test_results['drone_commands_received']}/{test_results['gcs_commands_sent']}")
-        else:
-            print(f"  GCS→Drone Commands: ❌ {test_results['drone_commands_received']}/{test_results['gcs_commands_sent']}")
-        
-        if test_results["drone_telemetry_sent"] > 0 and test_results["gcs_telemetry_received"] > 0:
-            print(f"  Drone→GCS Telemetry: ✅ {test_results['gcs_telemetry_received']}/{test_results['drone_telemetry_sent']}")
-        else:
-            print(f"  Drone→GCS Telemetry: ❌ {test_results['gcs_telemetry_received']}/{test_results['drone_telemetry_sent']}")
+        try:
+            text = data.decode("utf-8", errors="replace")
+        except Exception:
+            text = data.hex()
+        print(f"[DRONE] {timestamp} <- {text} (from {addr[0]}:{addr[1]})")
+    print("[DRONE] Command listener stopped")
 
-results = TestResults()
 
-def ensure_gcs_keys():
-    """Load or generate GCS signing keypair"""
-    keydir = Path(__file__).resolve().parent / "keys"
-    keydir.mkdir(parents=True, exist_ok=True)
-    
-    pub_path = keydir / "gcs_pub.bin"
-    sec_path = keydir / "gcs_sec.bin"
-    
-    try:
-        import oqs.oqs as oqs
-        suite = get_suite(SUITE_ID)
-        
-        if pub_path.exists() and sec_path.exists():
-            pub_bytes = pub_path.read_bytes()
-            sec_bytes = sec_path.read_bytes()
-            sig_obj = oqs.Signature(suite["sig_name"], secret_key=sec_bytes)
-            return pub_bytes, sig_obj
-        else:
-            sig_obj = oqs.Signature(suite["sig_name"])
-            pub_bytes = sig_obj.generate_keypair()
-            sec_bytes = sig_obj.export_secret_key()
-            
-            pub_path.write_bytes(pub_bytes)
-            sec_path.write_bytes(sec_bytes)
-            return pub_bytes, sig_obj
-            
-    except Exception as e:
-        raise RuntimeError(f"Failed to generate OQS signature keypair: {e}") from e
+def main() -> None:
+    args = parse_args()
 
-def gcs_proxy_thread():
-    """Thread 1: Start GCS proxy and wait for drone connection"""
-    try:
-        results.add_result("GCS_PROXY", "Starting GCS proxy...")
-        suite = get_suite(SUITE_ID)
-        gcs_pub, gcs_sig_obj = ensure_gcs_keys()
-        
-        test_results["gcs_proxy_started"] = True
-        results.add_result("GCS_PROXY", "Keys loaded, starting proxy")
-        
-        # This will block until handshake completes
-        run_proxy(role="gcs", suite=suite, cfg=CFG, gcs_sig_secret=gcs_sig_obj, gcs_sig_public=None)
-        
-    except Exception as e:
-        results.add_result("GCS_PROXY", f"Failed: {e}", False)
+    shutdown = threading.Event()
 
-def drone_proxy_thread():
-    """Thread 2: Connect to GCS and establish PQC tunnel"""
-    try:
-        # Wait for GCS proxy to start
-        while not test_results["gcs_proxy_started"]:
-            time.sleep(0.1)
-        
-        results.add_result("DRONE_PROXY", "Waiting for GCS public key...")
-        
-        keydir = Path(__file__).resolve().parent / "keys"
-        pub_path = keydir / "gcs_pub.bin"
-        
-        # Wait for GCS public key
-        timeout = 10
-        start_time = time.time()
-        while not pub_path.exists():
-            if time.time() - start_time > timeout:
-                raise TimeoutError("GCS public key not found")
-            time.sleep(0.2)
-        
-        gcs_pub = pub_path.read_bytes()
-        results.add_result("DRONE_PROXY", "GCS public key found, connecting...")
-        
-        suite = get_suite(SUITE_ID)
-        
-        # This will block until handshake completes and then continue running
-        run_proxy(role="drone", suite=suite, cfg=CFG, gcs_sig_secret=None, gcs_sig_public=gcs_pub)
-        
-    except Exception as e:
-        results.add_result("DRONE_PROXY", f"Failed: {e}", False)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as send_sock, \
+            socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as recv_sock:
+        recv_sock.bind(("0.0.0.0", args.recv_port))
 
-def gcs_commands_thread():
-    """Thread 3: Send commands from GCS to Drone"""
-    try:
-        results.add_result("GCS_COMMANDS", "Waiting for PQC handshake...")
-        
-        # Wait for proxies to establish connection
-        time.sleep(5)  # Give proxies time to complete handshake
-        
-        results.add_result("GCS_COMMANDS", "Starting command transmission test...")
-        
-        commands = [
-            b"CMD_TAKEOFF",
-            b"CMD_SET_ALTITUDE_100M", 
-            b"CMD_SET_HEADING_090",
-            b"CMD_RTL",
-            b"CMD_LAND"
-        ]
-        
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            for i, command in enumerate(commands):
-                try:
-                    sock.sendto(command, ("127.0.0.1", CFG["GCS_PLAINTEXT_TX"]))
-                    test_results["gcs_commands_sent"] += 1
-                    results.add_result("GCS_COMMANDS", f"Sent command {i+1}/5: {command.decode()}")
-                    time.sleep(1)  # Realistic command interval
-                except Exception as e:
-                    results.add_result("GCS_COMMANDS", f"Failed to send command {i+1}: {e}", False)
-        
-        results.add_result("GCS_COMMANDS", f"Command transmission complete: {test_results['gcs_commands_sent']}/5 sent")
-        
-    except Exception as e:
-        results.add_result("GCS_COMMANDS", f"Failed: {e}", False)
+        sender = threading.Thread(target=telemetry_loop, args=(send_sock, args.host, args.send_port, args.interval, args.loop, shutdown), daemon=True)
+        receiver = threading.Thread(target=command_loop, args=(recv_sock, shutdown), daemon=True)
 
-def drone_telemetry_thread():
-    """Thread 4: Send telemetry from Drone to GCS"""
-    try:
-        results.add_result("DRONE_TELEMETRY", "Waiting for PQC handshake...")
-        
-        # Wait for proxies to establish connection
-        time.sleep(5)
-        
-        # Start telemetry receiver first
-        receiver_thread = threading.Thread(target=gcs_telemetry_receiver, daemon=True)
-        receiver_thread.start()
-        
-        # Start command receiver
-        command_receiver_thread = threading.Thread(target=drone_command_receiver, daemon=True)
-        command_receiver_thread.start()
-        
-        time.sleep(2)  # Let receivers start
-        
-        results.add_result("DRONE_TELEMETRY", "Starting telemetry transmission test...")
-        
-        telemetry_messages = [
-            b"TELEM_GPS_LAT_37.7749_LON_-122.4194",
-            b"TELEM_ALT_150M_HEADING_090", 
-            b"TELEM_SPEED_25MS_BATTERY_85PCT",
-            b"TELEM_GPS_LAT_37.7750_LON_-122.4195",
-            b"TELEM_STATUS_MISSION_COMPLETE"
-        ]
-        
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            for i, telemetry in enumerate(telemetry_messages):
-                try:
-                    sock.sendto(telemetry, ("127.0.0.1", CFG["DRONE_PLAINTEXT_TX"]))
-                    test_results["drone_telemetry_sent"] += 1
-                    results.add_result("DRONE_TELEMETRY", f"Sent telemetry {i+1}/5: {telemetry.decode()[:30]}...")
-                    time.sleep(2)  # Realistic telemetry interval
-                except Exception as e:
-                    results.add_result("DRONE_TELEMETRY", f"Failed to send telemetry {i+1}: {e}", False)
-        
-        results.add_result("DRONE_TELEMETRY", f"Telemetry transmission complete: {test_results['drone_telemetry_sent']}/5 sent")
-        
-    except Exception as e:
-        results.add_result("DRONE_TELEMETRY", f"Failed: {e}", False)
+        sender.start()
+        receiver.start()
 
-def drone_command_receiver():
-    """Receive commands sent from GCS to Drone"""
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(("127.0.0.1", CFG["DRONE_PLAINTEXT_RX"]))
-            sock.settimeout(15)  # 15 second timeout
-            
-            results.add_result("DRONE_COMMANDS_RX", "Listening for commands from GCS...")
-            
-            while test_results["drone_commands_received"] < 5:
-                try:
-                    data, addr = sock.recvfrom(1024)
-                    test_results["drone_commands_received"] += 1
-                    results.add_result("DRONE_COMMANDS_RX", f"Received command: {data.decode()}")
-                except socket.timeout:
-                    break
-                except Exception as e:
-                    results.add_result("DRONE_COMMANDS_RX", f"Receive error: {e}", False)
-                    break
-    
-    except Exception as e:
-        results.add_result("DRONE_COMMANDS_RX", f"Failed to start receiver: {e}", False)
+        print("[DRONE] Autopilot simulator running. Press Ctrl+C to exit.")
+        try:
+            while sender.is_alive() or receiver.is_alive():
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            print("\n[DRONE] Interrupt received, shutting down")
+            shutdown.set()
+            sender.join(timeout=1.0)
+            receiver.join(timeout=1.0)
 
-def gcs_telemetry_receiver():
-    """Receive telemetry sent from Drone to GCS"""
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(("127.0.0.1", CFG["GCS_PLAINTEXT_RX"]))
-            sock.settimeout(15)  # 15 second timeout
-            
-            results.add_result("GCS_TELEMETRY_RX", "Listening for telemetry from drone...")
-            
-            while test_results["gcs_telemetry_received"] < 5:
-                try:
-                    data, addr = sock.recvfrom(1024)
-                    test_results["gcs_telemetry_received"] += 1
-                    results.add_result("GCS_TELEMETRY_RX", f"Received telemetry: {data.decode()[:30]}...")
-                except socket.timeout:
-                    break
-                except Exception as e:
-                    results.add_result("GCS_TELEMETRY_RX", f"Receive error: {e}", False)
-                    break
-    
-    except Exception as e:
-        results.add_result("GCS_TELEMETRY_RX", f"Failed to start receiver: {e}", False)
-
-def main():
-    """Main test orchestrator"""
-    print("=" * 80)
-    print("PQC PROXY COMPREHENSIVE FLOW TEST")
-    print("=" * 80)
-    print("Testing complete flow with 4 threads:")
-    print("  1. GCS Proxy (server)")  
-    print("  2. Drone Proxy (client)")
-    print("  3. GCS Commands → Drone")
-    print("  4. Drone Telemetry → GCS")
-    print()
-    
-    # Check port availability first
-    try:
-            test_ports = [45800, 45801, 45802, 45803, 45804, 45805, 45806]
-            for port in test_ports:
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as test_sock:
-                    test_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    test_sock.bind(("127.0.0.1", port))
-                results.add_result("SETUP", "All ports available")
-    except Exception as e:
-        results.add_result("SETUP", f"Port conflict: {e}", False)
-        return
-    
-    # Start all threads
-    threads = []
-    
-    # Start GCS proxy first
-    gcs_thread = threading.Thread(target=gcs_proxy_thread, name="GCS_Proxy", daemon=True)
-    threads.append(gcs_thread)
-    gcs_thread.start()
-    
-    # Wait a bit, then start drone proxy
-    time.sleep(2)
-    drone_thread = threading.Thread(target=drone_proxy_thread, name="Drone_Proxy", daemon=True)
-    threads.append(drone_thread)
-    drone_thread.start()
-    
-    # Wait for handshake, then start communication threads
-    time.sleep(5)
-    
-    gcs_cmd_thread = threading.Thread(target=gcs_commands_thread, name="GCS_Commands", daemon=True)
-    threads.append(gcs_cmd_thread)
-    gcs_cmd_thread.start()
-    
-    drone_telem_thread = threading.Thread(target=drone_telemetry_thread, name="Drone_Telemetry", daemon=True)  
-    threads.append(drone_telem_thread)
-    drone_telem_thread.start()
-    
-    # Let the test run
-    print("Test running... Press Ctrl+C to stop early")
-    try:
-        time.sleep(30)  # 30 second test duration
-    except KeyboardInterrupt:
-        print("\nTest interrupted by user")
-    
-    results.print_summary()
 
 if __name__ == "__main__":
     main()
 
 ============================================================
 
-FILE 44/46: tools\packet_interceptor.py
+FILE 46/53: tools\manual_4term\encrypted_bridge_logger.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\encrypted_bridge_logger.py
+Size: 4,355 bytes
+Modified: 2025-09-25 19:32:10
+------------------------------------------------------------
+"""Encrypted UDP bridge logger for manual 4-terminal testing.
+
+Listens on two UDP ports (drone->GCS and GCS->drone), forwards the
+packets to their true destinations, and prints concise metadata so you
+can verify encrypted traffic is flowing in both directions.
+"""
+from __future__ import annotations
+
+import argparse
+import socket
+import sys
+import threading
+import time
+from dataclasses import dataclass
+from typing import Tuple
+
+_LOG_BYTES_DEFAULT = 32
+_BUFFER_SIZE = 2048
+
+
+@dataclass
+class BridgeConfig:
+    listen_addr: Tuple[str, int]
+    forward_addr: Tuple[str, int]
+    label: str
+
+
+def _format_bytes(data: bytes, limit: int) -> str:
+    clipped = data[:limit]
+    hex_preview = clipped.hex()
+    if len(data) > limit:
+        return f"{hex_preview}... ({len(data)} bytes)"
+    return f"{hex_preview} ({len(data)} bytes)"
+
+
+def _bridge_loop(cfg: BridgeConfig, log_bytes: int, shutdown: threading.Event) -> None:
+    packet_count = 0
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as listener, \
+            socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as forwarder:
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(cfg.listen_addr)
+        listener.settimeout(0.5)
+
+        print(f"[{cfg.label}] Listening on {cfg.listen_addr[0]}:{cfg.listen_addr[1]} -> forwarding to {cfg.forward_addr[0]}:{cfg.forward_addr[1]}")
+        while not shutdown.is_set():
+            try:
+                data, addr = listener.recvfrom(_BUFFER_SIZE)
+            except socket.timeout:
+                continue
+            except OSError as exc:
+                if not shutdown.is_set():
+                    print(f"[{cfg.label}] Socket error: {exc}")
+                break
+
+            packet_count += 1
+            timestamp = time.strftime("%H:%M:%S")
+            preview = _format_bytes(data, log_bytes)
+            print(f"[{cfg.label}] {timestamp} #{packet_count} from {addr[0]}:{addr[1]} -> {preview}")
+
+            try:
+                forwarder.sendto(data, cfg.forward_addr)
+            except OSError as exc:
+                print(f"[{cfg.label}] Forward error: {exc}")
+                break
+
+        print(f"[{cfg.label}] Shutdown (processed {packet_count} packets)")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Log encrypted packets while forwarding between proxies")
+    parser.add_argument("--d2g-listen", type=int, required=True, help="Port to bind for Drone -> GCS traffic")
+    parser.add_argument("--d2g-forward", required=True, help="host:port to forward Drone -> GCS packets")
+    parser.add_argument("--g2d-listen", type=int, required=True, help="Port to bind for GCS -> Drone traffic")
+    parser.add_argument("--g2d-forward", required=True, help="host:port to forward GCS -> Drone packets")
+    parser.add_argument("--log-bytes", type=int, default=_LOG_BYTES_DEFAULT, help="Number of ciphertext bytes to preview (default: %(default)s)")
+    return parser.parse_args()
+
+
+def _parse_host_port(value: str) -> Tuple[str, int]:
+    if ":" not in value:
+        raise ValueError(f"Expected host:port, got '{value}'")
+    host, port_str = value.rsplit(":", 1)
+    return host, int(port_str)
+
+
+def main() -> None:
+    args = parse_args()
+
+    try:
+        d2g_forward = _parse_host_port(args.d2g_forward)
+        g2d_forward = _parse_host_port(args.g2d_forward)
+    except ValueError as exc:
+        print(f"Argument error: {exc}")
+        sys.exit(1)
+
+    shutdown = threading.Event()
+    bridges = [
+        BridgeConfig(("0.0.0.0", args.d2g_listen), d2g_forward, "Drone->GCS"),
+        BridgeConfig(("0.0.0.0", args.g2d_listen), g2d_forward, "GCS->Drone"),
+    ]
+
+    threads = [threading.Thread(target=_bridge_loop, args=(cfg, args.log_bytes, shutdown), daemon=True) for cfg in bridges]
+
+    print("Starting encrypted bridge logger. Press Ctrl+C to stop.")
+    for thread in threads:
+        thread.start()
+
+    try:
+        while any(thread.is_alive() for thread in threads):
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\nInterrupt received, shutting down...")
+        shutdown.set()
+        for thread in threads:
+            thread.join(timeout=1.0)
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 47/53: tools\manual_4term\gcs_ground_station_sim.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_ground_station_sim.py
+Size: 3,927 bytes
+Modified: 2025-09-25 19:29:08
+------------------------------------------------------------
+"""Minimal GCS ground-station simulator for manual quad-terminal tests.
+
+Sends a rotating set of high-level commands to the GCS proxy plaintext
+port and prints any telemetry frames returned from the drone proxy via
+GCS_PLAINTEXT_RX.
+"""
+from __future__ import annotations
+
+import argparse
+import socket
+import sys
+import threading
+import time
+from typing import List
+
+_DEFAULT_COMMANDS: List[str] = [
+    "CMD_ARM",
+    "CMD_TAKEOFF_ALT_30",
+    "CMD_SET_HEADING_090",
+    "CMD_LOITER_HOLD",
+    "CMD_RTL",
+]
+
+_BUFFER_SIZE = 2048
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Simulate a GCS app talking to the proxy")
+    parser.add_argument("--send-port", type=int, required=True, help="Port where GCS proxy listens for plaintext commands")
+    parser.add_argument("--recv-port", type=int, required=True, help="Port where GCS proxy delivers decrypted telemetry")
+    parser.add_argument("--host", default="127.0.0.1", help="Loopback host for both directions (default: %(default)s)")
+    parser.add_argument("--interval", type=float, default=2.0, help="Seconds between commands (default: %(default)s)")
+    parser.add_argument("--loop", action="store_true", help="Loop command list forever (default: stop after one pass)")
+    return parser.parse_args()
+
+
+def command_loop(sock: socket.socket, host: str, port: int, interval: float, loop: bool, shutdown: threading.Event) -> None:
+    print(f"[GCS] Sending plaintext commands to {host}:{port}")
+    while not shutdown.is_set():
+        for command in _DEFAULT_COMMANDS:
+            try:
+                payload = command.encode("utf-8")
+                sock.sendto(payload, (host, port))
+                timestamp = time.strftime("%H:%M:%S")
+                print(f"[GCS] {timestamp} -> {command}")
+            except OSError as exc:
+                print(f"[GCS] Send error: {exc}")
+                shutdown.set()
+                break
+            if shutdown.wait(interval):
+                break
+        if not loop:
+            break
+    print("[GCS] Command loop stopped")
+
+
+def telemetry_loop(sock: socket.socket, shutdown: threading.Event) -> None:
+    print("[GCS] Listening for decrypted telemetry...")
+    sock.settimeout(0.5)
+    while not shutdown.is_set():
+        try:
+            data, addr = sock.recvfrom(_BUFFER_SIZE)
+        except socket.timeout:
+            continue
+        except OSError as exc:
+            if not shutdown.is_set():
+                print(f"[GCS] Receive error: {exc}")
+            break
+        timestamp = time.strftime("%H:%M:%S")
+        try:
+            text = data.decode("utf-8", errors="replace")
+        except Exception:
+            text = data.hex()
+        print(f"[GCS] {timestamp} <- {text} (from {addr[0]}:{addr[1]})")
+    print("[GCS] Telemetry listener stopped")
+
+
+def main() -> None:
+    args = parse_args()
+
+    shutdown = threading.Event()
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as send_sock, \
+            socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as recv_sock:
+        recv_sock.bind(("0.0.0.0", args.recv_port))
+
+        sender = threading.Thread(target=command_loop, args=(send_sock, args.host, args.send_port, args.interval, args.loop, shutdown), daemon=True)
+        receiver = threading.Thread(target=telemetry_loop, args=(recv_sock, shutdown), daemon=True)
+
+        sender.start()
+        receiver.start()
+
+        print("[GCS] Ground-station simulator running. Press Ctrl+C to exit.")
+        try:
+            while sender.is_alive() or receiver.is_alive():
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            print("\n[GCS] Interrupt received, shutting down")
+            shutdown.set()
+            sender.join(timeout=1.0)
+            receiver.join(timeout=1.0)
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 48/53: tools\manual_4term\launch_manual_test.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\launch_manual_test.py
+Size: 9,824 bytes
+Modified: 2025-09-25 19:29:08
+------------------------------------------------------------
+"""Launch a four-terminal manual end-to-end test for the PQC proxy.
+
+Processes spawned:
+  1. GCS proxy (core.run_proxy gcs)
+  2. Drone proxy (core.run_proxy drone)
+  3. GCS ground-station simulator (commands -> proxy, telemetry <- proxy)
+  4. Drone autopilot simulator (telemetry -> proxy, commands <- proxy)
+
+Optional fifth process:
+  - Encrypted bridge logger that sits between the proxies and prints
+    ciphertext metadata while forwarding packets in both directions.
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import signal
+import subprocess
+import sys
+import threading
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+MANUAL_DIR = Path(__file__).resolve().parent
+DEFAULT_SECRETS = REPO_ROOT / "secrets"
+
+PORTS = {
+    "TCP_HANDSHAKE": 46000,
+    "GCS_ENCRYPTED_BIND": 46011,
+    "DRONE_ENCRYPTED_BIND": 46012,
+    "INTERCEPT_D2G_LISTEN": 46001,
+    "INTERCEPT_G2D_LISTEN": 46002,
+    "GCS_PLAINTEXT_TX": 47001,
+    "GCS_PLAINTEXT_RX": 47002,
+    "DRONE_PLAINTEXT_TX": 47003,
+    "DRONE_PLAINTEXT_RX": 47004,
+}
+
+_BUFFERED_TEXT = bool(os.name != "nt")  # On Windows CREATE_NEW_CONSOLE forbids capturing
+
+
+@dataclass
+class ProcessSpec:
+    label: str
+    command: List[str]
+    env: Dict[str, str]
+    new_window: bool
+
+
+@dataclass
+class ProcessHandle:
+    spec: ProcessSpec
+    process: subprocess.Popen
+    pump_thread: Optional[threading.Thread]
+
+
+def _ensure_identity(suite: str, secrets_dir: Path) -> None:
+    secret_path = secrets_dir / "gcs_signing.key"
+    public_path = secrets_dir / "gcs_signing.pub"
+    if secret_path.exists() and public_path.exists():
+        return
+
+    print(f"[setup] Generating GCS signing identity in {secrets_dir}")
+    secrets_dir.mkdir(parents=True, exist_ok=True)
+    cmd = [sys.executable, "-m", "core.run_proxy", "init-identity", "--suite", suite, "--output-dir", str(secrets_dir)]
+    result = subprocess.run(cmd, cwd=REPO_ROOT)
+    if result.returncode != 0:
+        raise RuntimeError("Failed to initialise GCS signing identity")
+
+
+def _stream_output(label: str, proc: subprocess.Popen) -> None:
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        print(f"[{label}] {line.rstrip()}" )
+    proc.stdout.close()
+
+
+def _launch_process(spec: ProcessSpec, cwd: Path) -> ProcessHandle:
+    creationflags = 0
+    stdout = None
+    stderr = None
+
+    if spec.new_window and os.name == "nt":
+        creationflags = subprocess.CREATE_NEW_CONSOLE  # type: ignore[attr-defined]
+    elif spec.new_window:
+        print(f"[warn] '--new-windows' requested but not supported on this platform. Running inline instead for {spec.label}.")
+
+    if not spec.new_window:
+        stdout = subprocess.PIPE
+        stderr = subprocess.STDOUT
+
+    proc = subprocess.Popen(
+        spec.command,
+        cwd=cwd,
+        env=spec.env,
+        stdout=stdout,
+        stderr=stderr,
+        text=True,
+        bufsize=1,
+    )
+
+    pump_thread: Optional[threading.Thread] = None
+    if stdout is not None and proc.stdout is not None:
+        pump_thread = threading.Thread(target=_stream_output, args=(spec.label, proc), daemon=True)
+        pump_thread.start()
+
+    return ProcessHandle(spec, proc, pump_thread)
+
+
+def _build_env(overrides: Dict[str, int]) -> Dict[str, str]:
+    env = os.environ.copy()
+    for key, value in overrides.items():
+        env[key] = str(value)
+    return env
+
+
+def _build_specs(args: argparse.Namespace, secrets_dir: Path) -> List[ProcessSpec]:
+    secret_path = secrets_dir / "gcs_signing.key"
+    public_path = secrets_dir / "gcs_signing.pub"
+
+    # Base overrides shared by both proxies
+    base_overrides = {
+        "TCP_HANDSHAKE_PORT": PORTS["TCP_HANDSHAKE"],
+        "DRONE_HOST": "127.0.0.1",
+        "GCS_HOST": "127.0.0.1",
+    }
+
+    if args.with_intercept:
+        drone_peer_port = PORTS["INTERCEPT_D2G_LISTEN"]
+        gcs_peer_port = PORTS["INTERCEPT_G2D_LISTEN"]
+    else:
+        drone_peer_port = PORTS["GCS_ENCRYPTED_BIND"]
+        gcs_peer_port = PORTS["DRONE_ENCRYPTED_BIND"]
+
+    gcs_env = _build_env({
+        **base_overrides,
+        "UDP_GCS_RX": PORTS["GCS_ENCRYPTED_BIND"],
+        "UDP_DRONE_RX": gcs_peer_port,
+        "GCS_PLAINTEXT_TX": PORTS["GCS_PLAINTEXT_TX"],
+        "GCS_PLAINTEXT_RX": PORTS["GCS_PLAINTEXT_RX"],
+    })
+
+    drone_env = _build_env({
+        **base_overrides,
+        "UDP_DRONE_RX": PORTS["DRONE_ENCRYPTED_BIND"],
+        "UDP_GCS_RX": drone_peer_port,
+        "DRONE_PLAINTEXT_TX": PORTS["DRONE_PLAINTEXT_TX"],
+        "DRONE_PLAINTEXT_RX": PORTS["DRONE_PLAINTEXT_RX"],
+    })
+
+    specs: List[ProcessSpec] = []
+
+    gcs_cmd = [sys.executable, "-m", "core.run_proxy", "gcs", "--suite", args.suite]
+    if secret_path != DEFAULT_SECRETS / "gcs_signing.key":
+        gcs_cmd += ["--gcs-secret-file", str(secret_path)]
+    specs.append(ProcessSpec("GCS", gcs_cmd, gcs_env, args.new_windows))
+
+    drone_cmd = [
+        sys.executable,
+        "-m",
+        "core.run_proxy",
+        "drone",
+        "--suite",
+        args.suite,
+        "--peer-pubkey-file",
+        str(public_path),
+    ]
+    specs.append(ProcessSpec("DRONE", drone_cmd, drone_env, args.new_windows))
+
+    gcs_sim_cmd = [
+        sys.executable,
+        str(MANUAL_DIR / "gcs_ground_station_sim.py"),
+        "--send-port",
+        str(PORTS["GCS_PLAINTEXT_TX"]),
+        "--recv-port",
+        str(PORTS["GCS_PLAINTEXT_RX"]),
+        "--loop",
+    ]
+    specs.append(ProcessSpec("GCS-SIM", gcs_sim_cmd, os.environ.copy(), args.new_windows))
+
+    drone_sim_cmd = [
+        sys.executable,
+        str(MANUAL_DIR / "drone_autopilot_sim.py"),
+        "--send-port",
+        str(PORTS["DRONE_PLAINTEXT_TX"]),
+        "--recv-port",
+        str(PORTS["DRONE_PLAINTEXT_RX"]),
+        "--loop",
+    ]
+    specs.append(ProcessSpec("DRONE-SIM", drone_sim_cmd, os.environ.copy(), args.new_windows))
+
+    if args.with_intercept:
+        bridge_cmd = [
+            sys.executable,
+            str(MANUAL_DIR / "encrypted_bridge_logger.py"),
+            "--d2g-listen",
+            str(PORTS["INTERCEPT_D2G_LISTEN"]),
+            "--d2g-forward",
+            f"127.0.0.1:{PORTS['GCS_ENCRYPTED_BIND']}",
+            "--g2d-listen",
+            str(PORTS["INTERCEPT_G2D_LISTEN"]),
+            "--g2d-forward",
+            f"127.0.0.1:{PORTS['DRONE_ENCRYPTED_BIND']}",
+        ]
+        specs.append(ProcessSpec("BRIDGE", bridge_cmd, os.environ.copy(), args.new_windows))
+
+    return specs
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Launch a manual four-terminal PQC proxy test")
+    parser.add_argument("--suite", default="cs-kyber768-aesgcm-dilithium3", help="Cryptographic suite for both proxies (default: %(default)s)")
+    parser.add_argument("--secrets-dir", default=str(DEFAULT_SECRETS), help="Directory containing GCS keypair (default: %(default)s)")
+    parser.add_argument("--no-auto-init", action="store_true", help="Do not auto-generate GCS keys if missing")
+    parser.add_argument("--with-intercept", action="store_true", help="Launch the encrypted bridge logger between proxies")
+    parser.add_argument("--new-windows", action="store_true", help="Attempt to open each process in a new console window (Windows only)")
+    return parser.parse_args()
+
+
+def print_banner(args: argparse.Namespace) -> None:
+    print("Manual PQC proxy test launcher")
+    print("Repository root:", REPO_ROOT)
+    print("Suite:", args.suite)
+    print("Secrets directory:", args.secrets_dir)
+    print("Intercept enabled:" if args.with_intercept else "Intercept disabled", args.with_intercept)
+    print("Ports in use:")
+    for key, value in PORTS.items():
+        print(f"  {key:<24} {value}")
+    print()
+    print("Press Ctrl+C in this window to stop all managed processes.")
+
+
+def main() -> None:
+    args = parse_args()
+    secrets_dir = Path(args.secrets_dir).resolve()
+
+    if not args.no_auto_init:
+        _ensure_identity(args.suite, secrets_dir)
+
+    print_banner(args)
+
+    specs = _build_specs(args, secrets_dir)
+    handles: List[ProcessHandle] = []
+
+    try:
+        for spec in specs:
+            handle = _launch_process(spec, REPO_ROOT)
+            handles.append(handle)
+            print(f"[launch] Started {spec.label} (PID {handle.process.pid})")
+
+        while True:
+            for handle in list(handles):
+                code = handle.process.poll()
+                if code is not None:
+                    print(f"[exit] {handle.spec.label} exited with code {code}")
+                    handles.remove(handle)
+            if not handles:
+                print("[launcher] All processes exited. Stopping launcher.")
+                break
+            time.sleep(0.5)
+
+    except KeyboardInterrupt:
+        print("\n[launcher] Interrupt received, terminating child processes...")
+    finally:
+        for handle in handles:
+            if handle.process.poll() is None:
+                try:
+                    if os.name == "nt" and hasattr(signal, "CTRL_BREAK_EVENT"):
+                        handle.process.send_signal(signal.CTRL_BREAK_EVENT)
+                        time.sleep(0.3)
+                    handle.process.terminate()
+                except Exception:
+                    pass
+        time.sleep(0.5)
+        for handle in handles:
+            if handle.process.poll() is None:
+                try:
+                    handle.process.kill()
+                except Exception:
+                    pass
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 49/53: tools\markers.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\markers.py
+Size: 3,323 bytes
+Modified: 2025-09-25 21:56:07
+------------------------------------------------------------
+"""Marker sink implementations for external power instrumentation.
+
+Used by benchmark harnesses to emit precise START/END markers that align with
+external power meters or logging systems.
+"""
+
+from __future__ import annotations
+
+from typing import Protocol
+import socket
+
+
+class MarkerSink(Protocol):
+    """Protocol for marker sinks used to signal run boundaries."""
+
+    def start(self, run_id: str, t_wall_ns: int) -> None:
+        """Emit a run start marker."""
+
+    def end(self, run_id: str, t_wall_ns: int) -> None:
+        """Emit a run end marker."""
+
+    def close(self) -> None:  # pragma: no cover - optional hook
+        """Optional resource cleanup."""
+
+
+class NullMarker:
+    """Marker sink that discards all events."""
+
+    def start(self, run_id: str, t_wall_ns: int) -> None:  # pragma: no cover - trivial
+        return
+
+    def end(self, run_id: str, t_wall_ns: int) -> None:  # pragma: no cover - trivial
+        return
+
+    def close(self) -> None:  # pragma: no cover - trivial
+        return
+
+
+class FileMarker:
+    """Append START/END markers to a text file."""
+
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+    def _write(self, tag: str, run_id: str, t_wall_ns: int) -> None:
+        with open(self.path, "a", encoding="utf-8") as handle:
+            handle.write(f"{tag} {run_id} {t_wall_ns}\n")
+
+    def start(self, run_id: str, t_wall_ns: int) -> None:
+        self._write("START", run_id, t_wall_ns)
+
+    def end(self, run_id: str, t_wall_ns: int) -> None:
+        self._write("END", run_id, t_wall_ns)
+
+    def close(self) -> None:  # pragma: no cover - nothing persistent
+        return
+
+
+class SerialMarker:
+    """Write markers to a serial port.
+
+    Requires ``pyserial`` to be installed in the environment.
+    """
+
+    def __init__(self, port: str, baud: int = 115_200) -> None:
+        import serial  # type: ignore
+
+        self._serial = serial.Serial(port=port, baudrate=baud, timeout=1)
+
+    def _send(self, payload: str) -> None:
+        self._serial.write(f"{payload}\n".encode("ascii"))
+        self._serial.flush()
+
+    def start(self, run_id: str, t_wall_ns: int) -> None:
+        self._send(f"START {run_id} {t_wall_ns}")
+
+    def end(self, run_id: str, t_wall_ns: int) -> None:
+        self._send(f"END {run_id} {t_wall_ns}")
+
+    def close(self) -> None:
+        try:
+            self._serial.close()
+        except Exception:  # pragma: no cover - best effort cleanup
+            pass
+
+
+class UdpMarker:
+    """Send markers over UDP to a remote host."""
+
+    def __init__(self, host_port: str) -> None:
+        host, port_str = host_port.split(":", 1)
+        self.addr = (host, int(port_str))
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def _send(self, payload: str) -> None:
+        self.sock.sendto(payload.encode("ascii"), self.addr)
+
+    def start(self, run_id: str, t_wall_ns: int) -> None:
+        self._send(f"START {run_id} {t_wall_ns}")
+
+    def end(self, run_id: str, t_wall_ns: int) -> None:
+        self._send(f"END {run_id} {t_wall_ns}")
+
+    def close(self) -> None:
+        try:
+            self.sock.close()
+        except Exception:  # pragma: no cover - best effort cleanup
+            pass
+
+============================================================
+
+FILE 50/53: tools\merge_power_csv.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\merge_power_csv.py
+Size: 5,656 bytes
+Modified: 2025-09-25 21:56:07
+------------------------------------------------------------
+"""Merge external power meter CSV output with benchmark manifests.
+
+For each manifest.json produced by the benchmark runner, slice the power-meter
+CSV to the START/END timestamps and compute aggregate energy statistics.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import math
+from pathlib import Path
+from typing import Dict, Iterable, List, Optional
+
+
+def parse_args() -> argparse.Namespace:
++    parser = argparse.ArgumentParser(description="Merge benchmark manifests with external power meter CSV data")
++    parser.add_argument("--manifest-dir", required=True, help="Directory containing manifest.json files")
++    parser.add_argument("--meter-csv", required=True, help="Power meter CSV file containing timestamped power samples")
++    parser.add_argument("--time-col", default="timestamp_ns", help="Column name for sample timestamps (nanoseconds)")
++    parser.add_argument("--power-col", default="power_w", help="Column name for power samples (watts)")
++    parser.add_argument("--out", default="benchmarks/out/merged.csv", help="Output CSV path with merged statistics")
++    return parser.parse_args()
++
++
++def load_meter_samples(csv_path: Path, time_col: str, power_col: str) -> List[Dict[str, float]]:
++    rows: List[Dict[str, float]] = []
++    with csv_path.open(newline="", encoding="utf-8") as handle:
++        reader = csv.DictReader(handle)
++        if time_col not in reader.fieldnames or power_col not in reader.fieldnames:
++            raise SystemExit(f"Required columns '{time_col}' and/or '{power_col}' missing from meter CSV")
++        for row in reader:
++            try:
++                t_ns = int(row[time_col])
++                p_w = float(row[power_col])
++            except (TypeError, ValueError) as exc:
++                raise SystemExit(f"Invalid meter row: {row}") from exc
++            rows.append({"t_ns": t_ns, "p_w": p_w})
++    if not rows:
++        print("Warning: meter CSV contained no samples")
++    return rows
++
++
++def slice_samples(samples: Iterable[Dict[str, float]], start_ns: int, end_ns: int) -> List[float]:
++    return [sample["p_w"] for sample in samples if start_ns <= sample["t_ns"] < end_ns]
++
++
++def compute_stats(samples: List[float], start_ns: int, end_ns: int) -> Dict[str, Optional[float]]:
++    duration_s = (end_ns - start_ns) / 1e9
++    if not samples:
++        return {
++            "samples": 0,
++            "avg_w": None,
++            "p95_w": None,
++            "max_w": None,
++            "joules": None,
++            "dur_s": duration_s,
++        }
++
++    sorted_samples = sorted(samples)
++    avg = sum(sorted_samples) / len(sorted_samples)
++    max_val = sorted_samples[-1]
++    p95_index = max(0, min(len(sorted_samples) - 1, math.floor(0.95 * (len(sorted_samples) - 1))))
++    p95_val = sorted_samples[p95_index]
++    joules = avg * duration_s
++    return {
++        "samples": len(sorted_samples),
++        "avg_w": avg,
++        "p95_w": p95_val,
++        "max_w": max_val,
++        "joules": joules,
++        "dur_s": duration_s,
++    }
++
++
++def collect_manifests(manifest_dir: Path) -> List[Dict[str, object]]:
++    manifests = []
++    for manifest_path in manifest_dir.rglob("manifest.json"):
++        data = json.loads(manifest_path.read_text(encoding="utf-8"))
++        data["_manifest_path"] = manifest_path
++        manifests.append(data)
++    if not manifests:
++        raise SystemExit(f"No manifest.json files found under {manifest_dir}")
++    manifests.sort(key=lambda entry: (entry.get("start_wall_ns", 0), entry.get("run_id", "")))
++    return manifests
++
++
++def merge(args: argparse.Namespace) -> None:
++    meter_samples = load_meter_samples(Path(args.meter_csv), args.time_col, args.power_col)
++    manifests = collect_manifests(Path(args.manifest_dir))
++
++    output_rows: List[Dict[str, object]] = []
++    for manifest in manifests:
++        start_ns = int(manifest["start_wall_ns"])
++        end_ns = int(manifest["end_wall_ns"])
++        sliced = slice_samples(meter_samples, start_ns, end_ns)
++        stats = compute_stats(sliced, start_ns, end_ns)
++        row: Dict[str, object] = {
++            "run_id": manifest.get("run_id"),
++            "suite": manifest.get("suite"),
++            "kem": manifest.get("kem"),
++            "sig": manifest.get("sig"),
++            "aead": manifest.get("aead"),
++            "repeat_idx": manifest.get("repeat_idx"),
++            "duration_s": manifest.get("duration_s"),
++            "start_wall_ns": start_ns,
++            "end_wall_ns": end_ns,
++            "manifest_path": str(manifest.get("_manifest_path")),
++            **stats,
++        }
++        output_rows.append(row)
++
++    out_path = Path(args.out)
++    out_path.parent.mkdir(parents=True, exist_ok=True)
++    fieldnames = [
++        "run_id",
++        "suite",
++        "kem",
++        "sig",
++        "aead",
++        "repeat_idx",
++        "duration_s",
++        "start_wall_ns",
++        "end_wall_ns",
++        "samples",
++        "avg_w",
++        "p95_w",
++        "max_w",
++        "joules",
++        "dur_s",
++        "manifest_path",
++    ]
++
++    with out_path.open("w", newline="", encoding="utf-8") as handle:
++        writer = csv.DictWriter(handle, fieldnames=fieldnames)
++        writer.writeheader()
++        for row in output_rows:
++            writer.writerow(row)
++    print(f"Merged {len(output_rows)} manifest entries into {out_path}")
++
++
++def main() -> None:
++    args = parse_args()
++    merge(args)
++
++
++if __name__ == "__main__":
++    main()
+
+============================================================
+
+FILE 51/53: tools\packet_interceptor.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\packet_interceptor.py
 Size: 2,494 bytes
@@ -5979,7 +7384,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 45/46: tools\power_hooks.py
+FILE 52/53: tools\power_hooks.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\power_hooks.py
 Size: 208 bytes
@@ -5993,7 +7398,7 @@ class PowerHook:
 
 ============================================================
 
-FILE 46/46: tools\scaffold_repo.py
+FILE 53/53: tools\scaffold_repo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\scaffold_repo.py
 Size: 17,074 bytes
