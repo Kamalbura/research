@@ -24,8 +24,8 @@ CONFIG = {
     "GCS_PLAINTEXT_RX": 47002,    # gcs-proxy→app
 
     # Hosts
-    "DRONE_HOST": "127.0.0.1",
-    "GCS_HOST": "127.0.0.1",
+    "DRONE_HOST": "192.168.0.102",
+    "GCS_HOST": "192.168.0.103",
 
     # Crypto/runtime
     "REPLAY_WINDOW": 1024,
