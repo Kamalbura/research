@@ -1,15 +1,15 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Output File: C:\Users\burak\Desktop\research\project_structure_20250925_222749.txt
-Generated: 2025-09-25 22:27:49
+Output File: C:\Users\burak\Desktop\research\project_structure_20250925_235652.txt
+Generated: 2025-09-25 23:56:52
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Generated: 2025-09-25 22:27:49
+Generated: 2025-09-25 23:56:52
 
 ├── __pycache__/
 │   ├── diagnose_handshake.cpython-313.pyc (3,003 bytes)
@@ -21,25 +21,24 @@ Generated: 2025-09-25 22:27:49
 │   ├── __pycache__/
 │   │   ├── __init__.cpython-313.pyc (273 bytes)
 │   │   ├── aead.cpython-313.pyc (13,736 bytes)
-│   │   ├── async_proxy.cpython-313.pyc (20,572 bytes)
+│   │   ├── async_proxy.cpython-313.pyc (33,642 bytes)
 │   │   ├── config.cpython-313.pyc (4,378 bytes)
 │   │   ├── handshake.cpython-313.pyc (11,730 bytes)
-│   │   ├── logging_utils.cpython-313.pyc (4,574 bytes)
-│   │   ├── policy_engine.cpython-313.pyc (983 bytes)
+│   │   ├── logging_utils.cpython-313.pyc (5,872 bytes)
+│   │   ├── policy_engine.cpython-313.pyc (9,815 bytes)
 │   │   ├── project_config.cpython-313.pyc (220 bytes)
-│   │   ├── run_proxy.cpython-313.pyc (18,155 bytes)
+│   │   ├── run_proxy.cpython-313.pyc (21,890 bytes)
 │   │   ├── runner.cpython-313.pyc (1,158 bytes)
 │   │   └── suites.cpython-313.pyc (11,609 bytes)
 │   ├── __init__.py (121 bytes)
 │   ├── aead.py (10,889 bytes)
-│   ├── async_proxy.py (18,859 bytes)
+│   ├── async_proxy.py (29,379 bytes)
 │   ├── config.py (5,603 bytes)
 │   ├── handshake.py (9,289 bytes)
-│   ├── logging_utils.py (2,011 bytes)
-│   ├── policy_engine.py (990 bytes)
+│   ├── logging_utils.py (2,957 bytes)
+│   ├── policy_engine.py (6,970 bytes)
 │   ├── project_config.py (168 bytes)
-│   ├── project_structure_20250925_190910.txt (88,724 bytes)
-│   ├── run_proxy.py (15,318 bytes)
+│   ├── run_proxy.py (18,726 bytes)
 │   ├── suites.py (11,602 bytes)
 │   └── temp-file.py (18,859 bytes)
 ├── ddos/
@@ -95,13 +94,14 @@ Generated: 2025-09-25 22:27:49
 │   │   ├── test_aead_framing.cpython-313-pytest-8.4.2.pyc (13,077 bytes)
 │   │   ├── test_aead_framing.cpython-313.pyc (7,620 bytes)
 │   │   ├── test_cli_identity.cpython-313-pytest-8.4.2.pyc (50,345 bytes)
+│   │   ├── test_control_sm.cpython-313-pytest-8.4.2.pyc (17,183 bytes)
 │   │   ├── test_end_to_end_proxy.cpython-313-pytest-8.4.2.pyc (17,910 bytes)
 │   │   ├── test_handshake.cpython-313-pytest-8.4.2.pyc (11,612 bytes)
 │   │   ├── test_handshake_downgrade.cpython-313-pytest-8.4.2.pyc (1,818 bytes)
 │   │   ├── test_hardening_features.cpython-313-pytest-8.4.2.pyc (27,504 bytes)
 │   │   ├── test_kdf_roles.cpython-313-pytest-8.4.2.pyc (7,996 bytes)
 │   │   ├── test_loss_dup_oom.cpython-313-pytest-8.4.2.pyc (586 bytes)
-│   │   ├── test_packet_types.cpython-313-pytest-8.4.2.pyc (7,081 bytes)
+│   │   ├── test_packet_types.cpython-313-pytest-8.4.2.pyc (7,385 bytes)
 │   │   ├── test_rekey_epoch.cpython-313-pytest-8.4.2.pyc (30,548 bytes)
 │   │   ├── test_replay_window.cpython-313-pytest-8.4.2.pyc (7,516 bytes)
 │   │   └── test_suites_config.cpython-313-pytest-8.4.2.pyc (39,783 bytes)
@@ -109,13 +109,14 @@ Generated: 2025-09-25 22:27:49
 │   ├── test-oqs.py (2,821 bytes)
 │   ├── test_aead_framing.py (6,589 bytes)
 │   ├── test_cli_identity.py (13,002 bytes)
+│   ├── test_control_sm.py (3,095 bytes)
 │   ├── test_end_to_end_proxy.py (11,044 bytes)
 │   ├── test_handshake.py (2,734 bytes)
 │   ├── test_handshake_downgrade.py (1,430 bytes)
 │   ├── test_hardening_features.py (7,879 bytes)
 │   ├── test_kdf_roles.py (1,630 bytes)
 │   ├── test_loss_dup_oom.py (149 bytes)
-│   ├── test_packet_types.py (4,208 bytes)
+│   ├── test_packet_types.py (4,350 bytes)
 │   ├── test_rekey_epoch.py (11,882 bytes)
 │   ├── test_replay_window.py (3,723 bytes)
 │   └── test_suites_config.py (12,691 bytes)
@@ -123,6 +124,7 @@ Generated: 2025-09-25 22:27:49
 │   ├── manual_4term/
 │   │   ├── __pycache__/
 │   │   │   ├── drone_autopilot_sim.cpython-313.pyc (6,509 bytes)
+│   │   │   ├── drone_tty.cpython-313.pyc (6,142 bytes)
 │   │   │   ├── encrypted_bridge_logger.cpython-313.pyc (7,713 bytes)
 │   │   │   ├── gcs_ground_station_sim.cpython-313.pyc (6,496 bytes)
 │   │   │   ├── launch_manual_test.cpython-313-pytest-8.4.2.pyc (15,131 bytes)
@@ -131,10 +133,12 @@ Generated: 2025-09-25 22:27:49
 │   │   │   ├── gcs_pub.bin (1,952 bytes)
 │   │   │   └── gcs_sec.bin (4,032 bytes)
 │   │   ├── drone_autopilot_sim.py (3,933 bytes)
+│   │   ├── drone_tty.py (3,485 bytes)
 │   │   ├── encrypted_bridge_logger.py (4,355 bytes)
 │   │   ├── gcs_ground_station_sim.py (3,927 bytes)
+│   │   ├── gcs_tty.py (3,479 bytes)
 │   │   ├── launch_manual_test.py (9,824 bytes)
-│   │   └── README.md (4,171 bytes)
+│   │   └── README.md (6,886 bytes)
 │   ├── wireshark/
 │   │   └── pqc_tunnel.lua (1,267 bytes)
 │   ├── bench_cli.py (841 bytes)
@@ -155,7 +159,7 @@ Generated: 2025-09-25 22:27:49
 ├── PR1_IMPLEMENTATION_SUMMARY.md (6,636 bytes)
 ├── progresslog.md (5,537 bytes)
 ├── PROJECT_STATUS.md (11,726 bytes)
-├── project_structure_20250925_222749.txt (0 bytes)
+├── project_structure_20250925_235652.txt (0 bytes)
 ├── pyproject.toml (455 bytes)
 ├── README.md (14,790 bytes)
 ├── strict_mode_demo.py (3,479 bytes)
@@ -166,7 +170,7 @@ Generated: 2025-09-25 22:27:49
 PYTHON FILE CONTENTS
 ================================================================================
 
-Found 53 Python files:
+Found 56 Python files:
    1. benchmarks\run_matrix.py
    2. core\__init__.py
    3. core\aead.py
@@ -196,34 +200,37 @@ Found 53 Python files:
   27. tests\test-oqs.py
   28. tests\test_aead_framing.py
   29. tests\test_cli_identity.py
-  30. tests\test_end_to_end_proxy.py
-  31. tests\test_handshake.py
-  32. tests\test_handshake_downgrade.py
-  33. tests\test_hardening_features.py
-  34. tests\test_kdf_roles.py
-  35. tests\test_loss_dup_oom.py
-  36. tests\test_packet_types.py
-  37. tests\test_rekey_epoch.py
-  38. tests\test_replay_window.py
-  39. tests\test_suites_config.py
-  40. tools\bench_cli.py
-  41. tools\check_ports.py
-  42. tools\encrypted_sniffer.py
-  43. tools\full_comm_check.py
-  44. tools\generate_identity.py
-  45. tools\manual_4term\drone_autopilot_sim.py
-  46. tools\manual_4term\encrypted_bridge_logger.py
-  47. tools\manual_4term\gcs_ground_station_sim.py
-  48. tools\manual_4term\launch_manual_test.py
-  49. tools\markers.py
-  50. tools\merge_power_csv.py
-  51. tools\packet_interceptor.py
-  52. tools\power_hooks.py
-  53. tools\scaffold_repo.py
+  30. tests\test_control_sm.py
+  31. tests\test_end_to_end_proxy.py
+  32. tests\test_handshake.py
+  33. tests\test_handshake_downgrade.py
+  34. tests\test_hardening_features.py
+  35. tests\test_kdf_roles.py
+  36. tests\test_loss_dup_oom.py
+  37. tests\test_packet_types.py
+  38. tests\test_rekey_epoch.py
+  39. tests\test_replay_window.py
+  40. tests\test_suites_config.py
+  41. tools\bench_cli.py
+  42. tools\check_ports.py
+  43. tools\encrypted_sniffer.py
+  44. tools\full_comm_check.py
+  45. tools\generate_identity.py
+  46. tools\manual_4term\drone_autopilot_sim.py
+  47. tools\manual_4term\drone_tty.py
+  48. tools\manual_4term\encrypted_bridge_logger.py
+  49. tools\manual_4term\gcs_ground_station_sim.py
+  50. tools\manual_4term\gcs_tty.py
+  51. tools\manual_4term\launch_manual_test.py
+  52. tools\markers.py
+  53. tools\merge_power_csv.py
+  54. tools\packet_interceptor.py
+  55. tools\power_hooks.py
+  56. tools\scaffold_repo.py
 
 --------------------------------------------------------------------------------
 
-FILE 1/53: benchmarks\run_matrix.py
+FILE 1/56: benchmarks\run_matrix.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\benchmarks\run_matrix.py
 Size: 11,095 bytes
@@ -540,7 +547,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 2/53: core\__init__.py
+FILE 2/56: core\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\__init__.py
 Size: 121 bytes
@@ -554,7 +561,7 @@ Provides post-quantum cryptography secure communication components.
 
 ============================================================
 
-FILE 3/53: core\aead.py
+FILE 3/56: core\aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\aead.py
 Size: 10,889 bytes
@@ -855,11 +862,11 @@ class Receiver:
 
 ============================================================
 
-FILE 4/53: core\async_proxy.py
+FILE 4/56: core\async_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\async_proxy.py
-Size: 18,859 bytes
-Modified: 2025-09-25 18:15:01
+Size: 29,379 bytes
+Modified: 2025-09-25 23:55:52
 ------------------------------------------------------------
 """
 Selectors-based network transport proxy.
@@ -877,8 +884,11 @@ is retained for backward compatibility; a future refactor may rename it to
 
 from __future__ import annotations
 
+import json
+import queue
 import socket
 import selectors
+import sys
 import threading
 import time
 import struct
@@ -886,7 +896,7 @@ from typing import Optional, Dict, Tuple
 from contextlib import contextmanager
 
 from core.config import CONFIG
-from core.suites import SUITES, header_ids_for_suite
+from core.suites import SUITES, header_ids_for_suite, get_suite, list_suites
 try:
     # Optional helper (if you implemented it)
     from core.suites import header_ids_from_names  # type: ignore
@@ -905,7 +915,14 @@ from core.aead import (
     AeadIds,
 )
 
-from core.policy_engine import handle_control
+from core.policy_engine import (
+    ControlState,
+    ControlResult,
+    create_control_state,
+    handle_control,
+    request_prepare,
+    record_rekey_result,
+)
 
 logger = get_logger("pqc")
 
@@ -925,8 +942,12 @@ class ProxyCounters:
         self.drop_header = 0
         self.drop_session_epoch = 0
         self.drop_other = 0
+        self.rekeys_ok = 0
+        self.rekeys_fail = 0
+        self.last_rekey_ms = 0
+        self.last_rekey_suite: Optional[str] = None
 
-    def to_dict(self) -> Dict[str, int]:
+    def to_dict(self) -> Dict[str, object]:
         return {
             "ptx_out": self.ptx_out,
             "ptx_in": self.ptx_in,
@@ -938,6 +959,10 @@ class ProxyCounters:
             "drop_header": self.drop_header,
             "drop_session_epoch": self.drop_session_epoch,
             "drop_other": self.drop_other,
+            "rekeys_ok": self.rekeys_ok,
+            "rekeys_fail": self.rekeys_fail,
+            "last_rekey_ms": self.last_rekey_ms,
+            "last_rekey_suite": self.last_rekey_suite or "",
         }
 
 
@@ -1177,6 +1202,102 @@ def _setup_sockets(role: str, cfg: dict):
                     pass
 
 
+def _compute_aead_ids(suite: dict, kem_name: Optional[str], sig_name: Optional[str]) -> AeadIds:
+    if kem_name and sig_name and header_ids_from_names:
+        ids_tuple = header_ids_from_names(kem_name, sig_name)  # type: ignore
+    else:
+        ids_tuple = header_ids_for_suite(suite)
+    return AeadIds(*ids_tuple)
+
+
+def _build_sender_receiver(
+    role: str,
+    ids: AeadIds,
+    session_id: bytes,
+    k_d2g: bytes,
+    k_g2d: bytes,
+    cfg: dict,
+):
+    if role == "drone":
+        sender = Sender(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_d2g)
+        receiver = Receiver(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_g2d, cfg["REPLAY_WINDOW"])
+    else:
+        sender = Sender(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_g2d)
+        receiver = Receiver(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_d2g, cfg["REPLAY_WINDOW"])
+    return sender, receiver
+
+
+def _launch_manual_console(control_state: ControlState, *, quiet: bool) -> Tuple[threading.Event, Tuple[threading.Thread, ...]]:
+    suites_catalog = sorted(list_suites().keys())
+    stop_event = threading.Event()
+
+    def status_loop() -> None:
+        last_line = ""
+        while not stop_event.is_set():
+            with control_state.lock:
+                state = control_state.state
+                suite_id = control_state.current_suite
+            line = f"[{state}] {suite_id}"
+            if line != last_line and not quiet:
+                sys.stderr.write(f"\r{line:<80}")
+                sys.stderr.flush()
+                last_line = line
+            time.sleep(0.5)
+        if not quiet:
+            sys.stderr.write("\r" + " " * 80 + "\r")
+            sys.stderr.flush()
+
+    def operator_loop() -> None:
+        if not quiet:
+            print("Manual control ready. Type a suite ID, 'list', 'status', or 'quit'.")
+        while not stop_event.is_set():
+            try:
+                line = input("rekey> ")
+            except EOFError:
+                break
+            if line is None:
+                continue
+            line = line.strip()
+            if not line:
+                continue
+            lowered = line.lower()
+            if lowered in {"quit", "exit"}:
+                break
+            if lowered == "list":
+                if not quiet:
+                    print("Available suites:")
+                    for sid in suites_catalog:
+                        print(f"  {sid}")
+                continue
+            if lowered == "status":
+                with control_state.lock:
+                    summary = f"state={control_state.state} suite={control_state.current_suite}"
+                    if control_state.last_status:
+                        summary += f" last_status={control_state.last_status}"
+                if not quiet:
+                    print(summary)
+                continue
+            try:
+                target_suite = get_suite(line)
+                rid = request_prepare(control_state, target_suite["suite_id"])
+                if not quiet:
+                    print(f"prepare queued for {target_suite['suite_id']} rid={rid}")
+            except RuntimeError as exc:
+                if not quiet:
+                    print(f"Busy: {exc}")
+            except Exception as exc:
+                if not quiet:
+                    print(f"Invalid suite: {exc}")
+
+        stop_event.set()
+
+    status_thread = threading.Thread(target=status_loop, daemon=True)
+    operator_thread = threading.Thread(target=operator_loop, daemon=True)
+    status_thread.start()
+    operator_thread.start()
+    return stop_event, (status_thread, operator_thread)
+
+
 def run_proxy(
     *,
     role: str,
@@ -1185,15 +1306,15 @@ def run_proxy(
     gcs_sig_secret: Optional[bytes] = None,
     gcs_sig_public: Optional[bytes] = None,
     stop_after_seconds: Optional[float] = None,
+    manual_control: bool = False,
+    quiet: bool = False,
     ready_event: Optional[threading.Event] = None,
-) -> Dict[str, int]:
+) -> Dict[str, object]:
     """
     Start a blocking proxy process for `role` in {"drone","gcs"}.
 
-    - Performs TCP handshake (server on GCS, client on Drone).
-    - Bridges plaintext UDP <-> encrypted UDP in both directions.
-    - Returns a dict of simple counters on clean exit:
-      {"ptx_out": int, "ptx_in": int, "enc_out": int, "enc_in": int, "drops": int}
+    Performs the TCP handshake, bridges plaintext/encrypted UDP, and processes
+    in-band control messages for rekey negotiation. Returns counters on clean exit.
     """
     if role not in {"drone", "gcs"}:
         raise ValueError(f"Invalid role: {role}")
@@ -1203,46 +1324,163 @@ def run_proxy(
     counters = ProxyCounters()
     start_time = time.time()
 
-    # Perform handshake and get session keys (+ optional kem/sig names)
     k_d2g, k_g2d, _nseed_d2g, _nseed_g2d, session_id, kem_name, sig_name = _perform_handshake(
         role, suite, gcs_sig_secret, gcs_sig_public, cfg, stop_after_seconds, ready_event
     )
 
-    # Log successful handshake
-    try:
-        suite_id = next((sid for sid, s in SUITES.items() if dict(s) == suite), "unknown")
-    except Exception:
-        suite_id = "unknown"
+    suite_id = suite.get("suite_id")
+    if not suite_id:
+        try:
+            suite_id = next((sid for sid, s in SUITES.items() if dict(s) == suite), "unknown")
+        except Exception:
+            suite_id = "unknown"
+
     logger.info(
         "PQC handshake completed successfully",
-        extra={"suite_id": suite_id, "peer_role": ("drone" if role == "gcs" else "gcs"), "session_id": session_id.hex()},
+        extra={
+            "suite_id": suite_id,
+            "peer_role": ("drone" if role == "gcs" else "gcs"),
+            "session_id": session_id.hex(),
+        },
     )
 
-    # Setup AEAD header IDs
-    if kem_name and sig_name and header_ids_from_names:
-        ids_tuple = header_ids_from_names(kem_name, sig_name)  # type: ignore
-    else:
-        ids_tuple = header_ids_for_suite(suite)
-    aead_ids = AeadIds(*ids_tuple)
+    aead_ids = _compute_aead_ids(suite, kem_name, sig_name)
+    sender, receiver = _build_sender_receiver(role, aead_ids, session_id, k_d2g, k_g2d, cfg)
 
-    # Role-based key directions
-    if role == "drone":
-        sender = Sender(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_d2g)
-        receiver = Receiver(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_g2d, cfg["REPLAY_WINDOW"])
-    else:  # gcs
-        sender = Sender(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_g2d)
-        receiver = Receiver(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_d2g, cfg["REPLAY_WINDOW"])
+    control_state = create_control_state(role, suite_id)
+    context_lock = threading.RLock()
+    active_context: Dict[str, object] = {
+        "suite": suite_id,
+        "suite_dict": suite,
+        "session_id": session_id,
+        "aead_ids": aead_ids,
+        "sender": sender,
+        "receiver": receiver,
+    }
 
-    # UDP bridge loop
+    active_rekeys: set[str] = set()
+    rekey_guard = threading.Lock()
+
+    if manual_control and role == "gcs" and not cfg.get("ENABLE_PACKET_TYPE"):
+        logger.warning("ENABLE_PACKET_TYPE is disabled; control-plane packets may not be processed correctly.")
+
+    manual_stop: Optional[threading.Event] = None
+    manual_threads: Tuple[threading.Thread, ...] = ()
+    if manual_control and role == "gcs":
+        manual_stop, manual_threads = _launch_manual_console(control_state, quiet=quiet)
+
+    def _launch_rekey(target_suite_id: str, rid: str) -> None:
+        with rekey_guard:
+            if rid in active_rekeys:
+                return
+            active_rekeys.add(rid)
+
+        logger.info(
+            "Control rekey negotiation started",
+            extra={"role": role, "suite_id": target_suite_id, "rid": rid},
+        )
+
+        def worker() -> None:
+            try:
+                new_suite = get_suite(target_suite_id)
+            except NotImplementedError as exc:
+                with context_lock:
+                    current_suite = active_context["suite"]
+                counters.rekeys_fail += 1
+                record_rekey_result(control_state, rid, current_suite, success=False)
+                logger.warning(
+                    "Control rekey rejected: unknown suite",
+                    extra={"role": role, "suite_id": target_suite_id, "rid": rid, "error": str(exc)},
+                )
+                with rekey_guard:
+                    active_rekeys.discard(rid)
+                return
+
+            try:
+                timeout = cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0)
+                rk_result = _perform_handshake(role, new_suite, gcs_sig_secret, gcs_sig_public, cfg, timeout)
+                if len(rk_result) >= 7:
+                    new_k_d2g, new_k_g2d, _nd1, _nd2, new_session_id, new_kem_name, new_sig_name = rk_result[:7]
+                else:
+                    new_k_d2g, new_k_g2d, _nd1, _nd2, new_session_id = rk_result
+                    new_kem_name = new_sig_name = None
+
+                new_ids = _compute_aead_ids(new_suite, new_kem_name, new_sig_name)
+                new_sender, new_receiver = _build_sender_receiver(
+                    role, new_ids, new_session_id, new_k_d2g, new_k_g2d, cfg
+                )
+
+                with context_lock:
+                    active_context.update(
+                        {
+                            "sender": new_sender,
+                            "receiver": new_receiver,
+                            "session_id": new_session_id,
+                            "aead_ids": new_ids,
+                            "suite": new_suite["suite_id"],
+                            "suite_dict": new_suite,
+                        }
+                    )
+
+                counters.rekeys_ok += 1
+                counters.last_rekey_ms = int(time.time() * 1000)
+                counters.last_rekey_suite = new_suite["suite_id"]
+                record_rekey_result(control_state, rid, new_suite["suite_id"], success=True)
+                logger.info(
+                    "Control rekey successful",
+                    extra={"role": role, "suite_id": new_suite["suite_id"], "rid": rid, "session_id": new_session_id.hex()},
+                )
+            except Exception as exc:
+                with context_lock:
+                    current_suite = active_context["suite"]
+                counters.rekeys_fail += 1
+                record_rekey_result(control_state, rid, current_suite, success=False)
+                logger.warning(
+                    "Control rekey failed",
+                    extra={"role": role, "suite_id": target_suite_id, "rid": rid, "error": str(exc)},
+                )
+            finally:
+                with rekey_guard:
+                    active_rekeys.discard(rid)
+
+        threading.Thread(target=worker, daemon=True).start()
+
     with _setup_sockets(role, cfg) as sockets:
         selector = selectors.DefaultSelector()
         selector.register(sockets["encrypted"], selectors.EVENT_READ, data="encrypted")
         selector.register(sockets["plaintext_in"], selectors.EVENT_READ, data="plaintext_in")
 
+        def send_control(payload: dict) -> None:
+            body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+            frame = b"\x02" + body
+            with context_lock:
+                current_sender = active_context["sender"]
+            try:
+                wire = current_sender.encrypt(frame)
+            except Exception as exc:
+                counters.drops += 1
+                counters.drop_other += 1
+                logger.warning("Failed to encrypt control payload", extra={"role": role, "error": str(exc)})
+                return
+            try:
+                sockets["encrypted"].sendto(wire, sockets["encrypted_peer"])
+                counters.enc_out += 1
+            except socket.error as exc:
+                counters.drops += 1
+                counters.drop_other += 1
+                logger.warning("Failed to send control payload", extra={"role": role, "error": str(exc)})
+
         try:
             while True:
                 if stop_after_seconds is not None and (time.time() - start_time) >= stop_after_seconds:
                     break
+
+                while True:
+                    try:
+                        control_payload = control_state.outbox.get_nowait()
+                    except queue.Empty:
+                        break
+                    send_control(control_payload)
 
                 events = selector.select(timeout=0.1)
                 for key, _mask in events:
@@ -1250,7 +1488,6 @@ def run_proxy(
                     data_type = key.data
 
                     if data_type == "plaintext_in":
-                        # Plaintext ingress: encrypt and forward
                         try:
                             payload, _addr = sock.recvfrom(2048)
                             if not payload:
@@ -1258,7 +1495,9 @@ def run_proxy(
                             counters.ptx_in += 1
 
                             payload_out = (b"\x01" + payload) if cfg.get("ENABLE_PACKET_TYPE") else payload
-                            wire = sender.encrypt(payload_out)
+                            with context_lock:
+                                current_sender = active_context["sender"]
+                            wire = current_sender.encrypt(payload_out)
 
                             try:
                                 sockets["encrypted"].sendto(wire, sockets["encrypted_peer"])
@@ -1275,11 +1514,14 @@ def run_proxy(
                                 continue
                             counters.enc_in += 1
 
+                            with context_lock:
+                                current_receiver = active_context["receiver"]
+
                             try:
-                                plaintext = receiver.decrypt(wire)
+                                plaintext = current_receiver.decrypt(wire)
                                 if plaintext is None:
                                     reason, _seq = _parse_header_fields(
-                                        CONFIG["WIRE_VERSION"], receiver.ids, receiver.session_id, wire
+                                        CONFIG["WIRE_VERSION"], current_receiver.ids, current_receiver.session_id, wire
                                     )
                                     counters.drops += 1
                                     if reason in ("version_mismatch", "crypto_id_mismatch", "header_too_short", "header_unpack_error"):
@@ -1311,9 +1553,23 @@ def run_proxy(
                                 if cfg.get("ENABLE_PACKET_TYPE") and plaintext:
                                     ptype = plaintext[0]
                                     if ptype == 0x01:
-                                        out_bytes = plaintext[1:]  # deliver to app
+                                        out_bytes = plaintext[1:]
                                     elif ptype == 0x02:
-                                        _ = handle_control(plaintext[1:])
+                                        try:
+                                            control_json = json.loads(plaintext[1:].decode("utf-8"))
+                                        except (UnicodeDecodeError, json.JSONDecodeError):
+                                            counters.drops += 1
+                                            counters.drop_other += 1
+                                            continue
+                                        result = handle_control(control_json, role, control_state)
+                                        for note in result.notes:
+                                            if note.startswith("prepare_fail"):
+                                                counters.rekeys_fail += 1
+                                        for payload in result.send:
+                                            control_state.outbox.put(payload)
+                                        if result.start_handshake:
+                                            suite_next, rid = result.start_handshake
+                                            _launch_rekey(suite_next, rid)
                                         continue
                                     else:
                                         counters.drops += 1
@@ -1331,12 +1587,16 @@ def run_proxy(
             pass
         finally:
             selector.close()
+            if manual_stop:
+                manual_stop.set()
+                for thread in manual_threads:
+                    thread.join(timeout=0.5)
 
     return counters.to_dict()
 
 ============================================================
 
-FILE 5/53: core\config.py
+FILE 5/56: core\config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\config.py
 Size: 5,603 bytes
@@ -1493,7 +1753,7 @@ validate_config(CONFIG)
 
 ============================================================
 
-FILE 6/53: core\handshake.py
+FILE 6/56: core\handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\handshake.py
 Size: 9,289 bytes
@@ -1742,14 +2002,14 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
 
 ============================================================
 
-FILE 7/53: core\logging_utils.py
+FILE 7/56: core\logging_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\logging_utils.py
-Size: 2,011 bytes
-Modified: 2025-09-24 15:32:25
+Size: 2,957 bytes
+Modified: 2025-09-25 23:55:52
 ------------------------------------------------------------
 import json, logging, sys, time
-from typing import Any, Dict
+from pathlib import Path
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -1784,6 +2044,33 @@ def get_logger(name: str = "pqc") -> logging.Logger:
     logger.propagate = False
     return logger
 
+
+def configure_file_logger(role: str, logger: logging.Logger | None = None) -> Path:
+    """Attach a JSON file handler and return log path."""
+
+    active_logger = logger or get_logger()
+
+    # Drop any previous file handlers we attached to avoid duplicate writes during tests.
+    for handler in list(active_logger.handlers):
+        if getattr(handler, "_pqc_file_handler", False):
+            active_logger.removeHandler(handler)
+            try:
+                handler.close()
+            except Exception:
+                pass
+
+    logs_dir = Path("logs")
+    logs_dir.mkdir(exist_ok=True)
+    timestamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    path = logs_dir / f"{role}-{timestamp}.log"
+
+    file_handler = logging.FileHandler(path, encoding="utf-8")
+    file_handler.setFormatter(JsonFormatter())
+    file_handler._pqc_file_handler = True  # type: ignore[attr-defined]
+    active_logger.addHandler(file_handler)
+
+    return path
+
 # Very small metrics hook (no deps)
 class Counter:
     def __init__(self): self.value = 0
@@ -1806,43 +2093,233 @@ METRICS = Metrics()
 
 ============================================================
 
-FILE 8/53: core\policy_engine.py
+FILE 8/56: core\policy_engine.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\policy_engine.py
-Size: 990 bytes
-Modified: 2025-09-25 13:14:29
+Size: 6,970 bytes
+Modified: 2025-09-25 23:55:52
 ------------------------------------------------------------
 """
-Minimal PolicyEngine stub for control-plane messages.
+In-band control-plane state machine for interactive rekey negotiation.
 
-Control packet format (first byte already stripped by async_proxy):
-    0x02 | cmd_id(1) | payload...
-For now we just log and ack-by-dropping. Later this will drive rekey/scheduler knobs.
+Implements a two-phase commit protocol carried over packet type 0x02 payloads.
 """
-from typing import Optional
 
-def handle_control(buf: bytes) -> Optional[bytes]:
-    """
-    Handle control-plane message and return optional response packet.
-    
-    Args:
-        buf: Control payload with type byte (0x02) already stripped by caller
-        
-    Returns:
-        Optional response packet to send back, or None for no response
-    """
-    if not buf:
-        return None
-    # First byte was 0x02 (packet type), async_proxy passes the rest in `buf`.
-    # Reserve cmd_id for future expansion.
-    cmd_id = buf[0] if len(buf) >= 1 else 0
-    # TODO: add dispatch on cmd_id (e.g., 0x01=rekey, 0x02=set-DSCP, 0x10=telemetry request).
-    # For now, do nothing and return no response.
-    return None
+from __future__ import annotations
+
+import queue
+import secrets
+import threading
+import time
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional, Tuple
+
+
+def _now_ms() -> int:
+    """Return monotonic milliseconds for control timestamps."""
+
+    return time.monotonic_ns() // 1_000_000
+
+
+def _default_safe() -> bool:
+    return True
+
+
+@dataclass
+class ControlState:
+    """Mutable control-plane state shared between proxy threads."""
+
+    role: str
+    current_suite: str
+    safe_guard: Callable[[], bool] = field(default_factory=_default_safe)
+    lock: threading.Lock = field(default_factory=threading.Lock)
+    outbox: "queue.Queue[dict]" = field(default_factory=queue.Queue)
+    pending: Dict[str, str] = field(default_factory=dict)
+    state: str = "RUNNING"
+    active_rid: Optional[str] = None
+    last_rekey_ms: Optional[int] = None
+    last_rekey_suite: Optional[str] = None
+    last_status: Optional[Dict[str, object]] = None
+    stats: Dict[str, int] = field(default_factory=lambda: {
+        "prepare_sent": 0,
+        "prepare_received": 0,
+        "rekeys_ok": 0,
+        "rekeys_fail": 0,
+    })
+    seen_rids: set[str] = field(default_factory=set)
+
+
+@dataclass
+class ControlResult:
+    """Outcome of processing a control message."""
+
+    send: List[dict] = field(default_factory=list)
+    start_handshake: Optional[Tuple[str, str]] = None  # (suite_id, rid)
+    notes: List[str] = field(default_factory=list)
+
+
+def create_control_state(role: str, suite_id: str, *, safe_guard: Callable[[], bool] | None = None) -> ControlState:
+    """Initialise ControlState with the provided role and suite."""
+
+    guard = safe_guard or _default_safe
+    return ControlState(role=role, current_suite=suite_id, safe_guard=guard)
+
+
+def generate_rid() -> str:
+    """Generate a random 64-bit hex request identifier."""
+
+    return secrets.token_hex(8)
+
+
+def enqueue_json(state: ControlState, payload: dict) -> None:
+    """Place an outbound JSON payload onto the control outbox."""
+
+    state.outbox.put(payload)
+
+
+def request_prepare(state: ControlState, suite_id: str) -> str:
+    """Queue a prepare_rekey message and transition to NEGOTIATING."""
+
+    rid = generate_rid()
+    now = _now_ms()
+    with state.lock:
+        if state.state != "RUNNING":
+            raise RuntimeError("control-plane already negotiating")
+        state.pending[rid] = suite_id
+        state.active_rid = rid
+        state.state = "NEGOTIATING"
+        state.stats["prepare_sent"] += 1
+    enqueue_json(
+        state,
+        {
+            "type": "prepare_rekey",
+            "suite": suite_id,
+            "rid": rid,
+            "t_ms": now,
+        },
+    )
+    return rid
+
+
+def record_rekey_result(state: ControlState, rid: str, suite_id: str, *, success: bool) -> None:
+    """Record outcome of a rekey attempt and enqueue status update."""
+
+    now = _now_ms()
+    status_payload = {
+        "type": "status",
+        "state": "RUNNING",
+        "suite": suite_id if success else state.current_suite,
+        "rid": rid,
+        "result": "ok" if success else "fail",
+        "t_ms": now,
+    }
+    with state.lock:
+        if success:
+            state.current_suite = suite_id
+            state.last_rekey_suite = suite_id
+            state.last_rekey_ms = now
+            state.stats["rekeys_ok"] += 1
+        else:
+            state.stats["rekeys_fail"] += 1
+        state.pending.pop(rid, None)
+        state.active_rid = None
+        state.state = "RUNNING"
+    enqueue_json(state, status_payload)
+
+
+def handle_control(msg: dict, role: str, state: ControlState) -> ControlResult:
+    """Process inbound control JSON and return actions for the proxy."""
+
+    result = ControlResult()
+    msg_type = msg.get("type")
+    if not isinstance(msg_type, str):
+        result.notes.append("missing_type")
+        return result
+
+    rid = msg.get("rid")
+    now = _now_ms()
+
+    if role == "gcs":
+        if msg_type == "prepare_ok" and isinstance(rid, str):
+            with state.lock:
+                suite = state.pending.get(rid)
+                if not suite:
+                    result.notes.append("unknown_rid")
+                    return result
+                state.state = "SWAPPING"
+                state.seen_rids.add(rid)
+            result.send.append({
+                "type": "commit_rekey",
+                "suite": suite,
+                "rid": rid,
+                "t_ms": now,
+            })
+            result.start_handshake = (suite, rid)
+        elif msg_type == "prepare_fail" and isinstance(rid, str):
+            reason = msg.get("reason", "unknown")
+            with state.lock:
+                state.pending.pop(rid, None)
+                state.active_rid = None
+                state.state = "RUNNING"
+                state.stats["rekeys_fail"] += 1
+                state.seen_rids.add(rid)
+            result.notes.append(f"prepare_fail:{reason}")
+        elif msg_type == "status":
+            with state.lock:
+                state.last_status = msg
+        else:
+            result.notes.append(f"ignored:{msg_type}")
+        return result
+
+    if msg_type == "prepare_rekey":
+        suite = msg.get("suite")
+        if not isinstance(rid, str) or not isinstance(suite, str):
+            result.notes.append("invalid_prepare")
+            return result
+
+        with state.lock:
+            if rid in state.seen_rids:
+                allow = False
+            else:
+                allow = state.state == "RUNNING" and state.safe_guard()
+            if allow:
+                state.pending[rid] = suite
+                state.active_rid = rid
+                state.state = "NEGOTIATING"
+                state.stats["prepare_received"] += 1
+                state.seen_rids.add(rid)
+        if allow:
+            result.send.append({
+                "type": "prepare_ok",
+                "rid": rid,
+                "t_ms": now,
+            })
+        else:
+            result.send.append({
+                "type": "prepare_fail",
+                "rid": rid,
+                "reason": "unsafe",
+                "t_ms": now,
+            })
+    elif msg_type == "commit_rekey" and isinstance(rid, str):
+        with state.lock:
+            suite = state.pending.get(rid)
+            if not suite:
+                result.notes.append("unknown_commit_rid")
+                return result
+            state.state = "SWAPPING"
+        result.start_handshake = (suite, rid)
+    elif msg_type == "status":
+        with state.lock:
+            state.last_status = msg
+    else:
+        result.notes.append(f"ignored:{msg_type}")
+
+    return result
 
 ============================================================
 
-FILE 9/53: core\project_config.py
+FILE 9/56: core\project_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\project_config.py
 Size: 168 bytes
@@ -1855,11 +2332,11 @@ __all__ = ["CONFIG"]
 
 ============================================================
 
-FILE 10/53: core\run_proxy.py
+FILE 10/56: core\run_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\run_proxy.py
-Size: 15,318 bytes
-Modified: 2025-09-25 21:56:07
+Size: 18,726 bytes
+Modified: 2025-09-25 23:55:52
 ------------------------------------------------------------
 """
 Unified CLI entrypoint for the PQC drone-GCS proxy.
@@ -1878,14 +2355,15 @@ import signal
 import os
 import json
 import time
+import logging
 from pathlib import Path
 from typing import Optional
 
 from oqs.oqs import Signature
 from core.config import CONFIG
-from core.suites import get_suite
+from core.suites import get_suite, build_suite_id
 from core.async_proxy import run_proxy
-from core.logging_utils import get_logger
+from core.logging_utils import get_logger, configure_file_logger
 
 logger = get_logger("pqc")
 
@@ -1903,7 +2381,7 @@ def create_secrets_dir():
     return secrets_dir
 
 
-def write_json_report(json_path: Optional[str], payload: dict) -> None:
+def write_json_report(json_path: Optional[str], payload: dict, *, quiet: bool = False) -> None:
     """Persist counters payload to JSON if a path is provided."""
 
     if not json_path:
@@ -1913,9 +2391,43 @@ def write_json_report(json_path: Optional[str], payload: dict) -> None:
         path = Path(json_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        print(f"Wrote JSON report to {path}")
+        if not quiet:
+            print(f"Wrote JSON report to {path}")
     except Exception as exc:
         print(f"Warning: Failed to write JSON output to {json_path}: {exc}")
+
+
+def _resolve_suite(args, role_label: str) -> dict:
+    """Resolve suite via legacy --suite or new --kem/--aead/--sig components."""
+
+    suite_arg = getattr(args, "suite", None)
+    kem = getattr(args, "kem", None)
+    sig = getattr(args, "sig", None)
+    aead = getattr(args, "aead", None)
+
+    if suite_arg and any(v is not None for v in (kem, sig, aead)):
+        print("Error: --suite cannot be combined with --kem/--sig/--aead")
+        sys.exit(1)
+
+    try:
+        if suite_arg:
+            suite = get_suite(suite_arg)
+        elif any(v is not None for v in (kem, sig, aead)):
+            if not all(v is not None for v in (kem, sig, aead)):
+                print("Error: --kem, --sig, and --aead must be provided together")
+                sys.exit(1)
+            suite_id = build_suite_id(kem, aead, sig)
+            suite = get_suite(suite_id)
+        else:
+            print(f"Error: {role_label} requires --suite or --kem/--sig/--aead")
+            sys.exit(1)
+    except NotImplementedError as exc:
+        print(f"Error: {exc}")
+        sys.exit(1)
+
+    # Normalize suite argument for downstream logging
+    setattr(args, "suite", suite.get("suite_id", getattr(args, "suite", None)))
+    return suite
 
 
 def init_identity_command(args):
@@ -1972,29 +2484,33 @@ def init_identity_command(args):
 
 def gcs_command(args):
     """Start GCS proxy."""
-    try:
-        suite = get_suite(args.suite)
-    except KeyError as e:
-        print(f"Error: Unknown suite: {args.suite}")
-        sys.exit(1)
+    suite = _resolve_suite(args, "GCS proxy")
+    suite_id = suite["suite_id"]
     
     gcs_sig_secret = None
     gcs_sig_public = None
     json_out_path = getattr(args, "json_out", None)
+    quiet = getattr(args, "quiet", False)
+
+    def info(msg: str) -> None:
+        if not quiet:
+            print(msg)
     
     if args.ephemeral:
-        print("⚠️  WARNING: Using EPHEMERAL keys - not suitable for production!")
-        print("⚠️  Key will be lost when process exits.")
-        print()
+        info("⚠️  WARNING: Using EPHEMERAL keys - not suitable for production!")
+        info("⚠️  Key will be lost when process exits.")
+        if not quiet:
+            print()
         
         # Generate ephemeral keypair
         sig = Signature(suite["sig_name"])
         gcs_sig_public = sig.generate_keypair()
         gcs_sig_secret = sig
-        print("Generated ephemeral GCS signing keypair:")
-        print(f"Public key (hex): {gcs_sig_public.hex()}")
-        print("Provide this to the drone via --gcs-pub-hex or --peer-pubkey-file")
-        print()
+        info("Generated ephemeral GCS signing keypair:")
+        if not quiet:
+            print(f"Public key (hex): {gcs_sig_public.hex()}")
+            print("Provide this to the drone via --gcs-pub-hex or --peer-pubkey-file")
+            print()
         
     else:
         # Load persistent key
@@ -2053,9 +2569,9 @@ def gcs_command(args):
             print("Consider running with --ephemeral or upgrading oqs-python/liboqs with key import support.")
             sys.exit(1)
 
-        print("Loaded GCS signing key from file.")
+        info("Loaded GCS signing key from file.")
         if load_method == "ctor_secret_key":
-            print("Using constructor-based fallback because import/export APIs are unavailable.")
+            info("Using constructor-based fallback because import/export APIs are unavailable.")
 
         gcs_sig_public = imported_public
         if gcs_sig_public is None:
@@ -2072,22 +2588,28 @@ def gcs_command(args):
                 if candidate.exists():
                     try:
                         gcs_sig_public = candidate.read_bytes()
-                        print(f"Loaded public key from {candidate}.")
+                        info(f"Loaded public key from {candidate}.")
                     except Exception as exc:
                         load_errors.append(f"public key read failed ({candidate}): {exc}")
                     break
 
-        if gcs_sig_public is not None:
+        if gcs_sig_public is not None and not quiet:
             print(f"Public key (hex): {gcs_sig_public.hex()}")
-        else:
+        elif gcs_sig_public is None and not quiet:
             print("Warning: Could not locate public key file for display. Ensure the drone has the matching public key.")
-        print()
+        if not quiet:
+            print()
     
     try:
-        print(f"Starting GCS proxy with suite {args.suite}")
+        log_path = configure_file_logger("gcs", logger)
+        if not quiet:
+            print(f"Log file: {log_path}")
+
+        info(f"Starting GCS proxy with suite {suite_id}")
         if args.stop_seconds:
-            print(f"Will auto-stop after {args.stop_seconds} seconds")
-        print()
+            info(f"Will auto-stop after {args.stop_seconds} seconds")
+        if not quiet:
+            print()
         
         counters = run_proxy(
             role="gcs",
@@ -2095,27 +2617,30 @@ def gcs_command(args):
             cfg=CONFIG,
             gcs_sig_secret=gcs_sig_secret,
             gcs_sig_public=None,
-            stop_after_seconds=args.stop_seconds
+            stop_after_seconds=args.stop_seconds,
+            manual_control=getattr(args, "control_manual", False),
+            quiet=quiet,
         )
         
         # Log final counters as JSON
         logger.info("GCS proxy shutdown", extra={"counters": counters})
         
-        print("GCS proxy stopped. Final counters:")
-        for key, value in counters.items():
-            print(f"  {key}: {value}")
+        if not quiet:
+            print("GCS proxy stopped. Final counters:")
+            for key, value in counters.items():
+                print(f"  {key}: {value}")
 
-        suite_id = suite.get("suite_id") or args.suite
         payload = {
             "role": "gcs",
             "suite": suite_id,
             "counters": counters,
             "ts_stop_ns": time.time_ns(),
         }
-        write_json_report(json_out_path, payload)
+        write_json_report(json_out_path, payload, quiet=quiet)
             
     except KeyboardInterrupt:
-        print("\nGCS proxy stopped by user.")
+        if not quiet:
+            print("\nGCS proxy stopped by user.")
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
@@ -2123,15 +2648,17 @@ def gcs_command(args):
 
 def drone_command(args):
     """Start drone proxy."""
-    try:
-        suite = get_suite(args.suite)
-    except KeyError as e:
-        print(f"Error: Unknown suite: {args.suite}")
-        sys.exit(1)
+    suite = _resolve_suite(args, "Drone proxy")
+    suite_id = suite["suite_id"]
     
     # Get GCS public key
     gcs_sig_public = None
     json_out_path = getattr(args, "json_out", None)
+    quiet = getattr(args, "quiet", False)
+
+    def info(msg: str) -> None:
+        if not quiet:
+            print(msg)
     
     try:
         if args.peer_pubkey_file:
@@ -2146,7 +2673,7 @@ def drone_command(args):
             default_pub = Path("secrets/gcs_signing.pub")
             if default_pub.exists():
                 gcs_sig_public = default_pub.read_bytes()
-                print(f"Using GCS public key from: {default_pub}")
+                info(f"Using GCS public key from: {default_pub}")
             else:
                 raise ValueError("No GCS public key provided. Use --peer-pubkey-file, --gcs-pub-hex, or ensure secrets/gcs_signing.pub exists.")
                 
@@ -2155,10 +2682,15 @@ def drone_command(args):
         sys.exit(1)
     
     try:
-        print(f"Starting drone proxy with suite {args.suite}")
+        log_path = configure_file_logger("drone", logger)
+        if not quiet:
+            print(f"Log file: {log_path}")
+
+        info(f"Starting drone proxy with suite {suite_id}")
         if args.stop_seconds:
-            print(f"Will auto-stop after {args.stop_seconds} seconds")
-        print()
+            info(f"Will auto-stop after {args.stop_seconds} seconds")
+        if not quiet:
+            print()
         
         counters = run_proxy(
             role="drone",
@@ -2166,27 +2698,30 @@ def drone_command(args):
             cfg=CONFIG,
             gcs_sig_secret=None,
             gcs_sig_public=gcs_sig_public,
-            stop_after_seconds=args.stop_seconds
+            stop_after_seconds=args.stop_seconds,
+            manual_control=False,
+            quiet=quiet,
         )
         
         # Log final counters as JSON
         logger.info("Drone proxy shutdown", extra={"counters": counters})
         
-        print("Drone proxy stopped. Final counters:")
-        for key, value in counters.items():
-            print(f"  {key}: {value}")
+        if not quiet:
+            print("Drone proxy stopped. Final counters:")
+            for key, value in counters.items():
+                print(f"  {key}: {value}")
 
-        suite_id = suite.get("suite_id") or args.suite
         payload = {
             "role": "drone",
             "suite": suite_id,
             "counters": counters,
             "ts_stop_ns": time.time_ns(),
         }
-        write_json_report(json_out_path, payload)
+        write_json_report(json_out_path, payload, quiet=quiet)
             
     except KeyboardInterrupt:
-        print("\nDrone proxy stopped by user.")
+        if not quiet:
+            print("\nDrone proxy stopped by user.")
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
@@ -2212,27 +2747,45 @@ def main():
     
     # gcs subcommand
     gcs_parser = subparsers.add_parser('gcs', help='Start GCS proxy')
-    gcs_parser.add_argument("--suite", required=True,
+    gcs_parser.add_argument("--suite",
                            help="Cryptographic suite ID (e.g., cs-kyber768-aesgcm-dilithium3)")
+    gcs_parser.add_argument("--kem",
+                           help="KEM alias (e.g., ML-KEM-768, kyber768)")
+    gcs_parser.add_argument("--aead",
+                           help="AEAD alias (e.g., AES-GCM)")
+    gcs_parser.add_argument("--sig",
+                           help="Signature alias (e.g., ML-DSA-65, dilithium3)")
     gcs_parser.add_argument("--gcs-secret-file",
                            help="Path to GCS secret key file (default: secrets/gcs_signing.key)")
     gcs_parser.add_argument("--ephemeral", action='store_true',
                            help="Use ephemeral keys (development only - prints warning)")
     gcs_parser.add_argument("--stop-seconds", type=float,
                            help="Auto-stop after N seconds (for testing)")
+    gcs_parser.add_argument("--quiet", action="store_true",
+                           help="Suppress informational prints (warnings/errors still shown)")
     gcs_parser.add_argument("--json-out",
                            help="Optional path to write counters JSON on shutdown")
+    gcs_parser.add_argument("--control-manual", action="store_true",
+                           help="Enable interactive manual in-band rekey control thread")
     
     # drone subcommand
     drone_parser = subparsers.add_parser('drone', help='Start drone proxy')
-    drone_parser.add_argument("--suite", required=True,
+    drone_parser.add_argument("--suite",
                              help="Cryptographic suite ID (e.g., cs-kyber768-aesgcm-dilithium3)")
+    drone_parser.add_argument("--kem",
+                             help="KEM alias (e.g., ML-KEM-768, kyber768)")
+    drone_parser.add_argument("--aead",
+                             help="AEAD alias (e.g., AES-GCM)")
+    drone_parser.add_argument("--sig",
+                             help="Signature alias (e.g., ML-DSA-65, dilithium3)")
     drone_parser.add_argument("--peer-pubkey-file",
                              help="Path to GCS public key file (default: secrets/gcs_signing.pub)")
     drone_parser.add_argument("--gcs-pub-hex",
                              help="GCS public key as hex string")
     drone_parser.add_argument("--stop-seconds", type=float,
                              help="Auto-stop after N seconds (for testing)")
+    drone_parser.add_argument("--quiet", action="store_true",
+                              help="Suppress informational prints (warnings/errors still shown)")
     drone_parser.add_argument("--json-out",
                               help="Optional path to write counters JSON on shutdown")
     
@@ -2259,8 +2812,12 @@ def main():
     if args.command == 'init-identity':
         init_identity_command(args)
     elif args.command == 'gcs':
+        if getattr(args, "quiet", False):
+            logger.setLevel(logging.WARNING)
         gcs_command(args)
     elif args.command == 'drone':
+        if getattr(args, "quiet", False):
+            logger.setLevel(logging.WARNING)
         drone_command(args)
 
 
@@ -2269,7 +2826,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 11/53: core\suites.py
+FILE 11/56: core\suites.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\suites.py
 Size: 11,602 bytes
@@ -2670,7 +3227,7 @@ def suite_bytes_for_hkdf(suite: Dict) -> bytes:
 
 ============================================================
 
-FILE 12/53: core\temp-file.py
+FILE 12/56: core\temp-file.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\temp-file.py
 Size: 18,859 bytes
@@ -3151,7 +3708,7 @@ def run_proxy(
 
 ============================================================
 
-FILE 13/53: ddos\features.py
+FILE 13/56: ddos\features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\features.py
 Size: 107 bytes
@@ -3162,7 +3719,7 @@ def extract_features(pkt_batch):
 
 ============================================================
 
-FILE 14/53: ddos\mitigations.py
+FILE 14/56: ddos\mitigations.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\mitigations.py
 Size: 112 bytes
@@ -3173,7 +3730,7 @@ def apply(action):
 
 ============================================================
 
-FILE 15/53: ddos\tst_stage2.py
+FILE 15/56: ddos\tst_stage2.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\tst_stage2.py
 Size: 104 bytes
@@ -3184,7 +3741,7 @@ def confirm(features):
 
 ============================================================
 
-FILE 16/53: ddos\xgb_stage1.py
+FILE 16/56: ddos\xgb_stage1.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\xgb_stage1.py
 Size: 106 bytes
@@ -3195,7 +3752,7 @@ def score(features):
 
 ============================================================
 
-FILE 17/53: diagnose_aead.py
+FILE 17/56: diagnose_aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\diagnose_aead.py
 Size: 620 bytes
@@ -3220,7 +3777,7 @@ print("decrypt", plain)
 
 ============================================================
 
-FILE 18/53: diagnose_handshake.py
+FILE 18/56: diagnose_handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\diagnose_handshake.py
 Size: 1,566 bytes
@@ -3283,7 +3840,7 @@ for name, value in keys.items():
 
 ============================================================
 
-FILE 19/53: drone\scripts\env_check.py
+FILE 19/56: drone\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\drone\scripts\env_check.py
 Size: 396 bytes
@@ -3305,7 +3862,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 20/53: gcs\scripts\env_check.py
+FILE 20/56: gcs\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\gcs\scripts\env_check.py
 Size: 396 bytes
@@ -3327,7 +3884,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 21/53: log_project_structure.py
+FILE 21/56: log_project_structure.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\log_project_structure.py
 Size: 7,038 bytes
@@ -3518,7 +4075,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 22/53: rl\agent_runtime.py
+FILE 22/56: rl\agent_runtime.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\agent_runtime.py
 Size: 117 bytes
@@ -3529,7 +4086,7 @@ if __name__ == "__main__": main()
 
 ============================================================
 
-FILE 23/53: rl\linucb.py
+FILE 23/56: rl\linucb.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\linucb.py
 Size: 107 bytes
@@ -3540,7 +4097,7 @@ class LinUCB:
 
 ============================================================
 
-FILE 24/53: rl\safety.py
+FILE 24/56: rl\safety.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\safety.py
 Size: 105 bytes
@@ -3550,7 +4107,7 @@ def guard(action, mission): raise NotImplementedError("RL safety shield not impl
 
 ============================================================
 
-FILE 25/53: strict_mode_demo.py
+FILE 25/56: strict_mode_demo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\strict_mode_demo.py
 Size: 3,479 bytes
@@ -3644,7 +4201,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 26/53: tests\__init__.py
+FILE 26/56: tests\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\__init__.py
 Size: 54 bytes
@@ -3656,7 +4213,7 @@ Test package for PQC Drone-GCS Secure Proxy.
 
 ============================================================
 
-FILE 27/53: tests\test-oqs.py
+FILE 27/56: tests\test-oqs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test-oqs.py
 Size: 2,821 bytes
@@ -3730,7 +4287,7 @@ try_import_all()
 
 ============================================================
 
-FILE 28/53: tests\test_aead_framing.py
+FILE 28/56: tests\test_aead_framing.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_aead_framing.py
 Size: 6,589 bytes
@@ -3974,7 +4531,7 @@ def test_epoch_bump():
 
 ============================================================
 
-FILE 29/53: tests\test_cli_identity.py
+FILE 29/56: tests\test_cli_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_cli_identity.py
 Size: 13,002 bytes
@@ -4298,7 +4855,91 @@ class TestCLIHelpAndUsage:
 
 ============================================================
 
-FILE 30/53: tests\test_end_to_end_proxy.py
+FILE 30/56: tests\test_control_sm.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tests\test_control_sm.py
+Size: 3,095 bytes
+Modified: 2025-09-25 23:55:52
+------------------------------------------------------------
+import queue
+
+from core.policy_engine import (
+    create_control_state,
+    handle_control,
+    record_rekey_result,
+    request_prepare,
+)
+
+
+def _drain_outbox(state):
+    items = []
+    while True:
+        try:
+            items.append(state.outbox.get_nowait())
+        except queue.Empty:
+            break
+    return items
+
+
+def test_gcs_prepare_commit_success():
+    state = create_control_state("gcs", "cs-kyber768-aesgcm-dilithium3")
+    rid = request_prepare(state, "cs-kyber512-aesgcm-dilithium2")
+    queued = _drain_outbox(state)
+    assert queued and queued[0]["type"] == "prepare_rekey"
+    assert state.state == "NEGOTIATING"
+
+    result = handle_control({"type": "prepare_ok", "rid": rid, "t_ms": 123}, "gcs", state)
+    assert result.start_handshake == ("cs-kyber512-aesgcm-dilithium2", rid)
+    assert result.send and result.send[0]["type"] == "commit_rekey"
+    assert state.state == "SWAPPING"
+
+    record_rekey_result(state, rid, "cs-kyber512-aesgcm-dilithium2", success=True)
+    status = _drain_outbox(state)
+    assert any(msg["type"] == "status" and msg["result"] == "ok" for msg in status)
+    assert state.state == "RUNNING"
+    assert state.stats["rekeys_ok"] == 1
+    assert state.current_suite == "cs-kyber512-aesgcm-dilithium2"
+
+
+def test_gcs_prepare_fail_resets_state():
+    state = create_control_state("gcs", "cs-kyber768-aesgcm-dilithium3")
+    rid = request_prepare(state, "cs-kyber512-aesgcm-dilithium2")
+    _ = _drain_outbox(state)
+    result = handle_control({"type": "prepare_fail", "rid": rid, "reason": "unsafe", "t_ms": 10}, "gcs", state)
+    assert not result.send
+    assert state.state == "RUNNING"
+    assert state.stats["rekeys_fail"] == 1
+
+
+def test_drone_prepare_and_commit_flow():
+    state = create_control_state("drone", "cs-kyber768-aesgcm-dilithium3")
+    msg = {"type": "prepare_rekey", "suite": "cs-kyber512-aesgcm-dilithium2", "rid": "abcd", "t_ms": 50}
+    result = handle_control(msg, "drone", state)
+    assert result.send and result.send[0]["type"] == "prepare_ok"
+    assert state.state == "NEGOTIATING"
+
+    commit = {"type": "commit_rekey", "rid": "abcd", "t_ms": 60}
+    result2 = handle_control(commit, "drone", state)
+    assert result2.start_handshake == ("cs-kyber512-aesgcm-dilithium2", "abcd")
+    assert state.state == "SWAPPING"
+
+    record_rekey_result(state, "abcd", "cs-kyber512-aesgcm-dilithium2", success=True)
+    status = _drain_outbox(state)
+    assert any(msg["type"] == "status" and msg["result"] == "ok" for msg in status)
+    assert state.state == "RUNNING"
+    assert state.current_suite == "cs-kyber512-aesgcm-dilithium2"
+
+
+def test_drone_prepare_fail_when_guard_blocks():
+    state = create_control_state("drone", "cs-kyber768-aesgcm-dilithium3", safe_guard=lambda: False)
+    msg = {"type": "prepare_rekey", "suite": "cs-kyber512-aesgcm-dilithium2", "rid": "ffff", "t_ms": 5}
+    result = handle_control(msg, "drone", state)
+    assert result.send and result.send[0]["type"] == "prepare_fail"
+    assert state.state == "RUNNING"
+
+============================================================
+
+FILE 31/56: tests\test_end_to_end_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_end_to_end_proxy.py
 Size: 11,044 bytes
@@ -4591,7 +5232,7 @@ class TestEndToEndProxy:
 
 ============================================================
 
-FILE 31/53: tests\test_handshake.py
+FILE 32/56: tests\test_handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake.py
 Size: 2,734 bytes
@@ -4668,7 +5309,7 @@ def test_mismatched_role_kdf():
 
 ============================================================
 
-FILE 32/53: tests\test_handshake_downgrade.py
+FILE 33/56: tests\test_handshake_downgrade.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake_downgrade.py
 Size: 1,430 bytes
@@ -4708,7 +5349,7 @@ def test_version_mismatch_signed_transcript_blocks_downgrade():
 
 ============================================================
 
-FILE 33/53: tests\test_hardening_features.py
+FILE 34/56: tests\test_hardening_features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_hardening_features.py
 Size: 7,879 bytes
@@ -4914,7 +5555,7 @@ class TestEpochGuard:
 
 ============================================================
 
-FILE 34/53: tests\test_kdf_roles.py
+FILE 35/56: tests\test_kdf_roles.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_kdf_roles.py
 Size: 1,630 bytes
@@ -4964,7 +5605,7 @@ def test_empty_kem_sig_name():
 
 ============================================================
 
-FILE 35/53: tests\test_loss_dup_oom.py
+FILE 36/56: tests\test_loss_dup_oom.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_loss_dup_oom.py
 Size: 149 bytes
@@ -4977,11 +5618,11 @@ def test_loss_dup_oom():
 
 ============================================================
 
-FILE 36/53: tests\test_packet_types.py
+FILE 37/56: tests\test_packet_types.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_packet_types.py
-Size: 4,208 bytes
-Modified: 2025-09-25 13:14:29
+Size: 4,350 bytes
+Modified: 2025-09-25 23:55:52
 ------------------------------------------------------------
 """
 Test packet typing functionality with ENABLE_PACKET_TYPE flag.
@@ -5102,13 +5743,15 @@ def test_packet_type_disabled():
     assert cfg["ENABLE_PACKET_TYPE"] is False
     
     # Test that the policy engine can be imported (integration smoke test)
-    from core.policy_engine import handle_control
-    result = handle_control(b"test")
-    assert result is None  # Should return None for now
+    from core.policy_engine import create_control_state, handle_control
+
+    state = create_control_state("gcs", "cs-kyber768-aesgcm-dilithium3")
+    result = handle_control({"type": "status", "state": "RUNNING", "rid": "noop", "t_ms": 0}, "gcs", state)
+    assert result.send == []
 
 ============================================================
 
-FILE 37/53: tests\test_rekey_epoch.py
+FILE 38/56: tests\test_rekey_epoch.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_rekey_epoch.py
 Size: 11,882 bytes
@@ -5399,7 +6042,7 @@ class TestRekeyEpoch:
 
 ============================================================
 
-FILE 38/53: tests\test_replay_window.py
+FILE 39/56: tests\test_replay_window.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_replay_window.py
 Size: 3,723 bytes
@@ -5538,7 +6181,7 @@ def test_reject_old_beyond_window():
 
 ============================================================
 
-FILE 39/53: tests\test_suites_config.py
+FILE 40/56: tests\test_suites_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_suites_config.py
 Size: 12,691 bytes
@@ -5856,7 +6499,7 @@ class TestSuites:
 
 ============================================================
 
-FILE 40/53: tools\bench_cli.py
+FILE 41/56: tools\bench_cli.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\bench_cli.py
 Size: 841 bytes
@@ -5883,7 +6526,7 @@ if __name__=="__main__": main()
 
 ============================================================
 
-FILE 41/53: tools\check_ports.py
+FILE 42/56: tools\check_ports.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_ports.py
 Size: 3,618 bytes
@@ -5986,7 +6629,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 42/53: tools\encrypted_sniffer.py
+FILE 43/56: tools\encrypted_sniffer.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\encrypted_sniffer.py
 Size: 1,570 bytes
@@ -6042,7 +6685,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 43/53: tools\full_comm_check.py
+FILE 44/56: tools\full_comm_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\full_comm_check.py
 Size: 9,657 bytes
@@ -6311,7 +6954,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 44/53: tools\generate_identity.py
+FILE 45/56: tools\generate_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\generate_identity.py
 Size: 2,266 bytes
@@ -6384,7 +7027,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 45/53: tools\manual_4term\drone_autopilot_sim.py
+FILE 46/56: tools\manual_4term\drone_autopilot_sim.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_autopilot_sim.py
 Size: 3,933 bytes
@@ -6496,7 +7139,130 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 46/53: tools\manual_4term\encrypted_bridge_logger.py
+FILE 47/56: tools\manual_4term\drone_tty.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_tty.py
+Size: 3,485 bytes
+Modified: 2025-09-25 23:12:00
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""Minimal interactive CLI for Drone plaintext tunnel."""
+
+from __future__ import annotations
+
+import argparse
+import os
+import socket
+import sys
+import threading
+
+from core.config import CONFIG
+
+MAX_PAYLOAD = 4096
+
+
+def ensure_newline(payload: bytes) -> bytes:
+    if payload.endswith(b"\n"):
+        return payload
+    return payload + b"\n"
+
+
+def truncate_payload(payload: bytes) -> bytes:
+    if len(payload) <= MAX_PAYLOAD:
+        return payload
+    trimmed = payload[:MAX_PAYLOAD]
+    if trimmed[-1:] != b"\n":
+        trimmed = trimmed[:-1] + b"\n"
+    return trimmed
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Interactive Drone plaintext console")
+    parser.add_argument("--host", default=CONFIG.get("DRONE_HOST", "127.0.0.1"), help="Destination host for plaintext telemetry")
+    parser.add_argument("--tx-port", type=int, default=CONFIG["DRONE_PLAINTEXT_TX"], help="Port to send telemetry lines")
+    parser.add_argument("--rx-port", type=int, default=CONFIG["DRONE_PLAINTEXT_RX"], help="Port receiving command lines")
+    parser.add_argument("--expect", type=int, default=0, help="Exit automatically after receiving N lines")
+    parser.add_argument("--verbose", action="store_true", help="Enable debug output to stderr")
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+
+    done = threading.Event()
+    recv_count = 0
+    recv_lock = threading.Lock()
+
+    rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx_sock.bind(("0.0.0.0", args.rx_port))
+    rx_sock.settimeout(0.1)
+
+    tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def debug(msg: str) -> None:
+        if args.verbose:
+            sys.stderr.write(msg + "\n")
+            sys.stderr.flush()
+
+    def reader() -> None:
+        nonlocal recv_count
+        while not done.is_set():
+            try:
+                data, _ = rx_sock.recvfrom(65535)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            if not data:
+                continue
+            trimmed = data[:MAX_PAYLOAD]
+            text = trimmed.decode("utf-8", errors="replace")
+            if not text.endswith("\n"):
+                text += "\n"
+            sys.stdout.write(text)
+            sys.stdout.flush()
+            if args.expect:
+                with recv_lock:
+                    recv_count += 1
+                    if recv_count >= args.expect:
+                        done.set()
+                        os._exit(0)
+        try:
+            rx_sock.close()
+        except OSError:
+            pass
+
+    thread = threading.Thread(target=reader, daemon=True)
+    thread.start()
+
+    try:
+        for line in sys.stdin:
+            if done.is_set():
+                break
+            encoded = ensure_newline(line.encode("utf-8", errors="replace"))
+            encoded = truncate_payload(encoded)
+            try:
+                tx_sock.sendto(encoded, (args.host, args.tx_port))
+            except OSError as exc:
+                debug(f"sendto failed: {exc}")
+                break
+    except KeyboardInterrupt:
+        pass
+    finally:
+        done.set()
+        try:
+            tx_sock.close()
+        except OSError:
+            pass
+        thread.join(timeout=0.2)
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 48/56: tools\manual_4term\encrypted_bridge_logger.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\encrypted_bridge_logger.py
 Size: 4,355 bytes
@@ -6624,7 +7390,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 47/53: tools\manual_4term\gcs_ground_station_sim.py
+FILE 49/56: tools\manual_4term\gcs_ground_station_sim.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_ground_station_sim.py
 Size: 3,927 bytes
@@ -6738,7 +7504,130 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 48/53: tools\manual_4term\launch_manual_test.py
+FILE 50/56: tools\manual_4term\gcs_tty.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_tty.py
+Size: 3,479 bytes
+Modified: 2025-09-25 23:12:00
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""Minimal interactive CLI for GCS plaintext tunnel."""
+
+from __future__ import annotations
+
+import argparse
+import os
+import socket
+import sys
+import threading
+
+from core.config import CONFIG
+
+MAX_PAYLOAD = 4096
+
+
+def ensure_newline(payload: bytes) -> bytes:
+    if payload.endswith(b"\n"):
+        return payload
+    return payload + b"\n"
+
+
+def truncate_payload(payload: bytes) -> bytes:
+    if len(payload) <= MAX_PAYLOAD:
+        return payload
+    trimmed = payload[:MAX_PAYLOAD]
+    if trimmed[-1:] != b"\n":
+        trimmed = trimmed[:-1] + b"\n"
+    return trimmed
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Interactive GCS plaintext console")
+    parser.add_argument("--host", default=CONFIG.get("GCS_HOST", "127.0.0.1"), help="Destination host for plaintext commands")
+    parser.add_argument("--tx-port", type=int, default=CONFIG["GCS_PLAINTEXT_TX"], help="Port to send plaintext commands")
+    parser.add_argument("--rx-port", type=int, default=CONFIG["GCS_PLAINTEXT_RX"], help="Port receiving telemetry lines")
+    parser.add_argument("--expect", type=int, default=0, help="Exit automatically after receiving N lines")
+    parser.add_argument("--verbose", action="store_true", help="Enable debug output to stderr")
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+
+    done = threading.Event()
+    recv_count = 0
+    recv_lock = threading.Lock()
+
+    rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx_sock.bind(("0.0.0.0", args.rx_port))
+    rx_sock.settimeout(0.1)
+
+    tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def debug(msg: str) -> None:
+        if args.verbose:
+            sys.stderr.write(msg + "\n")
+            sys.stderr.flush()
+
+    def reader() -> None:
+        nonlocal recv_count
+        while not done.is_set():
+            try:
+                data, _ = rx_sock.recvfrom(65535)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            if not data:
+                continue
+            trimmed = data[:MAX_PAYLOAD]
+            text = trimmed.decode("utf-8", errors="replace")
+            if not text.endswith("\n"):
+                text += "\n"
+            sys.stdout.write(text)
+            sys.stdout.flush()
+            if args.expect:
+                with recv_lock:
+                    recv_count += 1
+                    if recv_count >= args.expect:
+                        done.set()
+                        os._exit(0)
+        try:
+            rx_sock.close()
+        except OSError:
+            pass
+
+    thread = threading.Thread(target=reader, daemon=True)
+    thread.start()
+
+    try:
+        for line in sys.stdin:
+            if done.is_set():
+                break
+            encoded = ensure_newline(line.encode("utf-8", errors="replace"))
+            encoded = truncate_payload(encoded)
+            try:
+                tx_sock.sendto(encoded, (args.host, args.tx_port))
+            except OSError as exc:
+                debug(f"sendto failed: {exc}")
+                break
+    except KeyboardInterrupt:
+        pass
+    finally:
+        done.set()
+        try:
+            tx_sock.close()
+        except OSError:
+            pass
+        thread.join(timeout=0.2)
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 51/56: tools\manual_4term\launch_manual_test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\launch_manual_test.py
 Size: 9,824 bytes
@@ -7034,7 +7923,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 49/53: tools\markers.py
+FILE 52/56: tools\markers.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\markers.py
 Size: 3,323 bytes
@@ -7151,7 +8040,7 @@ class UdpMarker:
 
 ============================================================
 
-FILE 50/53: tools\merge_power_csv.py
+FILE 53/56: tools\merge_power_csv.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\merge_power_csv.py
 Size: 5,656 bytes
@@ -7309,7 +8198,7 @@ def parse_args() -> argparse.Namespace:
 
 ============================================================
 
-FILE 51/53: tools\packet_interceptor.py
+FILE 54/56: tools\packet_interceptor.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\packet_interceptor.py
 Size: 2,494 bytes
@@ -7384,7 +8273,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 52/53: tools\power_hooks.py
+FILE 55/56: tools\power_hooks.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\power_hooks.py
 Size: 208 bytes
@@ -7398,7 +8287,7 @@ class PowerHook:
 
 ============================================================
 
-FILE 53/53: tools\scaffold_repo.py
+FILE 56/56: tools\scaffold_repo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\scaffold_repo.py
 Size: 17,074 bytes

@@ -1,5 +1,5 @@
 import json, logging, sys, time
-from typing import Any, Dict
+from pathlib import Path
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -33,6 +33,33 @@ def get_logger(name: str = "pqc") -> logging.Logger:
     logger.addHandler(h)
     logger.propagate = False
     return logger
+
+
+def configure_file_logger(role: str, logger: logging.Logger | None = None) -> Path:
+    """Attach a JSON file handler and return log path."""
+
+    active_logger = logger or get_logger()
+
+    # Drop any previous file handlers we attached to avoid duplicate writes during tests.
+    for handler in list(active_logger.handlers):
+        if getattr(handler, "_pqc_file_handler", False):
+            active_logger.removeHandler(handler)
+            try:
+                handler.close()
+            except Exception:
+                pass
+
+    logs_dir = Path("logs")
+    logs_dir.mkdir(exist_ok=True)
+    timestamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    path = logs_dir / f"{role}-{timestamp}.log"
+
+    file_handler = logging.FileHandler(path, encoding="utf-8")
+    file_handler.setFormatter(JsonFormatter())
+    file_handler._pqc_file_handler = True  # type: ignore[attr-defined]
+    active_logger.addHandler(file_handler)
+
+    return path
 
 # Very small metrics hook (no deps)
 class Counter:

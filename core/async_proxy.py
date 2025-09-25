@@ -14,8 +14,11 @@ is retained for backward compatibility; a future refactor may rename it to
 
 from __future__ import annotations
 
+import json
+import queue
 import socket
 import selectors
+import sys
 import threading
 import time
 import struct
@@ -23,7 +26,7 @@ from typing import Optional, Dict, Tuple
 from contextlib import contextmanager
 
 from core.config import CONFIG
-from core.suites import SUITES, header_ids_for_suite
+from core.suites import SUITES, header_ids_for_suite, get_suite, list_suites
 try:
     # Optional helper (if you implemented it)
     from core.suites import header_ids_from_names  # type: ignore
@@ -42,7 +45,14 @@ from core.aead import (
     AeadIds,
 )
 
-from core.policy_engine import handle_control
+from core.policy_engine import (
+    ControlState,
+    ControlResult,
+    create_control_state,
+    handle_control,
+    request_prepare,
+    record_rekey_result,
+)
 
 logger = get_logger("pqc")
 
@@ -62,8 +72,12 @@ class ProxyCounters:
         self.drop_header = 0
         self.drop_session_epoch = 0
         self.drop_other = 0
+        self.rekeys_ok = 0
+        self.rekeys_fail = 0
+        self.last_rekey_ms = 0
+        self.last_rekey_suite: Optional[str] = None
 
-    def to_dict(self) -> Dict[str, int]:
+    def to_dict(self) -> Dict[str, object]:
         return {
             "ptx_out": self.ptx_out,
             "ptx_in": self.ptx_in,
@@ -75,6 +89,10 @@ class ProxyCounters:
             "drop_header": self.drop_header,
             "drop_session_epoch": self.drop_session_epoch,
             "drop_other": self.drop_other,
+            "rekeys_ok": self.rekeys_ok,
+            "rekeys_fail": self.rekeys_fail,
+            "last_rekey_ms": self.last_rekey_ms,
+            "last_rekey_suite": self.last_rekey_suite or "",
         }
 
 
@@ -314,6 +332,102 @@ def _setup_sockets(role: str, cfg: dict):
                     pass
 
 
+def _compute_aead_ids(suite: dict, kem_name: Optional[str], sig_name: Optional[str]) -> AeadIds:
+    if kem_name and sig_name and header_ids_from_names:
+        ids_tuple = header_ids_from_names(kem_name, sig_name)  # type: ignore
+    else:
+        ids_tuple = header_ids_for_suite(suite)
+    return AeadIds(*ids_tuple)
+
+
+def _build_sender_receiver(
+    role: str,
+    ids: AeadIds,
+    session_id: bytes,
+    k_d2g: bytes,
+    k_g2d: bytes,
+    cfg: dict,
+):
+    if role == "drone":
+        sender = Sender(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_d2g)
+        receiver = Receiver(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_g2d, cfg["REPLAY_WINDOW"])
+    else:
+        sender = Sender(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_g2d)
+        receiver = Receiver(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_d2g, cfg["REPLAY_WINDOW"])
+    return sender, receiver
+
+
+def _launch_manual_console(control_state: ControlState, *, quiet: bool) -> Tuple[threading.Event, Tuple[threading.Thread, ...]]:
+    suites_catalog = sorted(list_suites().keys())
+    stop_event = threading.Event()
+
+    def status_loop() -> None:
+        last_line = ""
+        while not stop_event.is_set():
+            with control_state.lock:
+                state = control_state.state
+                suite_id = control_state.current_suite
+            line = f"[{state}] {suite_id}"
+            if line != last_line and not quiet:
+                sys.stderr.write(f"\r{line:<80}")
+                sys.stderr.flush()
+                last_line = line
+            time.sleep(0.5)
+        if not quiet:
+            sys.stderr.write("\r" + " " * 80 + "\r")
+            sys.stderr.flush()
+
+    def operator_loop() -> None:
+        if not quiet:
+            print("Manual control ready. Type a suite ID, 'list', 'status', or 'quit'.")
+        while not stop_event.is_set():
+            try:
+                line = input("rekey> ")
+            except EOFError:
+                break
+            if line is None:
+                continue
+            line = line.strip()
+            if not line:
+                continue
+            lowered = line.lower()
+            if lowered in {"quit", "exit"}:
+                break
+            if lowered == "list":
+                if not quiet:
+                    print("Available suites:")
+                    for sid in suites_catalog:
+                        print(f"  {sid}")
+                continue
+            if lowered == "status":
+                with control_state.lock:
+                    summary = f"state={control_state.state} suite={control_state.current_suite}"
+                    if control_state.last_status:
+                        summary += f" last_status={control_state.last_status}"
+                if not quiet:
+                    print(summary)
+                continue
+            try:
+                target_suite = get_suite(line)
+                rid = request_prepare(control_state, target_suite["suite_id"])
+                if not quiet:
+                    print(f"prepare queued for {target_suite['suite_id']} rid={rid}")
+            except RuntimeError as exc:
+                if not quiet:
+                    print(f"Busy: {exc}")
+            except Exception as exc:
+                if not quiet:
+                    print(f"Invalid suite: {exc}")
+
+        stop_event.set()
+
+    status_thread = threading.Thread(target=status_loop, daemon=True)
+    operator_thread = threading.Thread(target=operator_loop, daemon=True)
+    status_thread.start()
+    operator_thread.start()
+    return stop_event, (status_thread, operator_thread)
+
+
 def run_proxy(
     *,
     role: str,
@@ -322,15 +436,15 @@ def run_proxy(
     gcs_sig_secret: Optional[bytes] = None,
     gcs_sig_public: Optional[bytes] = None,
     stop_after_seconds: Optional[float] = None,
+    manual_control: bool = False,
+    quiet: bool = False,
     ready_event: Optional[threading.Event] = None,
-) -> Dict[str, int]:
+) -> Dict[str, object]:
     """
     Start a blocking proxy process for `role` in {"drone","gcs"}.
 
-    - Performs TCP handshake (server on GCS, client on Drone).
-    - Bridges plaintext UDP <-> encrypted UDP in both directions.
-    - Returns a dict of simple counters on clean exit:
-      {"ptx_out": int, "ptx_in": int, "enc_out": int, "enc_in": int, "drops": int}
+    Performs the TCP handshake, bridges plaintext/encrypted UDP, and processes
+    in-band control messages for rekey negotiation. Returns counters on clean exit.
     """
     if role not in {"drone", "gcs"}:
         raise ValueError(f"Invalid role: {role}")
@@ -340,46 +454,163 @@ def run_proxy(
     counters = ProxyCounters()
     start_time = time.time()
 
-    # Perform handshake and get session keys (+ optional kem/sig names)
     k_d2g, k_g2d, _nseed_d2g, _nseed_g2d, session_id, kem_name, sig_name = _perform_handshake(
         role, suite, gcs_sig_secret, gcs_sig_public, cfg, stop_after_seconds, ready_event
     )
 
-    # Log successful handshake
-    try:
-        suite_id = next((sid for sid, s in SUITES.items() if dict(s) == suite), "unknown")
-    except Exception:
-        suite_id = "unknown"
+    suite_id = suite.get("suite_id")
+    if not suite_id:
+        try:
+            suite_id = next((sid for sid, s in SUITES.items() if dict(s) == suite), "unknown")
+        except Exception:
+            suite_id = "unknown"
+
     logger.info(
         "PQC handshake completed successfully",
-        extra={"suite_id": suite_id, "peer_role": ("drone" if role == "gcs" else "gcs"), "session_id": session_id.hex()},
+        extra={
+            "suite_id": suite_id,
+            "peer_role": ("drone" if role == "gcs" else "gcs"),
+            "session_id": session_id.hex(),
+        },
     )
 
-    # Setup AEAD header IDs
-    if kem_name and sig_name and header_ids_from_names:
-        ids_tuple = header_ids_from_names(kem_name, sig_name)  # type: ignore
-    else:
-        ids_tuple = header_ids_for_suite(suite)
-    aead_ids = AeadIds(*ids_tuple)
+    aead_ids = _compute_aead_ids(suite, kem_name, sig_name)
+    sender, receiver = _build_sender_receiver(role, aead_ids, session_id, k_d2g, k_g2d, cfg)
 
-    # Role-based key directions
-    if role == "drone":
-        sender = Sender(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_d2g)
-        receiver = Receiver(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_g2d, cfg["REPLAY_WINDOW"])
-    else:  # gcs
-        sender = Sender(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_g2d)
-        receiver = Receiver(CONFIG["WIRE_VERSION"], aead_ids, session_id, 0, k_d2g, cfg["REPLAY_WINDOW"])
+    control_state = create_control_state(role, suite_id)
+    context_lock = threading.RLock()
+    active_context: Dict[str, object] = {
+        "suite": suite_id,
+        "suite_dict": suite,
+        "session_id": session_id,
+        "aead_ids": aead_ids,
+        "sender": sender,
+        "receiver": receiver,
+    }
 
-    # UDP bridge loop
+    active_rekeys: set[str] = set()
+    rekey_guard = threading.Lock()
+
+    if manual_control and role == "gcs" and not cfg.get("ENABLE_PACKET_TYPE"):
+        logger.warning("ENABLE_PACKET_TYPE is disabled; control-plane packets may not be processed correctly.")
+
+    manual_stop: Optional[threading.Event] = None
+    manual_threads: Tuple[threading.Thread, ...] = ()
+    if manual_control and role == "gcs":
+        manual_stop, manual_threads = _launch_manual_console(control_state, quiet=quiet)
+
+    def _launch_rekey(target_suite_id: str, rid: str) -> None:
+        with rekey_guard:
+            if rid in active_rekeys:
+                return
+            active_rekeys.add(rid)
+
+        logger.info(
+            "Control rekey negotiation started",
+            extra={"role": role, "suite_id": target_suite_id, "rid": rid},
+        )
+
+        def worker() -> None:
+            try:
+                new_suite = get_suite(target_suite_id)
+            except NotImplementedError as exc:
+                with context_lock:
+                    current_suite = active_context["suite"]
+                counters.rekeys_fail += 1
+                record_rekey_result(control_state, rid, current_suite, success=False)
+                logger.warning(
+                    "Control rekey rejected: unknown suite",
+                    extra={"role": role, "suite_id": target_suite_id, "rid": rid, "error": str(exc)},
+                )
+                with rekey_guard:
+                    active_rekeys.discard(rid)
+                return
+
+            try:
+                timeout = cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0)
+                rk_result = _perform_handshake(role, new_suite, gcs_sig_secret, gcs_sig_public, cfg, timeout)
+                if len(rk_result) >= 7:
+                    new_k_d2g, new_k_g2d, _nd1, _nd2, new_session_id, new_kem_name, new_sig_name = rk_result[:7]
+                else:
+                    new_k_d2g, new_k_g2d, _nd1, _nd2, new_session_id = rk_result
+                    new_kem_name = new_sig_name = None
+
+                new_ids = _compute_aead_ids(new_suite, new_kem_name, new_sig_name)
+                new_sender, new_receiver = _build_sender_receiver(
+                    role, new_ids, new_session_id, new_k_d2g, new_k_g2d, cfg
+                )
+
+                with context_lock:
+                    active_context.update(
+                        {
+                            "sender": new_sender,
+                            "receiver": new_receiver,
+                            "session_id": new_session_id,
+                            "aead_ids": new_ids,
+                            "suite": new_suite["suite_id"],
+                            "suite_dict": new_suite,
+                        }
+                    )
+
+                counters.rekeys_ok += 1
+                counters.last_rekey_ms = int(time.time() * 1000)
+                counters.last_rekey_suite = new_suite["suite_id"]
+                record_rekey_result(control_state, rid, new_suite["suite_id"], success=True)
+                logger.info(
+                    "Control rekey successful",
+                    extra={"role": role, "suite_id": new_suite["suite_id"], "rid": rid, "session_id": new_session_id.hex()},
+                )
+            except Exception as exc:
+                with context_lock:
+                    current_suite = active_context["suite"]
+                counters.rekeys_fail += 1
+                record_rekey_result(control_state, rid, current_suite, success=False)
+                logger.warning(
+                    "Control rekey failed",
+                    extra={"role": role, "suite_id": target_suite_id, "rid": rid, "error": str(exc)},
+                )
+            finally:
+                with rekey_guard:
+                    active_rekeys.discard(rid)
+
+        threading.Thread(target=worker, daemon=True).start()
+
     with _setup_sockets(role, cfg) as sockets:
         selector = selectors.DefaultSelector()
         selector.register(sockets["encrypted"], selectors.EVENT_READ, data="encrypted")
         selector.register(sockets["plaintext_in"], selectors.EVENT_READ, data="plaintext_in")
 
+        def send_control(payload: dict) -> None:
+            body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+            frame = b"\x02" + body
+            with context_lock:
+                current_sender = active_context["sender"]
+            try:
+                wire = current_sender.encrypt(frame)
+            except Exception as exc:
+                counters.drops += 1
+                counters.drop_other += 1
+                logger.warning("Failed to encrypt control payload", extra={"role": role, "error": str(exc)})
+                return
+            try:
+                sockets["encrypted"].sendto(wire, sockets["encrypted_peer"])
+                counters.enc_out += 1
+            except socket.error as exc:
+                counters.drops += 1
+                counters.drop_other += 1
+                logger.warning("Failed to send control payload", extra={"role": role, "error": str(exc)})
+
         try:
             while True:
                 if stop_after_seconds is not None and (time.time() - start_time) >= stop_after_seconds:
                     break
+
+                while True:
+                    try:
+                        control_payload = control_state.outbox.get_nowait()
+                    except queue.Empty:
+                        break
+                    send_control(control_payload)
 
                 events = selector.select(timeout=0.1)
                 for key, _mask in events:
@@ -387,7 +618,6 @@ def run_proxy(
                     data_type = key.data
 
                     if data_type == "plaintext_in":
-                        # Plaintext ingress: encrypt and forward
                         try:
                             payload, _addr = sock.recvfrom(2048)
                             if not payload:
@@ -395,7 +625,9 @@ def run_proxy(
                             counters.ptx_in += 1
 
                             payload_out = (b"\x01" + payload) if cfg.get("ENABLE_PACKET_TYPE") else payload
-                            wire = sender.encrypt(payload_out)
+                            with context_lock:
+                                current_sender = active_context["sender"]
+                            wire = current_sender.encrypt(payload_out)
 
                             try:
                                 sockets["encrypted"].sendto(wire, sockets["encrypted_peer"])
@@ -412,11 +644,14 @@ def run_proxy(
                                 continue
                             counters.enc_in += 1
 
+                            with context_lock:
+                                current_receiver = active_context["receiver"]
+
                             try:
-                                plaintext = receiver.decrypt(wire)
+                                plaintext = current_receiver.decrypt(wire)
                                 if plaintext is None:
                                     reason, _seq = _parse_header_fields(
-                                        CONFIG["WIRE_VERSION"], receiver.ids, receiver.session_id, wire
+                                        CONFIG["WIRE_VERSION"], current_receiver.ids, current_receiver.session_id, wire
                                     )
                                     counters.drops += 1
                                     if reason in ("version_mismatch", "crypto_id_mismatch", "header_too_short", "header_unpack_error"):
@@ -448,9 +683,23 @@ def run_proxy(
                                 if cfg.get("ENABLE_PACKET_TYPE") and plaintext:
                                     ptype = plaintext[0]
                                     if ptype == 0x01:
-                                        out_bytes = plaintext[1:]  # deliver to app
+                                        out_bytes = plaintext[1:]
                                     elif ptype == 0x02:
-                                        _ = handle_control(plaintext[1:])
+                                        try:
+                                            control_json = json.loads(plaintext[1:].decode("utf-8"))
+                                        except (UnicodeDecodeError, json.JSONDecodeError):
+                                            counters.drops += 1
+                                            counters.drop_other += 1
+                                            continue
+                                        result = handle_control(control_json, role, control_state)
+                                        for note in result.notes:
+                                            if note.startswith("prepare_fail"):
+                                                counters.rekeys_fail += 1
+                                        for payload in result.send:
+                                            control_state.outbox.put(payload)
+                                        if result.start_handshake:
+                                            suite_next, rid = result.start_handshake
+                                            _launch_rekey(suite_next, rid)
                                         continue
                                     else:
                                         counters.drops += 1
@@ -468,5 +717,9 @@ def run_proxy(
             pass
         finally:
             selector.close()
+            if manual_stop:
+                manual_stop.set()
+                for thread in manual_threads:
+                    thread.join(timeout=0.5)
 
     return counters.to_dict()

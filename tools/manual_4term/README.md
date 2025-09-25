@@ -42,6 +42,63 @@ launcher window to terminate all managed child processes.
 If `--new-windows` is requested on a non-Windows platform, the launcher falls
 back to streaming process output inline.
 
+## Interactive plaintext consoles
+
+When you want to bypass the simulators and drive each proxy manually, use the
+lightweight TTY tools:
+
+| Script | Default bind/target | Purpose |
+| --- | --- | --- |
+| `gcs_tty.py` | sends to `GCS_PLAINTEXT_TX`, listens on `GCS_PLAINTEXT_RX` | Inject commands toward the drone and watch telemetry coming back through the GCS proxy. |
+| `drone_tty.py` | sends to `DRONE_PLAINTEXT_TX`, listens on `DRONE_PLAINTEXT_RX` | Feed telemetry into the drone proxy and observe decrypted command traffic. |
+
+Both tools accept `--host`, `--tx-port`, `--rx-port`, `--expect`, and
+`--verbose` options. `--expect N` exits after receiving `N` lines (useful for
+deterministic test scripts), while `--verbose` prints debug messages to
+stderr. Each line you type is truncated to 4096 bytes, newline-terminated, and
+sent as a single UDP datagram.
+
+Example session with both proxies already running in quiet mode:
+
+```powershell
+# Drone side: read decrypted commands, push telemetry lines
+python tools/manual_4term/drone_tty.py --expect 0
+
+# GCS side: send commands and display telemetry
+python tools/manual_4term/gcs_tty.py --expect 0
+```
+
+Run each command in its own terminal so you can interact with stdin/stdout
+independently. Pair these consoles with `encrypted_bridge_logger.py` when you
+need ciphertext visibility.
+
+## Manual in-band rekey workflow
+
+To exercise the new interactive control path, launch the proxies with the
+manual console enabled on the GCS side and quiet mode so the payload terminals
+stay clean:
+
+```powershell
+python -m core.run_proxy gcs   --suite cs-kyber768-aesgcm-dilithium3 --control-manual --quiet
+python -m core.run_proxy drone --suite cs-kyber768-aesgcm-dilithium3 --quiet
+```
+
+Each proxy now writes JSON logs under `logs/{role}-{YYYYmmdd-HHMMSS}.log` for
+later timing/power correlation. The manual console prints the current state and
+prompts for suite changes. Type `list` to see available suites, `status` for the
+latest control-plane snapshot, or a valid suite ID (for example
+`cs-kyber512-aesgcm-dilithium2`) to begin a two-phase rekey.
+
+The GCS console enqueues a `prepare_rekey` request (packet type `0x02`) inside
+the encrypted tunnel. The drone console either replies with `prepare_ok` or
+`prepare_fail` (simulated safety gating), after which the proxies perform a
+parallel handshake and atomically swap keys. Telemetry and command traffic keep
+flowing; the status feed emits `RUNNING→NEGOTIATING→SWAPPING→RUNNING` with the
+new suite ID.
+
+> **Note:** Packet typing must remain enabled (`CONFIG["ENABLE_PACKET_TYPE"] =
+> True`) so the proxies can distinguish control messages from payload bytes.
+
 ## What the simulators do
 
 * `gcs_ground_station_sim.py` pushes a rotating set of high-level commands to

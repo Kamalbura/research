@@ -117,6 +117,8 @@ def test_packet_type_disabled():
     assert cfg["ENABLE_PACKET_TYPE"] is False
     
     # Test that the policy engine can be imported (integration smoke test)
-    from core.policy_engine import handle_control
-    result = handle_control(b"test")
-    assert result is None  # Should return None for now
+    from core.policy_engine import create_control_state, handle_control
+
+    state = create_control_state("gcs", "cs-kyber768-aesgcm-dilithium3")
+    result = handle_control({"type": "status", "state": "RUNNING", "rid": "noop", "t_ms": 0}, "gcs", state)
+    assert result.send == []

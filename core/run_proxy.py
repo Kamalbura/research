@@ -15,14 +15,15 @@ import signal
 import os
 import json
 import time
+import logging
 from pathlib import Path
 from typing import Optional
 
 from oqs.oqs import Signature
 from core.config import CONFIG
-from core.suites import get_suite
+from core.suites import get_suite, build_suite_id
 from core.async_proxy import run_proxy
-from core.logging_utils import get_logger
+from core.logging_utils import get_logger, configure_file_logger
 
 logger = get_logger("pqc")
 
@@ -40,7 +41,7 @@ def create_secrets_dir():
     return secrets_dir
 
 
-def write_json_report(json_path: Optional[str], payload: dict) -> None:
+def write_json_report(json_path: Optional[str], payload: dict, *, quiet: bool = False) -> None:
     """Persist counters payload to JSON if a path is provided."""
 
     if not json_path:
@@ -50,9 +51,43 @@ def write_json_report(json_path: Optional[str], payload: dict) -> None:
         path = Path(json_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        print(f"Wrote JSON report to {path}")
+        if not quiet:
+            print(f"Wrote JSON report to {path}")
     except Exception as exc:
         print(f"Warning: Failed to write JSON output to {json_path}: {exc}")
+
+
+def _resolve_suite(args, role_label: str) -> dict:
+    """Resolve suite via legacy --suite or new --kem/--aead/--sig components."""
+
+    suite_arg = getattr(args, "suite", None)
+    kem = getattr(args, "kem", None)
+    sig = getattr(args, "sig", None)
+    aead = getattr(args, "aead", None)
+
+    if suite_arg and any(v is not None for v in (kem, sig, aead)):
+        print("Error: --suite cannot be combined with --kem/--sig/--aead")
+        sys.exit(1)
+
+    try:
+        if suite_arg:
+            suite = get_suite(suite_arg)
+        elif any(v is not None for v in (kem, sig, aead)):
+            if not all(v is not None for v in (kem, sig, aead)):
+                print("Error: --kem, --sig, and --aead must be provided together")
+                sys.exit(1)
+            suite_id = build_suite_id(kem, aead, sig)
+            suite = get_suite(suite_id)
+        else:
+            print(f"Error: {role_label} requires --suite or --kem/--sig/--aead")
+            sys.exit(1)
+    except NotImplementedError as exc:
+        print(f"Error: {exc}")
+        sys.exit(1)
+
+    # Normalize suite argument for downstream logging
+    setattr(args, "suite", suite.get("suite_id", getattr(args, "suite", None)))
+    return suite
 
 
 def init_identity_command(args):
@@ -109,29 +144,33 @@ def init_identity_command(args):
 
 def gcs_command(args):
     """Start GCS proxy."""
-    try:
-        suite = get_suite(args.suite)
-    except KeyError as e:
-        print(f"Error: Unknown suite: {args.suite}")
-        sys.exit(1)
+    suite = _resolve_suite(args, "GCS proxy")
+    suite_id = suite["suite_id"]
     
     gcs_sig_secret = None
     gcs_sig_public = None
     json_out_path = getattr(args, "json_out", None)
+    quiet = getattr(args, "quiet", False)
+
+    def info(msg: str) -> None:
+        if not quiet:
+            print(msg)
     
     if args.ephemeral:
-        print("⚠️  WARNING: Using EPHEMERAL keys - not suitable for production!")
-        print("⚠️  Key will be lost when process exits.")
-        print()
+        info("⚠️  WARNING: Using EPHEMERAL keys - not suitable for production!")
+        info("⚠️  Key will be lost when process exits.")
+        if not quiet:
+            print()
         
         # Generate ephemeral keypair
         sig = Signature(suite["sig_name"])
         gcs_sig_public = sig.generate_keypair()
         gcs_sig_secret = sig
-        print("Generated ephemeral GCS signing keypair:")
-        print(f"Public key (hex): {gcs_sig_public.hex()}")
-        print("Provide this to the drone via --gcs-pub-hex or --peer-pubkey-file")
-        print()
+        info("Generated ephemeral GCS signing keypair:")
+        if not quiet:
+            print(f"Public key (hex): {gcs_sig_public.hex()}")
+            print("Provide this to the drone via --gcs-pub-hex or --peer-pubkey-file")
+            print()
         
     else:
         # Load persistent key
@@ -190,9 +229,9 @@ def gcs_command(args):
             print("Consider running with --ephemeral or upgrading oqs-python/liboqs with key import support.")
             sys.exit(1)
 
-        print("Loaded GCS signing key from file.")
+        info("Loaded GCS signing key from file.")
         if load_method == "ctor_secret_key":
-            print("Using constructor-based fallback because import/export APIs are unavailable.")
+            info("Using constructor-based fallback because import/export APIs are unavailable.")
 
         gcs_sig_public = imported_public
         if gcs_sig_public is None:
@@ -209,22 +248,28 @@ def gcs_command(args):
                 if candidate.exists():
                     try:
                         gcs_sig_public = candidate.read_bytes()
-                        print(f"Loaded public key from {candidate}.")
+                        info(f"Loaded public key from {candidate}.")
                     except Exception as exc:
                         load_errors.append(f"public key read failed ({candidate}): {exc}")
                     break
 
-        if gcs_sig_public is not None:
+        if gcs_sig_public is not None and not quiet:
             print(f"Public key (hex): {gcs_sig_public.hex()}")
-        else:
+        elif gcs_sig_public is None and not quiet:
             print("Warning: Could not locate public key file for display. Ensure the drone has the matching public key.")
-        print()
+        if not quiet:
+            print()
     
     try:
-        print(f"Starting GCS proxy with suite {args.suite}")
+        log_path = configure_file_logger("gcs", logger)
+        if not quiet:
+            print(f"Log file: {log_path}")
+
+        info(f"Starting GCS proxy with suite {suite_id}")
         if args.stop_seconds:
-            print(f"Will auto-stop after {args.stop_seconds} seconds")
-        print()
+            info(f"Will auto-stop after {args.stop_seconds} seconds")
+        if not quiet:
+            print()
         
         counters = run_proxy(
             role="gcs",
@@ -232,27 +277,30 @@ def gcs_command(args):
             cfg=CONFIG,
             gcs_sig_secret=gcs_sig_secret,
             gcs_sig_public=None,
-            stop_after_seconds=args.stop_seconds
+            stop_after_seconds=args.stop_seconds,
+            manual_control=getattr(args, "control_manual", False),
+            quiet=quiet,
         )
         
         # Log final counters as JSON
         logger.info("GCS proxy shutdown", extra={"counters": counters})
         
-        print("GCS proxy stopped. Final counters:")
-        for key, value in counters.items():
-            print(f"  {key}: {value}")
+        if not quiet:
+            print("GCS proxy stopped. Final counters:")
+            for key, value in counters.items():
+                print(f"  {key}: {value}")
 
-        suite_id = suite.get("suite_id") or args.suite
         payload = {
             "role": "gcs",
             "suite": suite_id,
             "counters": counters,
             "ts_stop_ns": time.time_ns(),
         }
-        write_json_report(json_out_path, payload)
+        write_json_report(json_out_path, payload, quiet=quiet)
             
     except KeyboardInterrupt:
-        print("\nGCS proxy stopped by user.")
+        if not quiet:
+            print("\nGCS proxy stopped by user.")
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
@@ -260,15 +308,17 @@ def gcs_command(args):
 
 def drone_command(args):
     """Start drone proxy."""
-    try:
-        suite = get_suite(args.suite)
-    except KeyError as e:
-        print(f"Error: Unknown suite: {args.suite}")
-        sys.exit(1)
+    suite = _resolve_suite(args, "Drone proxy")
+    suite_id = suite["suite_id"]
     
     # Get GCS public key
     gcs_sig_public = None
     json_out_path = getattr(args, "json_out", None)
+    quiet = getattr(args, "quiet", False)
+
+    def info(msg: str) -> None:
+        if not quiet:
+            print(msg)
     
     try:
         if args.peer_pubkey_file:
@@ -283,7 +333,7 @@ def drone_command(args):
             default_pub = Path("secrets/gcs_signing.pub")
             if default_pub.exists():
                 gcs_sig_public = default_pub.read_bytes()
-                print(f"Using GCS public key from: {default_pub}")
+                info(f"Using GCS public key from: {default_pub}")
             else:
                 raise ValueError("No GCS public key provided. Use --peer-pubkey-file, --gcs-pub-hex, or ensure secrets/gcs_signing.pub exists.")
                 
@@ -292,10 +342,15 @@ def drone_command(args):
         sys.exit(1)
     
     try:
-        print(f"Starting drone proxy with suite {args.suite}")
+        log_path = configure_file_logger("drone", logger)
+        if not quiet:
+            print(f"Log file: {log_path}")
+
+        info(f"Starting drone proxy with suite {suite_id}")
         if args.stop_seconds:
-            print(f"Will auto-stop after {args.stop_seconds} seconds")
-        print()
+            info(f"Will auto-stop after {args.stop_seconds} seconds")
+        if not quiet:
+            print()
         
         counters = run_proxy(
             role="drone",
@@ -303,27 +358,30 @@ def drone_command(args):
             cfg=CONFIG,
             gcs_sig_secret=None,
             gcs_sig_public=gcs_sig_public,
-            stop_after_seconds=args.stop_seconds
+            stop_after_seconds=args.stop_seconds,
+            manual_control=False,
+            quiet=quiet,
         )
         
         # Log final counters as JSON
         logger.info("Drone proxy shutdown", extra={"counters": counters})
         
-        print("Drone proxy stopped. Final counters:")
-        for key, value in counters.items():
-            print(f"  {key}: {value}")
+        if not quiet:
+            print("Drone proxy stopped. Final counters:")
+            for key, value in counters.items():
+                print(f"  {key}: {value}")
 
-        suite_id = suite.get("suite_id") or args.suite
         payload = {
             "role": "drone",
             "suite": suite_id,
             "counters": counters,
             "ts_stop_ns": time.time_ns(),
         }
-        write_json_report(json_out_path, payload)
+        write_json_report(json_out_path, payload, quiet=quiet)
             
     except KeyboardInterrupt:
-        print("\nDrone proxy stopped by user.")
+        if not quiet:
+            print("\nDrone proxy stopped by user.")
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
@@ -349,27 +407,45 @@ def main():
     
     # gcs subcommand
     gcs_parser = subparsers.add_parser('gcs', help='Start GCS proxy')
-    gcs_parser.add_argument("--suite", required=True,
+    gcs_parser.add_argument("--suite",
                            help="Cryptographic suite ID (e.g., cs-kyber768-aesgcm-dilithium3)")
+    gcs_parser.add_argument("--kem",
+                           help="KEM alias (e.g., ML-KEM-768, kyber768)")
+    gcs_parser.add_argument("--aead",
+                           help="AEAD alias (e.g., AES-GCM)")
+    gcs_parser.add_argument("--sig",
+                           help="Signature alias (e.g., ML-DSA-65, dilithium3)")
     gcs_parser.add_argument("--gcs-secret-file",
                            help="Path to GCS secret key file (default: secrets/gcs_signing.key)")
     gcs_parser.add_argument("--ephemeral", action='store_true',
                            help="Use ephemeral keys (development only - prints warning)")
     gcs_parser.add_argument("--stop-seconds", type=float,
                            help="Auto-stop after N seconds (for testing)")
+    gcs_parser.add_argument("--quiet", action="store_true",
+                           help="Suppress informational prints (warnings/errors still shown)")
     gcs_parser.add_argument("--json-out",
                            help="Optional path to write counters JSON on shutdown")
+    gcs_parser.add_argument("--control-manual", action="store_true",
+                           help="Enable interactive manual in-band rekey control thread")
     
     # drone subcommand
     drone_parser = subparsers.add_parser('drone', help='Start drone proxy')
-    drone_parser.add_argument("--suite", required=True,
+    drone_parser.add_argument("--suite",
                              help="Cryptographic suite ID (e.g., cs-kyber768-aesgcm-dilithium3)")
+    drone_parser.add_argument("--kem",
+                             help="KEM alias (e.g., ML-KEM-768, kyber768)")
+    drone_parser.add_argument("--aead",
+                             help="AEAD alias (e.g., AES-GCM)")
+    drone_parser.add_argument("--sig",
+                             help="Signature alias (e.g., ML-DSA-65, dilithium3)")
     drone_parser.add_argument("--peer-pubkey-file",
                              help="Path to GCS public key file (default: secrets/gcs_signing.pub)")
     drone_parser.add_argument("--gcs-pub-hex",
                              help="GCS public key as hex string")
     drone_parser.add_argument("--stop-seconds", type=float,
                              help="Auto-stop after N seconds (for testing)")
+    drone_parser.add_argument("--quiet", action="store_true",
+                              help="Suppress informational prints (warnings/errors still shown)")
     drone_parser.add_argument("--json-out",
                               help="Optional path to write counters JSON on shutdown")
     
@@ -396,8 +472,12 @@ def main():
     if args.command == 'init-identity':
         init_identity_command(args)
     elif args.command == 'gcs':
+        if getattr(args, "quiet", False):
+            logger.setLevel(logging.WARNING)
         gcs_command(args)
     elif args.command == 'drone':
+        if getattr(args, "quiet", False):
+            logger.setLevel(logging.WARNING)
         drone_command(args)
 
 
