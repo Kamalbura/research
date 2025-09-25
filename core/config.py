@@ -11,17 +11,17 @@ from typing import Dict, Any
 # Default configuration - all required keys with correct types
 CONFIG = {
     # Handshake (TCP)
-    "TCP_HANDSHAKE_PORT": 5800,
+    "TCP_HANDSHAKE_PORT": 46000,
 
     # Encrypted UDP data-plane (network)
-    "UDP_DRONE_RX": 5810,   # drone binds here; GCS sends here
-    "UDP_GCS_RX": 5811,     # gcs binds here; Drone sends here
+    "UDP_DRONE_RX": 46012,   # drone binds here; GCS sends here
+    "UDP_GCS_RX": 46011,     # gcs binds here; Drone sends here
 
     # Plaintext UDP (local loopback to apps/FC)
-    "DRONE_PLAINTEXT_TX": 14550,  # app→drone-proxy (to encrypt out)
-    "DRONE_PLAINTEXT_RX": 14551,  # drone-proxy→app (after decrypt)
-    "GCS_PLAINTEXT_TX": 14551,    # app→gcs-proxy
-    "GCS_PLAINTEXT_RX": 14550,    # gcs-proxy→app
+    "DRONE_PLAINTEXT_TX": 47003,  # app→drone-proxy (to encrypt out)
+    "DRONE_PLAINTEXT_RX": 47004,  # drone-proxy→app (after decrypt)
+    "GCS_PLAINTEXT_TX": 47001,    # app→gcs-proxy
+    "GCS_PLAINTEXT_RX": 47002,    # gcs-proxy→app
 
     # Hosts
     "DRONE_HOST": "127.0.0.1",

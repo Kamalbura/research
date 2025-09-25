@@ -8,6 +8,13 @@ import os
 import socket
 import sys
 import threading
+from pathlib import Path
+
+# Ensure repository root is on sys.path when executed directly
+_ROOT = Path(__file__).resolve().parents[2]
+_ROOT_STR = str(_ROOT)
+if _ROOT_STR not in sys.path:
+    sys.path.insert(0, _ROOT_STR)
 
 from core.config import CONFIG
 

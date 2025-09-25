@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Set manual four-terminal test port profile (Bash)
+export TCP_HANDSHAKE_PORT=46000
+export UDP_GCS_RX=46011
+export UDP_DRONE_RX=46012
+export GCS_PLAINTEXT_TX=47001
+export GCS_PLAINTEXT_RX=47002
+export DRONE_PLAINTEXT_TX=47003
+export DRONE_PLAINTEXT_RX=47004
+
+echo "Applied port profile: TCP=46000, UDP(GCS)=46011, UDP(DRONE)=46012, PTX GCS=47001/47002, PTX DRONE=47003/47004"
