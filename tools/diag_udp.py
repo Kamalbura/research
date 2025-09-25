@@ -19,7 +19,11 @@ for parent in (_HERE.parent.parent, _HERE.parent):
         # Best-effort; fall through
         pass
 
-from core.config import CONFIG  # Defines GCS_PLAINTEXT_TX/RX and DRONE_PLAINTEXT_TX/RX
+from core.config import CONFIG  # Defines hosts and all plaintext/handshake ports
+
+def _sendto(sock: socket.socket, host: str, port: int, text: str) -> None:
+    sock.sendto(text.encode('utf-8'), (host, port))
+
 
 def run_udp_test(role, local_ip, remote_ip, local_rx_port, remote_tx_port):
     """
@@ -74,13 +78,118 @@ def run_udp_test(role, local_ip, remote_ip, local_rx_port, remote_tx_port):
         rx_sock.close()
         tx_sock.close()
 
+
+def run_auto(role: str, *, verbose: bool = False, delay: float = 0.05) -> int:
+    """Automatic cross-direction UDP smoke test using CONFIG hosts/ports.
+
+    Flow:
+      - Drone listens on DRONE_PLAINTEXT_RX; GCS listens on GCS_PLAINTEXT_RX.
+      - Drone sends trigger "HELLO_FROM_DRONE" to GCS_PLAINTEXT_RX.
+      - GCS replies "HELLO_FROM_GCS" to DRONE_PLAINTEXT_RX.
+      - Each side then sends 5 numbered messages to the other's RX port.
+      - Returns 0 on success; non-zero on failure.
+    """
+
+    gcs_host = CONFIG.get("GCS_HOST", "127.0.0.1")
+    drone_host = CONFIG.get("DRONE_HOST", "127.0.0.1")
+    gcs_rx = int(CONFIG["GCS_PLAINTEXT_RX"])  # local RX for GCS
+    drone_rx = int(CONFIG["DRONE_PLAINTEXT_RX"])  # local RX for Drone
+
+    # Sockets
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    if role == "gcs":
+        rx.bind(("0.0.0.0", gcs_rx))
+        peer_host, peer_port = drone_host, drone_rx
+    else:
+        rx.bind(("0.0.0.0", drone_rx))
+        peer_host, peer_port = gcs_host, gcs_rx
+
+    rx.setblocking(False)
+
+    received = []
+    stop = False
+
+    def recv_loop():
+        nonlocal stop
+        while not stop:
+            try:
+                data, addr = rx.recvfrom(65535)
+            except BlockingIOError:
+                time.sleep(0.01)
+                continue
+            except Exception as e:
+                if verbose:
+                    print(f"recv error: {e}")
+                break
+            received.append((time.time(), addr, data))
+            if verbose:
+                print(f"RX {addr}: {data[:64]!r}")
+
+    t = threading.Thread(target=recv_loop, daemon=True)
+    t.start()
+
+    try:
+        if role == "drone":
+            _sendto(tx, gcs_host, gcs_rx, "HELLO_FROM_DRONE")
+        # Wait briefly for trigger; then GCS replies
+        deadline = time.time() + 2.0
+        replied = False
+        while time.time() < deadline:
+            if any(b"HELLO_FROM_DRONE" in it[2] for it in received) and role == "gcs":
+                _sendto(tx, drone_host, drone_rx, "HELLO_FROM_GCS")
+                replied = True
+                break
+            if any(b"HELLO_FROM_GCS" in it[2] for it in received) and role == "drone":
+                replied = True
+                break
+            time.sleep(0.01)
+
+        if not replied:
+            print("Timeout waiting for trigger exchange")
+            return 2
+
+        # Now fire 5 numbered messages from both sides
+        for i in range(1, 6):
+            if role == "gcs":
+                _sendto(tx, drone_host, drone_rx, f"GCS_MSG_{i}")
+            else:
+                _sendto(tx, gcs_host, gcs_rx, f"DRONE_MSG_{i}")
+            time.sleep(delay)
+
+        # Allow receive
+        time.sleep(0.5)
+
+        # Basic assertions
+        rx_texts = [pkt[2].decode("utf-8", errors="ignore") for pkt in received]
+        if role == "gcs":
+            ok = any("HELLO_FROM_DRONE" in s for s in rx_texts) and sum(1 for s in rx_texts if s.startswith("DRONE_MSG_")) >= 1
+        else:
+            ok = any("HELLO_FROM_GCS" in s for s in rx_texts) and sum(1 for s in rx_texts if s.startswith("GCS_MSG_")) >= 1
+        print(f"Auto test {'PASSED' if ok else 'FAILED'}; received {len(received)} datagrams")
+        return 0 if ok else 1
+    finally:
+        stop = True
+        t.join(timeout=0.2)
+        try:
+            rx.close()
+            tx.close()
+        except Exception:
+            pass
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test direct UDP plaintext communication between GCS and Drone.")
     parser.add_argument("--role", choices=["gcs", "drone"], required=True, help="Specify if this is the 'gcs' or 'drone' side.")
     parser.add_argument("--local_ip", default="0.0.0.0", help="Local IP to bind the receiver socket to.")
     parser.add_argument("--remote_gcs_ip", help="IP of the GCS machine (required for drone role).")
     parser.add_argument("--remote_drone_ip", help="IP of the Drone machine (required for gcs role).")
+    parser.add_argument("--auto", action="store_true", help="Run automatic cross-direction smoke test using CONFIG hosts/ports.")
     args = parser.parse_args()
+
+    if args.auto:
+        rc = run_auto(args.role)
+        raise SystemExit(rc)
 
     if args.role == "gcs":
         if not args.remote_drone_ip:
