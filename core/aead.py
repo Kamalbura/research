@@ -35,7 +35,9 @@ class ReplayError(Exception):
 # Constants
 HEADER_STRUCT = "!BBBBB8sQB"
 HEADER_LEN = 22
-IV_LEN = 12
+# IV is still logically 12 bytes (1 epoch + 11 seq bytes) but is NO LONGER transmitted on wire.
+# Wire format: header(22) || ciphertext+tag
+IV_LEN = 0  # length of IV bytes present on wire (0 after optimization)
 
 
 @dataclass(frozen=True)
@@ -105,9 +107,10 @@ class Sender:
         )
 
     def encrypt(self, plaintext: bytes) -> bytes:
-        """
-        Returns wire bytes: header || iv(12) || ciphertext+tag
-        Increments internal seq on success.
+        """Encrypt plaintext returning: header || ciphertext + tag.
+
+        Deterministic IV (epoch||seq) is derived locally and NOT sent on wire to
+        reduce overhead (saves 12 bytes per packet). Receiver reconstructs it.
         """
         if not isinstance(plaintext, bytes):
             raise NotImplementedError("plaintext must be bytes")
@@ -119,10 +122,9 @@ class Sender:
         # Pack header with current sequence
         header = self.pack_header(self._seq)
         
-        # Generate IV = epoch (1 byte) || seq (11 bytes) to prevent reuse across epochs
+        # Derive deterministic IV = epoch (1 byte) || seq (11 bytes)
         iv = bytes([self.epoch & 0xFF]) + self._seq.to_bytes(11, "big")
-        
-        # Encrypt with header as AAD
+
         try:
             ciphertext = self._aesgcm.encrypt(iv, plaintext, header)
         except Exception as e:
@@ -131,11 +133,17 @@ class Sender:
         # Increment sequence on success
         self._seq += 1
         
-        # Return wire format: header || iv || ciphertext+tag
-        return header + iv + ciphertext
+        # Return optimized wire format: header || ciphertext+tag (IV omitted)
+        return header + ciphertext
 
     def bump_epoch(self) -> None:
-        """epoch += 1 (mod 256), reset _seq to 0"""
+        """Increase epoch and reset sequence.
+
+        Safety policy: forbid wrapping 255->0 with the same key to avoid IV reuse.
+        Callers should perform a new handshake to rotate keys before wrap.
+        """
+        if self.epoch == 255:
+            raise NotImplementedError("epoch wrap forbidden without rekey; perform handshake to rotate keys")
         self.epoch = (self.epoch + 1) % 256
         self._seq = 0
 
@@ -206,12 +214,15 @@ class Receiver:
             raise ReplayError(f"packet too old seq={seq}, high={self._high}, window={self.window}")
 
     def decrypt(self, wire: bytes) -> bytes:
-        """Validates header, anti-replay, and returns plaintext on success."""
+        """Validate header, perform anti-replay, reconstruct IV, decrypt.
+
+        Returns plaintext bytes or None (silent mode) on failure.
+        """
         if not isinstance(wire, bytes):
             raise NotImplementedError("wire must be bytes")
         
-        if len(wire) < HEADER_LEN + IV_LEN:
-            raise NotImplementedError("wire too short for header + IV")
+        if len(wire) < HEADER_LEN:
+            raise NotImplementedError("wire too short for header")
         
         # Extract header
         header = wire[:HEADER_LEN]
@@ -248,16 +259,9 @@ class Receiver:
                 raise
             return None
         
-        # Extract IV and ciphertext
-        iv = wire[HEADER_LEN:HEADER_LEN + IV_LEN]
-        ciphertext = wire[HEADER_LEN + IV_LEN:]
-        
-        # Validate IV matches expected deterministic value
-        expected_iv = bytes([epoch & 0xFF]) + seq.to_bytes(11, "big")
-        if iv != expected_iv:
-            if self.strict_mode:
-                raise HeaderMismatch("IV mismatch: expected epoch||seq format")
-            return None
+        # Reconstruct deterministic IV instead of reading from wire
+        iv = bytes([epoch & 0xFF]) + seq.to_bytes(11, "big")
+        ciphertext = wire[HEADER_LEN:]
         
         # Decrypt with header as AAD
         try:
@@ -277,6 +281,12 @@ class Receiver:
         self._mask = 0
 
     def bump_epoch(self) -> None:
-        """epoch += 1 (mod 256), reset replay state"""
+        """Increase epoch and reset replay state.
+        
+        Safety policy: forbid wrapping 255->0 with the same key to avoid IV reuse.
+        Callers should perform a new handshake to rotate keys before wrap.
+        """
+        if self.epoch == 255:
+            raise NotImplementedError("epoch wrap forbidden without rekey; perform handshake to rotate keys")
         self.epoch = (self.epoch + 1) % 256
         self.reset_replay()

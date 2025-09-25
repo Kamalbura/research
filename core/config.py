@@ -30,6 +30,21 @@ CONFIG = {
     # Crypto/runtime
     "REPLAY_WINDOW": 1024,
     "WIRE_VERSION": 1,      # header version byte (frozen)
+
+    # --- Optional hardening / QoS knobs (NOT required; safe defaults) ---
+    # Limit TCP handshake attempts accepted per IP at the GCS (server) side.
+    # Model: token bucket; BURST tokens max, refilling at REFILL_PER_SEC tokens/sec.
+    "HANDSHAKE_RL_BURST": 5,
+    "HANDSHAKE_RL_REFILL_PER_SEC": 1,
+
+    # Mark encrypted UDP with DSCP EF (46) to prioritize on WMM-enabled APs.
+    # Set to None to disable. Implementation multiplies by 4 to form TOS.
+    "ENCRYPTED_DSCP": 46,
+
+    # Feature flag: if True, proxy prefixes app->proxy plaintext with 1 byte packet type.
+    # 0x01 = MAVLink/data (forward to local app); 0x02 = control (route to policy engine).
+    # When False (default), proxy passes bytes unchanged (backward compatible).
+    "ENABLE_PACKET_TYPE": False,
 }
 
 
@@ -98,6 +113,11 @@ def validate_config(cfg: Dict[str, Any]) -> None:
         host = cfg[host_key]
         if not host or not isinstance(host, str):
             raise NotImplementedError(f"CONFIG[{host_key}] must be non-empty string, got {repr(host)}")
+    
+    # Optional keys are intentionally not required; do light validation if present
+    if "ENCRYPTED_DSCP" in cfg and cfg["ENCRYPTED_DSCP"] is not None:
+        if not (0 <= int(cfg["ENCRYPTED_DSCP"]) <= 63):
+            raise NotImplementedError("CONFIG[ENCRYPTED_DSCP] must be 0..63 or None")
 
 
 def _apply_env_overrides(cfg: Dict[str, Any]) -> Dict[str, Any]:

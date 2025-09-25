@@ -29,7 +29,9 @@ class TestRekeyEpoch:
         key_epoch1 = os.urandom(32)
         
         # Senders for different epochs
-        from core.aead import header_ids_for_suite, CONFIG, AeadIds
+        from core.suites import header_ids_for_suite
+        from core.config import CONFIG
+        from core.aead import AeadIds
         header_ids = header_ids_for_suite(suite)
         aead_ids = AeadIds(*header_ids)
         sender_epoch0 = Sender(CONFIG["WIRE_VERSION"], aead_ids, test_session_id, 0, key_epoch0)
@@ -59,7 +61,9 @@ class TestRekeyEpoch:
         # Test various epoch values
         epochs = [0, 1, 5, 255]
         
-        from core.aead import header_ids_for_suite, CONFIG, AeadIds
+        from core.suites import header_ids_for_suite
+        from core.config import CONFIG
+        from core.aead import AeadIds
         header_ids = header_ids_for_suite(suite)
         aead_ids = AeadIds(*header_ids)
         
@@ -90,7 +94,9 @@ class TestRekeyEpoch:
         key_epoch1 = os.urandom(32)
         
         # Start with epoch 0, send some packets
-        from core.aead import header_ids_for_suite, CONFIG, AeadIds
+        from core.suites import header_ids_for_suite
+        from core.config import CONFIG
+        from core.aead import AeadIds
         header_ids = header_ids_for_suite(suite)
         aead_ids = AeadIds(*header_ids)
         sender_epoch0 = Sender(CONFIG["WIRE_VERSION"], aead_ids, test_session_id, 0, key_epoch0)
@@ -129,7 +135,9 @@ class TestRekeyEpoch:
         key_epoch1 = os.urandom(32)
         
         # Senders for different epochs
-        from core.aead import header_ids_for_suite, CONFIG, AeadIds
+        from core.suites import header_ids_for_suite
+        from core.config import CONFIG
+        from core.aead import AeadIds
         header_ids = header_ids_for_suite(suite)
         aead_ids0 = AeadIds(*header_ids)
         aead_ids1 = AeadIds(*header_ids)
@@ -171,7 +179,9 @@ class TestRekeyEpoch:
         key = os.urandom(32)
         
         # Test max epoch value (255 for single byte)
-        from core.aead import header_ids_for_suite, CONFIG, AeadIds
+        from core.suites import header_ids_for_suite
+        from core.config import CONFIG
+        from core.aead import AeadIds
         header_ids = header_ids_for_suite(suite)
         aead_ids = AeadIds(*header_ids)
         sender_max = Sender(CONFIG["WIRE_VERSION"], aead_ids, test_session_id, 255, key)
@@ -197,7 +207,9 @@ class TestRekeyEpoch:
         key_new = os.urandom(32)
         
         # Simulate ongoing communication in old epoch
-        from core.aead import header_ids_for_suite, CONFIG, AeadIds
+        from core.suites import header_ids_for_suite
+        from core.config import CONFIG
+        from core.aead import AeadIds
         header_ids = header_ids_for_suite(suite)
         aead_ids_old = AeadIds(*header_ids)
         aead_ids_new = AeadIds(*header_ids)
@@ -233,7 +245,9 @@ class TestRekeyEpoch:
         key = os.urandom(32)
         
         # Same key, different epochs
-        from core.aead import header_ids_for_suite, CONFIG, AeadIds
+        from core.suites import header_ids_for_suite
+        from core.config import CONFIG
+        from core.aead import AeadIds
         header_ids = header_ids_for_suite(suite)
         aead_ids0 = AeadIds(*header_ids)
         aead_ids1 = AeadIds(*header_ids)

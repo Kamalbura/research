@@ -1,10 +1,14 @@
-"""
-Network transport proxy orchestration with TCP handshake and UDP encrypt/decrypt loops.
+"""Selectors-based network transport proxy.
 
-Implements the main proxy logic that:
-1. Performs authenticated TCP handshake using PQC KEM + signatures  
-2. Bridges plaintext UDP ⇄ encrypted UDP in both directions
-3. Uses non-blocking I/O with selectors for single-threaded operation
+Responsibilities:
+1. Perform authenticated TCP handshake (PQC KEM + signature) using `core.handshake`.
+2. Bridge plaintext UDP <-> encrypted UDP (AEAD framing) both directions.
+3. Enforce replay window and per-direction sequence via `core.aead`.
+
+Note: This module uses the low-level `selectors` stdlib facility—not `asyncio`—to
+remain dependency-light and fully deterministic for test harnesses. The filename
+is retained for backward compatibility; a future refactor may rename it to
+`selector_proxy.py` and/or introduce an asyncio variant.
 """
 
 import socket
@@ -27,7 +31,13 @@ class ProxyCounters:
         self.ptx_in = 0       # plaintext packets received from app  
         self.enc_out = 0      # encrypted packets sent to peer
         self.enc_in = 0       # encrypted packets received from peer
-        self.drops = 0        # packets dropped (AEAD failures, replay, etc.)
+        self.drops = 0        # total drops
+        # Granular drop reasons
+        self.drop_replay = 0
+        self.drop_auth = 0
+        self.drop_header = 0
+        self.drop_session_epoch = 0
+        self.drop_other = 0
     
     def to_dict(self) -> Dict[str, int]:
         return {
@@ -35,8 +45,78 @@ class ProxyCounters:
             "ptx_in": self.ptx_in, 
             "enc_out": self.enc_out,
             "enc_in": self.enc_in,
-            "drops": self.drops
+            "drops": self.drops,
+            "drop_replay": self.drop_replay,
+            "drop_auth": self.drop_auth,
+            "drop_header": self.drop_header,
+            "drop_session_epoch": self.drop_session_epoch,
+            "drop_other": self.drop_other,
         }
+
+
+def _dscp_to_tos(dscp: Optional[int]) -> Optional[int]:
+    """Convert DSCP value to TOS byte for socket options."""
+    if dscp is None:
+        return None
+    try:
+        d = int(dscp)
+        if 0 <= d <= 63:
+            return d << 2  # DSCP occupies high 6 bits of TOS/Traffic Class
+    except Exception:
+        pass
+    return None
+
+
+def _parse_header_fields(expected_version: int, aead_ids, session_id: bytes, wire: bytes) -> Tuple[str, Optional[int]]:
+    """
+    Try to unpack the header and classify the most likely drop reason *without* AEAD work.
+    Returns (reason, seq_if_available).
+    """
+    import struct
+    HEADER_STRUCT = "!BBBBB8sQB"
+    HEADER_LEN = 22
+    if len(wire) < HEADER_LEN:
+        return ("header_too_short", None)
+    try:
+        (version, kem_id, kem_param, sig_id, sig_param, sess, seq, epoch) = struct.unpack(HEADER_STRUCT, wire[:HEADER_LEN])
+    except struct.error:
+        return ("header_unpack_error", None)
+    if version != expected_version:
+        return ("version_mismatch", seq)
+    if (kem_id, kem_param, sig_id, sig_param) != (aead_ids.kem_id, aead_ids.kem_param, aead_ids.sig_id, aead_ids.sig_param):
+        return ("crypto_id_mismatch", seq)
+    if sess != session_id:
+        return ("session_mismatch", seq)
+    # If we got here, header matches; any decrypt failure that returns None is auth/tag failure.
+    return ("auth_fail_or_replay", seq)
+
+
+class _TokenBucket:
+    """Per-IP rate limiter using token bucket algorithm."""
+    def __init__(self, capacity: int, refill_per_sec: float):
+        self.capacity = max(1, capacity)
+        self.refill = max(0.01, float(refill_per_sec))
+        self.tokens: Dict[str, float] = {}      # ip -> tokens
+        self.last: Dict[str, float] = {}        # ip -> last timestamp
+        
+    def allow(self, ip: str) -> bool:
+        """Check if request from IP should be allowed."""
+        now = time.monotonic()
+        t = self.tokens.get(ip, self.capacity)
+        last = self.last.get(ip, now)
+        # refill
+        t = min(self.capacity, t + (now - last) * self.refill)
+        self.last[ip] = now
+        if t >= 1.0:
+            t -= 1.0
+            self.tokens[ip] = t
+            return True
+        self.tokens[ip] = t
+        return False
+
+
+from core.aead import Sender, Receiver, HeaderMismatch, ReplayError, AeadAuthError
+from core.policy_engine import handle_control
 
 
 def _validate_config(cfg: dict) -> None:
@@ -64,16 +144,29 @@ def _perform_handshake(role: str, suite: dict, gcs_sig_secret: Optional[bytes], 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_sock.bind(('0.0.0.0', cfg["TCP_HANDSHAKE_PORT"]))
-        server_sock.listen(1)
+        server_sock.listen(32)  # small backlog to smooth bursts
         
         # Set timeout for accept() to prevent hanging when no drone connects
         timeout = stop_after_seconds if stop_after_seconds is not None else 30.0
         server_sock.settimeout(timeout)
         
+        # Per-IP handshake gatekeeper (token bucket)
+        gate = _TokenBucket(cfg.get("HANDSHAKE_RL_BURST", 5), cfg.get("HANDSHAKE_RL_REFILL_PER_SEC", 1))
         try:
             try:
                 conn, addr = server_sock.accept()
                 try:
+                    ip, _port = addr
+                    if not gate.allow(ip):
+                        # Drop quickly without expensive KEM/signature work
+                        try:
+                            conn.settimeout(0.2)
+                            conn.sendall(b"\x00")  # minimal feedback; optional
+                        except Exception:
+                            pass
+                        finally:
+                            conn.close()
+                        raise NotImplementedError("Handshake rate-limit: too many attempts")
                     result = server_gcs_handshake(conn, suite, gcs_sig_secret)
                     return result  # (k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id)
                 finally:
@@ -110,6 +203,13 @@ def _setup_sockets(role: str, cfg: dict):
             enc_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             enc_sock.bind(('0.0.0.0', cfg["UDP_DRONE_RX"]))
             enc_sock.setblocking(False)
+            # DSCP marking (best-effort; ignore if not supported)
+            tos = _dscp_to_tos(cfg.get("ENCRYPTED_DSCP"))
+            if tos is not None:
+                try:
+                    enc_sock.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, tos)
+                except Exception:
+                    pass
             sockets['encrypted'] = enc_sock
             
             # Plaintext ingress - receive from local app
@@ -131,6 +231,12 @@ def _setup_sockets(role: str, cfg: dict):
             enc_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             enc_sock.bind(('0.0.0.0', cfg["UDP_GCS_RX"]))
             enc_sock.setblocking(False) 
+            tos = _dscp_to_tos(cfg.get("ENCRYPTED_DSCP"))
+            if tos is not None:
+                try:
+                    enc_sock.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, tos)
+                except Exception:
+                    pass
             sockets['encrypted'] = enc_sock
             
             # Plaintext ingress - receive from local app
@@ -240,8 +346,14 @@ def run_proxy(*, role: str, suite: dict, cfg: dict,
                                 
                             counters.ptx_in += 1
                             
+                            # Optional packet typing for routing (feature flagged)
+                            if cfg.get("ENABLE_PACKET_TYPE"):
+                                # 0x01 = app data; 0x02 reserved for control plane
+                                payload_out = b"\x01" + payload
+                            else:
+                                payload_out = payload
                             # Encrypt payload
-                            wire = sender.encrypt(payload)
+                            wire = sender.encrypt(payload_out)
                             
                             # Send to encrypted peer
                             try:
@@ -254,33 +366,65 @@ def run_proxy(*, role: str, suite: dict, cfg: dict,
                             continue
                     
                     elif data_type == 'encrypted':
-                        # Encrypted ingress: decrypt and forward
                         try:
                             wire, addr = sock.recvfrom(2048)
                             if not wire:
                                 continue
-                                
                             counters.enc_in += 1
-                            
-                            # Decrypt payload
+
                             try:
                                 plaintext = receiver.decrypt(wire)
                                 if plaintext is None:
-                                    # Replay or tampered packet
+                                    # Classify drop without AEAD work
+                                    reason, _seq = _parse_header_fields(
+                                        CONFIG["WIRE_VERSION"], receiver.ids, receiver.session_id, wire
+                                    )
                                     counters.drops += 1
+                                    if reason in ("version_mismatch", "crypto_id_mismatch", "header_too_short", "header_unpack_error"):
+                                        counters.drop_header += 1
+                                    elif reason == "session_mismatch":
+                                        counters.drop_session_epoch += 1
+                                    else:
+                                        # Could be replay or tag fail; we can't tell without state—count as auth.
+                                        counters.drop_auth += 1
                                     continue
-                            except Exception:
-                                # AEAD failure
+                            except ReplayError:
                                 counters.drops += 1
+                                counters.drop_replay += 1
                                 continue
-                                
-                            # Forward to plaintext peer
+                            except HeaderMismatch:
+                                counters.drops += 1
+                                counters.drop_header += 1
+                                continue
+                            except AeadAuthError:
+                                counters.drops += 1
+                                counters.drop_auth += 1
+                                continue
+                            except Exception:
+                                counters.drops += 1
+                                counters.drop_other += 1
+                                continue
+
                             try:
-                                sockets['plaintext_out'].sendto(plaintext, sockets['plaintext_peer'])
+                                out_bytes = plaintext
+                                if cfg.get("ENABLE_PACKET_TYPE") and plaintext:
+                                    ptype = plaintext[0]
+                                    if ptype == 0x01:
+                                        out_bytes = plaintext[1:]  # deliver to app
+                                    elif ptype == 0x02:
+                                        # control plane: send to PolicyEngine
+                                        _ = handle_control(plaintext[1:])
+                                        continue
+                                    else:
+                                        # Unknown type; drop in place
+                                        counters.drops += 1
+                                        counters.drop_other += 1
+                                        continue
+                                sockets['plaintext_out'].sendto(out_bytes, sockets['plaintext_peer'])
                                 counters.ptx_out += 1
                             except socket.error:
                                 counters.drops += 1
-                                
+                                counters.drop_other += 1
                         except socket.error:
                             continue
                             

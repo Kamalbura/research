@@ -10,89 +10,42 @@ from types import MappingProxyType
 
 
 # Frozen header ID mappings
-_KEM_IDS = {
-    "ML-KEM-512": (1, 1),   # (kem_id, kem_param)
-    "ML-KEM-768": (1, 2),
-    "ML-KEM-1024": (1, 3),
-}
-
-_SIG_IDS = {
-    # ML-DSA (Dilithium)
-    "ML-DSA-44": (1, 1),    # (sig_id, sig_param)  
-    "ML-DSA-65": (1, 2),
-    "ML-DSA-87": (1, 3),
-    # Falcon
-    "Falcon-512": (2, 1),
-    "Falcon-1024": (2, 2),
-    # SLH-DSA (SPHINCS+) - SHA2 variants only
-    "SLH-DSA-SHA2-128f": (3, 1),
-    "SLH-DSA-SHA2-256f": (3, 2),
-}
-
-# Suite registry - exactly 7 suites as specified
+# Suite registry - embed header ID bytes directly to avoid split mappings
 _SUITES_MUTABLE = {
     "cs-kyber512-aesgcm-dilithium2": {
-        "kem_name": "ML-KEM-512",
-        "kem_param": 512,
-        "sig_name": "ML-DSA-44", 
-        "sig_param": 44,
-        "nist_level": "L1",
-        "aead": "AES-256-GCM",
-        "kdf": "HKDF-SHA256"
+        "kem_name": "ML-KEM-512", "kem_id": 1, "kem_param_id": 1,
+        "sig_name": "ML-DSA-44", "sig_id": 1, "sig_param_id": 1,
+        "nist_level": "L1", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
     },
     "cs-kyber768-aesgcm-dilithium3": {
-        "kem_name": "ML-KEM-768",
-        "kem_param": 768,
-        "sig_name": "ML-DSA-65",
-        "sig_param": 65, 
-        "nist_level": "L3",
-        "aead": "AES-256-GCM",
-        "kdf": "HKDF-SHA256"
+        "kem_name": "ML-KEM-768", "kem_id": 1, "kem_param_id": 2,
+        "sig_name": "ML-DSA-65", "sig_id": 1, "sig_param_id": 2,
+        "nist_level": "L3", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
     },
     "cs-kyber1024-aesgcm-dilithium5": {
-        "kem_name": "ML-KEM-1024",
-        "kem_param": 1024,
-        "sig_name": "ML-DSA-87",
-        "sig_param": 87,
-        "nist_level": "L5", 
-        "aead": "AES-256-GCM",
-        "kdf": "HKDF-SHA256"
+        "kem_name": "ML-KEM-1024", "kem_id": 1, "kem_param_id": 3,
+        "sig_name": "ML-DSA-87", "sig_id": 1, "sig_param_id": 3,
+        "nist_level": "L5", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
     },
     "cs-kyber768-aesgcm-falcon512": {
-        "kem_name": "ML-KEM-768",
-        "kem_param": 768,
-        "sig_name": "Falcon-512",
-        "sig_param": 512,
-        "nist_level": "L3",
-        "aead": "AES-256-GCM", 
-        "kdf": "HKDF-SHA256"
+        "kem_name": "ML-KEM-768", "kem_id": 1, "kem_param_id": 2,
+        "sig_name": "Falcon-512", "sig_id": 2, "sig_param_id": 1,
+        "nist_level": "L3", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
     },
     "cs-kyber1024-aesgcm-falcon1024": {
-        "kem_name": "ML-KEM-1024",
-        "kem_param": 1024,
-        "sig_name": "Falcon-1024",
-        "sig_param": 1024,
-        "nist_level": "L5",
-        "aead": "AES-256-GCM",
-        "kdf": "HKDF-SHA256"
+        "kem_name": "ML-KEM-1024", "kem_id": 1, "kem_param_id": 3,
+        "sig_name": "Falcon-1024", "sig_id": 2, "sig_param_id": 2,
+        "nist_level": "L5", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
     },
     "cs-kyber512-aesgcm-sphincs128f_sha2": {
-        "kem_name": "ML-KEM-512",
-        "kem_param": 512,
-        "sig_name": "SLH-DSA-SHA2-128f",
-        "sig_param": "SHA2-128f",
-        "nist_level": "L1",
-        "aead": "AES-256-GCM",
-        "kdf": "HKDF-SHA256"
+        "kem_name": "ML-KEM-512", "kem_id": 1, "kem_param_id": 1,
+        "sig_name": "SLH-DSA-SHA2-128f", "sig_id": 3, "sig_param_id": 1,
+        "nist_level": "L1", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
     },
     "cs-kyber1024-aesgcm-sphincs256f_sha2": {
-        "kem_name": "ML-KEM-1024", 
-        "kem_param": 1024,
-        "sig_name": "SLH-DSA-SHA2-256f",
-        "sig_param": "SHA2-256f",
-        "nist_level": "L5",
-        "aead": "AES-256-GCM",
-        "kdf": "HKDF-SHA256"
+        "kem_name": "ML-KEM-1024", "kem_id": 1, "kem_param_id": 3,
+        "sig_name": "SLH-DSA-SHA2-256f", "sig_id": 3, "sig_param_id": 2,
+        "nist_level": "L5", "aead": "AES-256-GCM", "kdf": "HKDF-SHA256"
     }
 }
 
@@ -139,31 +92,14 @@ def get_suite(suite_id: str) -> Dict:
 
 
 def header_ids_for_suite(suite: Dict) -> Tuple[int, int, int, int]:
-    """
-    Map suite to (kem_id, kem_param_id, sig_id, sig_param_id) as specified.
-    
-    Args:
-        suite: Suite configuration dictionary
-        
-    Returns:
-        4-tuple of header ID bytes: (kem_id, kem_param_id, sig_id, sig_param_id)
-        
-    Raises:
-        NotImplementedError: If the suite uses unknown IDs/params
-    """
-    kem_name = suite.get("kem_name")
-    sig_name = suite.get("sig_name")
-    
-    if kem_name not in _KEM_IDS:
-        raise NotImplementedError(f"unknown KEM name: {kem_name}")
-    
-    if sig_name not in _SIG_IDS:
-        raise NotImplementedError(f"unknown signature name: {sig_name}")
-    
-    kem_id, kem_param_id = _KEM_IDS[kem_name]
-    sig_id, sig_param_id = _SIG_IDS[sig_name]
-    
-    return (kem_id, kem_param_id, sig_id, sig_param_id)
+    """Return embedded header ID bytes for provided suite dict copy."""
+    try:
+        return (
+            suite["kem_id"], suite["kem_param_id"],
+            suite["sig_id"], suite["sig_param_id"],
+        )
+    except KeyError as e:
+        raise NotImplementedError(f"suite missing embedded id field: {e}")
 
 
 def suite_bytes_for_hkdf(suite: Dict) -> bytes:

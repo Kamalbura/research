@@ -160,20 +160,19 @@ class TestEndToEndProxy:
         assert gcs_counters is not None
         assert drone_counters is not None
         
-        # CRITICAL: Add real payload assertions - this was missing in security audit
-        # For now, just verify that no handshake errors occurred (auth bypass is fixed)
-        # TODO: Debug packet forwarding timing in integration environment  
-        if received_at_gcs == drone_to_gcs_data and received_at_drone == gcs_to_drone_data:
-            print(f"✅ Perfect: Both directions forwarded correctly!")
-        else:
-            print(f"⚠️  Handshake works, but packet forwarding needs debugging:")
-            print(f"   Expected drone->GCS: {drone_to_gcs_data}, got: {received_at_gcs}")
-            print(f"   Expected GCS->drone: {gcs_to_drone_data}, got: {received_at_drone}")
-            # The critical security fix (auth bypass) is working - handshake completed
-            # Packet forwarding is an integration issue, not a security vulnerability
-        
-        print(f"✅ GCS counters: {gcs_counters}")
-        print(f"✅ Drone counters: {drone_counters}")
+        # Assert successful forwarding both directions
+        assert received_at_gcs is not None, "GCS did not receive data from drone"
+        assert received_at_gcs == drone_to_gcs_data, (
+            f"Mismatch drone->GCS: expected {drone_to_gcs_data!r} got {received_at_gcs!r}"
+        )
+        assert received_at_drone is not None, "Drone did not receive data from GCS"
+        assert received_at_drone == gcs_to_drone_data, (
+            f"Mismatch GCS->drone: expected {gcs_to_drone_data!r} got {received_at_drone!r}"
+        )
+
+        # Basic sanity on counters (at least one packet each direction was processed)
+        assert gcs_counters["enc_in"] >= 1
+        assert drone_counters["enc_in"] >= 1
     
     def test_tampered_packet_dropped(self, suite, gcs_keypair):
         """Test that tampered encrypted packets are dropped."""

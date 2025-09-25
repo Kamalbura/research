@@ -23,6 +23,10 @@ PUB = KEYDIR / "gcs_pub.bin"
 SEC = KEYDIR / "gcs_sec.bin"
 
 def ensure_keys() -> tuple[bytes, bytes]:
+    """Load or generate GCS signing keypair (fails fast if generation fails).
+
+    SECURITY: We never substitute random bytes if real key generation fails.
+    """
     KEYDIR.mkdir(parents=True, exist_ok=True)
     if PUB.exists() and SEC.exists():
         print(f"[GCS] Loading keys from {KEYDIR}")
@@ -33,11 +37,11 @@ def ensure_keys() -> tuple[bytes, bytes]:
         with oqs.Signature(suite["sig_name"]) as sig:
             pub = sig.generate_keypair()
             sec = sig.export_secret_key()
-    except Exception:
-        pub = os.urandom(64)
-        sec = os.urandom(64)
-    PUB.write_bytes(pub); SEC.write_bytes(sec)
-    print(f"[GCS] Wrote keys to {KEYDIR}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to generate OQS signature keypair: {e}") from e
+    PUB.write_bytes(pub)
+    SEC.write_bytes(sec)
+    print(f"[GCS] Generated and stored keys in {KEYDIR}")
     return pub, sec
 
 if __name__ == "__main__":

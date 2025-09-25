@@ -41,7 +41,8 @@ def build_server_hello(suite_id: str, server_sig_obj):
     session_id = os.urandom(8)
     kem_obj = KeyEncapsulation(kem_name.decode())
     kem_pub = kem_obj.generate_keypair()
-    transcript = b"pq-drone-gcs:v1|" + session_id + b"|" + kem_name + b"|" + sig_name + b"|" + kem_pub
+    # Include negotiated wire version as first byte of transcript to prevent downgrade
+    transcript = struct.pack("!B", version) + b"|pq-drone-gcs:v1|" + session_id + b"|" + kem_name + b"|" + sig_name + b"|" + kem_pub
     signature = server_sig_obj.sign(transcript)
     wire = struct.pack("!B", version)
     wire += struct.pack("!H", len(kem_name)) + kem_name
@@ -84,7 +85,7 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         offset += sig_len
     except Exception:
         raise HandshakeFormatError("malformed server hello")
-    transcript = b"pq-drone-gcs:v1|" + session_id + b"|" + kem_name + b"|" + sig_name + b"|" + kem_pub
+    transcript = struct.pack("!B", version) + b"|pq-drone-gcs:v1|" + session_id + b"|" + kem_name + b"|" + sig_name + b"|" + kem_pub
     try:
         sig = Signature(sig_name.decode())
         if not sig.verify(transcript, signature, server_sig_pub):
@@ -144,68 +145,54 @@ def derive_transport_keys(role: str, session_id: bytes, kem_name: bytes, sig_nam
     else:
         return key_recv, key_send
 def server_gcs_handshake(conn, suite, gcs_sig_secret):
-    # Real handshake implementation using provided GCS signing secret
+    """Authenticated GCS side handshake.
+
+    Requires a ready oqs.Signature object (with generated key pair). Fails fast if not.
+    """
     from oqs.oqs import Signature
     import struct
-    
-    # Add socket timeout to prevent hanging
+
     conn.settimeout(10.0)
-    
-    # Find suite_id from suite dict  
+
+    if not isinstance(gcs_sig_secret, Signature):
+        raise ValueError("gcs_sig_secret must be an oqs.Signature object with a loaded keypair")
+
+    # Resolve suite_id by matching suite dict
     suite_id = None
     from core.suites import SUITES
-    for test_id, test_suite in SUITES.items():
-        if dict(test_suite) == suite:
-            suite_id = test_id
+    for sid, s in SUITES.items():
+        if dict(s) == suite:
+            suite_id = sid
             break
-    if not suite_id:
-        raise ValueError("Could not find suite_id for provided suite")
-    
-    # Use provided GCS signing secret - create signature object
-    sig = Signature(suite["sig_name"])
-    # NOTE: oqs-python doesn't support importing secrets directly
-    # For now, we assume gcs_sig_secret contains a pre-configured Signature object
-    # In production, this would use sig.import_secret_key(gcs_sig_secret)
-    if isinstance(gcs_sig_secret, Signature):
-        sig = gcs_sig_secret
-    elif hasattr(gcs_sig_secret, 'sign'):
-        # Accept any object that can sign (duck typing)
-        sig = gcs_sig_secret
-    else:
-        # Fallback: generate keypair but warn
-        sig.generate_keypair()
-        print("WARNING: Using generated keypair instead of provided secret")
-    
-    # Build server hello
-    hello_wire, ephemeral = build_server_hello(suite_id, sig)
-    
-    # Send server hello with length prefix
+    if suite_id is None:
+        raise ValueError("suite not found in registry")
+
+    hello_wire, ephemeral = build_server_hello(suite_id, gcs_sig_secret)
     conn.sendall(struct.pack("!I", len(hello_wire)) + hello_wire)
-    
-    # Receive KEM ciphertext with length prefix
+
+    # Receive KEM ciphertext
     ct_len_bytes = b""
     while len(ct_len_bytes) < 4:
         chunk = conn.recv(4 - len(ct_len_bytes))
         if not chunk:
-            raise NotImplementedError("Connection closed reading ciphertext length")
+            raise ConnectionError("Connection closed reading ciphertext length")
         ct_len_bytes += chunk
-    
     ct_len = struct.unpack("!I", ct_len_bytes)[0]
     kem_ct = b""
     while len(kem_ct) < ct_len:
         chunk = conn.recv(ct_len - len(kem_ct))
         if not chunk:
-            raise NotImplementedError("Connection closed reading ciphertext")
+            raise ConnectionError("Connection closed reading ciphertext")
         kem_ct += chunk
-    
-    # Decapsulate and derive keys
+
     shared_secret = server_decapsulate(ephemeral, kem_ct)
-    key_recv, key_send = derive_transport_keys("server", ephemeral.session_id, 
-                                              ephemeral.kem_name.encode(), 
-                                              ephemeral.sig_name.encode(), 
-                                              shared_secret)
-    
-    # Return in expected format (nonce seeds are unused)
+    key_recv, key_send = derive_transport_keys(
+        "server",
+        ephemeral.session_id,
+        ephemeral.kem_name.encode(),
+        ephemeral.sig_name.encode(),
+        shared_secret,
+    )
     return key_recv, key_send, b"", b"", ephemeral.session_id
 
 def client_drone_handshake(client_sock, suite, gcs_sig_public):
