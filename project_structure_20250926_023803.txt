@@ -1,19 +1,16 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Output File: C:\Users\burak\Desktop\research\project_structure_20250925_235652.txt
-Generated: 2025-09-25 23:56:52
+Output File: C:\Users\burak\Desktop\research\project_structure_20250926_023803.txt
+Generated: 2025-09-26 02:38:03
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Generated: 2025-09-25 23:56:52
+Generated: 2025-09-26 02:38:03
 
-├── __pycache__/
-│   ├── diagnose_handshake.cpython-313.pyc (3,003 bytes)
-│   └── strict_mode_demo.cpython-313.pyc (4,035 bytes)
 ├── benchmarks/
 │   ├── matrix.yaml (159 bytes)
 │   └── run_matrix.py (11,095 bytes)
@@ -22,18 +19,16 @@ Generated: 2025-09-25 23:56:52
 │   │   ├── __init__.cpython-313.pyc (273 bytes)
 │   │   ├── aead.cpython-313.pyc (13,736 bytes)
 │   │   ├── async_proxy.cpython-313.pyc (33,642 bytes)
-│   │   ├── config.cpython-313.pyc (4,378 bytes)
+│   │   ├── config.cpython-313.pyc (4,407 bytes)
 │   │   ├── handshake.cpython-313.pyc (11,730 bytes)
 │   │   ├── logging_utils.cpython-313.pyc (5,872 bytes)
 │   │   ├── policy_engine.cpython-313.pyc (9,815 bytes)
-│   │   ├── project_config.cpython-313.pyc (220 bytes)
 │   │   ├── run_proxy.cpython-313.pyc (21,890 bytes)
-│   │   ├── runner.cpython-313.pyc (1,158 bytes)
 │   │   └── suites.cpython-313.pyc (11,609 bytes)
 │   ├── __init__.py (121 bytes)
 │   ├── aead.py (10,889 bytes)
 │   ├── async_proxy.py (29,379 bytes)
-│   ├── config.py (5,603 bytes)
+│   ├── config.py (5,614 bytes)
 │   ├── handshake.py (9,289 bytes)
 │   ├── logging_utils.py (2,957 bytes)
 │   ├── policy_engine.py (6,970 bytes)
@@ -75,6 +70,15 @@ Generated: 2025-09-25 23:56:52
 │       ├── env_check.py (396 bytes)
 │       ├── start_suite.ps1 (700 bytes)
 │       └── start_suite.sh (692 bytes)
+├── logs/
+│   ├── drone-20250925-194546.log (0 bytes)
+│   ├── drone-20250925-194845.log (0 bytes)
+│   ├── drone-20250925-194857.log (0 bytes)
+│   ├── gcs-20250925-194526.log (0 bytes)
+│   ├── gcs-20250925-194854.log (0 bytes)
+│   ├── gcs-20250925-204021.log (0 bytes)
+│   ├── gcs-20250925-204214.log (227 bytes)
+│   └── gcs-20250925-205351.log (227 bytes)
 ├── pqc_proxy.egg-info/
 │   ├── dependency_links.txt (1 bytes)
 │   ├── PKG-INFO (317 bytes)
@@ -133,12 +137,15 @@ Generated: 2025-09-25 23:56:52
 │   │   │   ├── gcs_pub.bin (1,952 bytes)
 │   │   │   └── gcs_sec.bin (4,032 bytes)
 │   │   ├── drone_autopilot_sim.py (3,933 bytes)
-│   │   ├── drone_tty.py (3,485 bytes)
+│   │   ├── drone_tty.py (3,712 bytes)
 │   │   ├── encrypted_bridge_logger.py (4,355 bytes)
 │   │   ├── gcs_ground_station_sim.py (3,927 bytes)
-│   │   ├── gcs_tty.py (3,479 bytes)
+│   │   ├── gcs_tty.py (3,706 bytes)
 │   │   ├── launch_manual_test.py (9,824 bytes)
 │   │   └── README.md (6,886 bytes)
+│   ├── port_profiles/
+│   │   ├── default.ps1 (380 bytes)
+│   │   └── default.sh (395 bytes)
 │   ├── wireshark/
 │   │   └── pqc_tunnel.lua (1,267 bytes)
 │   ├── bench_cli.py (841 bytes)
@@ -150,6 +157,7 @@ Generated: 2025-09-25 23:56:52
 │   ├── merge_power_csv.py (5,656 bytes)
 │   ├── packet_interceptor.py (2,494 bytes)
 │   ├── power_hooks.py (208 bytes)
+│   ├── project_structure_20250926_023741.txt (85,027 bytes)
 │   └── scaffold_repo.py (17,074 bytes)
 ├── CHANGELOG.md (10,969 bytes)
 ├── diagnose_aead.py (620 bytes)
@@ -159,7 +167,7 @@ Generated: 2025-09-25 23:56:52
 ├── PR1_IMPLEMENTATION_SUMMARY.md (6,636 bytes)
 ├── progresslog.md (5,537 bytes)
 ├── PROJECT_STATUS.md (11,726 bytes)
-├── project_structure_20250925_235652.txt (0 bytes)
+├── project_structure_20250926_023803.txt (8,233 bytes)
 ├── pyproject.toml (455 bytes)
 ├── README.md (14,790 bytes)
 ├── strict_mode_demo.py (3,479 bytes)
@@ -1599,8 +1607,8 @@ def run_proxy(
 FILE 5/56: core\config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\config.py
-Size: 5,603 bytes
-Modified: 2025-09-25 12:34:22
+Size: 5,614 bytes
+Modified: 2025-09-26 02:08:04
 ------------------------------------------------------------
 """
 Core configuration constants for PQC drone-GCS secure proxy.
@@ -1615,21 +1623,21 @@ from typing import Dict, Any
 # Default configuration - all required keys with correct types
 CONFIG = {
     # Handshake (TCP)
-    "TCP_HANDSHAKE_PORT": 5800,
+    "TCP_HANDSHAKE_PORT": 46000,
 
     # Encrypted UDP data-plane (network)
-    "UDP_DRONE_RX": 5810,   # drone binds here; GCS sends here
-    "UDP_GCS_RX": 5811,     # gcs binds here; Drone sends here
+    "UDP_DRONE_RX": 46012,   # drone binds here; GCS sends here
+    "UDP_GCS_RX": 46011,     # gcs binds here; Drone sends here
 
     # Plaintext UDP (local loopback to apps/FC)
-    "DRONE_PLAINTEXT_TX": 14550,  # app→drone-proxy (to encrypt out)
-    "DRONE_PLAINTEXT_RX": 14551,  # drone-proxy→app (after decrypt)
-    "GCS_PLAINTEXT_TX": 14551,    # app→gcs-proxy
-    "GCS_PLAINTEXT_RX": 14550,    # gcs-proxy→app
+    "DRONE_PLAINTEXT_TX": 47003,  # app→drone-proxy (to encrypt out)
+    "DRONE_PLAINTEXT_RX": 47004,  # drone-proxy→app (after decrypt)
+    "GCS_PLAINTEXT_TX": 47001,    # app→gcs-proxy
+    "GCS_PLAINTEXT_RX": 47002,    # gcs-proxy→app
 
     # Hosts
-    "DRONE_HOST": "127.0.0.1",
-    "GCS_HOST": "127.0.0.1",
+    "DRONE_HOST": "192.168.0.102",
+    "GCS_HOST": "192.168.0.103",
 
     # Crypto/runtime
     "REPLAY_WINDOW": 1024,
@@ -7142,8 +7150,8 @@ if __name__ == "__main__":
 FILE 47/56: tools\manual_4term\drone_tty.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_tty.py
-Size: 3,485 bytes
-Modified: 2025-09-25 23:12:00
+Size: 3,712 bytes
+Modified: 2025-09-26 01:43:48
 ------------------------------------------------------------
 #!/usr/bin/env python3
 """Minimal interactive CLI for Drone plaintext tunnel."""
@@ -7155,6 +7163,13 @@ import os
 import socket
 import sys
 import threading
+from pathlib import Path
+
+# Ensure repository root is on sys.path when executed directly
+_ROOT = Path(__file__).resolve().parents[2]
+_ROOT_STR = str(_ROOT)
+if _ROOT_STR not in sys.path:
+    sys.path.insert(0, _ROOT_STR)
 
 from core.config import CONFIG
 
@@ -7507,8 +7522,8 @@ if __name__ == "__main__":
 FILE 50/56: tools\manual_4term\gcs_tty.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_tty.py
-Size: 3,479 bytes
-Modified: 2025-09-25 23:12:00
+Size: 3,706 bytes
+Modified: 2025-09-26 01:43:48
 ------------------------------------------------------------
 #!/usr/bin/env python3
 """Minimal interactive CLI for GCS plaintext tunnel."""
@@ -7520,6 +7535,13 @@ import os
 import socket
 import sys
 import threading
+from pathlib import Path
+
+# Ensure repository root is on sys.path when executed directly
+_ROOT = Path(__file__).resolve().parents[2]
+_ROOT_STR = str(_ROOT)
+if _ROOT_STR not in sys.path:
+    sys.path.insert(0, _ROOT_STR)
 
 from core.config import CONFIG
 

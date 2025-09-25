@@ -1,3 +1,9 @@
 /.github
 /.pytest_cache
 /__pycache__
+
+# Python cache (ignore anywhere)
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
