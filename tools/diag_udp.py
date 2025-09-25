@@ -2,7 +2,24 @@ import socket
 import threading
 import time
 import argparse
-from core.config import CONFIG # Assuming CONFIG defines GCS_PLAINTEXT_TX/RX and DRONE_PLAINTEXT_TX/RX
+import sys
+from pathlib import Path
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+# Prefer the ancestor that contains a 'core' directory
+for parent in (_HERE.parent.parent, _HERE.parent):
+    try:
+        if (parent / "core").exists():
+            parent_str = str(parent)
+            if parent_str not in sys.path:
+                sys.path.insert(0, parent_str)
+            break
+    except Exception:
+        # Best-effort; fall through
+        pass
+
+from core.config import CONFIG  # Defines GCS_PLAINTEXT_TX/RX and DRONE_PLAINTEXT_TX/RX
 
 def run_udp_test(role, local_ip, remote_ip, local_rx_port, remote_tx_port):
     """
