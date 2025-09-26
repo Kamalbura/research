@@ -32,7 +32,7 @@ try {
     }
 
     if (-not $Suites -or $Suites.Count -eq 0) {
-        $suiteOutput = & $python -c "from core import test_suites_config as t; print('\\n'.join(t.ALL_SUITES))"
+    $suiteOutput = & $python -c "from core.suites import list_suites; print('\\n'.join(list_suites().keys()))"
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to enumerate suites via python."
             exit 1

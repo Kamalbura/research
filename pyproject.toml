@@ -5,7 +5,8 @@ description = "An adaptive PQC secure proxy for drone communications."
 requires-python = ">=3.10"
 dependencies = [
     "oqs>=0.10.0",
-    "cryptography>=45.0"
+    "cryptography>=45.0",
+    "paramiko>=3.4.0"
 ]
 
 [project.optional-dependencies]

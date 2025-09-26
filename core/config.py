@@ -65,6 +65,7 @@ _REQUIRED_KEYS = {
     "GCS_PLAINTEXT_HOST": str,
     "REPLAY_WINDOW": int,
     "WIRE_VERSION": int,
+    "ENABLE_PACKET_TYPE": bool,
 }
 
 # Keys that can be overridden by environment variables
@@ -79,7 +80,8 @@ _ENV_OVERRIDABLE = {
     "DRONE_PLAINTEXT_HOST",
     "GCS_PLAINTEXT_HOST",
     "DRONE_HOST",
-    "GCS_HOST"
+    "GCS_HOST",
+    "ENABLE_PACKET_TYPE",
 }
 
 
@@ -141,6 +143,14 @@ def _apply_env_overrides(cfg: Dict[str, Any]) -> Dict[str, Any]:
                     result[key] = int(env_value)
                 elif expected_type == str:
                     result[key] = str(env_value)
+                elif expected_type == bool:
+                    lowered = str(env_value).strip().lower()
+                    if lowered in {"1", "true", "yes", "on"}:
+                        result[key] = True
+                    elif lowered in {"0", "false", "no", "off"}:
+                        result[key] = False
+                    else:
+                        raise ValueError(f"invalid boolean literal: {env_value}")
                 else:
                     raise NotImplementedError(f"Unsupported type for env override: {expected_type}")
             except ValueError:

@@ -219,6 +219,39 @@ Each runner:
 - Writes suite-specific JSON/NDJSON logs under `logs/traffic/<suite>/`.
 - Appends a CSV summary (`matrix_gcs_summary.csv` / `matrix_drone_summary.csv`) with proxy counters and traffic totals.
 
+## Automated two-host harness
+
+For a fully automated LAN validation run, use `scripts/orchestrate_e2e.py`. The harness
+starts the local GCS proxy (with in-band control enabled), boots the remote drone proxy
+over SSH, drives plaintext traffic in both directions, and triggers a live suite change.
+It captures proxy counters, traffic summaries, stdout/stderr logs, and a JSON manifest
+under `artifacts/harness/<run_id>/`.
+
+Key points:
+
+- The script automatically exports `ENABLE_PACKET_TYPE=1` so that control messages are
+  routed to the policy engine during the run.
+- Paramiko is used for SSH; pass `--ssh-key` or `--ssh-password` depending on how the
+  Raspberry Pi is provisioned. The default remote root is `~/research`.
+- Rekey success is verified by parsing both proxy counter files via
+  `tools.counter_utils.load_proxy_counters`, ensuring `rekeys_ok >= 1` and that
+  `last_rekey_suite` matches `--rekey-suite`.
+
+Example (PowerShell on the GCS host):
+
+```powershell
+python scripts/orchestrate_e2e.py `
+  --suite cs-kyber768-aesgcm-dilithium3 `
+  --rekey-suite cs-kyber1024-aesgcm-falcon1024 `
+  --remote-host 192.168.0.102 `
+  --remote-user dev `
+  --ssh-key $env:USERPROFILE\.ssh\id_ed25519
+```
+
+Adjust `--remote-python`, `--remote-root`, or `--local-python` if the interpreters live
+outside the defaults. Each run emits a `summary.json` and `summary.txt` describing the
+suite transition, packet counters, and artefact paths for downstream analysis.
+
 ## Testing
 
 The repository ships with **82 automated tests** (plus one intentionally skipped long-running scenario) covering configuration, handshake, AEAD framing, replay prevention, control policy logic, and network transport.

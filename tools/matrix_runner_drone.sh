@@ -16,7 +16,7 @@ Options:
   -s SEC                 Alias for --slow-duration
   -h, --help             Show this help message
 
-If no suites are provided, the canonical set from core.test_suites_config.ALL_SUITES is used.
+If no suites are provided, the canonical set from core.suites.list_suites() is used.
 EOF
 }
 
@@ -72,8 +72,8 @@ fi
 
 if [ ${#SUITES[@]} -eq 0 ]; then
   mapfile -t SUITES < <("$PYTHON_BIN" - <<'PY'
-from core import test_suites_config as t
-for suite in t.ALL_SUITES:
+from core.suites import list_suites
+for suite in list_suites().keys():
     print(suite)
 PY
 )
