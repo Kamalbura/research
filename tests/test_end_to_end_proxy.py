@@ -18,6 +18,17 @@ from core.suites import get_suite
 from core.async_proxy import run_proxy
 
 
+def _alloc_port(sock_type=socket.SOCK_STREAM) -> int:
+    """Reserve an available loopback port for tests."""
+    with socket.socket(socket.AF_INET, sock_type) as sock:
+        if sock_type == socket.SOCK_DGRAM:
+            sock.bind(("127.0.0.1", 0))
+        else:
+            sock.bind(("127.0.0.1", 0))
+            sock.listen(1)
+        return sock.getsockname()[1]
+
+
 class TestEndToEndProxy:
     """End-to-end proxy tests on localhost."""
     
@@ -42,13 +53,23 @@ class TestEndToEndProxy:
         # Create synchronization event to eliminate race conditions
         gcs_ready_event = threading.Event()
         
+        # Reserve dedicated ports to avoid clashes with running proxies
+        handshake_port = _alloc_port()
+        udp_gcs_rx = _alloc_port(socket.SOCK_DGRAM)
+        udp_drone_rx = _alloc_port(socket.SOCK_DGRAM)
+
         # Use different ports for test to avoid conflicts
         test_config = CONFIG.copy()
         test_config.update({
+            "TCP_HANDSHAKE_PORT": handshake_port,
+            "UDP_GCS_RX": udp_gcs_rx,
+            "UDP_DRONE_RX": udp_drone_rx,
             "DRONE_PLAINTEXT_TX": 15550,  # Apps send to drone proxy here
             "DRONE_PLAINTEXT_RX": 15551,  # Apps receive from drone proxy here
             "GCS_PLAINTEXT_TX": 15552,    # Apps send to GCS proxy here  
             "GCS_PLAINTEXT_RX": 15553,    # Apps receive from GCS proxy here
+            "DRONE_HOST": "127.0.0.1",    # Force loopback for encrypted peer
+            "GCS_HOST": "127.0.0.1",      # Force loopback for handshake/peer
         })
         
         # Storage for proxy results
