@@ -1,25 +1,30 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Output File: C:\Users\burak\Desktop\research\project_structure_20250926_023803.txt
-Generated: 2025-09-26 02:38:03
+Output File: C:\Users\burak\Desktop\research\project_structure_20250926_194946.txt
+Generated: 2025-09-26 19:49:46
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Generated: 2025-09-26 02:38:03
+Generated: 2025-09-26 19:49:46
 
+├── artifacts/
+│   └── gcs-test/
+│       └── traffic/
+│           └── cs-mlkem768-aesgcm-mldsa65/
 ├── benchmarks/
 │   ├── matrix.yaml (159 bytes)
 │   └── run_matrix.py (11,095 bytes)
+├── captures/
 ├── core/
 │   ├── __pycache__/
 │   │   ├── __init__.cpython-313.pyc (273 bytes)
 │   │   ├── aead.cpython-313.pyc (13,736 bytes)
-│   │   ├── async_proxy.cpython-313.pyc (33,642 bytes)
-│   │   ├── config.cpython-313.pyc (4,407 bytes)
+│   │   ├── async_proxy.cpython-313.pyc (34,618 bytes)
+│   │   ├── config.cpython-313.pyc (5,113 bytes)
 │   │   ├── handshake.cpython-313.pyc (11,730 bytes)
 │   │   ├── logging_utils.cpython-313.pyc (5,872 bytes)
 │   │   ├── policy_engine.cpython-313.pyc (9,815 bytes)
@@ -27,8 +32,8 @@ Generated: 2025-09-26 02:38:03
 │   │   └── suites.cpython-313.pyc (11,609 bytes)
 │   ├── __init__.py (121 bytes)
 │   ├── aead.py (10,889 bytes)
-│   ├── async_proxy.py (29,379 bytes)
-│   ├── config.py (5,614 bytes)
+│   ├── async_proxy.py (31,168 bytes)
+│   ├── config.py (6,360 bytes)
 │   ├── handshake.py (9,289 bytes)
 │   ├── logging_utils.py (2,957 bytes)
 │   ├── policy_engine.py (6,970 bytes)
@@ -48,6 +53,7 @@ Generated: 2025-09-26 02:38:03
 │   ├── ddos-pipeline.txt (927 bytes)
 │   ├── deep-research.txt (62,258 bytes)
 │   ├── handshake.txt (1,237 bytes)
+│   ├── lan-test.txt (10,136 bytes)
 │   ├── measurement-and-results.txt (3,068 bytes)
 │   ├── mqtt.txt (5,415 bytes)
 │   ├── oqs-py.txt (2,211 bytes)
@@ -71,6 +77,13 @@ Generated: 2025-09-26 02:38:03
 │       ├── start_suite.ps1 (700 bytes)
 │       └── start_suite.sh (692 bytes)
 ├── logs/
+│   ├── matrix/
+│   │   └── traffic/
+│   │       ├── cs-mlkem1024-aesgcm-falcon1024/
+│   │       │   ├── gcs_events.jsonl (15,692 bytes)
+│   │       │   └── gcs_summary.json (348 bytes)
+│   │       └── cs-mlkem1024-aesgcm-falcon512/
+│   │           └── gcs_events.jsonl (15,692 bytes)
 │   ├── drone-20250925-194546.log (0 bytes)
 │   ├── drone-20250925-194845.log (0 bytes)
 │   ├── drone-20250925-194857.log (0 bytes)
@@ -78,7 +91,29 @@ Generated: 2025-09-26 02:38:03
 │   ├── gcs-20250925-194854.log (0 bytes)
 │   ├── gcs-20250925-204021.log (0 bytes)
 │   ├── gcs-20250925-204214.log (227 bytes)
-│   └── gcs-20250925-205351.log (227 bytes)
+│   ├── gcs-20250925-205351.log (227 bytes)
+│   ├── gcs-20250925-223707.log (227 bytes)
+│   ├── gcs-20250926-042434.log (590 bytes)
+│   ├── gcs-20250926-042726.log (0 bytes)
+│   ├── gcs-20250926-042842.log (0 bytes)
+│   ├── gcs-20250926-043403.log (0 bytes)
+│   ├── gcs-20250926-043726.log (590 bytes)
+│   ├── gcs-20250926-043939.log (227 bytes)
+│   ├── gcs-20250926-055913.log (227 bytes)
+│   ├── gcs-20250926-060045.log (227 bytes)
+│   ├── gcs-20250926-060723.log (590 bytes)
+│   ├── gcs-20250926-061859.log (227 bytes)
+│   ├── gcs-20250926-062115.log (227 bytes)
+│   ├── gcs-20250926-062205.log (590 bytes)
+│   ├── gcs-20250926-062859.log (227 bytes)
+│   ├── gcs-20250926-063322.log (227 bytes)
+│   ├── gcs-20250926-063650.log (590 bytes)
+│   ├── gcs-20250926-105536.log (0 bytes)
+│   ├── gcs-20250926-110059.log (0 bytes)
+│   ├── gcs-20250926-134935.log (0 bytes)
+│   ├── gcs-20250926-135000.log (0 bytes)
+│   ├── gcs-20250926-135101.log (0 bytes)
+│   └── gcs-20250926-135127.log (0 bytes)
 ├── pqc_proxy.egg-info/
 │   ├── dependency_links.txt (1 bytes)
 │   ├── PKG-INFO (317 bytes)
@@ -89,6 +124,8 @@ Generated: 2025-09-26 02:38:03
 │   ├── agent_runtime.py (117 bytes)
 │   ├── linucb.py (107 bytes)
 │   └── safety.py (105 bytes)
+├── scripts/
+│   └── orchestrate_e2e.py (19,886 bytes)
 ├── secrets/
 │   ├── gcs_signing.key (4,032 bytes)
 │   └── gcs_signing.pub (1,952 bytes)
@@ -99,7 +136,8 @@ Generated: 2025-09-26 02:38:03
 │   │   ├── test_aead_framing.cpython-313.pyc (7,620 bytes)
 │   │   ├── test_cli_identity.cpython-313-pytest-8.4.2.pyc (50,345 bytes)
 │   │   ├── test_control_sm.cpython-313-pytest-8.4.2.pyc (17,183 bytes)
-│   │   ├── test_end_to_end_proxy.cpython-313-pytest-8.4.2.pyc (17,910 bytes)
+│   │   ├── test_counter_utils.cpython-313-pytest-8.4.2.pyc (15,750 bytes)
+│   │   ├── test_end_to_end_proxy.cpython-313-pytest-8.4.2.pyc (19,080 bytes)
 │   │   ├── test_handshake.cpython-313-pytest-8.4.2.pyc (11,612 bytes)
 │   │   ├── test_handshake_downgrade.cpython-313-pytest-8.4.2.pyc (1,818 bytes)
 │   │   ├── test_hardening_features.cpython-313-pytest-8.4.2.pyc (27,504 bytes)
@@ -114,7 +152,8 @@ Generated: 2025-09-26 02:38:03
 │   ├── test_aead_framing.py (6,589 bytes)
 │   ├── test_cli_identity.py (13,002 bytes)
 │   ├── test_control_sm.py (3,095 bytes)
-│   ├── test_end_to_end_proxy.py (11,044 bytes)
+│   ├── test_counter_utils.py (3,143 bytes)
+│   ├── test_end_to_end_proxy.py (12,139 bytes)
 │   ├── test_handshake.py (2,734 bytes)
 │   ├── test_handshake_downgrade.py (1,430 bytes)
 │   ├── test_hardening_features.py (7,879 bytes)
@@ -125,51 +164,82 @@ Generated: 2025-09-26 02:38:03
 │   ├── test_replay_window.py (3,723 bytes)
 │   └── test_suites_config.py (12,691 bytes)
 ├── tools/
+│   ├── __pycache__/
+│   │   ├── __init__.cpython-313.pyc (222 bytes)
+│   │   ├── counter_utils.cpython-313.pyc (8,121 bytes)
+│   │   ├── diag_udp.cpython-313.pyc (12,199 bytes)
+│   │   ├── traffic_common.cpython-313.pyc (5,892 bytes)
+│   │   ├── traffic_gcs.cpython-313.pyc (451 bytes)
+│   │   └── traffic_runner.cpython-313.pyc (8,529 bytes)
+│   ├── captures/
 │   ├── manual_4term/
 │   │   ├── __pycache__/
 │   │   │   ├── drone_autopilot_sim.cpython-313.pyc (6,509 bytes)
-│   │   │   ├── drone_tty.cpython-313.pyc (6,142 bytes)
+│   │   │   ├── drone_tty.cpython-313.pyc (7,352 bytes)
 │   │   │   ├── encrypted_bridge_logger.cpython-313.pyc (7,713 bytes)
 │   │   │   ├── gcs_ground_station_sim.cpython-313.pyc (6,496 bytes)
+│   │   │   ├── gcs_tty.cpython-313.pyc (7,344 bytes)
 │   │   │   ├── launch_manual_test.cpython-313-pytest-8.4.2.pyc (15,131 bytes)
 │   │   │   └── launch_manual_test.cpython-313.pyc (14,205 bytes)
 │   │   ├── keys/
 │   │   │   ├── gcs_pub.bin (1,952 bytes)
 │   │   │   └── gcs_sec.bin (4,032 bytes)
 │   │   ├── drone_autopilot_sim.py (3,933 bytes)
-│   │   ├── drone_tty.py (3,712 bytes)
+│   │   ├── drone_tty.py (4,213 bytes)
 │   │   ├── encrypted_bridge_logger.py (4,355 bytes)
 │   │   ├── gcs_ground_station_sim.py (3,927 bytes)
-│   │   ├── gcs_tty.py (3,706 bytes)
+│   │   ├── gcs_tty.py (4,207 bytes)
 │   │   ├── launch_manual_test.py (9,824 bytes)
 │   │   └── README.md (6,886 bytes)
+│   ├── netcapture/
+│   │   ├── drone_capture.py (3,434 bytes)
+│   │   └── gcs_capture.py (5,576 bytes)
 │   ├── port_profiles/
 │   │   ├── default.ps1 (380 bytes)
 │   │   └── default.sh (395 bytes)
 │   ├── wireshark/
 │   │   └── pqc_tunnel.lua (1,267 bytes)
+│   ├── __init__.py (69 bytes)
+│   ├── audit_endpoints.py (5,511 bytes)
 │   ├── bench_cli.py (841 bytes)
+│   ├── check_no_hardcoded_ips.py (2,448 bytes)
 │   ├── check_ports.py (3,618 bytes)
+│   ├── counter_utils.py (6,381 bytes)
+│   ├── diag_udp.py (8,245 bytes)
 │   ├── encrypted_sniffer.py (1,570 bytes)
 │   ├── full_comm_check.py (9,657 bytes)
 │   ├── generate_identity.py (2,266 bytes)
 │   ├── markers.py (3,323 bytes)
+│   ├── matrix_runner_drone.sh (7,006 bytes)
+│   ├── matrix_runner_gcs.ps1 (7,913 bytes)
 │   ├── merge_power_csv.py (5,656 bytes)
 │   ├── packet_interceptor.py (2,494 bytes)
 │   ├── power_hooks.py (208 bytes)
+│   ├── prepare_matrix_keys.py (3,043 bytes)
 │   ├── project_structure_20250926_023741.txt (85,027 bytes)
-│   └── scaffold_repo.py (17,074 bytes)
+│   ├── scaffold_repo.py (17,074 bytes)
+│   ├── traffic_common.py (3,551 bytes)
+│   ├── traffic_drone.py (206 bytes)
+│   ├── traffic_gcs.py (202 bytes)
+│   ├── traffic_runner.py (7,778 bytes)
+│   ├── udp_dual_probe.py (5,048 bytes)
+│   ├── udp_echo_server.py (2,488 bytes)
+│   └── udp_forward_log.py (2,796 bytes)
 ├── CHANGELOG.md (10,969 bytes)
 ├── diagnose_aead.py (620 bytes)
 ├── diagnose_handshake.py (1,566 bytes)
 ├── environment.yml (179 bytes)
+├── gcs_debug.json (431 bytes)
 ├── log_project_structure.py (7,038 bytes)
+├── manual.md (11,124 bytes)
+├── manual.txt (11,124 bytes)
 ├── PR1_IMPLEMENTATION_SUMMARY.md (6,636 bytes)
 ├── progresslog.md (5,537 bytes)
 ├── PROJECT_STATUS.md (11,726 bytes)
-├── project_structure_20250926_023803.txt (8,233 bytes)
-├── pyproject.toml (455 bytes)
-├── README.md (14,790 bytes)
+├── project_structure_20250926_194946.txt (8,221 bytes)
+├── pyproject.toml (479 bytes)
+├── pytest.out (390 bytes)
+├── README.md (13,831 bytes)
 ├── strict_mode_demo.py (3,479 bytes)
 └── tlog.log (70,350 bytes)
 
@@ -178,7 +248,7 @@ Generated: 2025-09-26 02:38:03
 PYTHON FILE CONTENTS
 ================================================================================
 
-Found 56 Python files:
+Found 73 Python files:
    1. benchmarks\run_matrix.py
    2. core\__init__.py
    3. core\aead.py
@@ -203,42 +273,59 @@ Found 56 Python files:
   22. rl\agent_runtime.py
   23. rl\linucb.py
   24. rl\safety.py
-  25. strict_mode_demo.py
-  26. tests\__init__.py
-  27. tests\test-oqs.py
-  28. tests\test_aead_framing.py
-  29. tests\test_cli_identity.py
-  30. tests\test_control_sm.py
-  31. tests\test_end_to_end_proxy.py
-  32. tests\test_handshake.py
-  33. tests\test_handshake_downgrade.py
-  34. tests\test_hardening_features.py
-  35. tests\test_kdf_roles.py
-  36. tests\test_loss_dup_oom.py
-  37. tests\test_packet_types.py
-  38. tests\test_rekey_epoch.py
-  39. tests\test_replay_window.py
-  40. tests\test_suites_config.py
-  41. tools\bench_cli.py
-  42. tools\check_ports.py
-  43. tools\encrypted_sniffer.py
-  44. tools\full_comm_check.py
-  45. tools\generate_identity.py
-  46. tools\manual_4term\drone_autopilot_sim.py
-  47. tools\manual_4term\drone_tty.py
-  48. tools\manual_4term\encrypted_bridge_logger.py
-  49. tools\manual_4term\gcs_ground_station_sim.py
-  50. tools\manual_4term\gcs_tty.py
-  51. tools\manual_4term\launch_manual_test.py
-  52. tools\markers.py
-  53. tools\merge_power_csv.py
-  54. tools\packet_interceptor.py
-  55. tools\power_hooks.py
-  56. tools\scaffold_repo.py
+  25. scripts\orchestrate_e2e.py
+  26. strict_mode_demo.py
+  27. tests\__init__.py
+  28. tests\test-oqs.py
+  29. tests\test_aead_framing.py
+  30. tests\test_cli_identity.py
+  31. tests\test_control_sm.py
+  32. tests\test_counter_utils.py
+  33. tests\test_end_to_end_proxy.py
+  34. tests\test_handshake.py
+  35. tests\test_handshake_downgrade.py
+  36. tests\test_hardening_features.py
+  37. tests\test_kdf_roles.py
+  38. tests\test_loss_dup_oom.py
+  39. tests\test_packet_types.py
+  40. tests\test_rekey_epoch.py
+  41. tests\test_replay_window.py
+  42. tests\test_suites_config.py
+  43. tools\__init__.py
+  44. tools\audit_endpoints.py
+  45. tools\bench_cli.py
+  46. tools\check_no_hardcoded_ips.py
+  47. tools\check_ports.py
+  48. tools\counter_utils.py
+  49. tools\diag_udp.py
+  50. tools\encrypted_sniffer.py
+  51. tools\full_comm_check.py
+  52. tools\generate_identity.py
+  53. tools\manual_4term\drone_autopilot_sim.py
+  54. tools\manual_4term\drone_tty.py
+  55. tools\manual_4term\encrypted_bridge_logger.py
+  56. tools\manual_4term\gcs_ground_station_sim.py
+  57. tools\manual_4term\gcs_tty.py
+  58. tools\manual_4term\launch_manual_test.py
+  59. tools\markers.py
+  60. tools\merge_power_csv.py
+  61. tools\netcapture\drone_capture.py
+  62. tools\netcapture\gcs_capture.py
+  63. tools\packet_interceptor.py
+  64. tools\power_hooks.py
+  65. tools\prepare_matrix_keys.py
+  66. tools\scaffold_repo.py
+  67. tools\traffic_common.py
+  68. tools\traffic_drone.py
+  69. tools\traffic_gcs.py
+  70. tools\traffic_runner.py
+  71. tools\udp_dual_probe.py
+  72. tools\udp_echo_server.py
+  73. tools\udp_forward_log.py
 
 --------------------------------------------------------------------------------
 
-FILE 1/56: benchmarks\run_matrix.py
+FILE 1/73: benchmarks\run_matrix.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\benchmarks\run_matrix.py
 Size: 11,095 bytes
@@ -555,7 +642,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 2/56: core\__init__.py
+FILE 2/73: core\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\__init__.py
 Size: 121 bytes
@@ -569,7 +656,7 @@ Provides post-quantum cryptography secure communication components.
 
 ============================================================
 
-FILE 3/56: core\aead.py
+FILE 3/73: core\aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\aead.py
 Size: 10,889 bytes
@@ -870,11 +957,11 @@ class Receiver:
 
 ============================================================
 
-FILE 4/56: core\async_proxy.py
+FILE 4/73: core\async_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\async_proxy.py
-Size: 29,379 bytes
-Modified: 2025-09-25 23:55:52
+Size: 31,168 bytes
+Modified: 2025-09-26 14:12:12
 ------------------------------------------------------------
 """
 Selectors-based network transport proxy.
@@ -1159,7 +1246,7 @@ def _setup_sockets(role: str, cfg: dict):
 
             # Plaintext ingress - receive from local app
             ptx_in_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            ptx_in_sock.bind(("127.0.0.1", cfg["DRONE_PLAINTEXT_TX"]))
+            ptx_in_sock.bind((cfg["DRONE_PLAINTEXT_HOST"], cfg["DRONE_PLAINTEXT_TX"]))
             ptx_in_sock.setblocking(False)
             sockets["plaintext_in"] = ptx_in_sock
 
@@ -1169,7 +1256,7 @@ def _setup_sockets(role: str, cfg: dict):
 
             # Peer addresses
             sockets["encrypted_peer"] = (cfg["GCS_HOST"], cfg["UDP_GCS_RX"])
-            sockets["plaintext_peer"] = ("127.0.0.1", cfg["DRONE_PLAINTEXT_RX"])
+            sockets["plaintext_peer"] = (cfg["DRONE_PLAINTEXT_HOST"], cfg["DRONE_PLAINTEXT_RX"])
 
         elif role == "gcs":
             # Encrypted socket - receive from Drone
@@ -1186,7 +1273,7 @@ def _setup_sockets(role: str, cfg: dict):
 
             # Plaintext ingress - receive from local app
             ptx_in_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            ptx_in_sock.bind(("127.0.0.1", cfg["GCS_PLAINTEXT_TX"]))
+            ptx_in_sock.bind((cfg["GCS_PLAINTEXT_HOST"], cfg["GCS_PLAINTEXT_TX"]))
             ptx_in_sock.setblocking(False)
             sockets["plaintext_in"] = ptx_in_sock
 
@@ -1196,7 +1283,7 @@ def _setup_sockets(role: str, cfg: dict):
 
             # Peer addresses
             sockets["encrypted_peer"] = (cfg["DRONE_HOST"], cfg["UDP_DRONE_RX"])
-            sockets["plaintext_peer"] = ("127.0.0.1", cfg["GCS_PLAINTEXT_RX"])
+            sockets["plaintext_peer"] = (cfg["GCS_PLAINTEXT_HOST"], cfg["GCS_PLAINTEXT_RX"])
         else:
             raise ValueError(f"Invalid role: {role}")
 
@@ -1551,9 +1638,39 @@ def run_proxy(
                                 counters.drops += 1
                                 counters.drop_auth += 1
                                 continue
-                            except Exception:
+                            except NotImplementedError as exc:
+                                counters.drops += 1
+                                reason, _seq = _parse_header_fields(
+                                    CONFIG["WIRE_VERSION"], current_receiver.ids, current_receiver.session_id, wire
+                                )
+                                if reason in (
+                                    "version_mismatch",
+                                    "crypto_id_mismatch",
+                                    "header_too_short",
+                                    "header_unpack_error",
+                                ):
+                                    counters.drop_header += 1
+                                elif reason == "session_mismatch":
+                                    counters.drop_session_epoch += 1
+                                else:
+                                    counters.drop_auth += 1
+                                logger.warning(
+                                    "Decrypt failed (classified)",
+                                    extra={
+                                        "role": role,
+                                        "reason": reason,
+                                        "wire_len": len(wire),
+                                        "error": str(exc),
+                                    },
+                                )
+                                continue
+                            except Exception as exc:
                                 counters.drops += 1
                                 counters.drop_other += 1
+                                logger.warning(
+                                    "Decrypt failed (other)",
+                                    extra={"role": role, "error": str(exc), "wire_len": len(wire)},
+                                )
                                 continue
 
                             try:
@@ -1604,11 +1721,11 @@ def run_proxy(
 
 ============================================================
 
-FILE 5/56: core\config.py
+FILE 5/73: core\config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\config.py
-Size: 5,614 bytes
-Modified: 2025-09-26 02:08:04
+Size: 6,360 bytes
+Modified: 2025-09-26 18:45:57
 ------------------------------------------------------------
 """
 Core configuration constants for PQC drone-GCS secure proxy.
@@ -1634,6 +1751,8 @@ CONFIG = {
     "DRONE_PLAINTEXT_RX": 47004,  # drone-proxy→app (after decrypt)
     "GCS_PLAINTEXT_TX": 47001,    # app→gcs-proxy
     "GCS_PLAINTEXT_RX": 47002,    # gcs-proxy→app
+    "DRONE_PLAINTEXT_HOST": "127.0.0.1",
+    "GCS_PLAINTEXT_HOST": "127.0.0.1",
 
     # Hosts
     "DRONE_HOST": "192.168.0.102",
@@ -1671,8 +1790,11 @@ _REQUIRED_KEYS = {
     "GCS_PLAINTEXT_RX": int,
     "DRONE_HOST": str,
     "GCS_HOST": str,
+    "DRONE_PLAINTEXT_HOST": str,
+    "GCS_PLAINTEXT_HOST": str,
     "REPLAY_WINDOW": int,
     "WIRE_VERSION": int,
+    "ENABLE_PACKET_TYPE": bool,
 }
 
 # Keys that can be overridden by environment variables
@@ -1684,8 +1806,11 @@ _ENV_OVERRIDABLE = {
     "DRONE_PLAINTEXT_RX",  # Added for testing/benchmarking flexibility  
     "GCS_PLAINTEXT_TX",    # Added for testing/benchmarking flexibility
     "GCS_PLAINTEXT_RX",    # Added for testing/benchmarking flexibility
+    "DRONE_PLAINTEXT_HOST",
+    "GCS_PLAINTEXT_HOST",
     "DRONE_HOST",
-    "GCS_HOST"
+    "GCS_HOST",
+    "ENABLE_PACKET_TYPE",
 }
 
 
@@ -1721,7 +1846,7 @@ def validate_config(cfg: Dict[str, Any]) -> None:
         raise NotImplementedError(f"CONFIG[REPLAY_WINDOW] must be >= 64, got {cfg['REPLAY_WINDOW']}")
     
     # Validate hosts are valid strings (basic check)
-    for host_key in ["DRONE_HOST", "GCS_HOST"]:
+    for host_key in ["DRONE_HOST", "GCS_HOST", "DRONE_PLAINTEXT_HOST", "GCS_PLAINTEXT_HOST"]:
         host = cfg[host_key]
         if not host or not isinstance(host, str):
             raise NotImplementedError(f"CONFIG[{host_key}] must be non-empty string, got {repr(host)}")
@@ -1747,6 +1872,14 @@ def _apply_env_overrides(cfg: Dict[str, Any]) -> Dict[str, Any]:
                     result[key] = int(env_value)
                 elif expected_type == str:
                     result[key] = str(env_value)
+                elif expected_type == bool:
+                    lowered = str(env_value).strip().lower()
+                    if lowered in {"1", "true", "yes", "on"}:
+                        result[key] = True
+                    elif lowered in {"0", "false", "no", "off"}:
+                        result[key] = False
+                    else:
+                        raise ValueError(f"invalid boolean literal: {env_value}")
                 else:
                     raise NotImplementedError(f"Unsupported type for env override: {expected_type}")
             except ValueError:
@@ -1761,7 +1894,7 @@ validate_config(CONFIG)
 
 ============================================================
 
-FILE 6/56: core\handshake.py
+FILE 6/73: core\handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\handshake.py
 Size: 9,289 bytes
@@ -2010,7 +2143,7 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
 
 ============================================================
 
-FILE 7/56: core\logging_utils.py
+FILE 7/73: core\logging_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\logging_utils.py
 Size: 2,957 bytes
@@ -2101,7 +2234,7 @@ METRICS = Metrics()
 
 ============================================================
 
-FILE 8/56: core\policy_engine.py
+FILE 8/73: core\policy_engine.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\policy_engine.py
 Size: 6,970 bytes
@@ -2327,7 +2460,7 @@ def handle_control(msg: dict, role: str, state: ControlState) -> ControlResult:
 
 ============================================================
 
-FILE 9/56: core\project_config.py
+FILE 9/73: core\project_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\project_config.py
 Size: 168 bytes
@@ -2340,7 +2473,7 @@ __all__ = ["CONFIG"]
 
 ============================================================
 
-FILE 10/56: core\run_proxy.py
+FILE 10/73: core\run_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\run_proxy.py
 Size: 18,726 bytes
@@ -2834,7 +2967,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 11/56: core\suites.py
+FILE 11/73: core\suites.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\suites.py
 Size: 11,602 bytes
@@ -3235,7 +3368,7 @@ def suite_bytes_for_hkdf(suite: Dict) -> bytes:
 
 ============================================================
 
-FILE 12/56: core\temp-file.py
+FILE 12/73: core\temp-file.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\temp-file.py
 Size: 18,859 bytes
@@ -3716,7 +3849,7 @@ def run_proxy(
 
 ============================================================
 
-FILE 13/56: ddos\features.py
+FILE 13/73: ddos\features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\features.py
 Size: 107 bytes
@@ -3727,7 +3860,7 @@ def extract_features(pkt_batch):
 
 ============================================================
 
-FILE 14/56: ddos\mitigations.py
+FILE 14/73: ddos\mitigations.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\mitigations.py
 Size: 112 bytes
@@ -3738,7 +3871,7 @@ def apply(action):
 
 ============================================================
 
-FILE 15/56: ddos\tst_stage2.py
+FILE 15/73: ddos\tst_stage2.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\tst_stage2.py
 Size: 104 bytes
@@ -3749,7 +3882,7 @@ def confirm(features):
 
 ============================================================
 
-FILE 16/56: ddos\xgb_stage1.py
+FILE 16/73: ddos\xgb_stage1.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\xgb_stage1.py
 Size: 106 bytes
@@ -3760,7 +3893,7 @@ def score(features):
 
 ============================================================
 
-FILE 17/56: diagnose_aead.py
+FILE 17/73: diagnose_aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\diagnose_aead.py
 Size: 620 bytes
@@ -3785,7 +3918,7 @@ print("decrypt", plain)
 
 ============================================================
 
-FILE 18/56: diagnose_handshake.py
+FILE 18/73: diagnose_handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\diagnose_handshake.py
 Size: 1,566 bytes
@@ -3848,7 +3981,7 @@ for name, value in keys.items():
 
 ============================================================
 
-FILE 19/56: drone\scripts\env_check.py
+FILE 19/73: drone\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\drone\scripts\env_check.py
 Size: 396 bytes
@@ -3870,7 +4003,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 20/56: gcs\scripts\env_check.py
+FILE 20/73: gcs\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\gcs\scripts\env_check.py
 Size: 396 bytes
@@ -3892,7 +4025,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 21/56: log_project_structure.py
+FILE 21/73: log_project_structure.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\log_project_structure.py
 Size: 7,038 bytes
@@ -4083,7 +4216,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 22/56: rl\agent_runtime.py
+FILE 22/73: rl\agent_runtime.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\agent_runtime.py
 Size: 117 bytes
@@ -4094,7 +4227,7 @@ if __name__ == "__main__": main()
 
 ============================================================
 
-FILE 23/56: rl\linucb.py
+FILE 23/73: rl\linucb.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\linucb.py
 Size: 107 bytes
@@ -4105,7 +4238,7 @@ class LinUCB:
 
 ============================================================
 
-FILE 24/56: rl\safety.py
+FILE 24/73: rl\safety.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\safety.py
 Size: 105 bytes
@@ -4115,7 +4248,536 @@ def guard(action, mission): raise NotImplementedError("RL safety shield not impl
 
 ============================================================
 
-FILE 25/56: strict_mode_demo.py
+FILE 25/73: scripts\orchestrate_e2e.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\scripts\orchestrate_e2e.py
+Size: 19,886 bytes
+Modified: 2025-09-26 18:45:58
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""Automated two-host harness for PQC drone↔GCS proxy validation.
+
+This script orchestrates a local GCS proxy and a remote drone proxy using SSH.
+It drives traffic on both plaintext interfaces, triggers an in-band rekey, and
+collects artefacts (counters, logs, and traffic summaries) for post-run
+analysis. The helper is intended for repeatable LAN tests between a Windows
+GCS host and a Linux-based drone (e.g., Raspberry Pi).
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as _dt
+import json
+import os
+import sys
+import posixpath
+import shlex
+import subprocess
+import threading
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, Iterable, List, Optional
+
+import paramiko
+
+from tools.counter_utils import (
+    ProxyCounters,
+    TrafficSummary,
+    load_proxy_counters,
+    load_traffic_summary,
+)
+
+
+HANDSHAKE_PATTERN = "PQC handshake completed successfully"
+REKEY_OK_PATTERN = "Control rekey successful"
+REKEY_FAIL_MARKERS = ("Control rekey failed", "prepare_fail", "rekeys_fail")
+
+
+@dataclass
+class StreamRelay:
+    """Background copier that streams text from a process to a log file."""
+
+    stream: Iterable[str]
+    log_path: Path
+    patterns: Dict[str, threading.Event]
+    failure_hook: Optional[callable]
+    thread: threading.Thread
+
+    @classmethod
+    def start(
+        cls,
+        stream: Iterable[str],
+        log_path: Path,
+        *,
+        patterns: Optional[Dict[str, threading.Event]] = None,
+        failure_hook: Optional[callable] = None,
+    ) -> "StreamRelay":
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        relay = cls(stream, log_path, patterns or {}, failure_hook, threading.Thread())
+        relay.thread = threading.Thread(target=relay._pump, name=f"relay-{log_path.name}", daemon=True)
+        relay.thread.start()
+        return relay
+
+    def _pump(self) -> None:
+        with open(self.log_path, "w", encoding="utf-8") as sink:
+            for raw in iter(self.stream.readline, ""):
+                if isinstance(raw, bytes):  # pragma: no cover - defensive
+                    raw = raw.decode("utf-8", "replace")
+                if not raw:
+                    break
+                sink.write(raw)
+                sink.flush()
+                line = raw.rstrip("\r\n")
+                for pattern, event in self.patterns.items():
+                    if pattern in line:
+                        event.set()
+                if self.failure_hook:
+                    self.failure_hook(line)
+
+
+@dataclass
+class LocalProcess:
+    proc: subprocess.Popen[str]
+    stdout: StreamRelay
+    stderr: StreamRelay
+
+    def terminate(self) -> None:
+        if self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+
+
+@dataclass
+class RemoteProcess:
+    command: str
+    channel: paramiko.Channel
+    stdin: paramiko.ChannelFile
+    stdout_relay: StreamRelay
+    stderr_relay: StreamRelay
+
+    def close(self) -> None:
+        if not self.channel.closed:
+            try:
+                self.channel.close()
+            except Exception:  # pragma: no cover - best effort
+                pass
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Two-host PQC proxy orchestrator")
+    parser.add_argument("--suite", required=True, help="Initial suite identifier (e.g. cs-kyber768-aesgcm-dilithium3)")
+    parser.add_argument("--rekey-suite", required=True, help="Suite identifier to switch to during the run")
+    parser.add_argument("--remote-host", required=True, help="Drone host/IP reachable via SSH")
+    parser.add_argument("--remote-user", required=True, help="SSH username for the drone host")
+    parser.add_argument("--ssh-key", help="Path to SSH private key for the drone host")
+    parser.add_argument("--ssh-password", help="SSH password (discouraged; key auth preferred)")
+    parser.add_argument("--remote-root", default="~/research", help="Remote repository root containing this project")
+    parser.add_argument("--remote-python", default="python", help="Python executable on the drone host")
+    default_local_python = Path(os.environ.get("PYTHON_EXECUTABLE", sys.executable)).resolve()
+    parser.add_argument(
+        "--local-python",
+        default=str(default_local_python),
+        help="Python executable on the GCS host",
+    )
+    parser.add_argument("--artifact-dir", default="artifacts/harness", help="Local directory for collected artefacts")
+    parser.add_argument("--remote-artifact-dir", default="artifacts/harness", help="Remote directory (within repo) for run artefacts")
+    parser.add_argument("--label", help="Optional label appended to the run identifier")
+
+    parser.add_argument("--traffic-count", type=int, default=400, help="Packets to send from each traffic generator")
+    parser.add_argument("--traffic-rate", type=float, default=40.0, help="Packets per second for traffic generators")
+    parser.add_argument("--traffic-duration", type=float, default=40.0, help="Duration (seconds) cap for traffic generators")
+
+    parser.add_argument("--stop-seconds", type=float, default=90.0, help="Auto-stop duration supplied to each proxy")
+    parser.add_argument("--handshake-timeout", type=float, default=30.0, help="Timeout for initial handshake detection")
+    parser.add_argument("--rekey-delay", type=float, default=15.0, help="Delay (seconds) before requesting rekey once traffic is flowing")
+    parser.add_argument("--rekey-timeout", type=float, default=60.0, help="Timeout waiting for successful rekey events")
+    parser.add_argument("--post-rekey-wait", type=float, default=10.0, help="Additional wait after rekey before teardown")
+
+    return parser.parse_args()
+
+
+def build_run_id(base_suite: str, label: Optional[str]) -> str:
+    stamp = _dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    suite_token = base_suite.replace("-", "_")
+    if label:
+        label_clean = "".join(ch for ch in label if ch.isalnum() or ch in ("_", "-"))
+        return f"{stamp}_{suite_token}_{label_clean}"
+    return f"{stamp}_{suite_token}"
+
+
+def wait_event(event: threading.Event, timeout: float, description: str) -> None:
+    if not event.wait(timeout):
+        raise TimeoutError(f"Timed out waiting for {description}")
+
+
+def make_failure_hook(errors: List[str], label: str):
+    def _hook(line: str) -> None:
+        lower = line.lower()
+        if any(marker in lower for marker in REKEY_FAIL_MARKERS):
+            errors.append(f"{label}: {line}")
+    return _hook
+
+
+def resolve_remote_root(client: paramiko.SSHClient, remote_root: str) -> str:
+    cmd = f"cd {shlex.quote(remote_root)} && pwd"
+    _stdin, stdout, stderr = client.exec_command(cmd)
+    resolved = stdout.read().decode("utf-8", "ignore").strip()
+    err = stderr.read().decode("utf-8", "ignore").strip()
+    if not resolved:
+        raise RuntimeError(f"Failed to resolve remote root: {err or 'unknown error'}")
+    return resolved
+
+
+def start_remote_process(
+    client: paramiko.SSHClient,
+    command: str,
+    stdout_log: Path,
+    stderr_log: Path,
+    *,
+    patterns: Optional[Dict[str, threading.Event]] = None,
+    failure_hook=None,
+) -> RemoteProcess:
+    stdin, stdout, stderr = client.exec_command(command, get_pty=False)
+    stdout_file = stdout.channel.makefile("r", encoding="utf-8", errors="replace")
+    stderr_file = stderr.channel.makefile("r", encoding="utf-8", errors="replace")
+
+    stdout_relay = StreamRelay.start(stdout_file, stdout_log, patterns=patterns, failure_hook=failure_hook)
+    stderr_relay = StreamRelay.start(stderr_file, stderr_log, patterns=patterns, failure_hook=failure_hook)
+
+    return RemoteProcess(command, stdout.channel, stdin, stdout_relay, stderr_relay)
+
+
+def wait_remote(process: RemoteProcess, timeout: float) -> int:
+    deadline = time.time() + timeout
+    while not process.channel.exit_status_ready():
+        if time.time() > deadline:
+            raise TimeoutError(f"Remote command timed out: {process.command}")
+        time.sleep(1)
+    return process.channel.recv_exit_status()
+
+
+def start_local_process(
+    cmd: List[str],
+    *,
+    env: Dict[str, str],
+    stdout_log: Path,
+    stderr_log: Path,
+    patterns: Optional[Dict[str, threading.Event]] = None,
+    failure_hook=None,
+) -> LocalProcess:
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+        env=env,
+    )
+    if proc.stdout is None or proc.stderr is None:
+        raise RuntimeError("Failed to capture local process pipes")
+
+    stdout_relay = StreamRelay.start(proc.stdout, stdout_log, patterns=patterns, failure_hook=failure_hook)
+    stderr_relay = StreamRelay.start(proc.stderr, stderr_log, patterns=patterns, failure_hook=failure_hook)
+
+    return LocalProcess(proc=proc, stdout=stdout_relay, stderr=stderr_relay)
+
+
+def send_rekey_command(local_proxy: LocalProcess, suite_id: str) -> None:
+    if local_proxy.proc.stdin is None:
+        raise RuntimeError("Local proxy stdin not available for rekey command")
+    local_proxy.proc.stdin.write(f"{suite_id}\n")
+    local_proxy.proc.stdin.flush()
+
+
+def download_file(sftp: paramiko.SFTPClient, remote_path: str, local_path: Path) -> None:
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+    sftp.get(remote_path, str(local_path))
+
+
+def summarize_run(
+    run_dir: Path,
+    run_id: str,
+    suite_initial: str,
+    suite_rekey: str,
+    gcs_proxy_json: Path,
+    drone_proxy_json: Path,
+    gcs_traffic_summary: Path,
+    drone_traffic_summary: Path,
+    errors: List[str],
+) -> Dict[str, object]:
+    gcs_counters = load_proxy_counters(gcs_proxy_json)
+    drone_counters = load_proxy_counters(drone_proxy_json)
+    gcs_counters.ensure_rekey(suite_rekey)
+    drone_counters.ensure_rekey(suite_rekey)
+
+    gcs_traffic = load_traffic_summary(gcs_traffic_summary)
+    drone_traffic = load_traffic_summary(drone_traffic_summary)
+
+    summary = {
+        "run_id": run_id,
+        "timestamp_utc": _dt.datetime.utcnow().isoformat() + "Z",
+        "suite_initial": suite_initial,
+        "suite_rekey": suite_rekey,
+        "artifacts": {
+            "root": str(run_dir.resolve()),
+            "gcs_proxy": str(gcs_proxy_json.resolve()),
+            "drone_proxy": str(drone_proxy_json.resolve()),
+            "gcs_traffic": str(gcs_traffic_summary.resolve()),
+            "drone_traffic": str(drone_traffic_summary.resolve()),
+        },
+        "gcs": {
+            "role": gcs_counters.role,
+            "suite": gcs_counters.suite,
+            "counters": gcs_counters.counters,
+        },
+        "drone": {
+            "role": drone_counters.role,
+            "suite": drone_counters.suite,
+            "counters": drone_counters.counters,
+        },
+        "traffic": {
+            "gcs": {
+                "sent_total": gcs_traffic.sent_total,
+                "recv_total": gcs_traffic.recv_total,
+                "tx_bytes_total": gcs_traffic.tx_bytes_total,
+                "rx_bytes_total": gcs_traffic.rx_bytes_total,
+            },
+            "drone": {
+                "sent_total": drone_traffic.sent_total,
+                "recv_total": drone_traffic.recv_total,
+                "tx_bytes_total": drone_traffic.tx_bytes_total,
+                "rx_bytes_total": drone_traffic.rx_bytes_total,
+            },
+        },
+        "errors": errors,
+    }
+    summary_path = run_dir / "summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    return summary
+
+
+def main() -> None:
+    args = parse_args()
+    run_id = build_run_id(args.suite, args.label)
+
+    run_dir = Path(args.artifact_dir).expanduser().resolve() / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    gcs_proxy_json = run_dir / "gcs_proxy.json"
+    drone_proxy_json = run_dir / "drone_proxy.json"
+    gcs_traffic_out = run_dir / "gcs_traffic.jsonl"
+    drone_traffic_out = run_dir / "drone_traffic.jsonl"
+    gcs_traffic_summary = run_dir / "gcs_traffic_summary.json"
+    drone_traffic_summary = run_dir / "drone_traffic_summary.json"
+
+    logs_dir = run_dir / "logs"
+    gcs_stdout_log = logs_dir / "gcs_proxy_stdout.log"
+    gcs_stderr_log = logs_dir / "gcs_proxy_stderr.log"
+    drone_stdout_log = logs_dir / "drone_proxy_stdout.log"
+    drone_stderr_log = logs_dir / "drone_proxy_stderr.log"
+    gcs_traffic_stdout = logs_dir / "gcs_traffic_stdout.log"
+    gcs_traffic_stderr = logs_dir / "gcs_traffic_stderr.log"
+    drone_traffic_stdout = logs_dir / "drone_traffic_stdout.log"
+    drone_traffic_stderr = logs_dir / "drone_traffic_stderr.log"
+
+    errors: List[str] = []
+
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(
+        args.remote_host,
+        username=args.remote_user,
+        key_filename=args.ssh_key,
+        password=args.ssh_password,
+        look_for_keys=args.ssh_key is None,
+    )
+
+    remote_root_abs = resolve_remote_root(client, args.remote_root)
+    remote_run_rel = posixpath.join(args.remote_artifact_dir.rstrip("/"), run_id)
+    remote_run_abs = posixpath.join(remote_root_abs, remote_run_rel)
+
+    mkdir_cmd = f"cd {shlex.quote(args.remote_root)} && mkdir -p {shlex.quote(remote_run_rel)}"
+    client.exec_command(mkdir_cmd)
+
+    handshake_gcs = threading.Event()
+    handshake_drone = threading.Event()
+    rekey_gcs = threading.Event()
+    rekey_drone = threading.Event()
+
+    failure_hook_gcs = make_failure_hook(errors, "gcs")
+    failure_hook_drone = make_failure_hook(errors, "drone")
+
+    # Start remote drone proxy
+    remote_env = "ENABLE_PACKET_TYPE=1 PYTHONUNBUFFERED=1"
+    remote_proxy_json_rel = posixpath.join(remote_run_rel, "drone_proxy.json")
+    remote_proxy_cmd = (
+        f"cd {shlex.quote(args.remote_root)} && {remote_env} {shlex.quote(args.remote_python)} -m core.run_proxy "
+        f"drone --suite {shlex.quote(args.suite)} --stop-seconds {args.stop_seconds} "
+        f"--json-out {shlex.quote(remote_proxy_json_rel)}"
+    )
+    drone_process = start_remote_process(
+        client,
+        remote_proxy_cmd,
+        drone_stdout_log,
+        drone_stderr_log,
+        patterns={HANDSHAKE_PATTERN: handshake_drone, REKEY_OK_PATTERN: rekey_drone},
+        failure_hook=failure_hook_drone,
+    )
+
+    # Start local GCS proxy with manual control enabled
+    local_env = os.environ.copy()
+    local_env["ENABLE_PACKET_TYPE"] = "1"
+    local_env.setdefault("PYTHONUNBUFFERED", "1")
+
+    gcs_cmd = [
+        args.local_python,
+        "-m",
+        "core.run_proxy",
+        "gcs",
+        "--suite",
+        args.suite,
+        "--stop-seconds",
+        str(args.stop_seconds),
+        "--json-out",
+        str(gcs_proxy_json),
+        "--control-manual",
+    ]
+    gcs_process = start_local_process(
+        gcs_cmd,
+        env=local_env,
+        stdout_log=gcs_stdout_log,
+        stderr_log=gcs_stderr_log,
+        patterns={HANDSHAKE_PATTERN: handshake_gcs, REKEY_OK_PATTERN: rekey_gcs},
+        failure_hook=failure_hook_gcs,
+    )
+
+    drone_traffic: Optional[RemoteProcess] = None
+    gcs_traffic: Optional[LocalProcess] = None
+
+    try:
+        wait_event(handshake_gcs, args.handshake_timeout, "GCS handshake")
+        wait_event(handshake_drone, args.handshake_timeout, "drone handshake")
+
+        # Launch traffic generators
+        remote_traffic_summary_rel = posixpath.join(remote_run_rel, "drone_traffic_summary.json")
+        remote_traffic_out_rel = posixpath.join(remote_run_rel, "drone_traffic.jsonl")
+        remote_traffic_cmd = (
+            f"cd {shlex.quote(args.remote_root)} && {remote_env} {shlex.quote(args.remote_python)} tools/traffic_drone.py "
+            f"--count {args.traffic_count} --rate {args.traffic_rate} --duration {args.traffic_duration} "
+            f"--out {shlex.quote(remote_traffic_out_rel)} --summary {shlex.quote(remote_traffic_summary_rel)}"
+        )
+        drone_traffic = start_remote_process(
+            client,
+            remote_traffic_cmd,
+            drone_traffic_stdout,
+            drone_traffic_stderr,
+            failure_hook=failure_hook_drone,
+        )
+
+        gcs_traffic_cmd = [
+            args.local_python,
+            "tools/traffic_gcs.py",
+            "--count",
+            str(args.traffic_count),
+            "--rate",
+            str(args.traffic_rate),
+            "--duration",
+            str(args.traffic_duration),
+            "--out",
+            str(gcs_traffic_out),
+            "--summary",
+            str(gcs_traffic_summary),
+        ]
+        gcs_traffic = start_local_process(
+            gcs_traffic_cmd,
+            env=local_env,
+            stdout_log=gcs_traffic_stdout,
+            stderr_log=gcs_traffic_stderr,
+            failure_hook=failure_hook_gcs,
+        )
+
+        time.sleep(max(0.0, args.rekey_delay))
+        send_rekey_command(gcs_process, args.rekey_suite)
+
+        wait_event(rekey_gcs, args.rekey_timeout, "GCS rekey completion")
+        wait_event(rekey_drone, args.rekey_timeout, "drone rekey completion")
+
+        time.sleep(max(0.0, args.post_rekey_wait))
+
+        # Wait for traffic to complete (they exit once duration reached)
+        if gcs_traffic is not None:
+            gcs_traffic.proc.wait(timeout=args.traffic_duration + 20)
+        if drone_traffic is not None:
+            wait_remote(drone_traffic, args.traffic_duration + 20)
+
+        # Wait for proxies to exit after stop-seconds window
+        gcs_process.proc.wait(timeout=args.stop_seconds + 30)
+        wait_remote(drone_process, args.stop_seconds + 30)
+
+    finally:
+        # Cleanup
+        gcs_process.terminate()
+        drone_process.close()
+        # ensure traffic processes stopped
+        if gcs_traffic is not None:
+            try:
+                gcs_traffic.terminate()
+            except Exception:
+                pass
+        if drone_traffic is not None:
+            try:
+                drone_traffic.close()
+            except Exception:
+                pass
+
+    # Download remote artefacts
+    with client.open_sftp() as sftp:
+        download_file(sftp, posixpath.join(remote_root_abs, remote_proxy_json_rel), drone_proxy_json)
+        download_file(sftp, posixpath.join(remote_root_abs, remote_traffic_summary_rel), drone_traffic_summary)
+        download_file(sftp, posixpath.join(remote_root_abs, remote_traffic_out_rel), drone_traffic_out)
+
+    client.close()
+
+    summary = summarize_run(
+        run_dir,
+        run_id,
+        args.suite,
+        args.rekey_suite,
+        gcs_proxy_json,
+        drone_proxy_json,
+        gcs_traffic_summary,
+        drone_traffic_summary,
+        errors,
+    )
+
+    summary_txt = run_dir / "summary.txt"
+    summary_txt.write_text(
+        "Run ID: {run_id}\nInitial suite: {suite}\nRekey suite: {rekey}\nGCS rekeys_ok: {gcs_ok}\n"
+        "Drone rekeys_ok: {drone_ok}\nArtefacts: {root}\n".format(
+            run_id=run_id,
+            suite=args.suite,
+            rekey=args.rekey_suite,
+            gcs_ok=summary["gcs"]["counters"].get("rekeys_ok"),
+            drone_ok=summary["drone"]["counters"].get("rekeys_ok"),
+            root=summary["artifacts"]["root"],
+        ),
+        encoding="utf-8",
+    )
+
+    print(json.dumps(summary, indent=2))
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 26/73: strict_mode_demo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\strict_mode_demo.py
 Size: 3,479 bytes
@@ -4209,7 +4871,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 26/56: tests\__init__.py
+FILE 27/73: tests\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\__init__.py
 Size: 54 bytes
@@ -4221,7 +4883,7 @@ Test package for PQC Drone-GCS Secure Proxy.
 
 ============================================================
 
-FILE 27/56: tests\test-oqs.py
+FILE 28/73: tests\test-oqs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test-oqs.py
 Size: 2,821 bytes
@@ -4295,7 +4957,7 @@ try_import_all()
 
 ============================================================
 
-FILE 28/56: tests\test_aead_framing.py
+FILE 29/73: tests\test_aead_framing.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_aead_framing.py
 Size: 6,589 bytes
@@ -4539,7 +5201,7 @@ def test_epoch_bump():
 
 ============================================================
 
-FILE 29/56: tests\test_cli_identity.py
+FILE 30/73: tests\test_cli_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_cli_identity.py
 Size: 13,002 bytes
@@ -4863,7 +5525,7 @@ class TestCLIHelpAndUsage:
 
 ============================================================
 
-FILE 30/56: tests\test_control_sm.py
+FILE 31/73: tests\test_control_sm.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_control_sm.py
 Size: 3,095 bytes
@@ -4947,11 +5609,120 @@ def test_drone_prepare_fail_when_guard_blocks():
 
 ============================================================
 
-FILE 31/56: tests\test_end_to_end_proxy.py
+FILE 32/73: tests\test_counter_utils.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tests\test_counter_utils.py
+Size: 3,143 bytes
+Modified: 2025-09-26 18:45:57
+------------------------------------------------------------
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from tools.counter_utils import (
+    ProxyCounters,
+    TrafficSummary,
+    load_proxy_counters,
+    load_traffic_summary,
+)
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_load_proxy_counters_success(tmp_path: Path) -> None:
+    payload = {
+        "role": "gcs",
+        "suite": "cs-kyber768-aesgcm-dilithium3",
+        "counters": {
+            "rekeys_ok": 2,
+            "rekeys_fail": 0,
+            "last_rekey_suite": "cs-kyber1024-aesgcm-dilithium5",
+        },
+        "ts_stop_ns": 42,
+    }
+    file_path = tmp_path / "proxy.json"
+    _write_json(file_path, payload)
+
+    result = load_proxy_counters(file_path)
+
+    assert isinstance(result, ProxyCounters)
+    assert result.role == "gcs"
+    assert result.suite == "cs-kyber768-aesgcm-dilithium3"
+    assert result.rekeys_ok == 2
+    assert result.rekeys_fail == 0
+    assert result.last_rekey_suite == "cs-kyber1024-aesgcm-dilithium5"
+    assert result.ts_stop_ns == 42
+    assert result.path == file_path
+
+    # Should not raise when suite matches
+    result.ensure_rekey("cs-kyber1024-aesgcm-dilithium5")
+    with pytest.raises(ValueError):
+        result.ensure_rekey("cs-kyber512-aesgcm-dilithium2")
+
+
+def test_ensure_rekey_failure(tmp_path: Path) -> None:
+    payload = {
+        "role": "drone",
+        "suite": "cs-kyber768-aesgcm-dilithium3",
+        "counters": {"rekeys_ok": 0, "last_rekey_suite": ""},
+    }
+    file_path = tmp_path / "proxy_fail.json"
+    _write_json(file_path, payload)
+
+    result = load_proxy_counters(file_path)
+    with pytest.raises(ValueError):
+        result.ensure_rekey("cs-kyber1024-aesgcm-dilithium5")
+
+
+def test_load_traffic_summary(tmp_path: Path) -> None:
+    payload = {
+        "role": "gcs",
+        "peer_role": "drone",
+        "sent_total": 200,
+        "recv_total": 198,
+        "tx_bytes_total": 4096,
+        "rx_bytes_total": 4000,
+        "first_send_ts": "2025-09-26T06:37:00Z",
+        "last_send_ts": "2025-09-26T06:38:10Z",
+        "first_recv_ts": "2025-09-26T06:37:01Z",
+        "last_recv_ts": "2025-09-26T06:38:12Z",
+        "out_of_order": 0,
+        "unique_senders": 1,
+    }
+    file_path = tmp_path / "traffic.json"
+    _write_json(file_path, payload)
+
+    summary = load_traffic_summary(file_path)
+    assert isinstance(summary, TrafficSummary)
+    assert summary.role == "gcs"
+    assert summary.peer_role == "drone"
+    assert summary.sent_total == 200
+    assert summary.recv_total == 198
+    assert summary.tx_bytes_total == 4096
+    assert summary.rx_bytes_total == 4000
+    assert summary.out_of_order == 0
+    assert summary.unique_senders == 1
+    assert summary.first_send_ts == "2025-09-26T06:37:00Z"
+    assert summary.path == file_path
+
+
+def test_missing_proxy_file_raises(tmp_path: Path) -> None:
+    missing_path = tmp_path / "missing.json"
+    with pytest.raises(FileNotFoundError):
+        load_proxy_counters(missing_path)
+
+============================================================
+
+FILE 33/73: tests\test_end_to_end_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_end_to_end_proxy.py
-Size: 11,044 bytes
-Modified: 2025-09-25 15:24:44
+Size: 12,139 bytes
+Modified: 2025-09-26 14:12:12
 ------------------------------------------------------------
 """
 End-to-end tests for the PQC proxy network transport.
@@ -4971,6 +5742,18 @@ from oqs.oqs import Signature
 from core.config import CONFIG
 from core.suites import get_suite
 from core.async_proxy import run_proxy
+
+
+DEFAULT_HOST = CONFIG["GCS_PLAINTEXT_HOST"]
+
+
+def _alloc_port(sock_type=socket.SOCK_STREAM, host: str = DEFAULT_HOST) -> int:
+    """Reserve an available loopback port for tests."""
+    with socket.socket(socket.AF_INET, sock_type) as sock:
+        sock.bind((host, 0))
+        if sock_type != socket.SOCK_DGRAM:
+            sock.listen(1)
+        return sock.getsockname()[1]
 
 
 class TestEndToEndProxy:
@@ -4997,13 +5780,25 @@ class TestEndToEndProxy:
         # Create synchronization event to eliminate race conditions
         gcs_ready_event = threading.Event()
         
+        # Reserve dedicated ports to avoid clashes with running proxies
+        handshake_port = _alloc_port()
+        udp_gcs_rx = _alloc_port(socket.SOCK_DGRAM)
+        udp_drone_rx = _alloc_port(socket.SOCK_DGRAM)
+
         # Use different ports for test to avoid conflicts
         test_config = CONFIG.copy()
         test_config.update({
+            "TCP_HANDSHAKE_PORT": handshake_port,
+            "UDP_GCS_RX": udp_gcs_rx,
+            "UDP_DRONE_RX": udp_drone_rx,
             "DRONE_PLAINTEXT_TX": 15550,  # Apps send to drone proxy here
             "DRONE_PLAINTEXT_RX": 15551,  # Apps receive from drone proxy here
             "GCS_PLAINTEXT_TX": 15552,    # Apps send to GCS proxy here  
             "GCS_PLAINTEXT_RX": 15553,    # Apps receive from GCS proxy here
+            "DRONE_HOST": "127.0.0.1",    # Force loopback for encrypted peer
+            "GCS_HOST": "127.0.0.1",      # Force loopback for handshake/peer
+            "DRONE_PLAINTEXT_HOST": "127.0.0.1",
+            "GCS_PLAINTEXT_HOST": "127.0.0.1",
         })
         
         # Storage for proxy results
@@ -5053,7 +5848,7 @@ class TestEndToEndProxy:
             nonlocal received_at_gcs
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as receiver:
-                    receiver.bind(('127.0.0.1', test_config["GCS_PLAINTEXT_RX"]))
+                    receiver.bind((test_config["GCS_PLAINTEXT_HOST"], test_config["GCS_PLAINTEXT_RX"]))
                     receiver.settimeout(2.5)  # Increased timeout
                     data, addr = receiver.recvfrom(1024)
                     received_at_gcs = data
@@ -5064,7 +5859,7 @@ class TestEndToEndProxy:
             nonlocal received_at_drone
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as receiver:
-                    receiver.bind(('127.0.0.1', test_config["DRONE_PLAINTEXT_RX"]))
+                    receiver.bind((test_config["DRONE_PLAINTEXT_HOST"], test_config["DRONE_PLAINTEXT_RX"]))
                     receiver.settimeout(2.5)  # Increased timeout
                     data, addr = receiver.recvfrom(1024)
                     received_at_drone = data
@@ -5094,7 +5889,7 @@ class TestEndToEndProxy:
         # Test drone -> gcs forwarding
         drone_to_gcs_data = b"Hello from drone"
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sender:
-            sender.sendto(drone_to_gcs_data, ('127.0.0.1', test_config["DRONE_PLAINTEXT_TX"]))
+            sender.sendto(drone_to_gcs_data, (test_config["DRONE_PLAINTEXT_HOST"], test_config["DRONE_PLAINTEXT_TX"]))
         
         # Small delay
         time.sleep(0.1)
@@ -5102,7 +5897,7 @@ class TestEndToEndProxy:
         # Test gcs -> drone forwarding  
         gcs_to_drone_data = b"Hello from GCS"
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sender:
-            sender.sendto(gcs_to_drone_data, ('127.0.0.1', test_config["GCS_PLAINTEXT_TX"]))
+            sender.sendto(gcs_to_drone_data, (test_config["GCS_PLAINTEXT_HOST"], test_config["GCS_PLAINTEXT_TX"]))
         
         # Wait for everything to complete
         gcs_recv_thread.join(timeout=2.0)
@@ -5240,7 +6035,7 @@ class TestEndToEndProxy:
 
 ============================================================
 
-FILE 32/56: tests\test_handshake.py
+FILE 34/73: tests\test_handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake.py
 Size: 2,734 bytes
@@ -5317,7 +6112,7 @@ def test_mismatched_role_kdf():
 
 ============================================================
 
-FILE 33/56: tests\test_handshake_downgrade.py
+FILE 35/73: tests\test_handshake_downgrade.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake_downgrade.py
 Size: 1,430 bytes
@@ -5357,7 +6152,7 @@ def test_version_mismatch_signed_transcript_blocks_downgrade():
 
 ============================================================
 
-FILE 34/56: tests\test_hardening_features.py
+FILE 36/73: tests\test_hardening_features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_hardening_features.py
 Size: 7,879 bytes
@@ -5563,7 +6358,7 @@ class TestEpochGuard:
 
 ============================================================
 
-FILE 35/56: tests\test_kdf_roles.py
+FILE 37/73: tests\test_kdf_roles.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_kdf_roles.py
 Size: 1,630 bytes
@@ -5613,7 +6408,7 @@ def test_empty_kem_sig_name():
 
 ============================================================
 
-FILE 36/56: tests\test_loss_dup_oom.py
+FILE 38/73: tests\test_loss_dup_oom.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_loss_dup_oom.py
 Size: 149 bytes
@@ -5626,7 +6421,7 @@ def test_loss_dup_oom():
 
 ============================================================
 
-FILE 37/56: tests\test_packet_types.py
+FILE 39/73: tests\test_packet_types.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_packet_types.py
 Size: 4,350 bytes
@@ -5759,7 +6554,7 @@ def test_packet_type_disabled():
 
 ============================================================
 
-FILE 38/56: tests\test_rekey_epoch.py
+FILE 40/73: tests\test_rekey_epoch.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_rekey_epoch.py
 Size: 11,882 bytes
@@ -6050,7 +6845,7 @@ class TestRekeyEpoch:
 
 ============================================================
 
-FILE 39/56: tests\test_replay_window.py
+FILE 41/73: tests\test_replay_window.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_replay_window.py
 Size: 3,723 bytes
@@ -6189,7 +6984,7 @@ def test_reject_old_beyond_window():
 
 ============================================================
 
-FILE 40/56: tests\test_suites_config.py
+FILE 42/73: tests\test_suites_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_suites_config.py
 Size: 12,691 bytes
@@ -6507,7 +7302,174 @@ class TestSuites:
 
 ============================================================
 
-FILE 41/56: tools\bench_cli.py
+FILE 43/73: tools\__init__.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\__init__.py
+Size: 69 bytes
+Modified: 2025-09-26 15:16:07
+------------------------------------------------------------
+"""Helper package for tooling scripts used in automated testing."""
+
+============================================================
+
+FILE 44/73: tools\audit_endpoints.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\audit_endpoints.py
+Size: 5,511 bytes
+Modified: 2025-09-26 04:19:40
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""Audit repository files for hard-coded network endpoints.
+
+This script scans Python (and optional shell/Lua) files for IPv4 literals
+and socket usage that should instead reference core.config.CONFIG.
+It emits a JSON report of violations and exits non-zero if any are found.
+"""
+
+from __future__ import annotations
+
+import ast
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Iterable, List
+
+ROOT = Path(__file__).resolve().parents[1]
+ALLOW_IPS = {"127.0.0.1", "0.0.0.0", "::1"}
+CODE_DIRS = ("core", "tools", "drone", "gcs")
+IPV4_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
+EXCLUDE_PARTS = {"docs", "logs", "__pycache__"}
+
+Violation = dict[str, object]
+
+
+def iter_files() -> Iterable[Path]:
+    for directory in CODE_DIRS:
+        base = ROOT / directory
+        if not base.exists():
+            continue
+        for path in base.rglob("*.py"):
+            if any(part in EXCLUDE_PARTS for part in path.parts):
+                continue
+            yield path
+
+
+def flag(violations: List[Violation], path: Path, lineno: int, kind: str, detail: str, suggestion: str | None = None) -> None:
+    rel = str(path.relative_to(ROOT))
+    violations.append(
+        {
+            "file": rel,
+            "line": lineno,
+            "kind": kind,
+            "detail": detail,
+            "suggestion": suggestion or "",
+        }
+    )
+
+
+def scan_file(path: Path, violations: List[Violation]) -> None:
+    try:
+        source = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return
+
+    # Regex sweep for IPv4 literals
+    for lineno, line in enumerate(source.splitlines(), start=1):
+        for match in IPV4_RE.finditer(line):
+            ip = match.group(0)
+            if ip not in ALLOW_IPS:
+                flag(
+                    violations,
+                    path,
+                    lineno,
+                    "ipv4-literal",
+                    f"Found IPv4 literal '{ip}'",
+                    "Use CONFIG['GCS_HOST'/'DRONE_HOST'] or accept a parameter",
+                )
+
+    # AST analysis for socket invocations with literal endpoints
+    try:
+        tree = ast.parse(source, filename=str(path))
+    except SyntaxError:
+        return
+
+    def is_literal_str(node: ast.AST) -> bool:
+        return isinstance(node, ast.Constant) and isinstance(node.value, str)
+
+    def is_literal_int(node: ast.AST) -> bool:
+        return isinstance(node, ast.Constant) and isinstance(node.value, int)
+
+    class Visitor(ast.NodeVisitor):
+        def visit_Call(self, node: ast.Call) -> None:
+            attr = getattr(node.func, "attr", None)
+            if attr in {"bind", "connect"} and node.args:
+                target = node.args[0]
+                if isinstance(target, ast.Tuple) and len(target.elts) >= 2:
+                    host, port = target.elts[0], target.elts[1]
+                    if is_literal_str(host) and IPV4_RE.fullmatch(host.value or "") and host.value not in ALLOW_IPS:
+                        flag(
+                            violations,
+                            path,
+                            node.lineno,
+                            f"{attr}-literal-host",
+                            f"socket.{attr} uses literal host '{host.value}'",
+                            "Replace with CONFIG['GCS_HOST'/'DRONE_HOST']",
+                        )
+                    if is_literal_int(port):
+                        flag(
+                            violations,
+                            path,
+                            node.lineno,
+                            f"{attr}-literal-port",
+                            f"socket.{attr} uses literal port {port.value}",
+                            "Use CONFIG[...] for ports or pass via args",
+                        )
+            elif attr == "sendto" and len(node.args) >= 2:
+                destination = node.args[1]
+                if isinstance(destination, ast.Tuple) and len(destination.elts) >= 2:
+                    host, port = destination.elts[0], destination.elts[1]
+                    if is_literal_str(host) and IPV4_RE.fullmatch(host.value or "") and host.value not in ALLOW_IPS:
+                        flag(
+                            violations,
+                            path,
+                            node.lineno,
+                            "sendto-literal-host",
+                            f"socket.sendto uses literal host '{host.value}'",
+                            "Replace with CONFIG['GCS_HOST'/'DRONE_HOST']",
+                        )
+                    if is_literal_int(port):
+                        flag(
+                            violations,
+                            path,
+                            node.lineno,
+                            "sendto-literal-port",
+                            f"socket.sendto uses literal port {port.value}",
+                            "Use CONFIG[...] for ports",
+                        )
+            self.generic_visit(node)
+
+    Visitor().visit(tree)
+
+
+def main() -> int:
+    violations: List[Violation] = []
+    for path in iter_files():
+        scan_file(path, violations)
+
+    print(json.dumps({"violations": violations}, indent=2))
+    if violations:
+        print(f"\nFound {len(violations)} endpoint violations.", file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+============================================================
+
+FILE 45/73: tools\bench_cli.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\bench_cli.py
 Size: 841 bytes
@@ -6534,7 +7496,96 @@ if __name__=="__main__": main()
 
 ============================================================
 
-FILE 42/56: tools\check_ports.py
+FILE 46/73: tools\check_no_hardcoded_ips.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\check_no_hardcoded_ips.py
+Size: 2,448 bytes
+Modified: 2025-09-26 14:12:14
+------------------------------------------------------------
+"""Static check to ensure IPs/ports are sourced from core.config."""
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+from typing import Iterable, List, Tuple
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+TARGET_SUFFIXES = {".py", ".ps1", ".sh"}
+ALLOW_DIRS = {".git", "__pycache__", "venv", "env"}
+SKIP_PREFIXES = {
+    REPO_ROOT / "core" / "config.py",
+}
+SKIP_DIRS = {REPO_ROOT / "tests" / "fixtures"}
+
+IP_PATTERN = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+PORT_PATTERN = re.compile(r"socket\.(?:bind|connect|sendto)\([^\n\#]*?(\d{4,5})")
+ALLOWED_IPS = {"0.0.0.0", "127.0.0.1", "::1"}
+ALLOWED_PORTS = {"0", "53"}
+
+
+def iter_files() -> Iterable[Path]:
+    for path in REPO_ROOT.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix not in TARGET_SUFFIXES:
+            continue
+        if any(part in ALLOW_DIRS for part in path.parts):
+            continue
+        if any(path.is_relative_to(skip) for skip in SKIP_DIRS):
+            continue
+        yield path
+
+
+def find_violations(path: Path) -> Tuple[List[str], List[str]]:
+    if path in SKIP_PREFIXES:
+        return [], []
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    ips = []
+    for match in IP_PATTERN.finditer(text):
+        ip = match.group(0)
+        if ip in ALLOWED_IPS:
+            continue
+        ips.append(f"{path}:{match.start()} -> {ip}")
+    ports = []
+    for match in PORT_PATTERN.finditer(text):
+        port = match.group(1)
+        if port in ALLOWED_PORTS:
+            continue
+        ports.append(f"{path}:{match.start()} -> {port}")
+    return ips, ports
+
+
+def main() -> int:
+    ip_violations: List[str] = []
+    port_violations: List[str] = []
+
+    for path in iter_files():
+        ips, ports = find_violations(path)
+        ip_violations.extend(ips)
+        port_violations.extend(ports)
+
+    if ip_violations or port_violations:
+        if ip_violations:
+            print("IP literal violations detected:")
+            for item in ip_violations:
+                print(f"  {item}")
+        if port_violations:
+            print("Port literal violations detected:")
+            for item in port_violations:
+                print(f"  {item}")
+        return 1
+
+    print("No hard-coded IPs or forbidden port literals detected.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+============================================================
+
+FILE 47/73: tools\check_ports.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_ports.py
 Size: 3,618 bytes
@@ -6637,7 +7688,450 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 43/56: tools\encrypted_sniffer.py
+FILE 48/73: tools\counter_utils.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\counter_utils.py
+Size: 6,381 bytes
+Modified: 2025-09-26 18:45:57
+------------------------------------------------------------
+"""Utility helpers for reading proxy and traffic counter artifacts.
+
+These helpers keep the orchestration scripts decoupled from the exact JSON
+structure emitted by the proxies and traffic generators.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+
+@dataclass(frozen=True)
+class ProxyCounters:
+    """Parsed counters emitted by ``core.run_proxy``.
+
+    Attributes
+    ----------
+    role:
+        ``"gcs"`` or ``"drone"`` as recorded in the JSON payload.
+    suite:
+        Canonical suite identifier associated with the run.
+    counters:
+        Raw counter dictionary from the JSON payload.
+    ts_stop_ns:
+        Optional timestamp (nanoseconds) indicating when the proxy shut down.
+    path:
+        Filesystem location from which the payload was loaded.
+    """
+
+    role: str
+    suite: str
+    counters: Dict[str, Any]
+    ts_stop_ns: Optional[int] = None
+    path: Optional[Path] = None
+
+    @property
+    def rekeys_ok(self) -> int:
+        """Return the number of successful rekeys recorded by the proxy."""
+
+        return int(self.counters.get("rekeys_ok", 0))
+
+    @property
+    def rekeys_fail(self) -> int:
+        """Return the number of failed rekeys recorded by the proxy."""
+
+        return int(self.counters.get("rekeys_fail", 0))
+
+    @property
+    def last_rekey_suite(self) -> Optional[str]:
+        """Return the last suite identifier applied during rekey, if any."""
+
+        last_suite = self.counters.get("last_rekey_suite")
+        if isinstance(last_suite, str) and last_suite:
+            return last_suite
+        return None
+
+    def ensure_rekey(self, expected_suite: str) -> None:
+        """Validate that at least one rekey succeeded to ``expected_suite``.
+
+        Raises
+        ------
+        ValueError
+            If no successful rekey occurred or the final suite does not match
+            ``expected_suite``.
+        """
+
+        if self.rekeys_ok < 1:
+            raise ValueError(
+                f"Proxy {self.role} reported no successful rekeys (path={self.path})"
+            )
+        final_suite = self.last_rekey_suite
+        if final_suite != expected_suite:
+            raise ValueError(
+                f"Proxy {self.role} last_rekey_suite={final_suite!r} does not match "
+                f"expected {expected_suite!r}"
+            )
+
+
+@dataclass(frozen=True)
+class TrafficSummary:
+    """Counters emitted by ``tools/traffic_*.py``."""
+
+    role: str
+    peer_role: Optional[str]
+    sent_total: int
+    recv_total: int
+    tx_bytes_total: int
+    rx_bytes_total: int
+    first_send_ts: Optional[str]
+    last_send_ts: Optional[str]
+    first_recv_ts: Optional[str]
+    last_recv_ts: Optional[str]
+    out_of_order: int
+    unique_senders: int
+    path: Optional[Path] = None
+
+
+def _load_json(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(f"Counter file not found: {path}")
+    try:
+        import json
+
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # pragma: no cover - defensive logging only
+        raise ValueError(f"Failed to parse JSON from {path}: {exc}") from exc
+
+
+def load_proxy_counters(path: Path | str) -> ProxyCounters:
+    """Load proxy counters JSON from ``path``.
+
+    Parameters
+    ----------
+    path:
+        Filesystem path to the JSON payload created by ``--json-out``.
+
+    Returns
+    -------
+    ProxyCounters
+        Dataclass encapsulating the parsed counters.
+    """
+
+    target = Path(path)
+    payload = _load_json(target)
+
+    role = payload.get("role")
+    suite = payload.get("suite")
+    counters = payload.get("counters")
+
+    if not isinstance(role, str) or not isinstance(suite, str) or not isinstance(counters, dict):
+        raise ValueError(f"Invalid proxy counters JSON schema in {target}")
+
+    ts_stop_ns = payload.get("ts_stop_ns")
+    if ts_stop_ns is not None:
+        try:
+            ts_stop_ns = int(ts_stop_ns)
+        except (TypeError, ValueError):
+            ts_stop_ns = None
+
+    return ProxyCounters(
+        role=role,
+        suite=suite,
+        counters=counters,
+        ts_stop_ns=ts_stop_ns,
+        path=target,
+    )
+
+
+def load_traffic_summary(path: Path | str) -> TrafficSummary:
+    """Load traffic generator summary JSON.
+
+    Parameters
+    ----------
+    path:
+        Path to the file created via ``--summary``.
+    """
+
+    target = Path(path)
+    payload = _load_json(target)
+
+    role = payload.get("role")
+    peer_role = payload.get("peer_role")
+
+    required_int_fields = {
+        "sent_total": int,
+        "recv_total": int,
+        "tx_bytes_total": int,
+        "rx_bytes_total": int,
+        "out_of_order": int,
+    }
+
+    counters: Dict[str, int] = {}
+    for field, field_type in required_int_fields.items():
+        value = payload.get(field)
+        if not isinstance(value, field_type):
+            raise ValueError(f"Summary field {field} missing or wrong type in {target}")
+        counters[field] = int(value)
+
+    unique_senders_raw = payload.get("unique_senders")
+    unique_senders = int(unique_senders_raw) if unique_senders_raw is not None else 0
+
+    if not isinstance(role, str):
+        raise ValueError(f"Summary missing role field in {target}")
+
+    return TrafficSummary(
+        role=role,
+        peer_role=peer_role if isinstance(peer_role, str) else None,
+        sent_total=counters["sent_total"],
+        recv_total=counters["recv_total"],
+        tx_bytes_total=counters["tx_bytes_total"],
+        rx_bytes_total=counters["rx_bytes_total"],
+        first_send_ts=_opt_str(payload.get("first_send_ts")),
+        last_send_ts=_opt_str(payload.get("last_send_ts")),
+        first_recv_ts=_opt_str(payload.get("first_recv_ts")),
+        last_recv_ts=_opt_str(payload.get("last_recv_ts")),
+        out_of_order=counters["out_of_order"],
+        unique_senders=unique_senders,
+        path=target,
+    )
+
+
+def _opt_str(value: Any) -> Optional[str]:
+    return value if isinstance(value, str) and value else None
+
+
+__all__ = [
+    "ProxyCounters",
+    "TrafficSummary",
+    "load_proxy_counters",
+    "load_traffic_summary",
+]
+
+============================================================
+
+FILE 49/73: tools\diag_udp.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\diag_udp.py
+Size: 8,245 bytes
+Modified: 2025-09-26 03:26:42
+------------------------------------------------------------
+import socket
+import threading
+import time
+import argparse
+import sys
+from pathlib import Path
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+# Prefer the ancestor that contains a 'core' directory
+for parent in (_HERE.parent.parent, _HERE.parent):
+    try:
+        if (parent / "core").exists():
+            parent_str = str(parent)
+            if parent_str not in sys.path:
+                sys.path.insert(0, parent_str)
+            break
+    except Exception:
+        # Best-effort; fall through
+        pass
+
+from core.config import CONFIG  # Defines hosts and all plaintext/handshake ports
+
+def _sendto(sock: socket.socket, host: str, port: int, text: str) -> None:
+    sock.sendto(text.encode('utf-8'), (host, port))
+
+
+def run_udp_test(role, local_ip, remote_ip, local_rx_port, remote_tx_port):
+    """
+    Sets up a UDP listener and sender to test direct plaintext communication.
+    :param role: "GCS" or "DRONE"
+    :param local_ip: The IP address this machine should bind its receiver to (usually "0.0.0.0")
+    :param remote_ip: The IP address of the remote machine to send messages to
+    :param local_rx_port: The port this machine listens on
+    :param remote_tx_port: The port the remote machine is listening on (which we send to)
+    """
+    print(f"\n--- {role} Plaintext UDP Test ---")
+    print(f"  Listening on: {local_ip}:{local_rx_port}")
+    print(f"  Sending to:   {remote_ip}:{remote_tx_port}")
+    print(f"  Type a message and press Enter to send. Ctrl+C to exit.")
+
+    # Setup receiver socket
+    rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx_sock.bind((local_ip, local_rx_port))
+    rx_sock.setblocking(False) # Non-blocking for concurrent read/write
+
+    # Setup sender socket
+    tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    # Thread for receiving messages
+    def receiver():
+        while True:
+            try:
+                data, addr = rx_sock.recvfrom(65535)
+                msg = data.decode('utf-8', errors='ignore').strip()
+                print(f"\n[{time.strftime('%H:%M:%S')}] Received from {addr[0]}:{addr[1]}: {msg}")
+                print(f"Type message: ", end='', flush=True) # Prompt again after receiving
+            except BlockingIOError:
+                time.sleep(0.01) # Small delay to prevent busy-waiting
+            except Exception as e:
+                print(f"Error in receiver: {e}")
+                break
+
+    # Start receiver thread
+    receiver_thread = threading.Thread(target=receiver, daemon=True)
+    receiver_thread.start()
+
+    # Main thread for sending messages
+    try:
+        while True:
+            message = input(f"Type message: ")
+            if message.lower() == 'exit':
+                break
+            tx_sock.sendto(message.encode('utf-8'), (remote_ip, remote_tx_port))
+    except KeyboardInterrupt:
+        print("\nExiting...")
+    finally:
+        rx_sock.close()
+        tx_sock.close()
+
+
+def run_auto(role: str, *, verbose: bool = False, delay: float = 0.05) -> int:
+    """Automatic cross-direction UDP smoke test using CONFIG hosts/ports.
+
+    Flow:
+      - Drone listens on DRONE_PLAINTEXT_RX; GCS listens on GCS_PLAINTEXT_RX.
+      - Drone sends trigger "HELLO_FROM_DRONE" to GCS_PLAINTEXT_RX.
+      - GCS replies "HELLO_FROM_GCS" to DRONE_PLAINTEXT_RX.
+      - Each side then sends 5 numbered messages to the other's RX port.
+      - Returns 0 on success; non-zero on failure.
+    """
+
+    gcs_host = CONFIG.get("GCS_HOST", "127.0.0.1")
+    drone_host = CONFIG.get("DRONE_HOST", "127.0.0.1")
+    gcs_rx = int(CONFIG["GCS_PLAINTEXT_RX"])  # local RX for GCS
+    drone_rx = int(CONFIG["DRONE_PLAINTEXT_RX"])  # local RX for Drone
+
+    # Sockets
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    if role == "gcs":
+        rx.bind(("0.0.0.0", gcs_rx))
+        peer_host, peer_port = drone_host, drone_rx
+    else:
+        rx.bind(("0.0.0.0", drone_rx))
+        peer_host, peer_port = gcs_host, gcs_rx
+
+    rx.setblocking(False)
+
+    received = []
+    stop = False
+
+    def recv_loop():
+        nonlocal stop
+        while not stop:
+            try:
+                data, addr = rx.recvfrom(65535)
+            except BlockingIOError:
+                time.sleep(0.01)
+                continue
+            except Exception as e:
+                if verbose:
+                    print(f"recv error: {e}")
+                break
+            received.append((time.time(), addr, data))
+            if verbose:
+                print(f"RX {addr}: {data[:64]!r}")
+
+    t = threading.Thread(target=recv_loop, daemon=True)
+    t.start()
+
+    try:
+        if role == "drone":
+            _sendto(tx, gcs_host, gcs_rx, "HELLO_FROM_DRONE")
+        # Wait briefly for trigger; then GCS replies
+        deadline = time.time() + 2.0
+        replied = False
+        while time.time() < deadline:
+            if any(b"HELLO_FROM_DRONE" in it[2] for it in received) and role == "gcs":
+                _sendto(tx, drone_host, drone_rx, "HELLO_FROM_GCS")
+                replied = True
+                break
+            if any(b"HELLO_FROM_GCS" in it[2] for it in received) and role == "drone":
+                replied = True
+                break
+            time.sleep(0.01)
+
+        if not replied:
+            print("Timeout waiting for trigger exchange")
+            return 2
+
+        # Now fire 5 numbered messages from both sides
+        for i in range(1, 6):
+            if role == "gcs":
+                _sendto(tx, drone_host, drone_rx, f"GCS_MSG_{i}")
+            else:
+                _sendto(tx, gcs_host, gcs_rx, f"DRONE_MSG_{i}")
+            time.sleep(delay)
+
+        # Allow receive
+        time.sleep(0.5)
+
+        # Basic assertions
+        rx_texts = [pkt[2].decode("utf-8", errors="ignore") for pkt in received]
+        if role == "gcs":
+            ok = any("HELLO_FROM_DRONE" in s for s in rx_texts) and sum(1 for s in rx_texts if s.startswith("DRONE_MSG_")) >= 1
+        else:
+            ok = any("HELLO_FROM_GCS" in s for s in rx_texts) and sum(1 for s in rx_texts if s.startswith("GCS_MSG_")) >= 1
+        print(f"Auto test {'PASSED' if ok else 'FAILED'}; received {len(received)} datagrams")
+        return 0 if ok else 1
+    finally:
+        stop = True
+        t.join(timeout=0.2)
+        try:
+            rx.close()
+            tx.close()
+        except Exception:
+            pass
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Test direct UDP plaintext communication between GCS and Drone.")
+    parser.add_argument("--role", choices=["gcs", "drone"], required=True, help="Specify if this is the 'gcs' or 'drone' side.")
+    parser.add_argument("--local_ip", default="0.0.0.0", help="Local IP to bind the receiver socket to.")
+    parser.add_argument("--remote_gcs_ip", help="IP of the GCS machine (required for drone role).")
+    parser.add_argument("--remote_drone_ip", help="IP of the Drone machine (required for gcs role).")
+    parser.add_argument("--auto", action="store_true", help="Run automatic cross-direction smoke test using CONFIG hosts/ports.")
+    args = parser.parse_args()
+
+    if args.auto:
+        rc = run_auto(args.role)
+        raise SystemExit(rc)
+
+    if args.role == "gcs":
+        if not args.remote_drone_ip:
+            parser.error("--remote_drone_ip is required for 'gcs' role.")
+        run_udp_test(
+            role="GCS",
+            local_ip=args.local_ip,
+            remote_ip=args.remote_drone_ip,
+            local_rx_port=CONFIG["GCS_PLAINTEXT_RX"],
+            remote_tx_port=CONFIG["DRONE_PLAINTEXT_RX"]
+        )
+    elif args.role == "drone":
+        if not args.remote_gcs_ip:
+            parser.error("--remote_gcs_ip is required for 'drone' role.")
+        run_udp_test(
+            role="DRONE",
+            local_ip=args.local_ip,
+            remote_ip=args.remote_gcs_ip,
+            local_rx_port=CONFIG["DRONE_PLAINTEXT_RX"],
+            remote_tx_port=CONFIG["GCS_PLAINTEXT_RX"]
+        )
+
+============================================================
+
+FILE 50/73: tools\encrypted_sniffer.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\encrypted_sniffer.py
 Size: 1,570 bytes
@@ -6693,7 +8187,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 44/56: tools\full_comm_check.py
+FILE 51/73: tools\full_comm_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\full_comm_check.py
 Size: 9,657 bytes
@@ -6962,7 +8456,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 45/56: tools\generate_identity.py
+FILE 52/73: tools\generate_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\generate_identity.py
 Size: 2,266 bytes
@@ -7035,7 +8529,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 46/56: tools\manual_4term\drone_autopilot_sim.py
+FILE 53/73: tools\manual_4term\drone_autopilot_sim.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_autopilot_sim.py
 Size: 3,933 bytes
@@ -7147,11 +8641,11 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 47/56: tools\manual_4term\drone_tty.py
+FILE 54/73: tools\manual_4term\drone_tty.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_tty.py
-Size: 3,712 bytes
-Modified: 2025-09-26 01:43:48
+Size: 4,213 bytes
+Modified: 2025-09-26 11:47:33
 ------------------------------------------------------------
 #!/usr/bin/env python3
 """Minimal interactive CLI for Drone plaintext tunnel."""
@@ -7163,6 +8657,7 @@ import os
 import socket
 import sys
 import threading
+import time
 from pathlib import Path
 
 # Ensure repository root is on sys.path when executed directly
@@ -7193,7 +8688,11 @@ def truncate_payload(payload: bytes) -> bytes:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Interactive Drone plaintext console")
-    parser.add_argument("--host", default=CONFIG.get("DRONE_HOST", "127.0.0.1"), help="Destination host for plaintext telemetry")
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Destination host for plaintext telemetry (defaults to local proxy)",
+    )
     parser.add_argument("--tx-port", type=int, default=CONFIG["DRONE_PLAINTEXT_TX"], help="Port to send telemetry lines")
     parser.add_argument("--rx-port", type=int, default=CONFIG["DRONE_PLAINTEXT_RX"], help="Port receiving command lines")
     parser.add_argument("--expect", type=int, default=0, help="Exit automatically after receiving N lines")
@@ -7209,10 +8708,22 @@ def main() -> None:
     recv_lock = threading.Lock()
 
     rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    rx_sock.bind(("0.0.0.0", args.rx_port))
+    try:
+        rx_sock.bind(("0.0.0.0", args.rx_port))
+    except OSError as exc:
+        sys.stderr.write(
+            f"Failed to bind local RX port {args.rx_port}. Is another console or app already using it? ({exc})\n"
+        )
+        rx_sock.close()
+        sys.exit(1)
     rx_sock.settimeout(0.1)
 
     tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    sys.stderr.write(
+        f"[Drone TTY] Sending to {args.host}:{args.tx_port} | Listening on 0.0.0.0:{args.rx_port}\n"
+    )
+    sys.stderr.flush()
 
     def debug(msg: str) -> None:
         if args.verbose:
@@ -7259,8 +8770,9 @@ def main() -> None:
             try:
                 tx_sock.sendto(encoded, (args.host, args.tx_port))
             except OSError as exc:
-                debug(f"sendto failed: {exc}")
-                break
+                debug(f"sendto failed: {exc}; retrying in 0.5s")
+                time.sleep(0.5)
+                continue
     except KeyboardInterrupt:
         pass
     finally:
@@ -7277,7 +8789,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 48/56: tools\manual_4term\encrypted_bridge_logger.py
+FILE 55/73: tools\manual_4term\encrypted_bridge_logger.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\encrypted_bridge_logger.py
 Size: 4,355 bytes
@@ -7405,7 +8917,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 49/56: tools\manual_4term\gcs_ground_station_sim.py
+FILE 56/73: tools\manual_4term\gcs_ground_station_sim.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_ground_station_sim.py
 Size: 3,927 bytes
@@ -7519,11 +9031,11 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 50/56: tools\manual_4term\gcs_tty.py
+FILE 57/73: tools\manual_4term\gcs_tty.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_tty.py
-Size: 3,706 bytes
-Modified: 2025-09-26 01:43:48
+Size: 4,207 bytes
+Modified: 2025-09-26 11:47:33
 ------------------------------------------------------------
 #!/usr/bin/env python3
 """Minimal interactive CLI for GCS plaintext tunnel."""
@@ -7535,6 +9047,7 @@ import os
 import socket
 import sys
 import threading
+import time
 from pathlib import Path
 
 # Ensure repository root is on sys.path when executed directly
@@ -7565,7 +9078,11 @@ def truncate_payload(payload: bytes) -> bytes:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Interactive GCS plaintext console")
-    parser.add_argument("--host", default=CONFIG.get("GCS_HOST", "127.0.0.1"), help="Destination host for plaintext commands")
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Destination host for plaintext commands (defaults to local proxy)",
+    )
     parser.add_argument("--tx-port", type=int, default=CONFIG["GCS_PLAINTEXT_TX"], help="Port to send plaintext commands")
     parser.add_argument("--rx-port", type=int, default=CONFIG["GCS_PLAINTEXT_RX"], help="Port receiving telemetry lines")
     parser.add_argument("--expect", type=int, default=0, help="Exit automatically after receiving N lines")
@@ -7581,10 +9098,22 @@ def main() -> None:
     recv_lock = threading.Lock()
 
     rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    rx_sock.bind(("0.0.0.0", args.rx_port))
+    try:
+        rx_sock.bind(("0.0.0.0", args.rx_port))
+    except OSError as exc:
+        sys.stderr.write(
+            f"Failed to bind local RX port {args.rx_port}. Is another console or app already using it? ({exc})\n"
+        )
+        rx_sock.close()
+        sys.exit(1)
     rx_sock.settimeout(0.1)
 
     tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    sys.stderr.write(
+        f"[GCS TTY] Sending to {args.host}:{args.tx_port} | Listening on 0.0.0.0:{args.rx_port}\n"
+    )
+    sys.stderr.flush()
 
     def debug(msg: str) -> None:
         if args.verbose:
@@ -7631,8 +9160,9 @@ def main() -> None:
             try:
                 tx_sock.sendto(encoded, (args.host, args.tx_port))
             except OSError as exc:
-                debug(f"sendto failed: {exc}")
-                break
+                debug(f"sendto failed: {exc}; retrying in 0.5s")
+                time.sleep(0.5)
+                continue
     except KeyboardInterrupt:
         pass
     finally:
@@ -7649,7 +9179,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 51/56: tools\manual_4term\launch_manual_test.py
+FILE 58/73: tools\manual_4term\launch_manual_test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\launch_manual_test.py
 Size: 9,824 bytes
@@ -7945,7 +9475,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 52/56: tools\markers.py
+FILE 59/73: tools\markers.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\markers.py
 Size: 3,323 bytes
@@ -8062,7 +9592,7 @@ class UdpMarker:
 
 ============================================================
 
-FILE 53/56: tools\merge_power_csv.py
+FILE 60/73: tools\merge_power_csv.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\merge_power_csv.py
 Size: 5,656 bytes
@@ -8220,7 +9750,314 @@ def parse_args() -> argparse.Namespace:
 
 ============================================================
 
-FILE 54/56: tools\packet_interceptor.py
+FILE 61/73: tools\netcapture\drone_capture.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\netcapture\drone_capture.py
+Size: 3,434 bytes
+Modified: 2025-09-26 09:46:35
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""Linux-oriented capture helper for the drone host (Raspberry Pi).
+
+Usage::
+
+    python tools/netcapture/drone_capture.py --iface wlan0 --duration 30 --out captures/drone
+
+The script shells out to ``tcpdump`` (ubiquitous on Linux) and applies
+BPF filters for the PQC handshake TCP port and encrypted UDP ports defined in
+``core.config.CONFIG``.  The resulting ``.pcap`` can be inspected with Wireshark
+on any workstation.
+"""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import Iterable
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+for parent in (_HERE.parent.parent.parent, _HERE.parent.parent):
+    try:
+        if (parent / "core").exists():
+            parent_str = str(parent)
+            if parent_str not in sys.path:
+                sys.path.insert(0, parent_str)
+            break
+    except Exception:
+        pass
+
+from core.config import CONFIG
+
+HANDSHAKE_PORT = int(CONFIG["TCP_HANDSHAKE_PORT"])
+ENCRYPTED_PORTS = [int(CONFIG["UDP_GCS_RX"]), int(CONFIG["UDP_DRONE_RX"])]
+
+
+class CaptureError(RuntimeError):
+    pass
+
+
+def ensure_linux() -> None:
+    if sys.platform.startswith("win"):
+        raise SystemExit("drone_capture.py is intended for Linux hosts only")
+
+
+def tcpdump_available() -> bool:
+    return shutil.which("tcpdump") is not None
+
+
+def build_filter() -> str:
+    ports = {HANDSHAKE_PORT, *ENCRYPTED_PORTS}
+    clauses = []
+    for port in sorted(ports):
+        clauses.append(f"port {port}")
+    return " or ".join(clauses)
+
+
+def run_tcpdump(iface: str, pcap_path: Path, duration: int) -> None:
+    if not tcpdump_available():
+        raise CaptureError("tcpdump not found in PATH; install it (sudo apt install tcpdump)")
+
+    bpf = build_filter()
+    cmd: Iterable[str] = (
+        "tcpdump",
+        "-i",
+        iface,
+        "-w",
+        str(pcap_path),
+        "-G",
+        str(duration),
+        "-W",
+        "1",
+        "-n",
+        bpf,
+    )
+    proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if proc.returncode != 0:
+        raise CaptureError(f"tcpdump failed ({proc.returncode})\n{proc.stdout}")
+
+
+def main() -> None:
+    ensure_linux()
+
+    ap = argparse.ArgumentParser(description="Capture handshake/encrypted traffic on the drone host")
+    ap.add_argument("--iface", required=True, help="Network interface to capture (e.g., wlan0, eth0)")
+    ap.add_argument("--duration", type=int, default=20, help="Capture duration in seconds (default: 20)")
+    ap.add_argument(
+        "--out",
+        type=Path,
+        default=Path("captures/drone.pcap"),
+        help="Output pcap path (default: captures/drone.pcap)",
+    )
+    args = ap.parse_args()
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        run_tcpdump(args.iface, args.out, args.duration)
+    except CaptureError as exc:
+        print(f"\n❌ Capture failed: {exc}\n", file=sys.stderr)
+        raise SystemExit(2) from exc
+
+    print("\n✅ Capture complete:")
+    print(f"  • {args.out}")
+    print("\nTip: start this capture, then launch the proxy. Stop the proxy when you have enough packets, or rerun the capture for another segment.")
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 62/73: tools\netcapture\gcs_capture.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\netcapture\gcs_capture.py
+Size: 5,576 bytes
+Modified: 2025-09-26 09:59:28
+------------------------------------------------------------
+#!/usr/bin/env python3
+r"""Windows-oriented capture helper for the GCS host.
+
+Usage examples
+--------------
+Collect a 30s capture of handshake + encrypted ports into ``captures\gcs``::
+
+    python tools/netcapture/gcs_capture.py --duration 30 --out captures/gcs
+
+The script prefers ``pktmon`` (ships with Windows 10 2004+) and falls back to
+``netsh trace``.  It tries to add filters for the PQC handshake and encrypted
+UDP ports defined in ``core.config.CONFIG`` so the traces stay focused.
+
+Outputs
+-------
+* ``<out>.etl``        Raw ETW capture (always produced)
+* ``<out>.pcapng``     Packet capture (when ``pktmon`` is available)
+* ``<out>.log``        Text summary (when ``pktmon`` is available)
+
+Prerequisites
+-------------
+* Run from an elevated PowerShell / Command Prompt (admin rights).
+* ``pktmon`` or ``netsh`` must be available in ``PATH`` (Windows built-ins).
+"""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+from typing import Iterable
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+for parent in (_HERE.parent.parent.parent, _HERE.parent.parent):
+    try:
+        if (parent / "core").exists():
+            parent_str = str(parent)
+            if parent_str not in sys.path:
+                sys.path.insert(0, parent_str)
+            break
+    except Exception:
+        pass
+
+from core.config import CONFIG
+
+HANDSHAKE_PORT = int(CONFIG["TCP_HANDSHAKE_PORT"])
+ENCRYPTED_PORTS = [int(CONFIG["UDP_GCS_RX"]), int(CONFIG["UDP_DRONE_RX"])]
+
+
+class CaptureError(RuntimeError):
+    pass
+
+
+def run(cmd: Iterable[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
+    proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if check and proc.returncode != 0:
+        raise CaptureError(f"Command failed ({proc.returncode}): {' '.join(cmd)}\n{proc.stdout}")
+    return proc
+
+
+def ensure_windows() -> None:
+    if sys.platform != "win32":
+        raise SystemExit("gcs_capture.py is intended for Windows hosts only")
+
+
+def pktmon_available() -> bool:
+    return shutil.which("pktmon") is not None
+
+
+def netsh_available() -> bool:
+    return shutil.which("netsh") is not None
+
+
+def build_default_output(out_base: Path) -> tuple[Path, Path, Path]:
+    etl = out_base.with_suffix(".etl")
+    pcap = out_base.with_suffix(".pcapng")
+    log = out_base.with_suffix(".log")
+    return etl, pcap, log
+
+
+def run_pktmon(out_base: Path, duration: int) -> list[Path]:
+    etl, pcap, log = build_default_output(out_base)
+
+    # Reset previous state to keep output predictable
+    run(["pktmon", "stop"], check=False)
+    run(["pktmon", "reset"], check=False)
+
+    # Apply lightweight port filters so we only capture the PQC traffic
+    filter_ports = sorted({HANDSHAKE_PORT, *ENCRYPTED_PORTS})
+    for port in filter_ports:
+        run(["pktmon", "filter", "add", "--port", str(port)])
+
+    run(["pktmon", "start", "--etw", "--capture"])
+    time.sleep(duration)
+    run(["pktmon", "stop"])
+
+    temp_etl = Path("PktMon.etl")
+    if temp_etl.exists():
+        temp_etl.replace(etl)
+    else:
+        raise CaptureError("pktmon did not produce PktMon.etl")
+
+    run(["pktmon", "format", str(etl), "-o", str(pcap)])
+    run(["pktmon", "format", str(etl), "-o", str(log), "--text"])
+
+    run(["pktmon", "reset"], check=False)
+    return [etl, pcap, log]
+
+
+def run_netsh(out_base: Path, duration: int) -> list[Path]:
+    if not netsh_available():
+        raise CaptureError("Neither pktmon nor netsh is available; cannot capture")
+
+    etl, _, _ = build_default_output(out_base)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir) / "trace"
+        run(
+            [
+                "netsh",
+                "trace",
+                "start",
+                "capture=yes",
+                "tracefile=" + str(tmp),
+                "report=no",
+                "maxsize=512",
+            ]
+        )
+        time.sleep(duration)
+        run(["netsh", "trace", "stop"])
+        raw = tmp.with_suffix(".etl")
+        if raw.exists():
+            raw.replace(etl)
+        else:
+            raise CaptureError("netsh trace did not produce an .etl file")
+    return [etl]
+
+
+def main() -> None:
+    ensure_windows()
+
+    ap = argparse.ArgumentParser(description="Capture handshake/encrypted traffic on the GCS host")
+    ap.add_argument("--duration", type=int, default=20, help="Capture duration in seconds (default: 20)")
+    ap.add_argument(
+        "--out",
+        type=Path,
+        default=Path("captures/gcs_capture"),
+        help="Output file base name (extensions added automatically)",
+    )
+    args = ap.parse_args()
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if pktmon_available():
+            produced = run_pktmon(args.out, args.duration)
+        else:
+            produced = run_netsh(args.out, args.duration)
+    except CaptureError as exc:
+        print(f"\n❌ Capture failed: {exc}\n", file=sys.stderr)
+        raise SystemExit(2) from exc
+
+    print("\n✅ Capture complete. Generated files:")
+    for path in produced:
+        print(f"  • {path}")
+    print(
+        "\nTip: start this capture, then launch the proxy. Stop the proxy and re-run the capture if you need multiple segments."
+    )
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 63/73: tools\packet_interceptor.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\packet_interceptor.py
 Size: 2,494 bytes
@@ -8295,7 +10132,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 55/56: tools\power_hooks.py
+FILE 64/73: tools\power_hooks.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\power_hooks.py
 Size: 208 bytes
@@ -8309,7 +10146,114 @@ class PowerHook:
 
 ============================================================
 
-FILE 56/56: tools\scaffold_repo.py
+FILE 65/73: tools\prepare_matrix_keys.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\prepare_matrix_keys.py
+Size: 3,043 bytes
+Modified: 2025-09-26 19:49:08
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""Generate per-suite signing identities for matrix tests.
+
+Creates `gcs_signing.key`/`gcs_signing.pub` pairs under
+`secrets/matrix/<safe_suite>/` so both the GCS and drone proxies can
+reuse deterministic file locations during automated matrix runs.
+"""
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+from core.suites import list_suites
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def safe_suite_name(name: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in name)
+
+
+def ensure_identity(suite: str, out_root: Path, *, force: bool = False) -> None:
+    safe = safe_suite_name(suite)
+    suite_dir = out_root / safe
+    secret_path = suite_dir / "gcs_signing.key"
+    public_path = suite_dir / "gcs_signing.pub"
+
+    if not force and secret_path.exists() and public_path.exists():
+        print(f"[keys] Reusing existing signing identity for {suite} ({suite_dir})")
+        return
+
+    print(f"[keys] Generating signing identity for {suite} -> {suite_dir}")
+    suite_dir.mkdir(parents=True, exist_ok=True)
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "core.run_proxy",
+        "init-identity",
+        "--suite",
+        suite,
+        "--output-dir",
+        str(suite_dir),
+    ]
+    result = subprocess.run(cmd, cwd=REPO_ROOT)
+    if result.returncode != 0:
+        raise SystemExit(f"Failed to generate signing identity for {suite}")
+
+    if not secret_path.exists() or not public_path.exists():
+        raise SystemExit(f"Generated signing identity for {suite} is missing files in {suite_dir}")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Prepare signing identities for matrix tests")
+    parser.add_argument(
+        "--suite",
+        action="append",
+        help="Suite ID to generate (may be provided multiple times). Defaults to all registered suites.",
+    )
+    parser.add_argument(
+        "--out-root",
+        default=str(REPO_ROOT / "secrets" / "matrix"),
+        help="Output directory for matrix key material (default: secrets/matrix)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Regenerate identities even if files already exist",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+
+    if args.suite:
+        suites = list(dict.fromkeys(args.suite))
+    else:
+        suites = list(list_suites().keys())
+
+    out_root = Path(args.out_root).expanduser()
+    if not out_root.is_absolute():
+        out_root = (REPO_ROOT / out_root).resolve()
+    else:
+        out_root.mkdir(parents=True, exist_ok=True)
+
+    out_root.mkdir(parents=True, exist_ok=True)
+
+    for suite in suites:
+        ensure_identity(suite, out_root, force=args.force)
+
+    print(f"[keys] Complete. Generated {len(suites)} suites in {out_root}")
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 66/73: tools\scaffold_repo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\scaffold_repo.py
 Size: 17,074 bytes
@@ -8666,6 +10610,696 @@ if __name__ == "__main__":
     ap.add_argument("--force", action="store_true", help="overwrite existing files")
     args = ap.parse_args()
     sys.exit(main(force=args.force) or 0)
+
+============================================================
+
+FILE 67/73: tools\traffic_common.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\traffic_common.py
+Size: 3,551 bytes
+Modified: 2025-09-26 16:29:20
+------------------------------------------------------------
+"""Shared helpers for traffic generators that exercise the plaintext sides of the PQC proxy."""
+from __future__ import annotations
+
+import json
+import os
+import selectors
+import socket
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Callable, Dict, Literal, Tuple
+
+from core.config import CONFIG
+
+Role = Literal["gcs", "drone"]
+
+
+def _timestamp() -> str:
+    """Return an ISO-8601 timestamp with UTC timezone."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def load_ports_and_hosts(role: Role) -> Dict[str, object]:
+    """Return resolved host/port information for the given role.
+
+    All values originate from ``core.config.CONFIG`` after environment overrides
+    have been applied. The returned dictionary contains:
+
+    ``local_listen_ip`` – interface to bind UDP receivers (default ``0.0.0.0``).
+    ``tx_addr`` – tuple of (host, port) for sending plaintext to the local proxy.
+    ``rx_bind`` – tuple for binding the UDP receive socket.
+    ``peer_role`` – the opposite role string.
+    """
+
+    role_upper = role.upper()
+    peer_role = "drone" if role == "gcs" else "gcs"
+
+    host_key_tx = f"{role_upper}_PLAINTEXT_HOST"
+    host_key_rx = host_key_tx
+    tx_port_key = f"{role_upper}_PLAINTEXT_TX"
+    rx_port_key = f"{role_upper}_PLAINTEXT_RX"
+
+    tx_host = CONFIG[host_key_tx]
+    rx_host = CONFIG[host_key_rx]
+    tx_port = CONFIG[tx_port_key]
+    rx_port = CONFIG[rx_port_key]
+
+    return {
+        "local_listen_ip": os.environ.get("PQC_TRAFFIC_LISTEN_IP", "0.0.0.0"),
+        "tx_addr": (tx_host, tx_port),
+        "rx_bind": (os.environ.get("PQC_TRAFFIC_BIND_HOST", rx_host), rx_port),
+        "peer_role": peer_role,
+        "role_host": tx_host,
+    }
+
+
+def open_udp_socket(rx_bind: Tuple[str, int]) -> socket.socket:
+    """Create a non-blocking UDP socket bound to ``rx_bind``."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    except OSError:
+        pass  # Not supported on all platforms (e.g., Windows prior to 10)
+    sock.bind(rx_bind)
+    sock.setblocking(False)
+    return sock
+
+
+def ndjson_logger(path: Path) -> Tuple[Callable[[Dict[str, object]], None], Callable[[], None]]:
+    """Return a simple NDJSON logger factory returning (log_fn, close_fn)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fp = path.open("a", encoding="utf-8")
+
+    def log(event: Dict[str, object]) -> None:
+        payload = {"ts": _timestamp(), **event}
+        fp.write(json.dumps(payload, separators=(",", ":")) + "\n")
+        fp.flush()
+
+    def close() -> None:
+        fp.flush()
+        os.fsync(fp.fileno())
+        fp.close()
+
+    return log, close
+
+
+class TokenBucket:
+    """Simple token bucket rate limiter."""
+
+    def __init__(self, rate_per_sec: float) -> None:
+        self.rate = max(rate_per_sec, 0.0)
+        self.tokens = 0.0
+        self.last = time.monotonic()
+
+    def consume(self, now: float) -> bool:
+        if self.rate <= 0:
+            return True
+        self.tokens = min(self.rate, self.tokens + (now - self.last) * self.rate)
+        self.last = now
+        if self.tokens >= 1.0:
+            self.tokens -= 1.0
+            return True
+        return False
+
+
+def configured_selector(sock: socket.socket) -> selectors.BaseSelector:
+    sel = selectors.DefaultSelector()
+    sel.register(sock, selectors.EVENT_READ)
+    return sel
+
+
+============================================================
+
+FILE 68/73: tools\traffic_drone.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\traffic_drone.py
+Size: 206 bytes
+Modified: 2025-09-26 16:29:20
+------------------------------------------------------------
+"""CLI entry point for the drone traffic generator."""
+from __future__ import annotations
+
+import sys
+
+from tools.traffic_runner import run
+
+
+if __name__ == "__main__":
+    sys.exit(run("drone"))
+
+============================================================
+
+FILE 69/73: tools\traffic_gcs.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\traffic_gcs.py
+Size: 202 bytes
+Modified: 2025-09-26 16:29:20
+------------------------------------------------------------
+"""CLI entry point for the GCS traffic generator."""
+from __future__ import annotations
+
+import sys
+
+from tools.traffic_runner import run
+
+
+if __name__ == "__main__":
+    sys.exit(run("gcs"))
+
+============================================================
+
+FILE 70/73: tools\traffic_runner.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\traffic_runner.py
+Size: 7,778 bytes
+Modified: 2025-09-26 16:29:20
+------------------------------------------------------------
+"""Shared runner for automated plaintext traffic generators."""
+from __future__ import annotations
+
+import argparse
+import json
+import socket
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, Optional
+
+from tools.traffic_common import (
+    TokenBucket,
+    configured_selector,
+    load_ports_and_hosts,
+    ndjson_logger,
+    open_udp_socket,
+)
+
+
+def iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _build_parser(role: str) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=f"traffic_{role}",
+        description="Generate UDP plaintext traffic for the PQC proxy.",
+    )
+    parser.add_argument("--count", type=int, default=200, help="Total messages to send (default: 200)")
+    parser.add_argument("--rate", type=float, default=50.0, help="Maximum send rate in packets/sec (default: 50)")
+    parser.add_argument(
+        "--duration",
+        type=float,
+        default=None,
+        help="Optional duration cap in seconds. When omitted, exits after sending all messages and an idle grace period.",
+    )
+    parser.add_argument("--out", type=Path, default=None, help="Path for NDJSON event log")
+    parser.add_argument("--summary", type=Path, default=None, help="Path for JSON summary output")
+    parser.add_argument("--peer-hint", type=str, default=None, help="Annotate payloads with expected peer role")
+    parser.add_argument(
+        "--payload-bytes",
+        type=int,
+        default=0,
+        help="Optional number of '.' bytes appended to each payload for throughput testing.",
+    )
+    return parser
+
+
+def _default_paths(role: str) -> Dict[str, Path]:
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
+    logs_dir = Path("logs")
+    return {
+        "out": logs_dir / f"{role}_traffic_{ts}.jsonl",
+        "summary": logs_dir / f"{role}_traffic_summary_{ts}.json",
+    }
+
+
+def run(role: str, argv: Optional[list[str]] = None) -> int:
+    parser = _build_parser(role)
+    args = parser.parse_args(argv)
+
+    defaults = _default_paths(role)
+    out_path: Path = args.out or defaults["out"]
+    summary_path: Path = args.summary or defaults["summary"]
+
+    settings = load_ports_and_hosts(role)  # type: ignore[arg-type]
+    rx_host, rx_port = settings["rx_bind"]  # type: ignore[index]
+    rx_sock = open_udp_socket((rx_host, rx_port))
+    tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    selector = configured_selector(rx_sock)
+    bucket = TokenBucket(args.rate)
+
+    log_event, close_log = ndjson_logger(out_path)
+
+    payload_pad = b"." * max(args.payload_bytes, 0)
+
+    start = time.monotonic()
+    deadline = start + args.duration if args.duration else None
+    last_activity = start
+    idle_grace = 1.0
+
+    counters: Dict[str, Optional[object]] = {
+        "role": role,
+        "peer_role": settings["peer_role"],
+        "sent_total": 0,
+        "recv_total": 0,
+        "first_send_ts": None,
+        "last_send_ts": None,
+        "first_recv_ts": None,
+        "last_recv_ts": None,
+        "out_of_order": 0,
+        "unique_senders": 0,
+        "rx_bytes_total": 0,
+        "tx_bytes_total": 0,
+    }
+
+    expected_seq: Dict[str, int] = {}
+    unique_senders = set()
+
+    seq = 0
+    send_done = False
+
+    tx_addr = settings["tx_addr"]  # type: ignore[assignment]
+
+    try:
+        while True:
+            now = time.monotonic()
+            if deadline and now >= deadline:
+                break
+
+            if not send_done:
+                if seq >= args.count:
+                    send_done = True
+                else:
+                    if bucket.consume(now):
+                        seq += 1
+                        payload = {
+                            "role": role,
+                            "seq": seq,
+                            "t_send_ns": time.monotonic_ns(),
+                        }
+                        if args.peer_hint:
+                            payload["peer_hint"] = args.peer_hint
+                        packet = json.dumps(payload, separators=(",", ":")).encode("utf-8") + payload_pad
+                        sent_bytes = tx_sock.sendto(packet, tx_addr)
+                        counters["sent_total"] = int(counters["sent_total"]) + 1  # type: ignore[arg-type]
+                        counters["tx_bytes_total"] = int(counters["tx_bytes_total"]) + sent_bytes  # type: ignore[arg-type]
+                        iso_ts = iso_now()
+                        counters["last_send_ts"] = iso_ts
+                        if counters["first_send_ts"] is None:
+                            counters["first_send_ts"] = iso_ts
+                        log_event({"event": "send", "seq": seq, "bytes": sent_bytes})
+                        last_activity = now
+
+            timeout = 0.05
+            if deadline:
+                timeout = max(0.0, min(timeout, deadline - now))
+
+            events = selector.select(timeout)
+            if events:
+                for _key, _mask in events:
+                    try:
+                        data, addr = rx_sock.recvfrom(4096)
+                    except BlockingIOError:
+                        continue
+                    now = time.monotonic()
+                    last_activity = now
+                    counters["recv_total"] = int(counters["recv_total"]) + 1  # type: ignore[arg-type]
+                    counters["rx_bytes_total"] = int(counters["rx_bytes_total"]) + len(data)  # type: ignore[arg-type]
+                    iso_ts = iso_now()
+                    counters["last_recv_ts"] = iso_ts
+                    if counters["first_recv_ts"] is None:
+                        counters["first_recv_ts"] = iso_ts
+
+                    sender_label = f"{addr[0]}:{addr[1]}"
+                    try:
+                        message = json.loads(data.decode("utf-8"))
+                        sender_label = message.get("role", sender_label)
+                        seq_val = message.get("seq")
+                        if isinstance(seq_val, int):
+                            expected = expected_seq.get(sender_label)
+                            if expected is None:
+                                expected_seq[sender_label] = seq_val + 1
+                            else:
+                                if seq_val != expected:
+                                    counters["out_of_order"] = int(counters["out_of_order"]) + abs(seq_val - expected)  # type: ignore[arg-type]
+                                expected_seq[sender_label] = seq_val + 1
+                    except (ValueError, UnicodeDecodeError):
+                        message = None
+
+                    unique_senders.add(sender_label)
+                    log_payload: Dict[str, object] = {
+                        "event": "recv",
+                        "bytes": len(data),
+                        "from": f"{addr[0]}:{addr[1]}",
+                        "sender": sender_label,
+                    }
+                    if isinstance(message, dict) and "seq" in message:
+                        log_payload["seq"] = message["seq"]
+                    log_event(log_payload)
+
+            if send_done and not events and not deadline:
+                if now - last_activity >= idle_grace:
+                    break
+    except KeyboardInterrupt:
+        pass
+    finally:
+        selector.close()
+        rx_sock.close()
+        tx_sock.close()
+        close_log()
+
+    counters["unique_senders"] = len(unique_senders)
+
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps(counters, indent=2), encoding="utf-8")
+    return 0
+
+============================================================
+
+FILE 71/73: tools\udp_dual_probe.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\udp_dual_probe.py
+Size: 5,048 bytes
+Modified: 2025-09-26 10:15:21
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""Bi-directional UDP probe to verify ports and paths end-to-end.
+
+Run this on both hosts (GCS and Drone) at the same time. It will:
+- Bind a local RX port and print every packet received (with source IP:port).
+- Periodically send numbered messages to the peer's RX port.
+- Log exactly which local ephemeral source port each message leaves from.
+
+Defaults are taken from core.config.CONFIG for the encrypted path (UDP_GCS_RX/UDP_DRONE_RX)
+so you can prove the tunnel ports themselves are reachable. You can target plaintext
+ports as well with --mode plaintext.
+
+Examples:
+  # GCS side (listens on UDP_GCS_RX, sends to DRONE_HOST:UDP_DRONE_RX)
+  python tools/udp_dual_probe.py --role gcs --mode encrypted
+
+  # Drone side (listens on UDP_DRONE_RX, sends to GCS_HOST:UDP_GCS_RX)
+  python tools/udp_dual_probe.py --role drone --mode encrypted
+
+Stop with Ctrl+C.
+"""
+
+from __future__ import annotations
+
+import argparse
+import socket
+import sys
+import threading
+import time
+from pathlib import Path
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+for parent in (_HERE.parent, _HERE.parent.parent):
+    try:
+        if (parent / "core").exists():
+            p = str(parent)
+            if p not in sys.path:
+                sys.path.insert(0, p)
+            break
+    except Exception:
+        pass
+
+from core.config import CONFIG
+
+
+def build_args() -> argparse.Namespace:
+    ap = argparse.ArgumentParser(description="Bi-directional UDP probe")
+    ap.add_argument("--role", choices=["gcs", "drone"], required=True)
+    ap.add_argument("--mode", choices=["encrypted", "plaintext"], default="encrypted")
+    ap.add_argument("--interval", type=float, default=1.0, help="Seconds between sends")
+    ap.add_argument("--count", type=int, default=10, help="Messages to send before exit (0 = infinite)")
+    return ap.parse_args()
+
+
+essential = {
+    "gcs": {
+        "encrypted_rx": int(CONFIG["UDP_GCS_RX"]),
+        "plaintext_tx": int(CONFIG["GCS_PLAINTEXT_TX"]),
+        "plaintext_rx": int(CONFIG["GCS_PLAINTEXT_RX"]),
+        "peer_host": CONFIG["DRONE_HOST"],
+        "peer_encrypted_rx": int(CONFIG["UDP_DRONE_RX"]),
+    },
+    "drone": {
+        "encrypted_rx": int(CONFIG["UDP_DRONE_RX"]),
+        "plaintext_tx": int(CONFIG["DRONE_PLAINTEXT_TX"]),
+        "plaintext_rx": int(CONFIG["DRONE_PLAINTEXT_RX"]),
+        "peer_host": CONFIG["GCS_HOST"],
+        "peer_encrypted_rx": int(CONFIG["UDP_GCS_RX"]),
+    },
+}
+
+
+def run_probe(role: str, mode: str, interval: float, count: int) -> None:
+    cfg = essential[role]
+
+    if mode == "encrypted":
+        local_rx_port = cfg["encrypted_rx"]
+        peer_host = cfg["peer_host"]
+        peer_rx_port = cfg["peer_encrypted_rx"]
+        label = "ENC"
+    else:
+        # plaintext runs on loopback only for each host
+        local_rx_port = cfg["plaintext_rx"]
+        peer_host = "127.0.0.1"
+        peer_rx_port = cfg["plaintext_tx"]
+        label = "PTX"
+
+    print(f"[{role.upper()}][{label}] RX bind on 0.0.0.0:{local_rx_port}")
+    print(f"[{role.upper()}][{label}] Will send to {peer_host}:{peer_rx_port}")
+
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx.bind(("0.0.0.0", local_rx_port))
+    rx.settimeout(0.2)
+
+    tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # For visibility, bind tx to an ephemeral port so we know the source
+    tx.bind(("0.0.0.0", 0))
+
+    stop = threading.Event()
+
+    def receiver() -> None:
+        while not stop.is_set():
+            try:
+                data, addr = rx.recvfrom(2048)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            ts = time.strftime("%H:%M:%S")
+            print(f"[{role.upper()}][{label}][{ts}] RX {len(data)}B from {addr[0]}:{addr[1]} :: {data[:64]!r}")
+
+    t = threading.Thread(target=receiver, daemon=True)
+    t.start()
+
+    try:
+        i = 0
+        while count == 0 or i < count:
+            i += 1
+            ts = time.strftime("%H:%M:%S")
+            try:
+                # Print the local source address/port before sending
+                src_host, src_port = tx.getsockname()
+                payload = f"{label}_MSG_{i}@{ts}".encode()
+                tx.sendto(payload, (peer_host, peer_rx_port))
+                print(f"[{role.upper()}][{label}][{ts}] TX {len(payload)}B from {src_host}:{src_port} -> {peer_host}:{peer_rx_port}")
+            except Exception as exc:
+                print(f"[{role.upper()}][{label}] TX error: {exc}")
+                break
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        stop.set()
+        t.join(timeout=0.3)
+        try:
+            rx.close()
+            tx.close()
+        except OSError:
+            pass
+
+
+if __name__ == "__main__":
+    args = build_args()
+    run_probe(args.role, args.mode, args.interval, args.count)
+
+============================================================
+
+FILE 72/73: tools\udp_echo_server.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\udp_echo_server.py
+Size: 2,488 bytes
+Modified: 2025-09-26 09:59:28
+------------------------------------------------------------
+#!/usr/bin/env python3
+r"""Simple UDP echo server to test network connectivity.
+
+This replaces the complex pktmon capture with a basic UDP listener that
+will tell us definitively if packets are reaching the Windows machine.
+"""
+
+from __future__ import annotations
+
+import argparse
+import socket
+import sys
+import time
+from pathlib import Path
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+for parent in (_HERE.parent.parent.parent, _HERE.parent.parent):
+    try:
+        if (parent / "core").exists():
+            parent_str = str(parent)
+            if parent_str not in sys.path:
+                sys.path.insert(0, parent_str)
+            break
+    except Exception:
+        pass
+
+from core.config import CONFIG
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="UDP Echo Server for Firewall Testing")
+    parser.add_argument("--port", type=int, default=CONFIG["UDP_GCS_RX"], help="UDP port to listen on")
+    parser.add_argument("--host", default="0.0.0.0", help="Host IP to bind to")
+    parser.add_argument("--timeout", type=int, default=30, help="Timeout in seconds")
+    args = parser.parse_args()
+
+    print(f"--- UDP Echo Server ---")
+    print(f"🚀 Listening for UDP packets on {args.host}:{args.port} for {args.timeout} seconds...")
+    print(f"Send a packet from the Pi with: echo 'TEST' | nc -u -w1 <GCS_IP> {args.port}")
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.bind((args.host, args.port))
+            s.settimeout(args.timeout)
+            
+            while True:
+                try:
+                    data, addr = s.recvfrom(2048)
+                    timestamp = time.strftime("%H:%M:%S")
+                    print(f"\n✅ [{timestamp}] Received '{data.decode()}' from {addr[0]}:{addr[1]}")
+                    
+                    # Echo back
+                    s.sendto(b"ECHO:" + data, addr)
+                    print(f"🚀 Echoed back to sender")
+                except socket.timeout:
+                    print("\n⏰ Timeout reached. No packets received.")
+                    break
+                except KeyboardInterrupt:
+                    print("\n🛑 Stopped by user.")
+                    break
+
+        except Exception as e:
+            print(f"\n❌ FAILED: {e}")
+            return 1
+    
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+============================================================
+
+FILE 73/73: tools\udp_forward_log.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\udp_forward_log.py
+Size: 2,796 bytes
+Modified: 2025-09-26 11:47:33
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""UDP forwarder that logs PQC header metadata while keeping traffic flowing."""
+
+from __future__ import annotations
+
+import argparse
+import socket
+import struct
+import time
+
+HEADER_STRUCT = "!BBBBB8sQB"
+HEADER_LEN = struct.calcsize(HEADER_STRUCT)
+
+
+def parse_header(data: bytes):
+    if len(data) < HEADER_LEN:
+        return None
+    try:
+        version, kem_id, kem_param, sig_id, sig_param, session_id, seq, epoch = struct.unpack(
+            HEADER_STRUCT, data[:HEADER_LEN]
+        )
+        return {
+            "version": version,
+            "kem": (kem_id, kem_param),
+            "sig": (sig_id, sig_param),
+            "session_id": session_id.hex(),
+            "seq": seq,
+            "epoch": epoch,
+        }
+    except Exception:
+        return None
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="UDP forwarder with PQC header logging")
+    parser.add_argument("--listen", required=True, help="host:port to bind (e.g., 0.0.0.0:46012)")
+    parser.add_argument("--forward", required=True, help="host:port to forward to (e.g., 127.0.0.1:56012)")
+    parser.add_argument("--label", default="tap", help="Log label for output prefix")
+    return parser
+
+
+def parse_host_port(value: str) -> tuple[str, int]:
+    host, port_str = value.rsplit(":", 1)
+    return host, int(port_str)
+
+
+def main() -> None:
+    args = build_parser().parse_args()
+    listen_host, listen_port = parse_host_port(args.listen)
+    forward_host, forward_port = parse_host_port(args.forward)
+
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    try:
+        rx.bind((listen_host, listen_port))
+        print(f"[{args.label}] listening on {listen_host}:{listen_port} -> forwarding to {forward_host}:{forward_port}")
+
+        while True:
+            data, addr = rx.recvfrom(65535)
+            meta = parse_header(data)
+            ts = time.strftime("%H:%M:%S")
+            if meta:
+                print(
+                    f"[{ts}][{args.label}] {len(data)}B from {addr[0]}:{addr[1]} "
+                    f"hdr={{'version': {meta['version']}, 'kem': {meta['kem']}, 'sig': {meta['sig']}, "
+                    f"'session_id': '{meta['session_id']}', 'seq': {meta['seq']}, 'epoch': {meta['epoch']}}}"
+                )
+            else:
+                print(
+                    f"[{ts}][{args.label}] {len(data)}B from {addr[0]}:{addr[1]} hdr=? first16={data[:16].hex()}"
+                )
+            tx.sendto(data, (forward_host, forward_port))
+    except KeyboardInterrupt:
+        pass
+    finally:
+        rx.close()
+        tx.close()
+
+
+if __name__ == "__main__":
+    main()
 
 ============================================================
 

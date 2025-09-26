@@ -1,3 +1,0 @@
-﻿"suite","host","ptx_out","ptx_in","enc_out","enc_in","drops","drop_auth","drop_header","drop_replay","traffic_sent_total","traffic_recv_total"
-"cs-mlkem512-aesgcm-mldsa65","gcs","0","200","200","155","155","0","155","0","200","0"
-"cs-mlkem512-aesgcm-mldsa65","gcs","0","0","0","0","0","0","0","0","200","0"

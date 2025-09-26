@@ -11,6 +11,7 @@ Options:
   --pkts COUNT           Total packets to send per run (default: 200)
   --rate PPS             Packet rate for traffic generator (default: 50)
   --outdir PATH          Output directory for logs & summaries (default: ./logs)
+  --secrets-dir PATH     Directory containing suite signing material (default: ./secrets)
   --suites ID1,ID2       Comma-separated suite list; can be repeated
   -f SEC                 Alias for --duration
   -s SEC                 Alias for --slow-duration
@@ -25,6 +26,9 @@ SLOW_SECS=90
 PKTS=200
 RATE=50
 OUTDIR="$(pwd)/logs"
+SECRETS_DIR=""
+HANDSHAKE_TIMEOUT=30
+HANDSHAKE_PATTERN="PQC handshake completed successfully"
 declare -a SUITES=()
 AUTO_SUITES=0
 
@@ -43,6 +47,8 @@ while [ $# -gt 0 ]; do
     --pkts) PKTS="$2"; shift 2 ;;
     --rate) RATE="$2"; shift 2 ;;
     --outdir) OUTDIR="$2"; shift 2 ;;
+    --secrets-dir) SECRETS_DIR="$2"; shift 2 ;;
+    --handshake-timeout) HANDSHAKE_TIMEOUT="$2"; shift 2 ;;
     --suites)
       IFS=',' read -r -a tmp <<<"$2"
       SUITES+=("${tmp[@]}")
@@ -109,10 +115,31 @@ print(os.path.abspath(sys.argv[1]))
 PY
 )
 
+if [ -z "$SECRETS_DIR" ]; then
+  SECRETS_DIR="$REPO_ROOT/secrets"
+fi
+
+SECRETS_DIR=$("$PYTHON_BIN" - <<'PY' "$SECRETS_DIR"
+import os
+import sys
+print(os.path.abspath(sys.argv[1]))
+PY
+)
+
+MATRIX_SECRETS="$SECRETS_DIR/matrix"
+
+if [ ! -d "$MATRIX_SECRETS" ]; then
+  echo "ERROR: Matrix secrets directory $MATRIX_SECRETS not found. Ensure suite key material is synced from the GCS host." >&2
+  exit 1
+fi
+
 LOGS_ROOT="$OUTDIR"
 SUMMARY_CSV="$LOGS_ROOT/matrix_drone_summary.csv"
 
 mkdir -p "$LOGS_ROOT"
+
+HANDSHAKE_DIR="$LOGS_ROOT/handshake"
+mkdir -p "$HANDSHAKE_DIR"
 
 if [ $AUTO_SUITES -eq 1 ]; then
   IFS=$'\n' SUITES=($(printf '%s\n' "${SUITES[@]}" | sort))
@@ -155,6 +182,32 @@ row = {
     "traffic_sent_total": traffic["sent_total"],
     "traffic_recv_total": traffic["recv_total"],
 }
+
+wait_for_handshake() {
+  local label="$1" pid="$2" log_path="$3"
+  local deadline=$(( $(date +%s) + HANDSHAKE_TIMEOUT ))
+  local matched=0
+  while [ $(date +%s) -lt $deadline ]; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      echo "WARNING: Proxy for $label exited before handshake completed" >&2
+      return 1
+    fi
+
+    if [ -f "$log_path" ] && grep -qF "$HANDSHAKE_PATTERN" "$log_path"; then
+      matched=1
+      break
+    fi
+
+    sleep 0.2
+  done
+
+  if [ $matched -ne 1 ]; then
+    echo "WARNING: Timed out waiting for handshake for $label (timeout ${HANDSHAKE_TIMEOUT}s)" >&2
+    return 1
+  fi
+
+  return 0
+}
 write_header = not os.path.exists(csv_path)
 with open(csv_path, "a", encoding="utf-8", newline="") as fp:
     writer = csv.DictWriter(fp, fieldnames=row.keys())
@@ -173,18 +226,33 @@ for suite in "${SUITES[@]}"; do
   fi
 
   safe="$(safe_name "$suite")"
+  key_dir="$MATRIX_SECRETS/$safe"
+  pub_path="$key_dir/gcs_signing.pub"
+  if [ ! -f "$pub_path" ]; then
+    echo "ERROR: Missing GCS public key for suite $suite ($pub_path)" >&2
+    exit 1
+  fi
+
   proxy_json="$LOGS_ROOT/drone_${safe}.json"
   traffic_dir="$LOGS_ROOT/traffic/$safe"
   mkdir -p "$traffic_dir"
   traffic_out="$traffic_dir/drone_events.jsonl"
   traffic_summary="$traffic_dir/drone_summary.json"
+  proxy_log="$HANDSHAKE_DIR/drone_${safe}_handshake.log"
+  : >"$proxy_log"
 
   printf '[DRONE][%d/%d] Starting proxy for suite %s (%s s)\n' "$suite_index" "$total_suites" "$suite" "$duration"
   suite_start=$(date +%s)
-  $PYTHON_BIN -m core.run_proxy drone --suite "$suite" --stop-seconds "$duration" --json-out "$proxy_json" --quiet &
+  $PYTHON_BIN -m core.run_proxy drone --suite "$suite" --peer-pubkey-file "$pub_path" --stop-seconds "$duration" --json-out "$proxy_json" --quiet >"$proxy_log" 2>&1 &
   proxy_pid=$!
 
-  sleep 3
+  printf '[DRONE][%d/%d] Waiting for handshake signal\n' "$suite_index" "$total_suites"
+  if ! wait_for_handshake "$suite" "$proxy_pid" "$proxy_log"; then
+    wait "$proxy_pid" 2>/dev/null || true
+    echo "WARNING: Skipping traffic for suite $suite due to handshake failure" >&2
+    continue
+  fi
+  printf '[DRONE][%d/%d] Handshake confirmed\n' "$suite_index" "$total_suites"
 
   run_duration=$((duration - 5))
   if [ "$run_duration" -le 0 ]; then
