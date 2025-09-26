@@ -107,4 +107,4 @@ def configured_selector(sock: socket.socket) -> selectors.BaseSelector:
     sel = selectors.DefaultSelector()
     sel.register(sock, selectors.EVENT_READ)
     return sel
-*** End of File***
+

@@ -1,25 +1,96 @@
 #!/usr/bin/env bash
 set -u
 
+usage() {
+  cat <<'EOF' >&2
+Usage: ./matrix_runner_drone.sh [options] [suite1 suite2 ...]
+
+Options:
+  --duration SEC         Duration for standard suites (default: 25)
+  --slow-duration SEC    Duration for SPHINCS+ suites (default: 90)
+  --pkts COUNT           Total packets to send per run (default: 200)
+  --rate PPS             Packet rate for traffic generator (default: 50)
+  --outdir PATH          Output directory for logs & summaries (default: ./logs)
+  --suites ID1,ID2       Comma-separated suite list; can be repeated
+  -f SEC                 Alias for --duration
+  -s SEC                 Alias for --slow-duration
+  -h, --help             Show this help message
+
+If no suites are provided, the canonical set from core.test_suites_config.ALL_SUITES is used.
+EOF
+}
+
 FAST_SECS=25
 SLOW_SECS=90
-
-while getopts "f:s:" opt; do
-  case "$opt" in
-    f) FAST_SECS=$OPTARG ;;
-    s) SLOW_SECS=$OPTARG ;;
-    *) echo "Usage: $0 [-f fast_seconds] [-s slow_seconds] suite1 [suite2 ...]" >&2; exit 1 ;;
-  esac
-done
-shift $((OPTIND-1))
-
-if [ $# -lt 1 ]; then
-  echo "Usage: $0 [-f fast_seconds] [-s slow_seconds] suite1 [suite2 ...]" >&2
-  exit 1
-fi
+PKTS=200
+RATE=50
+OUTDIR="$(pwd)/logs"
+declare -a SUITES=()
 
 PYTHON_BIN=${PYTHON_BIN:-python3}
-LOGS_ROOT="$(pwd)/logs"
+
+ORIG_DIR=$(pwd)
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+trap 'cd "$ORIG_DIR"' EXIT
+cd "$REPO_ROOT"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --duration) FAST_SECS="$2"; shift 2 ;;
+    --slow-duration) SLOW_SECS="$2"; shift 2 ;;
+    --pkts) PKTS="$2"; shift 2 ;;
+    --rate) RATE="$2"; shift 2 ;;
+    --outdir) OUTDIR="$2"; shift 2 ;;
+    --suites)
+      IFS=',' read -r -a tmp <<<"$2"
+      SUITES+=("${tmp[@]}")
+      shift 2
+      ;;
+    -f) FAST_SECS="$2"; shift 2 ;;
+    -s) SLOW_SECS="$2"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    --)
+      shift
+      break
+      ;;
+    --*)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+    *)
+      SUITES+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [ $# -gt 0 ]; then
+  SUITES+=("$@")
+fi
+
+if [ ${#SUITES[@]} -eq 0 ]; then
+  mapfile -t SUITES < <("$PYTHON_BIN" - <<'PY'
+from core import test_suites_config as t
+for suite in t.ALL_SUITES:
+    print(suite)
+PY
+)
+fi
+
+if [ -z "$OUTDIR" ]; then
+  OUTDIR="$(pwd)/logs"
+fi
+
+OUTDIR=$("$PYTHON_BIN" - <<'PY' "$OUTDIR"
+import os
+import sys
+print(os.path.abspath(sys.argv[1]))
+PY
+)
+
+LOGS_ROOT="$OUTDIR"
 SUMMARY_CSV="$LOGS_ROOT/matrix_drone_summary.csv"
 
 mkdir -p "$LOGS_ROOT"
@@ -64,7 +135,7 @@ with open(csv_path, "a", encoding="utf-8", newline="") as fp:
 PY
 }
 
-for suite in "$@"; do
+for suite in "${SUITES[@]}"; do
   if [[ "$suite" == *sphincs* ]]; then
     duration="$SLOW_SECS"
   else
@@ -73,7 +144,7 @@ for suite in "$@"; do
 
   safe="$(safe_name "$suite")"
   proxy_json="$LOGS_ROOT/drone_${safe}.json"
-  traffic_dir="$LOGS_ROOT/traffic/$suite"
+  traffic_dir="$LOGS_ROOT/traffic/$safe"
   mkdir -p "$traffic_dir"
   traffic_out="$traffic_dir/drone_events.jsonl"
   traffic_summary="$traffic_dir/drone_summary.json"
@@ -90,7 +161,7 @@ for suite in "$@"; do
   fi
 
   echo "[DRONE] Running traffic generator"
-  if ! $PYTHON_BIN tools/traffic_drone.py --count 200 --rate 50 --duration "$run_duration" --out "$traffic_out" --summary "$traffic_summary"; then
+  if ! $PYTHON_BIN -m tools.traffic_drone --count "$PKTS" --rate "$RATE" --duration "$run_duration" --out "$traffic_out" --summary "$traffic_summary"; then
     echo "WARNING: traffic_drone.py exited with code $?" >&2
   fi
 

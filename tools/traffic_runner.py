@@ -197,4 +197,3 @@ def run(role: str, argv: Optional[list[str]] = None) -> int:
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(json.dumps(counters, indent=2), encoding="utf-8")
     return 0
-*** End of File***

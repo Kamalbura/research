@@ -8,4 +8,3 @@ from tools.traffic_runner import run
 
 if __name__ == "__main__":
     sys.exit(run("gcs"))
-*** End of File***
