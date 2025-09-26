@@ -673,9 +673,39 @@ def run_proxy(
                                 counters.drops += 1
                                 counters.drop_auth += 1
                                 continue
-                            except Exception:
+                            except NotImplementedError as exc:
+                                counters.drops += 1
+                                reason, _seq = _parse_header_fields(
+                                    CONFIG["WIRE_VERSION"], current_receiver.ids, current_receiver.session_id, wire
+                                )
+                                if reason in (
+                                    "version_mismatch",
+                                    "crypto_id_mismatch",
+                                    "header_too_short",
+                                    "header_unpack_error",
+                                ):
+                                    counters.drop_header += 1
+                                elif reason == "session_mismatch":
+                                    counters.drop_session_epoch += 1
+                                else:
+                                    counters.drop_auth += 1
+                                logger.warning(
+                                    "Decrypt failed (classified)",
+                                    extra={
+                                        "role": role,
+                                        "reason": reason,
+                                        "wire_len": len(wire),
+                                        "error": str(exc),
+                                    },
+                                )
+                                continue
+                            except Exception as exc:
                                 counters.drops += 1
                                 counters.drop_other += 1
+                                logger.warning(
+                                    "Decrypt failed (other)",
+                                    extra={"role": role, "error": str(exc), "wire_len": len(wire)},
+                                )
                                 continue
 
                             try:
