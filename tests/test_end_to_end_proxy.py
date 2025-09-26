@@ -18,13 +18,14 @@ from core.suites import get_suite
 from core.async_proxy import run_proxy
 
 
-def _alloc_port(sock_type=socket.SOCK_STREAM) -> int:
+DEFAULT_HOST = CONFIG["GCS_PLAINTEXT_HOST"]
+
+
+def _alloc_port(sock_type=socket.SOCK_STREAM, host: str = DEFAULT_HOST) -> int:
     """Reserve an available loopback port for tests."""
     with socket.socket(socket.AF_INET, sock_type) as sock:
-        if sock_type == socket.SOCK_DGRAM:
-            sock.bind(("127.0.0.1", 0))
-        else:
-            sock.bind(("127.0.0.1", 0))
+        sock.bind((host, 0))
+        if sock_type != socket.SOCK_DGRAM:
             sock.listen(1)
         return sock.getsockname()[1]
 
@@ -70,6 +71,8 @@ class TestEndToEndProxy:
             "GCS_PLAINTEXT_RX": 15553,    # Apps receive from GCS proxy here
             "DRONE_HOST": "127.0.0.1",    # Force loopback for encrypted peer
             "GCS_HOST": "127.0.0.1",      # Force loopback for handshake/peer
+            "DRONE_PLAINTEXT_HOST": "127.0.0.1",
+            "GCS_PLAINTEXT_HOST": "127.0.0.1",
         })
         
         # Storage for proxy results
@@ -119,7 +122,7 @@ class TestEndToEndProxy:
             nonlocal received_at_gcs
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as receiver:
-                    receiver.bind(('127.0.0.1', test_config["GCS_PLAINTEXT_RX"]))
+                    receiver.bind((test_config["GCS_PLAINTEXT_HOST"], test_config["GCS_PLAINTEXT_RX"]))
                     receiver.settimeout(2.5)  # Increased timeout
                     data, addr = receiver.recvfrom(1024)
                     received_at_gcs = data
@@ -130,7 +133,7 @@ class TestEndToEndProxy:
             nonlocal received_at_drone
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as receiver:
-                    receiver.bind(('127.0.0.1', test_config["DRONE_PLAINTEXT_RX"]))
+                    receiver.bind((test_config["DRONE_PLAINTEXT_HOST"], test_config["DRONE_PLAINTEXT_RX"]))
                     receiver.settimeout(2.5)  # Increased timeout
                     data, addr = receiver.recvfrom(1024)
                     received_at_drone = data
@@ -160,7 +163,7 @@ class TestEndToEndProxy:
         # Test drone -> gcs forwarding
         drone_to_gcs_data = b"Hello from drone"
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sender:
-            sender.sendto(drone_to_gcs_data, ('127.0.0.1', test_config["DRONE_PLAINTEXT_TX"]))
+            sender.sendto(drone_to_gcs_data, (test_config["DRONE_PLAINTEXT_HOST"], test_config["DRONE_PLAINTEXT_TX"]))
         
         # Small delay
         time.sleep(0.1)
@@ -168,7 +171,7 @@ class TestEndToEndProxy:
         # Test gcs -> drone forwarding  
         gcs_to_drone_data = b"Hello from GCS"
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sender:
-            sender.sendto(gcs_to_drone_data, ('127.0.0.1', test_config["GCS_PLAINTEXT_TX"]))
+            sender.sendto(gcs_to_drone_data, (test_config["GCS_PLAINTEXT_HOST"], test_config["GCS_PLAINTEXT_TX"]))
         
         # Wait for everything to complete
         gcs_recv_thread.join(timeout=2.0)

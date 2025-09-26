@@ -87,11 +87,12 @@ Values are defined in `core/config.py` and validated at startup:
 | GCS plaintext TX/RX    | 47001 / 47002|
 | Drone plaintext TX/RX  | 47003 / 47004|
 
-Default host bindings (`DRONE_HOST`, `GCS_HOST`) target the LAN IPs defined in `core/config.py` (for example `192.168.0.102` and `192.168.0.103`). Override any value by setting an environment variable before launching a proxy. Examples:
+Default host bindings (`DRONE_HOST`, `GCS_HOST`) target the LAN IPs defined in `core/config.py` (for example `192.168.0.102` and `192.168.0.103`). The new plaintext peers follow the same pattern via `DRONE_PLAINTEXT_HOST` / `GCS_PLAINTEXT_HOST`. Override any value by setting an environment variable before launching a proxy. Examples:
 
 ```bash
 export UDP_DRONE_RX=56012
 export DRONE_HOST=127.0.0.1
+export GCS_PLAINTEXT_HOST=127.0.0.1
 ```
 
 ### Quick loopback smoke test (single host)
@@ -141,6 +142,34 @@ Keep both TTYs and proxies running simultaneously. Type in the GCS console and v
 
 > **Tip:** Stop proxies with `Ctrl+C` after traffic has flowed to ensure `gcs_debug.json` / `drone_debug.json` capture non-zero counters.
 
+### Automated traffic apps (headless loopback or LAN)
+
+For unattended, timestamped load on the plaintext sides, launch the dedicated traffic generators. They honour `core.config.CONFIG` (including environment overrides) and emit NDJSON event streams plus JSON summaries.
+
+```powershell
+# GCS side (Windows PowerShell example)
+conda activate gcs-env
+python tools/traffic_gcs.py --count 300 --rate 40 --duration 30 `
+  --out logs/gcs_traffic.jsonl --summary logs/gcs_summary.json
+
+# Drone side (Raspberry Pi example)
+source ~/cenv/bin/activate
+python tools/traffic_drone.py --count 300 --rate 40 --duration 30 \
+  --out logs/drone_traffic.jsonl --summary logs/drone_summary.json
+```
+
+Each app logs `send`/`recv` events with ISO timestamps, byte counts, and sequence numbers, then writes a summary containing:
+
+```
+sent_total, recv_total,
+first_send_ts, last_send_ts,
+first_recv_ts, last_recv_ts,
+out_of_order, unique_senders,
+rx_bytes_total, tx_bytes_total
+```
+
+Use `--payload-bytes` to pad messages for throughput tests and `--peer-hint` to annotate payloads for easier correlation.
+
 ---
 
 ## Operational tooling
@@ -152,6 +181,8 @@ Keep both TTYs and proxies running simultaneously. Type in the GCS console and v
 | `tools/udp_forward_log.py` | Inline UDP forwarder that logs PQC header metadata (`session_id`, `seq`, `epoch`) while forwarding packets—ideal for LAN taps. |
 | `tools/netcapture/gcs_capture.py` / `drone_capture.py` | Windows `pktmon`/Linux `tcpdump` wrappers for handshake and encrypted traffic capture. |
 | `tools/udp_dual_probe.py` | Diagnostics probe that sends numbered messages in both directions to confirm port wiring before proxies are launched. |
+| `tools/traffic_gcs.py` / `traffic_drone.py` | Automated plaintext traffic apps that send/receive telemetry bursts, log NDJSON events, and emit counter summaries (see below). |
+| `tools/check_no_hardcoded_ips.py` | Static safety check ensuring code paths use `core.config.CONFIG` for IPs/ports. |
 
 Operational notes:
 
@@ -160,6 +191,33 @@ Operational notes:
 - Replay drops are classified: `drop_header`, `drop_auth`, `drop_session_epoch`, `drop_replay`, `drop_other`.
 
 ---
+
+## Suite matrix automation
+
+Use the matrix runners to iterate suites, collect proxy counters, and capture traffic statistics. Run the PowerShell script on the GCS host and the Bash script on the drone host with the **same ordered suite list**.
+
+```powershell
+# Windows (GCS)
+Set-ExecutionPolicy -Scope Process RemoteSigned
+pwsh tools/matrix_runner_gcs.ps1 -Suites @(
+  "cs-mlkem768-aesgcm-mldsa65",
+  "cs-mlkem768-aesgcm-falcon512",
+  "cs-mlkem1024-aesgcm-sphincs256f"
+)
+```
+
+```bash
+# Raspberry Pi (Drone)
+chmod +x tools/matrix_runner_drone.sh
+./tools/matrix_runner_drone.sh cs-mlkem768-aesgcm-mldsa65 cs-mlkem768-aesgcm-falcon512 cs-mlkem1024-aesgcm-sphincs256f
+```
+
+Each runner:
+
+- Starts the proxy with an auto-stop timer (`--stop-seconds`), picking longer windows for SPHINCS+ suites.
+- Invokes `traffic_*.py` with matching durations to drive plaintext packets.
+- Writes suite-specific JSON/NDJSON logs under `logs/traffic/<suite>/`.
+- Appends a CSV summary (`matrix_gcs_summary.csv` / `matrix_drone_summary.csv`) with proxy counters and traffic totals.
 
 ## Testing
 
@@ -177,6 +235,12 @@ python -m pytest tests/test_end_to_end_proxy.py -vv
 ```
 
 > Test dependencies are defined under the `test` extra in `pyproject.toml`. End-to-end tests reserve loopback ports dynamically, so they are safe to run even if proxies are already bound to default ports during manual experiments.
+
+Run the static guardrail before committing code to confirm that all networking paths use `core.config.CONFIG` for host/port resolution:
+
+```bash
+python tools/check_no_hardcoded_ips.py
+```
 
 ---
 

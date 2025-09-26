@@ -281,7 +281,7 @@ def _setup_sockets(role: str, cfg: dict):
 
             # Plaintext ingress - receive from local app
             ptx_in_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            ptx_in_sock.bind(("127.0.0.1", cfg["DRONE_PLAINTEXT_TX"]))
+            ptx_in_sock.bind((cfg["DRONE_PLAINTEXT_HOST"], cfg["DRONE_PLAINTEXT_TX"]))
             ptx_in_sock.setblocking(False)
             sockets["plaintext_in"] = ptx_in_sock
 
@@ -291,7 +291,7 @@ def _setup_sockets(role: str, cfg: dict):
 
             # Peer addresses
             sockets["encrypted_peer"] = (cfg["GCS_HOST"], cfg["UDP_GCS_RX"])
-            sockets["plaintext_peer"] = ("127.0.0.1", cfg["DRONE_PLAINTEXT_RX"])
+            sockets["plaintext_peer"] = (cfg["DRONE_PLAINTEXT_HOST"], cfg["DRONE_PLAINTEXT_RX"])
 
         elif role == "gcs":
             # Encrypted socket - receive from Drone
@@ -308,7 +308,7 @@ def _setup_sockets(role: str, cfg: dict):
 
             # Plaintext ingress - receive from local app
             ptx_in_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            ptx_in_sock.bind(("127.0.0.1", cfg["GCS_PLAINTEXT_TX"]))
+            ptx_in_sock.bind((cfg["GCS_PLAINTEXT_HOST"], cfg["GCS_PLAINTEXT_TX"]))
             ptx_in_sock.setblocking(False)
             sockets["plaintext_in"] = ptx_in_sock
 
@@ -318,7 +318,7 @@ def _setup_sockets(role: str, cfg: dict):
 
             # Peer addresses
             sockets["encrypted_peer"] = (cfg["DRONE_HOST"], cfg["UDP_DRONE_RX"])
-            sockets["plaintext_peer"] = ("127.0.0.1", cfg["GCS_PLAINTEXT_RX"])
+            sockets["plaintext_peer"] = (cfg["GCS_PLAINTEXT_HOST"], cfg["GCS_PLAINTEXT_RX"])
         else:
             raise ValueError(f"Invalid role: {role}")
 

@@ -22,6 +22,8 @@ CONFIG = {
     "DRONE_PLAINTEXT_RX": 47004,  # drone-proxy→app (after decrypt)
     "GCS_PLAINTEXT_TX": 47001,    # app→gcs-proxy
     "GCS_PLAINTEXT_RX": 47002,    # gcs-proxy→app
+    "DRONE_PLAINTEXT_HOST": "127.0.0.1",
+    "GCS_PLAINTEXT_HOST": "127.0.0.1",
 
     # Hosts
     "DRONE_HOST": "192.168.0.102",
@@ -59,6 +61,8 @@ _REQUIRED_KEYS = {
     "GCS_PLAINTEXT_RX": int,
     "DRONE_HOST": str,
     "GCS_HOST": str,
+    "DRONE_PLAINTEXT_HOST": str,
+    "GCS_PLAINTEXT_HOST": str,
     "REPLAY_WINDOW": int,
     "WIRE_VERSION": int,
 }
@@ -72,6 +76,8 @@ _ENV_OVERRIDABLE = {
     "DRONE_PLAINTEXT_RX",  # Added for testing/benchmarking flexibility  
     "GCS_PLAINTEXT_TX",    # Added for testing/benchmarking flexibility
     "GCS_PLAINTEXT_RX",    # Added for testing/benchmarking flexibility
+    "DRONE_PLAINTEXT_HOST",
+    "GCS_PLAINTEXT_HOST",
     "DRONE_HOST",
     "GCS_HOST"
 }
@@ -109,7 +115,7 @@ def validate_config(cfg: Dict[str, Any]) -> None:
         raise NotImplementedError(f"CONFIG[REPLAY_WINDOW] must be >= 64, got {cfg['REPLAY_WINDOW']}")
     
     # Validate hosts are valid strings (basic check)
-    for host_key in ["DRONE_HOST", "GCS_HOST"]:
+    for host_key in ["DRONE_HOST", "GCS_HOST", "DRONE_PLAINTEXT_HOST", "GCS_PLAINTEXT_HOST"]:
         host = cfg[host_key]
         if not host or not isinstance(host, str):
             raise NotImplementedError(f"CONFIG[{host_key}] must be non-empty string, got {repr(host)}")
