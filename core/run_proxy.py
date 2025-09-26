@@ -19,13 +19,45 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from oqs.oqs import Signature
 from core.config import CONFIG
 from core.suites import get_suite, build_suite_id
-from core.async_proxy import run_proxy
 from core.logging_utils import get_logger, configure_file_logger
 
 logger = get_logger("pqc")
+
+
+def _require_signature_class():
+    """Lazily import oqs Signature and provide a friendly error if missing."""
+
+    try:
+        from oqs.oqs import Signature  # type: ignore
+    except ModuleNotFoundError as exc:  # pragma: no cover - exercised via CLI
+        if exc.name in {"oqs", "oqs.oqs"}:
+            print(
+                "Error: oqs-python is required for cryptographic operations. "
+                "Install it with 'pip install oqs-python' or activate the project environment."
+            )
+            sys.exit(1)
+        raise
+
+    return Signature
+
+
+def _require_run_proxy():
+    """Import run_proxy only when needed, surfacing helpful guidance on failure."""
+
+    try:
+        from core.async_proxy import run_proxy as _run_proxy  # type: ignore
+    except ModuleNotFoundError as exc:  # pragma: no cover - exercised via CLI
+        if exc.name in {"oqs", "oqs.oqs"}:
+            print(
+                "Error: oqs-python is required to start the proxy. "
+                "Install it with 'pip install oqs-python' or activate the project environment."
+            )
+            sys.exit(1)
+        raise
+
+    return _run_proxy
 
 
 def signal_handler(signum, frame):
@@ -111,6 +143,8 @@ def init_identity_command(args):
     if secret_path.exists() or public_path.exists():
         print("Warning: Identity files already exist. Overwriting with a new keypair.")
     
+    Signature = _require_signature_class()
+
     try:
         sig = Signature(suite["sig_name"])
         if hasattr(sig, 'export_secret_key'):
@@ -147,6 +181,9 @@ def gcs_command(args):
     suite = _resolve_suite(args, "GCS proxy")
     suite_id = suite["suite_id"]
     
+    Signature = _require_signature_class()
+    proxy_runner = _require_run_proxy()
+
     gcs_sig_secret = None
     gcs_sig_public = None
     json_out_path = getattr(args, "json_out", None)
@@ -271,7 +308,7 @@ def gcs_command(args):
         if not quiet:
             print()
         
-        counters = run_proxy(
+        counters = proxy_runner(
             role="gcs",
             suite=suite,
             cfg=CONFIG,
@@ -311,6 +348,8 @@ def drone_command(args):
     suite = _resolve_suite(args, "Drone proxy")
     suite_id = suite["suite_id"]
     
+    proxy_runner = _require_run_proxy()
+
     # Get GCS public key
     gcs_sig_public = None
     json_out_path = getattr(args, "json_out", None)
@@ -352,7 +391,7 @@ def drone_command(args):
         if not quiet:
             print()
         
-        counters = run_proxy(
+        counters = proxy_runner(
             role="drone",
             suite=suite,
             cfg=CONFIG,

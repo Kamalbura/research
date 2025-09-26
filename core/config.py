@@ -47,6 +47,10 @@ CONFIG = {
     # 0x01 = MAVLink/data (forward to local app); 0x02 = control (route to policy engine).
     # When False (default), proxy passes bytes unchanged (backward compatible).
     "ENABLE_PACKET_TYPE": False,
+
+    # Enforce strict matching of encrypted UDP peer IP/port with the authenticated handshake peer.
+    # Disable (set to False) only when operating behind NAT where source ports may differ.
+    "STRICT_UDP_PEER_MATCH": True,
 }
 
 
@@ -66,6 +70,7 @@ _REQUIRED_KEYS = {
     "REPLAY_WINDOW": int,
     "WIRE_VERSION": int,
     "ENABLE_PACKET_TYPE": bool,
+    "STRICT_UDP_PEER_MATCH": bool,
 }
 
 # Keys that can be overridden by environment variables
@@ -82,6 +87,7 @@ _ENV_OVERRIDABLE = {
     "DRONE_HOST",
     "GCS_HOST",
     "ENABLE_PACKET_TYPE",
+    "STRICT_UDP_PEER_MATCH",
 }
 
 

@@ -3,7 +3,10 @@ import os
 import struct
 from core.config import CONFIG
 from core.suites import get_suite
+from core.logging_utils import get_logger
 from oqs.oqs import KeyEncapsulation, Signature
+
+logger = get_logger("pqc")
 
 class HandshakeFormatError(Exception):
     pass
@@ -225,6 +228,37 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
     # Parse and VERIFY server hello - NO BYPASS ALLOWED
     # This is critical for security - verification failure must abort
     hello = parse_and_verify_server_hello(hello_wire, CONFIG["WIRE_VERSION"], gcs_sig_public)
+
+    expected_kem = suite.get("kem_name") if isinstance(suite, dict) else None
+    expected_sig = suite.get("sig_name") if isinstance(suite, dict) else None
+    negotiated_kem = hello.kem_name.decode() if isinstance(hello.kem_name, bytes) else hello.kem_name
+    negotiated_sig = hello.sig_name.decode() if isinstance(hello.sig_name, bytes) else hello.sig_name
+    if expected_kem and negotiated_kem != expected_kem:
+        logger.error(
+            "Suite mismatch detected during handshake",
+            extra={
+                "expected_kem": expected_kem,
+                "expected_sig": expected_sig,
+                "negotiated_kem": negotiated_kem,
+                "negotiated_sig": negotiated_sig,
+            },
+        )
+        raise HandshakeVerifyError(
+            f"Downgrade attempt detected: expected {expected_kem}, got {negotiated_kem}"
+        )
+    if expected_sig and negotiated_sig != expected_sig:
+        logger.error(
+            "Suite mismatch detected during handshake",
+            extra={
+                "expected_kem": expected_kem,
+                "expected_sig": expected_sig,
+                "negotiated_kem": negotiated_kem,
+                "negotiated_sig": negotiated_sig,
+            },
+        )
+        raise HandshakeVerifyError(
+            f"Downgrade attempt detected: expected {expected_sig}, got {negotiated_sig}"
+        )
     
     # Encapsulate and send KEM ciphertext
     kem_ct, shared_secret = client_encapsulate(hello)
@@ -236,5 +270,13 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
                                               shared_secret)
     
     # Return in expected format (nonce seeds are unused)
-    return key_send, key_recv, b"", b"", hello.session_id, hello.kem_name.decode() if isinstance(hello.kem_name, bytes) else hello.kem_name, hello.sig_name.decode() if isinstance(hello.sig_name, bytes) else hello.sig_name
+    return (
+        key_send,
+        key_recv,
+        b"",
+        b"",
+        hello.session_id,
+        hello.kem_name.decode() if isinstance(hello.kem_name, bytes) else hello.kem_name,
+        hello.sig_name.decode() if isinstance(hello.sig_name, bytes) else hello.sig_name,
+    )
 

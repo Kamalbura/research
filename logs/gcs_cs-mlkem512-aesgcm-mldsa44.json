@@ -1,6 +1,6 @@
 {
   "role": "gcs",
-  "suite": "cs-mlkem768-aesgcm-mldsa65",
+  "suite": "cs-mlkem512-aesgcm-mldsa44",
   "counters": {
     "ptx_out": 0,
     "ptx_in": 0,
@@ -17,5 +17,5 @@
     "last_rekey_ms": 0,
     "last_rekey_suite": ""
   },
-  "ts_stop_ns": 1758908640957329900
+  "ts_stop_ns": 1758900920030075600
 }

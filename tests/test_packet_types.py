@@ -32,6 +32,11 @@ def test_packet_type_data_path():
         "DRONE_PLAINTEXT_RX": 15651,
         "GCS_PLAINTEXT_TX": 15652,
         "GCS_PLAINTEXT_RX": 15653,
+    "TCP_HANDSHAKE_PORT": 15654,
+        "DRONE_HOST": "127.0.0.1",
+        "GCS_HOST": "127.0.0.1",
+        "DRONE_PLAINTEXT_HOST": "127.0.0.1",
+        "GCS_PLAINTEXT_HOST": "127.0.0.1",
         "ENABLE_PACKET_TYPE": True,  # Enable packet typing for this test
     })
 

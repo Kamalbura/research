@@ -189,8 +189,17 @@ def _perform_handshake(
     cfg: dict,
     stop_after_seconds: Optional[float] = None,
     ready_event: Optional[threading.Event] = None,
-) -> Tuple[bytes, bytes, bytes, bytes, bytes, Optional[str], Optional[str]]:
-    """Perform TCP handshake and return derived keys, session_id, and optionally kem/sig names."""
+) -> Tuple[
+    bytes,
+    bytes,
+    bytes,
+    bytes,
+    bytes,
+    Optional[str],
+    Optional[str],
+    Tuple[str, int],
+]:
+    """Perform TCP handshake and return keys, session details, and authenticated peer address."""
     if role == "gcs":
         if gcs_sig_secret is None:
             raise NotImplementedError("GCS signature secret not provided")
@@ -204,7 +213,9 @@ def _perform_handshake(
             ready_event.set()
 
         timeout = stop_after_seconds if stop_after_seconds is not None else 30.0
-        server_sock.settimeout(timeout)
+        deadline: Optional[float] = None
+        if stop_after_seconds is not None:
+            deadline = time.monotonic() + stop_after_seconds
 
         gate = _TokenBucket(
             cfg.get("HANDSHAKE_RL_BURST", 5),
@@ -213,29 +224,59 @@ def _perform_handshake(
 
         try:
             try:
-                conn, addr = server_sock.accept()
-                try:
-                    ip, _port = addr
-                    if not gate.allow(ip):
+                while True:
+                    if deadline is not None:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            raise socket.timeout
+                        server_sock.settimeout(max(0.01, remaining))
+                    else:
+                        server_sock.settimeout(timeout)
+
+                    conn, addr = server_sock.accept()
+                    try:
+                        ip, _port = addr
+                        if ip != cfg["DRONE_HOST"]:
+                            logger.warning(
+                                "Rejected handshake from unauthorized IP",
+                                extra={"role": role, "expected": cfg["DRONE_HOST"], "received": ip},
+                            )
+                            conn.close()
+                            continue
+
+                        if not gate.allow(ip):
+                            try:
+                                conn.settimeout(0.2)
+                                conn.sendall(b"\x00")
+                            except Exception:
+                                pass
+                            finally:
+                                conn.close()
+                            raise NotImplementedError("Handshake rate-limit: too many attempts")
+
+                        result = server_gcs_handshake(conn, suite, gcs_sig_secret)
+                        # Support either 5-tuple or 7-tuple
+                        if len(result) >= 7:
+                            k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id, kem_name, sig_name = result[:7]
+                        else:
+                            k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id = result
+                            kem_name = sig_name = None
+                        peer_addr = (ip, cfg["UDP_DRONE_RX"])
+                        return (
+                            k_d2g,
+                            k_g2d,
+                            nseed_d2g,
+                            nseed_g2d,
+                            session_id,
+                            kem_name,
+                            sig_name,
+                            peer_addr,
+                        )
+                    finally:
                         try:
-                            conn.settimeout(0.2)
-                            conn.sendall(b"\x00")
+                            conn.close()
                         except Exception:
                             pass
-                        finally:
-                            conn.close()
-                        raise NotImplementedError("Handshake rate-limit: too many attempts")
-
-                    result = server_gcs_handshake(conn, suite, gcs_sig_secret)
-                    # Support either 5-tuple or 7-tuple
-                    if len(result) >= 7:
-                        k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id, kem_name, sig_name = result[:7]
-                    else:
-                        k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id = result
-                        kem_name = sig_name = None
-                    return k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id, kem_name, sig_name
-                finally:
-                    conn.close()
             except socket.timeout:
                 raise NotImplementedError("No drone connection received within timeout")
         finally:
@@ -248,13 +289,24 @@ def _perform_handshake(
         client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             client_sock.connect((cfg["GCS_HOST"], cfg["TCP_HANDSHAKE_PORT"]))
+            peer_ip, _peer_port = client_sock.getpeername()
             result = client_drone_handshake(client_sock, suite, gcs_sig_public)
             if len(result) >= 7:
                 k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id, kem_name, sig_name = result[:7]
             else:
                 k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id = result
                 kem_name = sig_name = None
-            return k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id, kem_name, sig_name
+            peer_addr = (peer_ip, cfg["UDP_GCS_RX"])
+            return (
+                k_d2g,
+                k_g2d,
+                nseed_d2g,
+                nseed_g2d,
+                session_id,
+                kem_name,
+                sig_name,
+                peer_addr,
+            )
         finally:
             client_sock.close()
     else:
@@ -262,7 +314,7 @@ def _perform_handshake(
 
 
 @contextmanager
-def _setup_sockets(role: str, cfg: dict):
+def _setup_sockets(role: str, cfg: dict, *, encrypted_peer: Optional[Tuple[str, int]] = None):
     """Setup and cleanup all UDP sockets for the proxy."""
     sockets = {}
     try:
@@ -290,7 +342,7 @@ def _setup_sockets(role: str, cfg: dict):
             sockets["plaintext_out"] = ptx_out_sock
 
             # Peer addresses
-            sockets["encrypted_peer"] = (cfg["GCS_HOST"], cfg["UDP_GCS_RX"])
+            sockets["encrypted_peer"] = encrypted_peer or (cfg["GCS_HOST"], cfg["UDP_GCS_RX"])
             sockets["plaintext_peer"] = (cfg["DRONE_PLAINTEXT_HOST"], cfg["DRONE_PLAINTEXT_RX"])
 
         elif role == "gcs":
@@ -317,7 +369,7 @@ def _setup_sockets(role: str, cfg: dict):
             sockets["plaintext_out"] = ptx_out_sock
 
             # Peer addresses
-            sockets["encrypted_peer"] = (cfg["DRONE_HOST"], cfg["UDP_DRONE_RX"])
+            sockets["encrypted_peer"] = encrypted_peer or (cfg["DRONE_HOST"], cfg["UDP_DRONE_RX"])
             sockets["plaintext_peer"] = (cfg["GCS_PLAINTEXT_HOST"], cfg["GCS_PLAINTEXT_RX"])
         else:
             raise ValueError(f"Invalid role: {role}")
@@ -454,9 +506,20 @@ def run_proxy(
     counters = ProxyCounters()
     start_time = time.time()
 
-    k_d2g, k_g2d, _nseed_d2g, _nseed_g2d, session_id, kem_name, sig_name = _perform_handshake(
+    handshake_result = _perform_handshake(
         role, suite, gcs_sig_secret, gcs_sig_public, cfg, stop_after_seconds, ready_event
     )
+
+    (
+        k_d2g,
+        k_g2d,
+        _nseed_d2g,
+        _nseed_g2d,
+        session_id,
+        kem_name,
+        sig_name,
+        peer_addr,
+    ) = handshake_result
 
     suite_id = suite.get("suite_id")
     if not suite_id:
@@ -486,6 +549,8 @@ def run_proxy(
         "aead_ids": aead_ids,
         "sender": sender,
         "receiver": receiver,
+        "peer_addr": peer_addr,
+        "peer_match_strict": bool(cfg.get("STRICT_UDP_PEER_MATCH", True)),
     }
 
     active_rekeys: set[str] = set()
@@ -529,11 +594,16 @@ def run_proxy(
             try:
                 timeout = cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0)
                 rk_result = _perform_handshake(role, new_suite, gcs_sig_secret, gcs_sig_public, cfg, timeout)
-                if len(rk_result) >= 7:
-                    new_k_d2g, new_k_g2d, _nd1, _nd2, new_session_id, new_kem_name, new_sig_name = rk_result[:7]
-                else:
-                    new_k_d2g, new_k_g2d, _nd1, _nd2, new_session_id = rk_result
-                    new_kem_name = new_sig_name = None
+                (
+                    new_k_d2g,
+                    new_k_g2d,
+                    _nd1,
+                    _nd2,
+                    new_session_id,
+                    new_kem_name,
+                    new_sig_name,
+                    new_peer_addr,
+                ) = rk_result
 
                 new_ids = _compute_aead_ids(new_suite, new_kem_name, new_sig_name)
                 new_sender, new_receiver = _build_sender_receiver(
@@ -549,8 +619,10 @@ def run_proxy(
                             "aead_ids": new_ids,
                             "suite": new_suite["suite_id"],
                             "suite_dict": new_suite,
+                            "peer_addr": new_peer_addr,
                         }
                     )
+                    sockets["encrypted_peer"] = new_peer_addr
 
                 counters.rekeys_ok += 1
                 counters.last_rekey_ms = int(time.time() * 1000)
@@ -575,7 +647,7 @@ def run_proxy(
 
         threading.Thread(target=worker, daemon=True).start()
 
-    with _setup_sockets(role, cfg) as sockets:
+    with _setup_sockets(role, cfg, encrypted_peer=peer_addr) as sockets:
         selector = selectors.DefaultSelector()
         selector.register(sockets["encrypted"], selectors.EVENT_READ, data="encrypted")
         selector.register(sockets["plaintext_in"], selectors.EVENT_READ, data="plaintext_in")
@@ -639,13 +711,33 @@ def run_proxy(
 
                     elif data_type == "encrypted":
                         try:
-                            wire, _addr = sock.recvfrom(2048)
+                            wire, addr = sock.recvfrom(2048)
                             if not wire:
                                 continue
-                            counters.enc_in += 1
 
                             with context_lock:
                                 current_receiver = active_context["receiver"]
+                                expected_peer = active_context.get("peer_addr")
+                                strict_match = bool(active_context.get("peer_match_strict", True))
+
+                            src_ip, src_port = addr
+                            if expected_peer is not None:
+                                exp_ip, exp_port = expected_peer  # type: ignore[misc]
+                                mismatch = False
+                                if strict_match:
+                                    mismatch = src_ip != exp_ip or src_port != exp_port
+                                else:
+                                    mismatch = src_ip != exp_ip
+                                if mismatch:
+                                    counters.drops += 1
+                                    counters.drop_other += 1
+                                    logger.warning(
+                                        "Dropped encrypted packet from unauthorized source",
+                                        extra={"role": role, "expected": expected_peer, "received": addr},
+                                    )
+                                    continue
+
+                            counters.enc_in += 1
 
                             try:
                                 plaintext = current_receiver.decrypt(wire)
