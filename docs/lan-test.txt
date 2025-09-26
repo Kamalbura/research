@@ -1,0 +1,158 @@
+LAN Integration Test – Drone ↔ GCS Secure Tunnel
+===============================================
+
+Date: 2025-09-26
+Suite: cs-mlkem768-aesgcm-mldsa65 (session e0a3816968587119)
+
+Objective
+---------
+Validate that plaintext traffic between the Ground Control Station (GCS) and drone flows over the PQC-encrypted tunnel on the LAN, with taps confirming ciphertext in both directions.
+
+Test Hosts
+----------
+- GCS (Windows) – 192.168.0.103
+- Drone (Raspberry Pi) – 192.168.0.102
+
+Preparation
+-----------
+1. Generated GCS signing key earlier; stored in `secrets/gcs_signing.key` / `.pub`.
+2. Confirmed `oqs` and dependencies installed in both environments (`gcs-env`, `cenv`).
+3. Verified the following default ports in `core/config.py`:
+   - Encrypted: GCS RX 46011, Drone RX 46012
+   - Plaintext loopback: GCS 47001/47002, Drone 47003/47004
+
+Execution Steps
+---------------
+
+### Drone Side (Pi)
+1. Activate environment and override encrypted RX port (tap backend):
+   ```bash
+   export UDP_DRONE_RX=56012
+   source ~/cenv/bin/activate
+   ```
+2. Start drone proxy:
+   ```bash
+   python -m core.run_proxy drone --suite cs-kyber768-aesgcm-mldsa65 --stop-seconds 360 --json-out drone_debug.json
+   ```
+   - Log: `logs/drone-20250926-063601.log`
+   - Handshake success with session `e0a3816968587119`.
+3. Launch encrypted tap to capture inbound packets:
+   ```bash
+   python tools/udp_forward_log.py --listen 0.0.0.0:46012 --forward 127.0.0.1:56012 --label enc_GCS_to_drone
+   ```
+4. Open plaintext console for telemetry output:
+   ```bash
+   python tools/manual_4term/drone_tty.py
+   ```
+
+### GCS Side (Windows)
+1. Activate environment and override encrypted RX port:
+   ```powershell
+   conda activate gcs-env
+   $Env:UDP_GCS_RX = "56011"
+   ```
+2. Start GCS proxy:
+   ```powershell
+   python -m core.run_proxy gcs --suite cs-kyber768-aesgcm-dilithium3 --stop-seconds 360 --json-out gcs_debug.json
+   ```
+   - Log: `logs\gcs-20250926-063650.log`
+   - Handshake success matching session `e0a3816968587119`.
+3. Launch encrypted tap to record inbound packets:
+   ```powershell
+   python tools\udp_forward_log.py --listen 0.0.0.0:46011 --forward 127.0.0.1:56011 --label enc_drone_to_GCS
+   ```
+4. Open plaintext command console:
+   ```powershell
+   python tools\manual_4term\gcs_tty.py
+   ```
+
+Verification Evidence
+---------------------
+1. **Ciphertext taps**
+   - Drone tap (`enc_GCS_to_drone`) logged authenticated packets with seq 0..3.
+   - GCS tap (`enc_drone_to_GCS`) logged packets with seq 0..4.
+2. **Plaintext consoles**
+   - Lines typed in `gcs_tty.py` appeared in `drone_tty.py`:
+     ````
+     hello
+     namasthe
+     jasi balayya
+     ashish bhayya
+     haaa chotte
+     bhayya
+     haa bataoooooo
+     ha bhayya bhiook lag raha tha na
+     haaa lekin ab kya kar saktha he
+     ````
+3. **Proxy logs**
+   - Both logs show `PQC handshake completed successfully`.
+   - No decrypt warnings; drop counters remain zero.
+
+Post-Test Cleanup
+-----------------
+- Stopped TTY consoles and proxies with Ctrl+C to flush `*_debug.json` counters.
+- Removed environment overrides (`unset UDP_DRONE_RX`, `Remove-Item Env:UDP_GCS_RX`).
+
+Outcome
+-------
+✅ PQC tunnel operational on LAN with bi-directional encrypted UDP traffic and plaintext delivery verified end-to-end.
+---------------------------------------------------
+drone 
+dev@uavpi:~/research $ export UDP_DRONE_RX=56012
+dev@uavpi:~/research $ source ~/cenv/bin/activate
+(cenv) dev@uavpi:~/research $ python -m core.run_proxy drone --suite cs-kyber768-aesgcm-mldsa65 --stop-seconds 360 --json-out drone_debug.json
+Using GCS public key from: secrets/gcs_signing.pub
+Log file: logs/drone-20250926-063601.log
+Starting drone proxy with suite cs-mlkem768-aesgcm-mldsa65
+Will auto-stop after 360.0 seconds
+
+{"ts": "2025-09-26T06:37:09Z", "level": "INFO", "name": "pqc", "msg": "PQC handshake completed successfully", "suite_id": "cs-mlkem768-aesgcm-mldsa65", "peer_role": "gcs", "session_id": "e0a3816968587119"}
+{"ts": "2025-09-26T06:42:01Z", "level": "INFO", "name": "pqc", "msg": "Drone proxy shutdown", "counters": {"ptx_out": 4, "ptx_in": 5, "enc_out": 5, "enc_in": 4, "drops": 0, "drop_replay": 0, "drop_auth": 0, "drop_header": 0, "drop_session_epoch": 0, "drop_other": 0, "rekeys_ok": 0, "rekeys_fail": 0, "last_rekey_ms": 0, "last_rekey_suite": ""}}
+Drone proxy stopped. Final counters:
+  ptx_out: 4
+  ptx_in: 5
+  enc_out: 5
+  enc_in: 4
+  drops: 0
+  drop_replay: 0
+  drop_auth: 0
+  drop_header: 0
+  drop_session_epoch: 0
+  drop_other: 0
+  rekeys_ok: 0
+  rekeys_fail: 0
+  last_rekey_ms: 0
+  last_rekey_suite:
+Wrote JSON report to drone_debug.
+------------------------------------------
+gcs
+(gcs-env) PS C:\Users\burak\Desktop\research> python -m core.run_proxy gcs --suite cs-kyber768-aesgcm-dilithium3 --stop-seconds 360 --json-out gcs_debug.json
+Loaded GCS signing key from file.
+Using constructor-based fallback because import/export APIs are unavailable.
+Loaded public key from secrets\gcs_signing.pub.
+Public key (hex): 487250f0cb204b445b1d43b93f0f00fcb763452b31ecccfdfcd97aeda289f9f1b413d144e42a1d526abf13468959913ea467fabc4152bc748c1259e9febcb5a7b80597e6c42cd2023fc50c733419808f2e656cdf8d86875f852b2a8065d4f69a2223308e73b51ed45d40872529cf751db70fede4dc96673dfbfd682a65f584348c2f271fe49fd7ab508949cdc367074fdfe39055be181a4fc0670332bc7550fcee26f438dd9705cc894ea33018bee2df174551a5dbece5777625a38a73c60e45d7910cc3fe38054b6acca71a5fe2d2bb0a563ecc811de8abe2b22deed86cda1408a0ccce52e404cd501fcc35e1ee9eae6e0800dca6ada593f1cb194393b025edb491959b44a5b3e2534f3e3b06597133819714eee66eb9666b34c4b7c79e4dc35d17e5132fd8f3ebf48cfffbf250c0a75a3fbb85463bf55253eece367878eca4cfa5eba62261423e7d06adf26d21d10c16bcee0367f410d48f115ecf731a80783d146bfa3fcdb5a75fe38e23af0bb9850b477a026e0270e3618bbf726a2ba36c1dae07f0d50aec7e49821d337befa3a51cb466299779b32c340ce72ade7131e6f7183b0c5ff4fabddfdc4aaf13793c76320767f39e1ff7b34190bd67a2ce35aaf58b2262c6ad12953272bed6187e3f0485990789652ae83d9592a77207c730cfab69e86c2b415b4ef0fefed6c88546552c6a36ebf3c528d7b4c8e2a629f2fc603aa596af0ac7618abb0cce888cfc5d80c15d25d21a3bdc73a87aa1fb18238ea3eef4087da96060137b99c70707972567e8e8fda4e6d3aa618cd971faf9eca533710927b2b39768512b429c7583cbad9fed4b70190d0efc6bf7209ab7a05a668fc4ba421c9bb2d6cf0c1bdc7d6d9957ab4e73c831098138ad658480cdc2c450f967f09c6ad32dd00de69e627153387cd43426c519cc4ded3bfdc52118fa15082a876ce456591a317769962cafe59911b5efed0948fdcd4b29f6f89eb945dccc41e06e7acd2a50344ab014c255506f7c718caa590ddd51f4c2ba70030c8f4df5072d28ef89037e1b73154a3004d05af7b07a26566487b00d55409ef1ca29aeb934f84fbb0255375f0ec034d7ce8a676b0da7d9863ea641b95c2bfd2981c72a12956fb6961f20d3a5805feddac547168040924a68ef4aa6ea955e875553302138c179deb5e997c40e752c71ad47b7c6d73c52ec149d291fde4147a6ccc5694105201b30a7be70a0bf6bed06b18cc4fd7490cf7b7b5d2f82c02e4b6fd481760487fff293bfc1f95666652ac919f8db3ea9624a64637ca17aa098caf16e77b8093873854cfaac5d4833fd101aee50b05be570c1e9f504435a8c9db48de689b3d6ddbc452a75b3dded385953201f478ec5ab295ba626224cf87ef2a50f3bfe363195812aff1d1e522e7d752129a06f16a0c20d71e0c68c06801305b036702b1ba7ee36e77386fd558897adf73578a09a4332baabcf967288d0a0db8a096bed89936ccf126bc66ad2023befc9fa0c6ce1ec14db7fabdf5746e6a9a3d63494e2c4a4c9ef5526eefef58795f78215b00f0acea40d081275ffaa2e75dc199f3540681813725cb604526367995a1727aebd40d9d29c7a70f32189152179309c3e0e85fb57d094d729b32006a09049871addaab6137990188e6b6a2c0ce53ee8b9dfc18db5369f562fdc9e0d8c09cce14dd237d017d06930970917c8ef7ae0e0519cc535524932edfb61120af730a18b7dc0f8a7bfcf5169b2b223b3488c7ed940f07114a45dd042f0ae960f9522597134ee4c5042d178817687f08151f4b03d00fa35fbde383ce8d9cc147518d89278f2dc741a5b6afac541c9adaa2ef41df2036f6fd674c067ec315c066f4b723150894f33e48927eec41ffe6bfb6e5fa5a2b291f8485fae6c42c359ba472952a8f319d0d497028b14ebb0f185f0ee9e16a76d3c70c6f2356c3ece80929a05485dc21daf0055f03718318a26ffc1a0ae0c5b8a94ca78929779ab937c8448d5628e5193e560d01a15c36c7f38bfe69b033c085f503b79e353927e3f6840b9c1f12d72b641b647c4926f3ad9f79d1736176b03446da25c562d286d41be2fe925490a19d61980409b20132a77ca264f480e1d7e1394b86f67e75ca2fc0e5f81955ac86b335bc5bc3e798cb353a8611e3315c58132726e3f4031442291acf7b0a7688c4a500c0d180d73be922cc1b0ed207426f79b98f278e93e4c8adada12a8934fc5be05c1e0b2eb8a31d191c371cb8ac47bce0194a415c42392a5eb0325f2f76b796a1e0915205997a4c192e5a3fa644b001f350a7793fc66751629ce2e5131c2640d2988a20129bb89689ff7a150c0ac54a020092b07fe0aa3169f96e677b8a7c6b055ee98931e6eb3e2927e64dfca944fc3b2d9a62c514caec4cb60d8d9445a220248f7873e35e8c51b8b329e20f04d83602292106d67695cff9aa2d18c64b3462ac6f40adaab868a0380ec9a9b5e9c62554205c3796a96cbfea9ec85a941d24661ea1f715bcad5b2aa22fe10b0c3601bb0e3a830814a7a5861bb2d1370af14c5b8fadc247db691064ac50e62b173fe7bf272900b62aea739f26dd49111b3c60db9ffd40a9faf3f64207d6e97d3675c12f62a46df5b8f7c0883b9df750b2c5e75854d610786790a842e3ace460a9fd2cd0c41aac7d5d1c83b6f74e8e3027202e82ff96958cbeb44ba08c1aef9e37c1238a266f7754055c38461d5876f9bdd8712c1426543ffaecd4ea7f15278bebe2f6f63365a01296761
+
+Log file: logs\gcs-20250926-063650.log
+Starting GCS proxy with suite cs-mlkem768-aesgcm-mldsa65
+Will auto-stop after 360.0 seconds
+
+{"ts": "2025-09-26T06:37:07Z", "level": "INFO", "name": "pqc", "msg": "PQC handshake completed successfully", "taskName": null, "suite_id": "cs-mlkem768-aesgcm-mldsa65", "peer_role": "drone", "session_id": "e0a3816968587119"}
+{"ts": "2025-09-26T06:42:50Z", "level": "INFO", "name": "pqc", "msg": "GCS proxy shutdown", "taskName": null, "counters": {"ptx_out": 5, "ptx_in": 4, "enc_out": 4, "enc_in": 5, "drops": 0, "drop_replay": 0, "drop_auth": 0, "drop_header": 0, "drop_session_epoch": 0, "drop_other": 0, "rekeys_ok": 0, "rekeys_fail": 0, "last_rekey_ms": 0, "last_rekey_suite": ""}}
+GCS proxy stopped. Final counters:
+  ptx_out: 5
+  ptx_in: 4
+  enc_out: 4
+  enc_in: 5
+  drops: 0
+  drop_replay: 0
+  drop_auth: 0
+  drop_header: 0
+  drop_session_epoch: 0
+  drop_other: 0
+  rekeys_ok: 0
+  rekeys_fail: 0
+  last_rekey_ms: 0
+  last_rekey_suite:
+Wrote JSON report to gcs_debug.json
+(gcs-env) PS C:\Users\burak\Desktop\research> 
+---------------------------------
