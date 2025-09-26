@@ -1,0 +1,21 @@
+{
+  "role": "gcs",
+  "suite": "cs-mlkem512-aesgcm-mldsa65",
+  "counters": {
+    "ptx_out": 0,
+    "ptx_in": 0,
+    "enc_out": 0,
+    "enc_in": 0,
+    "drops": 0,
+    "drop_replay": 0,
+    "drop_auth": 0,
+    "drop_header": 0,
+    "drop_session_epoch": 0,
+    "drop_other": 0,
+    "rekeys_ok": 0,
+    "rekeys_fail": 0,
+    "last_rekey_ms": 0,
+    "last_rekey_suite": ""
+  },
+  "ts_stop_ns": 1758894686937808100
+}

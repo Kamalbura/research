@@ -16,6 +16,7 @@ function Get-SafeName {
 }
 
 $python = if ($env:PYTHON_BIN) { $env:PYTHON_BIN } else { "python" }
+$autoDiscoveredSuites = $false
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path $scriptDir -Parent
 
@@ -32,12 +33,21 @@ try {
     }
 
     if (-not $Suites -or $Suites.Count -eq 0) {
-    $suiteOutput = & $python -c "from core.suites import list_suites; print('\\n'.join(list_suites().keys()))"
+        $autoDiscoveredSuites = $true
+        $suiteJson = & $python -c "import json; from core.suites import list_suites; print(json.dumps(list(list_suites().keys())))"
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to enumerate suites via python."
             exit 1
         }
-        $Suites = $suiteOutput -split "`n" | Where-Object { $_ -ne "" }
+        try {
+            $Suites = @(
+                (ConvertFrom-Json -InputObject $suiteJson)
+            )
+        }
+        catch {
+            Write-Error "Failed to parse suite list from python: $_"
+            exit 1
+        }
     }
 
     $expandedSuites = @()
@@ -58,6 +68,16 @@ try {
         exit 1
     }
 
+    if ($autoDiscoveredSuites) {
+        $sortedSuites = [System.Collections.Generic.List[string]]::new()
+        $sortedSuites.AddRange([string[]]$Suites)
+        $sortedSuites.Sort([System.StringComparer]::Ordinal)
+        $Suites = $sortedSuites
+    }
+
+    $schedulePretty = ($Suites -join ", ")
+    Write-Host "[GCS] Suite plan: $schedulePretty"
+
     $logsRoot = $OutDir
     if (-not (Test-Path $logsRoot)) {
         New-Item -ItemType Directory -Path $logsRoot -Force | Out-Null
@@ -65,7 +85,10 @@ try {
 
     $summaryCsv = Join-Path $logsRoot "matrix_gcs_summary.csv"
 
+    $suiteIndex = 0
+    $totalSuites = $Suites.Count
     foreach ($suite in $Suites) {
+        $suiteIndex += 1
         $safe = Get-SafeName -Name $suite
         $duration = if ($suite -match "sphincs") { $SlowDurationSec } else { $DurationSec }
 
@@ -78,13 +101,14 @@ try {
         $trafficOut = Join-Path $trafficDir "gcs_events.jsonl"
         $trafficSummary = Join-Path $trafficDir "gcs_summary.json"
 
-        Write-Host "[GCS] Starting proxy for suite $suite ($duration s)"
+    Write-Host "[GCS][$suiteIndex/$totalSuites] Starting proxy for suite $suite ($duration s)"
+        $suiteStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         $proxyArgs = @("-m", "core.run_proxy", "gcs", "--suite", $suite, "--stop-seconds", $duration.ToString(), "--json-out", $proxyJson, "--quiet")
         $proxyProc = Start-Process -FilePath $python -ArgumentList $proxyArgs -PassThru -WindowStyle Hidden -WorkingDirectory $repoRoot
 
         Start-Sleep -Seconds 3
 
-        Write-Host "[GCS] Running traffic generator"
+    Write-Host "[GCS][$suiteIndex/$totalSuites] Running traffic generator"
         $runDuration = $duration - 5
         if ($runDuration -le 0) { $runDuration = $duration }
     $trafficArgs = @("-m", "tools.traffic_gcs", "--count", $Pkts.ToString(), "--rate", $Rate.ToString(), "--duration", $runDuration.ToString(), "--out", $trafficOut, "--summary", $trafficSummary)
@@ -97,6 +121,8 @@ try {
         if ($proxyProc.ExitCode -ne 0) {
             Write-Warning "Proxy exited with code $($proxyProc.ExitCode)"
         }
+
+        $suiteStopwatch.Stop()
 
         if (-not (Test-Path $proxyJson)) {
             Write-Warning "Proxy JSON $proxyJson not found"
@@ -126,6 +152,8 @@ try {
         }
 
         $row | Export-Csv -Path $summaryCsv -Append -NoTypeInformation -Encoding UTF8
+
+    Write-Host "[GCS][$suiteIndex/$totalSuites] Completed suite $suite in $([Math]::Round($suiteStopwatch.Elapsed.TotalSeconds, 2)) s (sent=$($row.traffic_sent_total) recv=$($row.traffic_recv_total) drops=$($row.drops))"
     }
 }
 finally {

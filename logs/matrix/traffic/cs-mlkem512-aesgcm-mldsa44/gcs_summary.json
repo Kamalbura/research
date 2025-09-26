@@ -1,0 +1,14 @@
+{
+  "role": "gcs",
+  "peer_role": "drone",
+  "sent_total": 200,
+  "recv_total": 0,
+  "first_send_ts": "2025-09-26T13:50:41.722065+00:00",
+  "last_send_ts": "2025-09-26T13:50:54.262103+00:00",
+  "first_recv_ts": null,
+  "last_recv_ts": null,
+  "out_of_order": 0,
+  "unique_senders": 0,
+  "rx_bytes_total": 0,
+  "tx_bytes_total": 10092
+}

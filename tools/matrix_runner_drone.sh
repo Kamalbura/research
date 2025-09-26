@@ -26,6 +26,7 @@ PKTS=200
 RATE=50
 OUTDIR="$(pwd)/logs"
 declare -a SUITES=()
+AUTO_SUITES=0
 
 PYTHON_BIN=${PYTHON_BIN:-python3}
 
@@ -71,7 +72,9 @@ if [ $# -gt 0 ]; then
 fi
 
 if [ ${#SUITES[@]} -eq 0 ]; then
+  AUTO_SUITES=1
   mapfile -t SUITES < <("$PYTHON_BIN" - <<'PY'
+import json
 from core.suites import list_suites
 for suite in list_suites().keys():
     print(suite)
@@ -81,6 +84,22 @@ fi
 
 if [ -z "$OUTDIR" ]; then
   OUTDIR="$(pwd)/logs"
+fi
+
+clean_suites=()
+for entry in "${SUITES[@]}"; do
+  IFS=',' read -r -a parts <<<"$entry"
+  for part in "${parts[@]}"; do
+    trimmed=$(printf '%s' "$part" | sed 's/^ *//;s/ *$//')
+    if [ -n "$trimmed" ]; then
+      clean_suites+=("$trimmed")
+    fi
+  done
+done
+if [ ${#clean_suites[@]} -gt 0 ]; then
+  SUITES=("${clean_suites[@]}")
+else
+  SUITES=()
 fi
 
 OUTDIR=$("$PYTHON_BIN" - <<'PY' "$OUTDIR"
@@ -94,6 +113,16 @@ LOGS_ROOT="$OUTDIR"
 SUMMARY_CSV="$LOGS_ROOT/matrix_drone_summary.csv"
 
 mkdir -p "$LOGS_ROOT"
+
+if [ $AUTO_SUITES -eq 1 ]; then
+  IFS=$'\n' SUITES=($(printf '%s\n' "${SUITES[@]}" | sort))
+fi
+schedule_pretty=$(printf '%s, ' "${SUITES[@]}")
+schedule_pretty=${schedule_pretty%, }
+echo "[DRONE] Suite plan: $schedule_pretty"
+
+total_suites=${#SUITES[@]}
+suite_index=0
 
 safe_name() {
   echo "$1" | sed 's/[^A-Za-z0-9_-]/_/g'
@@ -136,6 +165,7 @@ PY
 }
 
 for suite in "${SUITES[@]}"; do
+  suite_index=$((suite_index + 1))
   if [[ "$suite" == *sphincs* ]]; then
     duration="$SLOW_SECS"
   else
@@ -149,7 +179,8 @@ for suite in "${SUITES[@]}"; do
   traffic_out="$traffic_dir/drone_events.jsonl"
   traffic_summary="$traffic_dir/drone_summary.json"
 
-  echo "[DRONE] Starting proxy for suite $suite ($duration s)"
+  printf '[DRONE][%d/%d] Starting proxy for suite %s (%s s)\n' "$suite_index" "$total_suites" "$suite" "$duration"
+  suite_start=$(date +%s)
   $PYTHON_BIN -m core.run_proxy drone --suite "$suite" --stop-seconds "$duration" --json-out "$proxy_json" --quiet &
   proxy_pid=$!
 
@@ -160,7 +191,7 @@ for suite in "${SUITES[@]}"; do
     run_duration=$duration
   fi
 
-  echo "[DRONE] Running traffic generator"
+  printf '[DRONE][%d/%d] Running traffic generator\n' "$suite_index" "$total_suites"
   if ! $PYTHON_BIN -m tools.traffic_drone --count "$PKTS" --rate "$RATE" --duration "$run_duration" --out "$traffic_out" --summary "$traffic_summary"; then
     echo "WARNING: traffic_drone.py exited with code $?" >&2
   fi
@@ -177,4 +208,25 @@ for suite in "${SUITES[@]}"; do
   fi
 
   append_csv "$suite" "$proxy_json" "$traffic_summary"
+
+  suite_end=$(date +%s)
+  elapsed=$((suite_end - suite_start))
+
+  suite_summary=$("$PYTHON_BIN" - <<'PY' "$proxy_json" "$traffic_summary"
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as fp:
+    proxy = json.load(fp)
+with open(sys.argv[2], "r", encoding="utf-8") as fp:
+    traffic = json.load(fp)
+
+sent = traffic.get("sent_total", 0)
+recv = traffic.get("recv_total", 0)
+drops = proxy.get("counters", {}).get("drops", 0)
+print(f"{sent}|{recv}|{drops}")
+PY
+)
+  IFS='|' read -r sent_total recv_total drops_total <<<"$suite_summary"
+  printf '[DRONE][%d/%d] Completed suite %s in %ds (sent=%s recv=%s drops=%s)\n' "$suite_index" "$total_suites" "$suite" "$elapsed" "$sent_total" "$recv_total" "$drops_total"
 done
