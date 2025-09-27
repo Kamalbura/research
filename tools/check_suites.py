@@ -1,0 +1,30 @@
+from core.suites import list_suites
+
+wanted = [
+    "cs-mlkem512-aesgcm-mldsa44",
+    "cs-mlkem512-aesgcm-mldsa65",
+    "cs-mlkem512-aesgcm-mldsa87",
+    "cs-mlkem512-aesgcm-falcon512",
+    "cs-mlkem512-aesgcm-falcon1024",
+    "cs-mlkem512-aesgcm-sphincs128fsha2",
+    "cs-mlkem512-aesgcm-sphincs256fsha2",
+    "cs-mlkem768-aesgcm-mldsa44",
+    "cs-mlkem768-aesgcm-mldsa65",
+    "cs-mlkem768-aesgcm-mldsa87",
+    "cs-mlkem768-aesgcm-falcon512",
+    "cs-mlkem768-aesgcm-falcon1024",
+    "cs-mlkem768-aesgcm-sphincs128fsha2",
+    "cs-mlkem768-aesgcm-sphincs256fsha2",
+    "cs-mlkem1024-aesgcm-mldsa44",
+    "cs-mlkem1024-aesgcm-mldsa65",
+    "cs-mlkem1024-aesgcm-mldsa87",
+    "cs-mlkem1024-aesgcm-falcon512",
+    "cs-mlkem1024-aesgcm-falcon1024",
+    "cs-mlkem1024-aesgcm-sphincs128fsha2",
+    "cs-mlkem1024-aesgcm-sphincs256fsha2",
+]
+
+available = set(list_suites().keys())
+missing = [s for s in wanted if s not in available]
+print('missing:', missing)
+print('total registry suites:', len(available))
