@@ -62,6 +62,14 @@ class TestConfig:
         
         with pytest.raises(NotImplementedError, match="REPLAY_WINDOW.*must be >= 64"):
             validate_config(bad_config)
+
+    def test_replay_window_maximum(self):
+        """Test REPLAY_WINDOW upper bound is enforced."""
+        bad_config = CONFIG.copy()
+        bad_config["REPLAY_WINDOW"] = 9000
+
+        with pytest.raises(NotImplementedError, match="REPLAY_WINDOW.*must be <= 8192"):
+            validate_config(bad_config)
     
     def test_port_ranges(self):
         """Test all port values are in valid range."""
@@ -102,6 +110,23 @@ class TestConfig:
         
         with pytest.raises(NotImplementedError, match="must be non-empty string"):
             validate_config(bad_config)
+
+    def test_plaintext_hosts_must_be_loopback_by_default(self):
+        """Test plaintext binding rejects non-loopback without override."""
+        bad_config = CONFIG.copy()
+        bad_config["DRONE_PLAINTEXT_HOST"] = "0.0.0.0"
+
+        with pytest.raises(NotImplementedError, match="loopback address"):
+            validate_config(bad_config)
+
+    def test_plaintext_host_override_env(self, monkeypatch):
+        """ALLOW_NON_LOOPBACK_PLAINTEXT env should permit non-loopback host."""
+        bad_config = CONFIG.copy()
+        bad_config["DRONE_PLAINTEXT_HOST"] = "0.0.0.0"
+        monkeypatch.setenv("ALLOW_NON_LOOPBACK_PLAINTEXT", "1")
+
+        # Should not raise now
+        validate_config(bad_config)
     
     def test_env_overrides(self):
         """Test environment variable overrides work correctly."""

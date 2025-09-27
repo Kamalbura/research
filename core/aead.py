@@ -116,8 +116,8 @@ class Sender:
             raise NotImplementedError("plaintext must be bytes")
         
         # Check for sequence overflow - header uses uint64, so check that limit
-        if self._seq > (2**64 - 1):
-            raise NotImplementedError("packet_seq overflow (uint64)")
+        if self._seq >= (2**64 - 1):
+            raise NotImplementedError("packet_seq overflow imminent; rekey/epoch bump required")
         
         # Pack header with current sequence
         header = self.pack_header(self._seq)
@@ -186,6 +186,7 @@ class Receiver:
             raise NotImplementedError("_mask must be non-negative int")
         
         self._aesgcm = AESGCM(self.key_recv)
+        self._last_error: Optional[str] = None
 
     def _check_replay(self, seq: int) -> None:
         """Check if sequence number should be accepted (anti-replay)."""
@@ -236,25 +237,30 @@ class Receiver:
         
         # Validate header fields
         if version != self.version:
+            self._last_error = "header"
             if self.strict_mode:
                 raise HeaderMismatch(f"version mismatch: expected {self.version}, got {version}")
             return None
         
         if (kem_id, kem_param, sig_id, sig_param) != (self.ids.kem_id, self.ids.kem_param, self.ids.sig_id, self.ids.sig_param):
+            self._last_error = "header"
             if self.strict_mode:
                 raise HeaderMismatch(f"crypto ID mismatch")
             return None
         
         if session_id != self.session_id:
+            self._last_error = "session"
             return None  # Wrong session - always fail silently for security
         
         if epoch != self.epoch:
+            self._last_error = "session"
             return None  # Wrong epoch - always fail silently for rekeying
         
         # Check replay protection
         try:
             self._check_replay(seq)
         except ReplayError:
+            self._last_error = "replay"
             if self.strict_mode:
                 raise
             return None
@@ -267,12 +273,13 @@ class Receiver:
         try:
             plaintext = self._aesgcm.decrypt(iv, ciphertext, header)
         except InvalidTag:
+            self._last_error = "auth"
             if self.strict_mode:
                 raise AeadAuthError("AEAD authentication failed")
             return None
         except Exception as e:
             raise NotImplementedError(f"AEAD decryption failed: {e}")
-        
+        self._last_error = None
         return plaintext
 
     def reset_replay(self) -> None:
@@ -290,3 +297,6 @@ class Receiver:
             raise NotImplementedError("epoch wrap forbidden without rekey; perform handshake to rotate keys")
         self.epoch = (self.epoch + 1) % 256
         self.reset_replay()
+
+    def last_error_reason(self) -> Optional[str]:
+        return getattr(self, "_last_error", None)

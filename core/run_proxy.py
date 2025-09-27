@@ -188,6 +188,7 @@ def gcs_command(args):
     gcs_sig_public = None
     json_out_path = getattr(args, "json_out", None)
     quiet = getattr(args, "quiet", False)
+    status_file = getattr(args, "status_file", None)
 
     def info(msg: str) -> None:
         if not quiet:
@@ -317,6 +318,7 @@ def gcs_command(args):
             stop_after_seconds=args.stop_seconds,
             manual_control=getattr(args, "control_manual", False),
             quiet=quiet,
+            status_file=status_file,
         )
         
         # Log final counters as JSON
@@ -354,6 +356,7 @@ def drone_command(args):
     gcs_sig_public = None
     json_out_path = getattr(args, "json_out", None)
     quiet = getattr(args, "quiet", False)
+    status_file = getattr(args, "status_file", None)
 
     def info(msg: str) -> None:
         if not quiet:
@@ -400,6 +403,7 @@ def drone_command(args):
             stop_after_seconds=args.stop_seconds,
             manual_control=False,
             quiet=quiet,
+            status_file=status_file,
         )
         
         # Log final counters as JSON
@@ -466,6 +470,8 @@ def main():
                            help="Optional path to write counters JSON on shutdown")
     gcs_parser.add_argument("--control-manual", action="store_true",
                            help="Enable interactive manual in-band rekey control thread")
+    gcs_parser.add_argument("--status-file",
+                           help="Path to write proxy status JSON updates (handshake/rekey)")
     
     # drone subcommand
     drone_parser = subparsers.add_parser('drone', help='Start drone proxy')
@@ -487,6 +493,8 @@ def main():
                               help="Suppress informational prints (warnings/errors still shown)")
     drone_parser.add_argument("--json-out",
                               help="Optional path to write counters JSON on shutdown")
+    drone_parser.add_argument("--status-file",
+                              help="Path to write proxy status JSON updates (handshake/rekey)")
     
     args = parser.parse_args()
     

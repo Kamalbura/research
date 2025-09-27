@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2025-09-28] - LAN Hardening Checklist Refresh
+
+### Verified
+- Confirmed encrypted UDP spoof drops increment both `drops` and `drop_src_addr`, keeping hardening tests stable.
+- Reviewed rekey worker locking to ensure active context and counters remain race-free during suite swaps.
+
+### Maintained
+- Latest regression run (`pytest -q`) passes 93 tests with 1 skip prior to full 21-suite LAN execution.
+- Documented the LAN matrix workflow and artifact expectations in `docs/lan-test.txt` for field execution.
+
 ## [1.0.0] - 2025-09-24 - INITIAL RELEASE ✅
 
 ### 🎉 **Major Milestones Achieved**

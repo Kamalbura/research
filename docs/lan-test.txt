@@ -1,6 +1,18 @@
 LAN Integration Test – Drone ↔ GCS Secure Tunnel
 ===============================================
 
+Matrix Sweep Playbook — 2025-09-28
+----------------------------------
+- **Target hosts:** Drone 192.168.0.102, GCS 192.168.0.103.
+- **Environment overrides:** set `DRONE_HOST`, `GCS_HOST`, `ENABLE_PACKET_TYPE`, `STRICT_UDP_PEER_MATCH` via OS env (no config edits).
+- **Execution cadence:**
+   1. Launch GCS proxy loop (PowerShell) cycling through 21 suites for 60 s each, writing status and summary JSON under `logs/matrix/traffic/<suite>/`.
+   2. Start Drone proxy loop (Pi bash) with the same suite list and `--peer-pubkey-file` pointing at `secrets/gcs_signing.pub`.
+   3. Keep a GCS plaintext pinger and Drone echo app running for the full window to maintain bidirectional load.
+- **Perf sampling:** During or after the sweep, run `tools/udp_dual_probe.py` locally on both sides and store outputs in `logs/perf/{gcs,drone}_dual_probe.json`.
+- **Aggregation:** Use the provided CSV helper script to produce `logs/matrix/summary.csv` once all suites complete.
+- **Artifacts:** Preserve per-suite `{gcs,drone}_{summary,status}.json`, perf outputs, representative proxy logs containing “PQC handshake completed successfully”, and `pytest.out` from the pre-run regression.
+
 Date: 2025-09-26
 Suite: cs-mlkem768-aesgcm-mldsa65 (session e0a3816968587119)
 

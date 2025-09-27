@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import hashlib
+import hmac
 import os
 import struct
 from core.config import CONFIG
@@ -22,6 +24,7 @@ class ServerHello:
     session_id: bytes
     kem_pub: bytes
     signature: bytes
+    challenge: bytes
 
 @dataclass
 class ServerEphemeral:
@@ -29,6 +32,7 @@ class ServerEphemeral:
     sig_name: str
     session_id: bytes
     kem_obj: object  # oqs.KeyEncapsulation instance
+    challenge: bytes
 
 def build_server_hello(suite_id: str, server_sig_obj):
     suite = get_suite(suite_id)
@@ -42,22 +46,37 @@ def build_server_hello(suite_id: str, server_sig_obj):
     if not isinstance(server_sig_obj, Signature):
         raise NotImplementedError("server_sig_obj must be oqs.Signature")
     session_id = os.urandom(8)
+    challenge = os.urandom(8)
     kem_obj = KeyEncapsulation(kem_name.decode())
     kem_pub = kem_obj.generate_keypair()
     # Include negotiated wire version as first byte of transcript to prevent downgrade
-    transcript = struct.pack("!B", version) + b"|pq-drone-gcs:v1|" + session_id + b"|" + kem_name + b"|" + sig_name + b"|" + kem_pub
+    transcript = (
+        struct.pack("!B", version)
+        + b"|pq-drone-gcs:v1|"
+        + session_id
+        + b"|"
+        + kem_name
+        + b"|"
+        + sig_name
+        + b"|"
+        + kem_pub
+        + b"|"
+        + challenge
+    )
     signature = server_sig_obj.sign(transcript)
     wire = struct.pack("!B", version)
     wire += struct.pack("!H", len(kem_name)) + kem_name
     wire += struct.pack("!H", len(sig_name)) + sig_name
     wire += session_id
+    wire += challenge
     wire += struct.pack("!I", len(kem_pub)) + kem_pub
     wire += struct.pack("!H", len(signature)) + signature
     ephemeral = ServerEphemeral(
         kem_name=kem_name.decode(),
         sig_name=sig_name.decode(),
         session_id=session_id,
-        kem_obj=kem_obj
+        kem_obj=kem_obj,
+        challenge=challenge,
     )
     return wire, ephemeral
 
@@ -78,6 +97,8 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         offset += sig_name_len
         session_id = wire[offset:offset+8]
         offset += 8
+        challenge = wire[offset:offset+8]
+        offset += 8
         kem_pub_len = struct.unpack_from("!I", wire, offset)[0]
         offset += 4
         kem_pub = wire[offset:offset+kem_pub_len]
@@ -88,7 +109,19 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         offset += sig_len
     except Exception:
         raise HandshakeFormatError("malformed server hello")
-    transcript = struct.pack("!B", version) + b"|pq-drone-gcs:v1|" + session_id + b"|" + kem_name + b"|" + sig_name + b"|" + kem_pub
+    transcript = (
+        struct.pack("!B", version)
+        + b"|pq-drone-gcs:v1|"
+        + session_id
+        + b"|"
+        + kem_name
+        + b"|"
+        + sig_name
+        + b"|"
+        + kem_pub
+        + b"|"
+        + challenge
+    )
     try:
         sig = Signature(sig_name.decode())
         if not sig.verify(transcript, signature, server_sig_pub):
@@ -103,8 +136,20 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         sig_name=sig_name,
         session_id=session_id,
         kem_pub=kem_pub,
-        signature=signature
+        signature=signature,
+        challenge=challenge,
     )
+
+def _drone_psk_bytes() -> bytes:
+    psk_hex = CONFIG.get("DRONE_PSK", "")
+    try:
+        psk = bytes.fromhex(psk_hex)
+    except ValueError as exc:
+        raise NotImplementedError(f"Invalid DRONE_PSK hex: {exc}")
+    if len(psk) != 32:
+        raise NotImplementedError("DRONE_PSK must decode to 32 bytes")
+    return psk
+
 
 def client_encapsulate(server_hello: ServerHello):
     try:
@@ -191,6 +236,26 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
             raise ConnectionError("Connection closed reading ciphertext")
         kem_ct += chunk
 
+    tag_len = hashlib.sha256().digest_size
+    tag = b""
+    while len(tag) < tag_len:
+        chunk = conn.recv(tag_len - len(tag))
+        if not chunk:
+            raise ConnectionError("Connection closed reading drone authentication tag")
+        tag += chunk
+
+    expected_tag = hmac.new(_drone_psk_bytes(), hello_wire, hashlib.sha256).digest()
+    if not hmac.compare_digest(tag, expected_tag):
+        try:
+            peer_ip, _peer_port = conn.getpeername()
+        except OSError:
+            peer_ip = "unknown"
+        logger.warning(
+            "Rejected drone handshake with bad authentication tag",
+            extra={"role": "gcs", "expected_peer": CONFIG["DRONE_HOST"], "received": peer_ip},
+        )
+        raise HandshakeVerifyError("drone authentication failed")
+
     shared_secret = server_decapsulate(ephemeral, kem_ct)
     key_send, key_recv = derive_transport_keys(
         "server",
@@ -235,7 +300,7 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
     negotiated_sig = hello.sig_name.decode() if isinstance(hello.sig_name, bytes) else hello.sig_name
     if expected_kem and negotiated_kem != expected_kem:
         logger.error(
-            "Suite mismatch detected during handshake",
+            "Suite mismatch",
             extra={
                 "expected_kem": expected_kem,
                 "expected_sig": expected_sig,
@@ -248,7 +313,7 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
         )
     if expected_sig and negotiated_sig != expected_sig:
         logger.error(
-            "Suite mismatch detected during handshake",
+            "Suite mismatch",
             extra={
                 "expected_kem": expected_kem,
                 "expected_sig": expected_sig,
@@ -260,9 +325,10 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
             f"Downgrade attempt detected: expected {expected_sig}, got {negotiated_sig}"
         )
     
-    # Encapsulate and send KEM ciphertext
+    # Encapsulate and send KEM ciphertext + authentication tag
     kem_ct, shared_secret = client_encapsulate(hello)
-    client_sock.sendall(struct.pack("!I", len(kem_ct)) + kem_ct)
+    tag = hmac.new(_drone_psk_bytes(), hello_wire, hashlib.sha256).digest()
+    client_sock.sendall(struct.pack("!I", len(kem_ct)) + kem_ct + tag)
     
     # Derive transport keys
     key_send, key_recv = derive_transport_keys("client", hello.session_id, 

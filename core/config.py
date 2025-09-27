@@ -5,6 +5,7 @@ Single source of truth for all network ports, hosts, and runtime parameters.
 """
 
 import os
+from ipaddress import ip_address
 from typing import Dict, Any
 
 
@@ -29,6 +30,10 @@ CONFIG = {
     "DRONE_HOST": "192.168.0.102",
     "GCS_HOST": "192.168.0.103",
 
+    # Pre-shared key (hex) for drone authentication during handshake.
+    # Default is a placeholder; override in production via environment variable.
+    "DRONE_PSK": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+
     # Crypto/runtime
     "REPLAY_WINDOW": 1024,
     "WIRE_VERSION": 1,      # header version byte (frozen)
@@ -46,11 +51,14 @@ CONFIG = {
     # Feature flag: if True, proxy prefixes app->proxy plaintext with 1 byte packet type.
     # 0x01 = MAVLink/data (forward to local app); 0x02 = control (route to policy engine).
     # When False (default), proxy passes bytes unchanged (backward compatible).
-    "ENABLE_PACKET_TYPE": False,
+    "ENABLE_PACKET_TYPE": True,
 
     # Enforce strict matching of encrypted UDP peer IP/port with the authenticated handshake peer.
     # Disable (set to False) only when operating behind NAT where source ports may differ.
     "STRICT_UDP_PEER_MATCH": True,
+
+    # Log real session IDs only when explicitly enabled (default False masks them to hashes).
+    "LOG_SESSION_ID": False,
 }
 
 
@@ -71,6 +79,8 @@ _REQUIRED_KEYS = {
     "WIRE_VERSION": int,
     "ENABLE_PACKET_TYPE": bool,
     "STRICT_UDP_PEER_MATCH": bool,
+    "LOG_SESSION_ID": bool,
+    "DRONE_PSK": str,
 }
 
 # Keys that can be overridden by environment variables
@@ -88,6 +98,8 @@ _ENV_OVERRIDABLE = {
     "GCS_HOST",
     "ENABLE_PACKET_TYPE",
     "STRICT_UDP_PEER_MATCH",
+    "LOG_SESSION_ID",
+    "DRONE_PSK",
 }
 
 
@@ -121,17 +133,56 @@ def validate_config(cfg: Dict[str, Any]) -> None:
     
     if cfg["REPLAY_WINDOW"] < 64:
         raise NotImplementedError(f"CONFIG[REPLAY_WINDOW] must be >= 64, got {cfg['REPLAY_WINDOW']}")
+    if cfg["REPLAY_WINDOW"] > 8192:
+        raise NotImplementedError(f"CONFIG[REPLAY_WINDOW] must be <= 8192, got {cfg['REPLAY_WINDOW']}")
     
     # Validate hosts are valid strings (basic check)
-    for host_key in ["DRONE_HOST", "GCS_HOST", "DRONE_PLAINTEXT_HOST", "GCS_PLAINTEXT_HOST"]:
+    for host_key in ["DRONE_HOST", "GCS_HOST"]:
         host = cfg[host_key]
         if not host or not isinstance(host, str):
             raise NotImplementedError(f"CONFIG[{host_key}] must be non-empty string, got {repr(host)}")
+        try:
+            ip_address(host)
+        except ValueError as exc:
+            raise NotImplementedError(f"CONFIG[{host_key}] must be a valid IP address: {exc}")
+
+    # Loopback hosts for plaintext path may remain hostnames (e.g., 127.0.0.1).
+    allow_non_loopback_plaintext = str(os.environ.get("ALLOW_NON_LOOPBACK_PLAINTEXT", "")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    for host_key in ["DRONE_PLAINTEXT_HOST", "GCS_PLAINTEXT_HOST"]:
+        host = cfg[host_key]
+        if not host or not isinstance(host, str):
+            raise NotImplementedError(f"CONFIG[{host_key}] must be non-empty string, got {repr(host)}")
+        if allow_non_loopback_plaintext:
+            continue
+        try:
+            parsed = ip_address(host)
+            if not parsed.is_loopback:
+                raise NotImplementedError(
+                    f"CONFIG[{host_key}] must be a loopback address unless ALLOW_NON_LOOPBACK_PLAINTEXT is set"
+                )
+        except ValueError:
+            if host.lower() != "localhost":
+                raise NotImplementedError(
+                    f"CONFIG[{host_key}] must be loopback/localhost unless ALLOW_NON_LOOPBACK_PLAINTEXT is set"
+                )
     
     # Optional keys are intentionally not required; do light validation if present
     if "ENCRYPTED_DSCP" in cfg and cfg["ENCRYPTED_DSCP"] is not None:
         if not (0 <= int(cfg["ENCRYPTED_DSCP"]) <= 63):
             raise NotImplementedError("CONFIG[ENCRYPTED_DSCP] must be 0..63 or None")
+
+    psk = cfg.get("DRONE_PSK", "")
+    try:
+        psk_bytes = bytes.fromhex(psk)
+    except ValueError:
+        raise NotImplementedError("CONFIG[DRONE_PSK] must be a hex string")
+    if len(psk_bytes) != 32:
+        raise NotImplementedError("CONFIG[DRONE_PSK] must decode to 32 bytes")
 
 
 def _apply_env_overrides(cfg: Dict[str, Any]) -> Dict[str, Any]:

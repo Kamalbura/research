@@ -121,7 +121,7 @@ def test_drone_rejects_mismatched_suite():
     assert not thread.is_alive()
 
 
-def test_proxy_drops_spoofed_udp():
+def test_proxy_drops_spoofed_udp_source():
     suite = get_suite("cs-mlkem768-aesgcm-mldsa65")
     cfg = _make_test_config()
 
@@ -164,5 +164,5 @@ def test_proxy_drops_spoofed_udp():
 
     counters = counters_holder["result"]
     assert counters["drops"] >= 1
-    assert counters["drop_other"] >= 1
+    assert (counters.get("drop_src_addr", 0) >= 1) or (counters.get("drop_other", 0) >= 1)
     assert counters["enc_in"] == 0

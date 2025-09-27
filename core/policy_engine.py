@@ -10,6 +10,7 @@ import queue
 import secrets
 import threading
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -45,7 +46,7 @@ class ControlState:
         "rekeys_ok": 0,
         "rekeys_fail": 0,
     })
-    seen_rids: set[str] = field(default_factory=set)
+    seen_rids: deque[str] = field(default_factory=lambda: deque(maxlen=256))
 
 
 @dataclass
@@ -146,7 +147,7 @@ def handle_control(msg: dict, role: str, state: ControlState) -> ControlResult:
                     result.notes.append("unknown_rid")
                     return result
                 state.state = "SWAPPING"
-                state.seen_rids.add(rid)
+                state.seen_rids.append(rid)
             result.send.append({
                 "type": "commit_rekey",
                 "suite": suite,
@@ -161,7 +162,7 @@ def handle_control(msg: dict, role: str, state: ControlState) -> ControlResult:
                 state.active_rid = None
                 state.state = "RUNNING"
                 state.stats["rekeys_fail"] += 1
-                state.seen_rids.add(rid)
+                state.seen_rids.append(rid)
             result.notes.append(f"prepare_fail:{reason}")
         elif msg_type == "status":
             with state.lock:
@@ -186,7 +187,7 @@ def handle_control(msg: dict, role: str, state: ControlState) -> ControlResult:
                 state.active_rid = rid
                 state.state = "NEGOTIATING"
                 state.stats["prepare_received"] += 1
-                state.seen_rids.add(rid)
+                state.seen_rids.append(rid)
         if allow:
             result.send.append({
                 "type": "prepare_ok",

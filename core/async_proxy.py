@@ -14,44 +14,46 @@ is retained for backward compatibility; a future refactor may rename it to
 
 from __future__ import annotations
 
+import hashlib
 import json
 import queue
 import socket
 import selectors
+import struct
 import sys
 import threading
 import time
-import struct
-from typing import Optional, Dict, Tuple
 from contextlib import contextmanager
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 
 from core.config import CONFIG
-from core.suites import SUITES, header_ids_for_suite, get_suite, list_suites
+from core.suites import SUITES, get_suite, header_ids_for_suite, list_suites
 try:
     # Optional helper (if you implemented it)
     from core.suites import header_ids_from_names  # type: ignore
 except Exception:
     header_ids_from_names = None  # type: ignore
 
-from core.handshake import server_gcs_handshake, client_drone_handshake
+from core.handshake import HandshakeVerifyError, client_drone_handshake, server_gcs_handshake
 from core.logging_utils import get_logger
 
 from core.aead import (
-    Sender,
-    Receiver,
-    HeaderMismatch,
-    ReplayError,
     AeadAuthError,
     AeadIds,
+    HeaderMismatch,
+    Receiver,
+    ReplayError,
+    Sender,
 )
 
 from core.policy_engine import (
-    ControlState,
     ControlResult,
+    ControlState,
     create_control_state,
     handle_control,
-    request_prepare,
     record_rekey_result,
+    request_prepare,
 )
 
 logger = get_logger("pqc")
@@ -72,6 +74,7 @@ class ProxyCounters:
         self.drop_header = 0
         self.drop_session_epoch = 0
         self.drop_other = 0
+        self.drop_src_addr = 0
         self.rekeys_ok = 0
         self.rekeys_fail = 0
         self.last_rekey_ms = 0
@@ -89,6 +92,7 @@ class ProxyCounters:
             "drop_header": self.drop_header,
             "drop_session_epoch": self.drop_session_epoch,
             "drop_other": self.drop_other,
+            "drop_src_addr": self.drop_src_addr,
             "rekeys_ok": self.rekeys_ok,
             "rekeys_fail": self.rekeys_fail,
             "last_rekey_ms": self.last_rekey_ms,
@@ -236,10 +240,17 @@ def _perform_handshake(
                     conn, addr = server_sock.accept()
                     try:
                         ip, _port = addr
-                        if ip != cfg["DRONE_HOST"]:
+                        allowed_ips = {str(cfg["DRONE_HOST"])}
+                        allowlist = cfg.get("DRONE_HOST_ALLOWLIST", []) or []
+                        if isinstance(allowlist, (list, tuple, set)):
+                            for entry in allowlist:
+                                allowed_ips.add(str(entry))
+                        else:
+                            allowed_ips.add(str(allowlist))
+                        if ip not in allowed_ips:
                             logger.warning(
                                 "Rejected handshake from unauthorized IP",
-                                extra={"role": role, "expected": cfg["DRONE_HOST"], "received": ip},
+                                extra={"role": role, "expected": sorted(allowed_ips), "received": ip},
                             )
                             conn.close()
                             continue
@@ -252,9 +263,20 @@ def _perform_handshake(
                                 pass
                             finally:
                                 conn.close()
-                            raise NotImplementedError("Handshake rate-limit: too many attempts")
+                            logger.warning(
+                                "Handshake rate-limit drop",
+                                extra={"role": role, "ip": ip},
+                            )
+                            continue
 
-                        result = server_gcs_handshake(conn, suite, gcs_sig_secret)
+                        try:
+                            result = server_gcs_handshake(conn, suite, gcs_sig_secret)
+                        except HandshakeVerifyError:
+                            logger.warning(
+                                "Rejected drone handshake with failed authentication",
+                                extra={"role": role, "expected": cfg["DRONE_HOST"], "received": ip},
+                            )
+                            continue
                         # Support either 5-tuple or 7-tuple
                         if len(result) >= 7:
                             k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id, kem_name, sig_name = result[:7]
@@ -491,6 +513,7 @@ def run_proxy(
     manual_control: bool = False,
     quiet: bool = False,
     ready_event: Optional[threading.Event] = None,
+    status_file: Optional[str] = None,
 ) -> Dict[str, object]:
     """
     Start a blocking proxy process for `role` in {"drone","gcs"}.
@@ -504,7 +527,26 @@ def run_proxy(
     _validate_config(cfg)
 
     counters = ProxyCounters()
+    counters_lock = threading.Lock()
     start_time = time.time()
+
+    status_path: Optional[Path] = None
+    if status_file:
+        status_path = Path(status_file).expanduser()
+
+    def write_status(payload: Dict[str, object]) -> None:
+        if status_path is None:
+            return
+        try:
+            status_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = status_path.with_suffix(status_path.suffix + ".tmp")
+            tmp_path.write_text(json.dumps(payload), encoding="utf-8")
+            tmp_path.replace(status_path)
+        except Exception as exc:
+            logger.warning(
+                "Failed to write status file",
+                extra={"role": role, "error": str(exc), "path": str(status_path)},
+            )
 
     handshake_result = _perform_handshake(
         role, suite, gcs_sig_secret, gcs_sig_public, cfg, stop_after_seconds, ready_event
@@ -528,12 +570,24 @@ def run_proxy(
         except Exception:
             suite_id = "unknown"
 
+    write_status({
+        "status": "handshake_ok",
+        "suite": suite_id,
+        "session_id": session_id.hex(),
+    })
+
+    sess_display = (
+        session_id.hex()
+        if cfg.get("LOG_SESSION_ID", False)
+        else hashlib.sha256(session_id).hexdigest()[:8] + "..."
+    )
+
     logger.info(
         "PQC handshake completed successfully",
         extra={
             "suite_id": suite_id,
             "peer_role": ("drone" if role == "gcs" else "gcs"),
-            "session_id": session_id.hex(),
+            "session_id": sess_display,
         },
     )
 
@@ -581,7 +635,8 @@ def run_proxy(
             except NotImplementedError as exc:
                 with context_lock:
                     current_suite = active_context["suite"]
-                counters.rekeys_fail += 1
+                with counters_lock:
+                    counters.rekeys_fail += 1
                 record_rekey_result(control_state, rid, current_suite, success=False)
                 logger.warning(
                     "Control rekey rejected: unknown suite",
@@ -624,18 +679,37 @@ def run_proxy(
                     )
                     sockets["encrypted_peer"] = new_peer_addr
 
-                counters.rekeys_ok += 1
-                counters.last_rekey_ms = int(time.time() * 1000)
-                counters.last_rekey_suite = new_suite["suite_id"]
+                with counters_lock:
+                    counters.rekeys_ok += 1
+                    counters.last_rekey_ms = int(time.time() * 1000)
+                    counters.last_rekey_suite = new_suite["suite_id"]
                 record_rekey_result(control_state, rid, new_suite["suite_id"], success=True)
+                write_status(
+                    {
+                        "status": "rekey_ok",
+                        "new_suite": new_suite["suite_id"],
+                        "session_id": new_session_id.hex(),
+                    }
+                )
+                new_sess_display = (
+                    new_session_id.hex()
+                    if cfg.get("LOG_SESSION_ID", False)
+                    else hashlib.sha256(new_session_id).hexdigest()[:8] + "..."
+                )
                 logger.info(
                     "Control rekey successful",
-                    extra={"role": role, "suite_id": new_suite["suite_id"], "rid": rid, "session_id": new_session_id.hex()},
+                    extra={
+                        "role": role,
+                        "suite_id": new_suite["suite_id"],
+                        "rid": rid,
+                        "session_id": new_sess_display,
+                    },
                 )
             except Exception as exc:
                 with context_lock:
                     current_suite = active_context["suite"]
-                counters.rekeys_fail += 1
+                with counters_lock:
+                    counters.rekeys_fail += 1
                 record_rekey_result(control_state, rid, current_suite, success=False)
                 logger.warning(
                     "Control rekey failed",
@@ -730,8 +804,8 @@ def run_proxy(
                                     mismatch = src_ip != exp_ip
                                 if mismatch:
                                     counters.drops += 1
-                                    counters.drop_other += 1
-                                    logger.warning(
+                                    counters.drop_src_addr += 1
+                                    logger.debug(
                                         "Dropped encrypted packet from unauthorized source",
                                         extra={"role": role, "expected": expected_peer, "received": addr},
                                     )
@@ -742,16 +816,36 @@ def run_proxy(
                             try:
                                 plaintext = current_receiver.decrypt(wire)
                                 if plaintext is None:
-                                    reason, _seq = _parse_header_fields(
-                                        CONFIG["WIRE_VERSION"], current_receiver.ids, current_receiver.session_id, wire
-                                    )
                                     counters.drops += 1
-                                    if reason in ("version_mismatch", "crypto_id_mismatch", "header_too_short", "header_unpack_error"):
+                                    last_reason = current_receiver.last_error_reason()
+                                    if last_reason == "auth":
+                                        counters.drop_auth += 1
+                                    elif last_reason == "header":
                                         counters.drop_header += 1
-                                    elif reason == "session_mismatch":
+                                    elif last_reason == "replay":
+                                        counters.drop_replay += 1
+                                    elif last_reason == "session":
                                         counters.drop_session_epoch += 1
                                     else:
-                                        counters.drop_auth += 1
+                                        reason, _seq = _parse_header_fields(
+                                            CONFIG["WIRE_VERSION"],
+                                            current_receiver.ids,
+                                            current_receiver.session_id,
+                                            wire,
+                                        )
+                                        if reason in (
+                                            "version_mismatch",
+                                            "crypto_id_mismatch",
+                                            "header_too_short",
+                                            "header_unpack_error",
+                                        ):
+                                            counters.drop_header += 1
+                                        elif reason == "session_mismatch":
+                                            counters.drop_session_epoch += 1
+                                        elif reason == "auth_fail_or_replay":
+                                            counters.drop_auth += 1
+                                        else:
+                                            counters.drop_other += 1
                                     continue
                             except ReplayError:
                                 counters.drops += 1
@@ -801,32 +895,35 @@ def run_proxy(
                                 continue
 
                             try:
-                                out_bytes = plaintext
+                                if plaintext and plaintext[0] == 0x02:
+                                    try:
+                                        control_json = json.loads(plaintext[1:].decode("utf-8"))
+                                    except (UnicodeDecodeError, json.JSONDecodeError):
+                                        counters.drops += 1
+                                        counters.drop_other += 1
+                                        continue
+                                    result = handle_control(control_json, role, control_state)
+                                    for note in result.notes:
+                                        if note.startswith("prepare_fail"):
+                                            with counters_lock:
+                                                counters.rekeys_fail += 1
+                                    for payload in result.send:
+                                        control_state.outbox.put(payload)
+                                    if result.start_handshake:
+                                        suite_next, rid = result.start_handshake
+                                        _launch_rekey(suite_next, rid)
+                                    continue
+
                                 if cfg.get("ENABLE_PACKET_TYPE") and plaintext:
                                     ptype = plaintext[0]
                                     if ptype == 0x01:
                                         out_bytes = plaintext[1:]
-                                    elif ptype == 0x02:
-                                        try:
-                                            control_json = json.loads(plaintext[1:].decode("utf-8"))
-                                        except (UnicodeDecodeError, json.JSONDecodeError):
-                                            counters.drops += 1
-                                            counters.drop_other += 1
-                                            continue
-                                        result = handle_control(control_json, role, control_state)
-                                        for note in result.notes:
-                                            if note.startswith("prepare_fail"):
-                                                counters.rekeys_fail += 1
-                                        for payload in result.send:
-                                            control_state.outbox.put(payload)
-                                        if result.start_handshake:
-                                            suite_next, rid = result.start_handshake
-                                            _launch_rekey(suite_next, rid)
-                                        continue
                                     else:
                                         counters.drops += 1
                                         counters.drop_other += 1
                                         continue
+                                else:
+                                    out_bytes = plaintext
 
                                 sockets["plaintext_out"].sendto(out_bytes, sockets["plaintext_peer"])
                                 counters.ptx_out += 1
