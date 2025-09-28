@@ -12,9 +12,7 @@ __pycache__/
 artifacts/harness/
 
 # Secrets and generated keys
-secrets/
-secrets/*
-secrets/matrix/
+
 
 # Logs and JSON outputs
 logs/
