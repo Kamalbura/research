@@ -11,6 +11,13 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+from pathlib import Path
+
+# Ensure repo root is on sys.path when executed from tools/ directory
+_HERE = Path(__file__).resolve()
+_REPO = _HERE.parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
 
 def _get_pid_for_port(port: int) -> int | None:

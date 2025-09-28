@@ -8,6 +8,16 @@ import signal
 import socket
 import threading
 import time
+import sys
+from pathlib import Path
+
+# Ensure repository root is on sys.path when executed directly so
+# imports like 'from tools.socket_utils import ...' succeed.
+_HERE = Path(__file__).resolve()
+_REPO = _HERE.parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
 from tools.socket_utils import open_udp_socket, close_socket
 
 
