@@ -37,12 +37,27 @@ def ts(): return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 def mkdirp(p): pathlib.Path(p).mkdir(parents=True, exist_ok=True)
 
 # ---- Control client (to drone) ----
-def ctl_send(host, port, obj, timeout=2.0):
-    with socket.create_connection((host, port), timeout=timeout) as s:
-        s.sendall((json.dumps(obj)+"\n").encode())
-        s.shutdown(socket.SHUT_WR)
-        line = s.makefile().readline()
-        return json.loads(line.strip()) if line else {}
+def ctl_send(host, port, obj, timeout=2.0, retries=4, backoff=0.5):
+    """Send a line-delimited JSON request to the drone control server.
+
+    Retries a few times on transient failures (connection refused, timeout).
+    """
+    last_exc = None
+    for attempt in range(1, retries + 1):
+        try:
+            with socket.create_connection((host, port), timeout=timeout) as s:
+                s.sendall((json.dumps(obj) + "\n").encode())
+                s.shutdown(socket.SHUT_WR)
+                line = s.makefile().readline()
+                return json.loads(line.strip()) if line else {}
+        except Exception as e:
+            last_exc = e
+            if attempt < retries:
+                time.sleep(backoff * attempt)
+                continue
+            raise
+    if last_exc:
+        raise last_exc
 
 # ---- Traffic driver ----
 class UdpTraffic:
@@ -135,96 +150,108 @@ def main():
     key = f"{args.secrets_dir}/{first}/gcs_signing.key"
     status_file = f"{sdir(first)}/gcs_status.json"
     summary_file = f"{sdir(first)}/gcs_summary.json"
-    gcs_log = open(f"{args.outdir}/gcs_{time.strftime('%Y%m%d-%H%M%S')}.log","w")
-    gcs = subprocess.Popen([
-        sys.executable,"-m","core.run_proxy","gcs",
-        "--suite", first,
-        "--gcs-secret-file", key,
-        "--control-manual",
-        "--status-file", status_file,
-        "--json-out", summary_file
-    ], stdin=subprocess.PIPE, stdout=gcs_log, stderr=subprocess.STDOUT, text=True, bufsize=1)
+    gcs_log_path = f"{args.outdir}/gcs_{time.strftime('%Y%m%d-%H%M%S')}.log"
+    gcs_log = open(gcs_log_path, "w", encoding="utf-8", errors="replace")
+    gcs = subprocess.Popen(
+        [
+            sys.executable, "-m", "core.run_proxy", "gcs",
+            "--suite", first,
+            "--gcs-secret-file", key,
+            "--control-manual",
+            "--status-file", status_file,
+            "--json-out", summary_file
+        ],
+        stdin=subprocess.PIPE, stdout=gcs_log, stderr=subprocess.STDOUT, text=True, bufsize=1
+    )
 
-    # Ensure the drone follower is up; rotate monitors for the first suite
     try:
-        ctl_send(args.drone, args.control_port, {"cmd":"ping"})
-        ctl_send(args.drone, args.control_port, {"cmd":"mark","suite": first})
-    except Exception as e:
-        print(f"[WARN] control ping failed: {e}", file=sys.stderr)
-
-    # Wait handshake / readiness
-    ok = wait_handshake(status_file, timeout=20)
-    print(f"[{ts()}] initial handshake ready? {ok}")
-
-    # Traffic per suite
-    summary_rows = []
-    for idx, suite in enumerate(args.suites):
-        if idx>0:
-            # Rekey by writing suite id + newline to proxy stdin
-            print(f"[{ts()}] rekey -> {suite}")
-            gcs.stdin.write(suite + "\n"); gcs.stdin.flush()
-            # rotate drone monitors to the new suite
-            try:
-                ctl_send(args.drone, args.control_port, {"cmd":"mark","suite": suite})
-            except Exception as e:
-                print(f"[WARN] mark failed: {e}", file=sys.stderr)
-            # Switch output files for status/summary to keep per-suite artifacts
-            status_file = f"{sdir(suite)}/gcs_status.json"
-            summary_file = f"{sdir(suite)}/gcs_summary.json"
-            # (run_proxy will keep writing to the originally provided files; if you
-            #  prefer per-suite files from the proxy, relaunch per suite instead of rekeying.)
-
-        # Start traffic
-        events_path = f"{sdir(suite)}/gcs_events.jsonl"
-        traf = UdpTraffic(args.app_send_port, args.app_recv_port, events_path, args.rate)
-        start_ns = time.time_ns()
-        traf.start()
-        time.sleep(args.duration)
-        traf.stop_and_close()
-        end_ns = time.time_ns()
-
-        # Read current proxy summary (best-effort)
-        js = {}
+        # Ensure the drone follower is up; rotate monitors for the first suite
         try:
-            if os.path.exists(summary_file):
-                js = json.load(open(summary_file))
-        except Exception: pass
+            ctl_send(args.drone, args.control_port, {"cmd": "ping"})
+            ctl_send(args.drone, args.control_port, {"cmd": "mark", "suite": first})
+        except Exception as e:
+            print(f"[WARN] control ping failed: {e}", file=sys.stderr)
 
-        summary_rows.append({
-            "suite": suite,
-            "duration_s": args.duration,
-            "sent": traf.sent,
-            "rcvd": traf.rcvd,
-            "start_ns": start_ns,
-            "end_ns": end_ns,
-            "enc_out": js.get("enc_out",0),
-            "enc_in": js.get("enc_in",0),
-            "drops": js.get("drops",0),
-            "rekeys_ok": js.get("rekeys_ok",0),
-            "rekeys_fail": js.get("rekeys_fail",0),
-        })
-        print(f"[{ts()}] {suite}: sent={traf.sent} rcvd={traf.rcvd} enc_out={js.get('enc_out')} enc_in={js.get('enc_in')}")
+        # Wait handshake / readiness
+        ok = wait_handshake(status_file, timeout=20)
+        print(f"[{ts()}] initial handshake ready? {ok}")
 
-    # Write CSV rollup
-    csv_path = f"{args.outdir}/summary.csv"
-    with open(csv_path,"w",newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(summary_rows[0].keys()))
-        w.writeheader(); w.writerows(summary_rows)
-    print(f"[{ts()}] wrote {csv_path}")
+        # Traffic per suite
+        summary_rows = []
+        for idx, suite in enumerate(args.suites):
+            if idx>0:
+                # Rekey by writing suite id + newline to proxy stdin
+                print(f"[{ts()}] rekey -> {suite}")
+                gcs.stdin.write(suite + "\n"); gcs.stdin.flush()
+                # rotate drone monitors to the new suite
+                try:
+                    ctl_send(args.drone, args.control_port, {"cmd":"mark","suite": suite})
+                except Exception as e:
+                    print(f"[WARN] mark failed: {e}", file=sys.stderr)
+                # Switch output files for status/summary to keep per-suite artifacts
+                status_file = f"{sdir(suite)}/gcs_status.json"
+                summary_file = f"{sdir(suite)}/gcs_summary.json"
+                # (run_proxy will keep writing to the originally provided files; if you
+                #  prefer per-suite files from the proxy, relaunch per suite instead of rekeying.)
 
-    # Clean shutdown
-    try:
-        ctl_send(args.drone, args.control_port, {"cmd":"stop"})
-    except Exception:
-        pass
-    try:
-        gcs.stdin.write("quit\n"); gcs.stdin.flush()
-    except Exception:
-        pass
-    try:
-        gcs.wait(timeout=3)
-    except Exception:
-        gcs.kill()
+            # Start traffic
+            events_path = f"{sdir(suite)}/gcs_events.jsonl"
+            traf = UdpTraffic(args.app_send_port, args.app_recv_port, events_path, args.rate)
+            start_ns = time.time_ns()
+            traf.start()
+            time.sleep(args.duration)
+            traf.stop_and_close()
+            end_ns = time.time_ns()
+
+            # Read current proxy summary (best-effort)
+            js = {}
+            try:
+                if os.path.exists(summary_file):
+                    js = json.load(open(summary_file))
+            except Exception: pass
+
+            summary_rows.append({
+                "suite": suite,
+                "duration_s": args.duration,
+                "sent": traf.sent,
+                "rcvd": traf.rcvd,
+                "start_ns": start_ns,
+                "end_ns": end_ns,
+                "enc_out": js.get("enc_out",0),
+                "enc_in": js.get("enc_in",0),
+                "drops": js.get("drops",0),
+                "rekeys_ok": js.get("rekeys_ok",0),
+                "rekeys_fail": js.get("rekeys_fail",0),
+            })
+            print(f"[{ts()}] {suite}: sent={traf.sent} rcvd={traf.rcvd} enc_out={js.get('enc_out')} enc_in={js.get('enc_in')}")
+
+        # Write CSV rollup
+        csv_path = f"{args.outdir}/summary.csv"
+        with open(csv_path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(summary_rows[0].keys()))
+            w.writeheader(); w.writerows(summary_rows)
+        print(f"[{ts()}] wrote {csv_path}")
+
+        # Clean shutdown
+        try:
+            ctl_send(args.drone, args.control_port, {"cmd": "stop"})
+        except Exception:
+            pass
+        try:
+            if gcs.stdin:
+                gcs.stdin.write("quit\n"); gcs.stdin.flush()
+        except Exception:
+            pass
+        try:
+            gcs.wait(timeout=3)
+        except Exception:
+            gcs.kill()
+    finally:
+        try:
+            if gcs_log:
+                gcs_log.close()
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     main()

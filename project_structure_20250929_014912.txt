@@ -1,15 +1,15 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Output File: C:\Users\burak\Desktop\research\project_structure_20250928_180858.txt
-Generated: 2025-09-28 18:08:58
+Output File: C:\Users\burak\Desktop\research\project_structure_20250929_014912.txt
+Generated: 2025-09-29 01:49:12
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Generated: 2025-09-28 18:08:58
+Generated: 2025-09-29 01:49:12
 
 ├── artifacts/
 │   ├── gcs-test/
@@ -58,6 +58,7 @@ Generated: 2025-09-28 18:08:58
 ├── docs/
 │   ├── aead-and-framing.txt (961 bytes)
 │   ├── all-context.txt (49,418 bytes)
+│   ├── auto_run_playbook.md (5,522 bytes)
 │   ├── auto_test_playbook.md (4,526 bytes)
 │   ├── context.txt (10,234 bytes)
 │   ├── ddos-pipeline.txt (927 bytes)
@@ -91,6 +92,14 @@ Generated: 2025-09-28 18:08:58
 │       ├── start_suite.ps1 (700 bytes)
 │       └── start_suite.sh (692 bytes)
 ├── logs/
+│   ├── auto/
+│   │   ├── cs-mlkem768-aesgcm-mldsa65/
+│   │   │   └── gcs_events.jsonl (62,355 bytes)
+│   │   ├── gcs_20250929-003156.log (4,274 bytes)
+│   │   ├── gcs_20250929-013813.log (4,274 bytes)
+│   │   ├── quickpass_events.jsonl (5,946 bytes)
+│   │   ├── quickpass_summary.csv (1,106 bytes)
+│   │   └── summary.csv (174 bytes)
 │   ├── handshake/
 │   │   ├── gcs_cs-mlkem1024-aesgcm-falcon1024_handshake.err (0 bytes)
 │   │   ├── gcs_cs-mlkem1024-aesgcm-falcon1024_handshake.log (52 bytes)
@@ -108,13 +117,17 @@ Generated: 2025-09-28 18:08:58
 │   ├── traffic/
 │   │   ├── cs-mlkem1024-aesgcm-falcon1024/
 │   │   ├── cs-mlkem1024-aesgcm-falcon512/
-│   │   └── cs-mlkem512-aesgcm-mldsa44/
+│   │   ├── cs-mlkem512-aesgcm-mldsa44/
+│   │   ├── cs-mlkem768-aesgcm-mldsa/
+│   │   └── cs-mlkem768-aesgcm-mldsa65/
+│   │       └── gcs_status.json (99 bytes)
 │   ├── auto_gcs_cs-mlkem512-mldsa44.txt (0 bytes)
 │   ├── drone-20250925-194546.log (0 bytes)
 │   ├── drone-20250925-194845.log (0 bytes)
 │   ├── drone-20250925-194857.log (0 bytes)
 │   ├── drone-20250927-205953.log (0 bytes)
 │   ├── drone-20250927-210434.log (605 bytes)
+│   ├── drone-20250928-125752.log (0 bytes)
 │   ├── gcs-20250925-194526.log (0 bytes)
 │   ├── gcs-20250925-194854.log (0 bytes)
 │   ├── gcs-20250925-204021.log (0 bytes)
@@ -169,18 +182,31 @@ Generated: 2025-09-28 18:08:58
 │   ├── gcs-20250927-212618.log (0 bytes)
 │   ├── gcs-20250927-213838.log (0 bytes)
 │   ├── gcs-20250927-214441.log (605 bytes)
+│   ├── gcs-20250928-130204.log (0 bytes)
+│   ├── gcs-20250928-130835.log (0 bytes)
+│   ├── gcs-20250928-131319.log (222 bytes)
+│   ├── gcs-20250928-131957.log (222 bytes)
+│   ├── gcs-20250928-134737.log (0 bytes)
+│   ├── gcs-20250928-135106.log (0 bytes)
+│   ├── gcs-20250928-140808.log (0 bytes)
+│   ├── gcs-20250928-142813.log (222 bytes)
+│   ├── gcs-20250928-154238.log (222 bytes)
+│   ├── gcs-20250928-190157.log (0 bytes)
+│   ├── gcs-20250928-200813.log (0 bytes)
 │   ├── gcs_conda_list.json (148,762 bytes)
 │   ├── gcs_cs-mlkem512-aesgcm-mldsa44.json (431 bytes)
+│   ├── gcs_manual_status.json (99 bytes)
 │   ├── gcs_proxy_cs-mlkem768-aesgcm-mldsa65_20250928-031440.json (456 bytes)
 │   ├── gcs_proxy_cs-mlkem768-aesgcm-mldsa65_status.txt (99 bytes)
+│   ├── gcs_status.json (99 bytes)
 │   ├── gcs_status_cs-mlkem768-aesgcm-mldsa65_20250928-031440.json (99 bytes)
 │   ├── gcs_traffic_20250928-024409.jsonl (25,893 bytes)
 │   └── gcs_traffic_summary_20250928-024409.json (349 bytes)
 ├── pqc_proxy.egg-info/
 │   ├── dependency_links.txt (1 bytes)
-│   ├── PKG-INFO (317 bytes)
-│   ├── requires.txt (59 bytes)
-│   ├── SOURCES.txt (740 bytes)
+│   ├── PKG-INFO (349 bytes)
+│   ├── requires.txt (75 bytes)
+│   ├── SOURCES.txt (829 bytes)
 │   └── top_level.txt (5 bytes)
 ├── rl/
 │   ├── agent_runtime.py (117 bytes)
@@ -190,6 +216,13 @@ Generated: 2025-09-28 18:08:58
 │   ├── lan_matrix_runner.ps1 (9,554 bytes)
 │   └── orchestrate_e2e.py (19,886 bytes)
 ├── secrets/
+│   ├── logs/
+│   │   ├── traffic/
+│   │   │   └── cs-mlkem768-aesgcm-mldsa65/
+│   │   ├── gcs-20250928-133746.log (0 bytes)
+│   │   ├── gcs-20250928-133959.log (0 bytes)
+│   │   ├── gcs-20250928-134043.log (0 bytes)
+│   │   └── gcs-20250928-142432.log (0 bytes)
 │   ├── matrix/
 │   │   ├── cs-mlkem1024-aesgcm-falcon1024/
 │   │   │   ├── gcs_signing.key (2,305 bytes)
@@ -317,10 +350,19 @@ Generated: 2025-09-28 18:08:58
 │   │   ├── counter_utils.cpython-313.pyc (8,121 bytes)
 │   │   ├── diag_udp.cpython-313.pyc (12,199 bytes)
 │   │   ├── prepare_matrix_keys.cpython-313.pyc (4,755 bytes)
+│   │   ├── socket_utils.cpython-313.pyc (3,371 bytes)
 │   │   ├── traffic_common.cpython-313.pyc (5,892 bytes)
 │   │   ├── traffic_gcs.cpython-313.pyc (451 bytes)
 │   │   ├── traffic_runner.cpython-313.pyc (8,529 bytes)
 │   │   └── udp_echo.cpython-313.pyc (3,530 bytes)
+│   ├── auto/
+│   │   ├── __pycache__/
+│   │   │   ├── drone_follower.cpython-313.pyc (15,717 bytes)
+│   │   │   ├── gcs_scheduler.cpython-313.pyc (17,599 bytes)
+│   │   │   └── gcs_scheduler_quickpass.cpython-313.pyc (13,504 bytes)
+│   │   ├── drone_follower.py (9,149 bytes)
+│   │   ├── gcs_scheduler.py (10,773 bytes)
+│   │   └── gcs_scheduler_quickpass.py (7,891 bytes)
 │   ├── captures/
 │   ├── manual_4term/
 │   │   ├── __pycache__/
@@ -353,13 +395,14 @@ Generated: 2025-09-28 18:08:58
 │   ├── __init__.py (69 bytes)
 │   ├── aggregate_lan_results.py (4,639 bytes)
 │   ├── audit_endpoints.py (5,511 bytes)
-│   ├── auto_test_drone.py (3,028 bytes)
-│   ├── auto_test_gcs.py (2,314 bytes)
+│   ├── auto_test_drone.py (3,561 bytes)
+│   ├── auto_test_gcs.py (2,549 bytes)
 │   ├── bench_cli.py (841 bytes)
 │   ├── check_matrix_keys.py (1,373 bytes)
 │   ├── check_no_hardcoded_ips.py (2,448 bytes)
 │   ├── check_ports.py (3,618 bytes)
 │   ├── check_suites.py (1,030 bytes)
+│   ├── cleanup_bound_ports.py (2,136 bytes)
 │   ├── copy_pubs_to_pi.py (5,456 bytes)
 │   ├── counter_utils.py (6,381 bytes)
 │   ├── diag_udp.py (8,245 bytes)
@@ -378,12 +421,13 @@ Generated: 2025-09-28 18:08:58
 │   ├── print_oqs_info.py (4,200 bytes)
 │   ├── project_structure_20250926_023741.txt (85,027 bytes)
 │   ├── scaffold_repo.py (17,074 bytes)
+│   ├── socket_utils.py (2,295 bytes)
 │   ├── traffic_common.py (3,551 bytes)
 │   ├── traffic_drone.py (206 bytes)
 │   ├── traffic_gcs.py (202 bytes)
 │   ├── traffic_runner.py (7,778 bytes)
 │   ├── udp_dual_probe.py (5,048 bytes)
-│   ├── udp_echo.py (2,192 bytes)
+│   ├── udp_echo.py (2,558 bytes)
 │   ├── udp_echo_server.py (2,488 bytes)
 │   └── udp_forward_log.py (2,796 bytes)
 ├── CHANGELOG.md (11,492 bytes)
@@ -401,7 +445,7 @@ Generated: 2025-09-28 18:08:58
 ├── project_no_tests.txt (354,956 bytes)
 ├── project_skip.txt (194,791 bytes)
 ├── PROJECT_STATUS.md (11,726 bytes)
-├── project_structure_20250928_180858.txt (16,439 bytes)
+├── project_structure_20250929_014912.txt (16,425 bytes)
 ├── pyproject.toml (479 bytes)
 ├── pytest.out (404 bytes)
 ├── README.md (15,701 bytes)
@@ -415,7 +459,7 @@ Generated: 2025-09-28 18:08:58
 PYTHON FILE CONTENTS
 ================================================================================
 
-Found 84 Python files:
+Found 89 Python files:
    1. benchmarks\run_matrix.py
    2. core\__init__.py
    3. core\aead.py
@@ -463,47 +507,52 @@ Found 84 Python files:
   45. tools\__init__.py
   46. tools\aggregate_lan_results.py
   47. tools\audit_endpoints.py
-  48. tools\auto_test_drone.py
-  49. tools\auto_test_gcs.py
-  50. tools\bench_cli.py
-  51. tools\check_matrix_keys.py
-  52. tools\check_no_hardcoded_ips.py
-  53. tools\check_ports.py
-  54. tools\check_suites.py
-  55. tools\copy_pubs_to_pi.py
-  56. tools\counter_utils.py
-  57. tools\diag_udp.py
-  58. tools\encrypted_sniffer.py
-  59. tools\full_comm_check.py
-  60. tools\generate_env_report.py
-  61. tools\generate_identity.py
-  62. tools\manual_4term\drone_autopilot_sim.py
-  63. tools\manual_4term\drone_tty.py
-  64. tools\manual_4term\encrypted_bridge_logger.py
-  65. tools\manual_4term\gcs_ground_station_sim.py
-  66. tools\manual_4term\gcs_tty.py
-  67. tools\manual_4term\launch_manual_test.py
-  68. tools\markers.py
-  69. tools\merge_power_csv.py
-  70. tools\netcapture\drone_capture.py
-  71. tools\netcapture\gcs_capture.py
-  72. tools\packet_interceptor.py
-  73. tools\power_hooks.py
-  74. tools\prepare_matrix_keys.py
-  75. tools\print_oqs_info.py
-  76. tools\scaffold_repo.py
-  77. tools\traffic_common.py
-  78. tools\traffic_drone.py
-  79. tools\traffic_gcs.py
-  80. tools\traffic_runner.py
-  81. tools\udp_dual_probe.py
-  82. tools\udp_echo.py
-  83. tools\udp_echo_server.py
-  84. tools\udp_forward_log.py
+  48. tools\auto\drone_follower.py
+  49. tools\auto\gcs_scheduler.py
+  50. tools\auto\gcs_scheduler_quickpass.py
+  51. tools\auto_test_drone.py
+  52. tools\auto_test_gcs.py
+  53. tools\bench_cli.py
+  54. tools\check_matrix_keys.py
+  55. tools\check_no_hardcoded_ips.py
+  56. tools\check_ports.py
+  57. tools\check_suites.py
+  58. tools\cleanup_bound_ports.py
+  59. tools\copy_pubs_to_pi.py
+  60. tools\counter_utils.py
+  61. tools\diag_udp.py
+  62. tools\encrypted_sniffer.py
+  63. tools\full_comm_check.py
+  64. tools\generate_env_report.py
+  65. tools\generate_identity.py
+  66. tools\manual_4term\drone_autopilot_sim.py
+  67. tools\manual_4term\drone_tty.py
+  68. tools\manual_4term\encrypted_bridge_logger.py
+  69. tools\manual_4term\gcs_ground_station_sim.py
+  70. tools\manual_4term\gcs_tty.py
+  71. tools\manual_4term\launch_manual_test.py
+  72. tools\markers.py
+  73. tools\merge_power_csv.py
+  74. tools\netcapture\drone_capture.py
+  75. tools\netcapture\gcs_capture.py
+  76. tools\packet_interceptor.py
+  77. tools\power_hooks.py
+  78. tools\prepare_matrix_keys.py
+  79. tools\print_oqs_info.py
+  80. tools\scaffold_repo.py
+  81. tools\socket_utils.py
+  82. tools\traffic_common.py
+  83. tools\traffic_drone.py
+  84. tools\traffic_gcs.py
+  85. tools\traffic_runner.py
+  86. tools\udp_dual_probe.py
+  87. tools\udp_echo.py
+  88. tools\udp_echo_server.py
+  89. tools\udp_forward_log.py
 
 --------------------------------------------------------------------------------
 
-FILE 1/84: benchmarks\run_matrix.py
+FILE 1/89: benchmarks\run_matrix.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\benchmarks\run_matrix.py
 Size: 11,095 bytes
@@ -820,7 +869,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 2/84: core\__init__.py
+FILE 2/89: core\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\__init__.py
 Size: 121 bytes
@@ -834,7 +883,7 @@ Provides post-quantum cryptography secure communication components.
 
 ============================================================
 
-FILE 3/84: core\aead.py
+FILE 3/89: core\aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\aead.py
 Size: 11,338 bytes
@@ -1145,7 +1194,7 @@ class Receiver:
 
 ============================================================
 
-FILE 4/84: core\async_proxy.py
+FILE 4/89: core\async_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\async_proxy.py
 Size: 38,809 bytes
@@ -2098,7 +2147,7 @@ def run_proxy(
 
 ============================================================
 
-FILE 5/84: core\config.py
+FILE 5/89: core\config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\config.py
 Size: 8,822 bytes
@@ -2328,7 +2377,7 @@ validate_config(CONFIG)
 
 ============================================================
 
-FILE 6/84: core\handshake.py
+FILE 6/89: core\handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\handshake.py
 Size: 12,545 bytes
@@ -2685,7 +2734,7 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
 
 ============================================================
 
-FILE 7/84: core\logging_utils.py
+FILE 7/89: core\logging_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\logging_utils.py
 Size: 2,957 bytes
@@ -2776,7 +2825,7 @@ METRICS = Metrics()
 
 ============================================================
 
-FILE 8/84: core\policy_engine.py
+FILE 8/89: core\policy_engine.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\policy_engine.py
 Size: 7,034 bytes
@@ -3003,7 +3052,7 @@ def handle_control(msg: dict, role: str, state: ControlState) -> ControlResult:
 
 ============================================================
 
-FILE 9/84: core\project_config.py
+FILE 9/89: core\project_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\project_config.py
 Size: 168 bytes
@@ -3016,7 +3065,7 @@ __all__ = ["CONFIG"]
 
 ============================================================
 
-FILE 10/84: core\run_proxy.py
+FILE 10/89: core\run_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\run_proxy.py
 Size: 20,487 bytes
@@ -3557,7 +3606,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 11/84: core\suites.py
+FILE 11/89: core\suites.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\suites.py
 Size: 11,618 bytes
@@ -3958,7 +4007,7 @@ def suite_bytes_for_hkdf(suite: Dict) -> bytes:
 
 ============================================================
 
-FILE 12/84: core\temp-file.py
+FILE 12/89: core\temp-file.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\temp-file.py
 Size: 18,859 bytes
@@ -4439,7 +4488,7 @@ def run_proxy(
 
 ============================================================
 
-FILE 13/84: ddos\features.py
+FILE 13/89: ddos\features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\features.py
 Size: 107 bytes
@@ -4450,7 +4499,7 @@ def extract_features(pkt_batch):
 
 ============================================================
 
-FILE 14/84: ddos\mitigations.py
+FILE 14/89: ddos\mitigations.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\mitigations.py
 Size: 112 bytes
@@ -4461,7 +4510,7 @@ def apply(action):
 
 ============================================================
 
-FILE 15/84: ddos\tst_stage2.py
+FILE 15/89: ddos\tst_stage2.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\tst_stage2.py
 Size: 104 bytes
@@ -4472,7 +4521,7 @@ def confirm(features):
 
 ============================================================
 
-FILE 16/84: ddos\xgb_stage1.py
+FILE 16/89: ddos\xgb_stage1.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\xgb_stage1.py
 Size: 106 bytes
@@ -4483,7 +4532,7 @@ def score(features):
 
 ============================================================
 
-FILE 17/84: diagnose_aead.py
+FILE 17/89: diagnose_aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\diagnose_aead.py
 Size: 620 bytes
@@ -4508,7 +4557,7 @@ print("decrypt", plain)
 
 ============================================================
 
-FILE 18/84: diagnose_handshake.py
+FILE 18/89: diagnose_handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\diagnose_handshake.py
 Size: 1,566 bytes
@@ -4571,7 +4620,7 @@ for name, value in keys.items():
 
 ============================================================
 
-FILE 19/84: drone\scripts\env_check.py
+FILE 19/89: drone\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\drone\scripts\env_check.py
 Size: 396 bytes
@@ -4593,7 +4642,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 20/84: gcs\scripts\env_check.py
+FILE 20/89: gcs\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\gcs\scripts\env_check.py
 Size: 396 bytes
@@ -4615,7 +4664,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 21/84: import_check.py
+FILE 21/89: import_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\import_check.py
 Size: 268 bytes
@@ -4633,7 +4682,7 @@ except Exception as e:
 
 ============================================================
 
-FILE 22/84: log_project_structure.py
+FILE 22/89: log_project_structure.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\log_project_structure.py
 Size: 8,868 bytes
@@ -4868,7 +4917,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 23/84: rl\agent_runtime.py
+FILE 23/89: rl\agent_runtime.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\agent_runtime.py
 Size: 117 bytes
@@ -4879,7 +4928,7 @@ if __name__ == "__main__": main()
 
 ============================================================
 
-FILE 24/84: rl\linucb.py
+FILE 24/89: rl\linucb.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\linucb.py
 Size: 107 bytes
@@ -4890,7 +4939,7 @@ class LinUCB:
 
 ============================================================
 
-FILE 25/84: rl\safety.py
+FILE 25/89: rl\safety.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\safety.py
 Size: 105 bytes
@@ -4900,7 +4949,7 @@ def guard(action, mission): raise NotImplementedError("RL safety shield not impl
 
 ============================================================
 
-FILE 26/84: scripts\orchestrate_e2e.py
+FILE 26/89: scripts\orchestrate_e2e.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\scripts\orchestrate_e2e.py
 Size: 19,886 bytes
@@ -5429,7 +5478,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 27/84: strict_mode_demo.py
+FILE 27/89: strict_mode_demo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\strict_mode_demo.py
 Size: 3,479 bytes
@@ -5523,7 +5572,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 28/84: tests\__init__.py
+FILE 28/89: tests\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\__init__.py
 Size: 54 bytes
@@ -5535,7 +5584,7 @@ Test package for PQC Drone-GCS Secure Proxy.
 
 ============================================================
 
-FILE 29/84: tests\test-oqs.py
+FILE 29/89: tests\test-oqs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test-oqs.py
 Size: 2,821 bytes
@@ -5609,7 +5658,7 @@ try_import_all()
 
 ============================================================
 
-FILE 30/84: tests\test_aead_framing.py
+FILE 30/89: tests\test_aead_framing.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_aead_framing.py
 Size: 6,589 bytes
@@ -5853,7 +5902,7 @@ def test_epoch_bump():
 
 ============================================================
 
-FILE 31/84: tests\test_cli_identity.py
+FILE 31/89: tests\test_cli_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_cli_identity.py
 Size: 13,002 bytes
@@ -6177,7 +6226,7 @@ class TestCLIHelpAndUsage:
 
 ============================================================
 
-FILE 32/84: tests\test_control_sm.py
+FILE 32/89: tests\test_control_sm.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_control_sm.py
 Size: 3,095 bytes
@@ -6261,7 +6310,7 @@ def test_drone_prepare_fail_when_guard_blocks():
 
 ============================================================
 
-FILE 33/84: tests\test_counter_utils.py
+FILE 33/89: tests\test_counter_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_counter_utils.py
 Size: 3,143 bytes
@@ -6370,7 +6419,7 @@ def test_missing_proxy_file_raises(tmp_path: Path) -> None:
 
 ============================================================
 
-FILE 34/84: tests\test_end_to_end_proxy.py
+FILE 34/89: tests\test_end_to_end_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_end_to_end_proxy.py
 Size: 12,139 bytes
@@ -6687,7 +6736,7 @@ class TestEndToEndProxy:
 
 ============================================================
 
-FILE 35/84: tests\test_handshake.py
+FILE 35/89: tests\test_handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake.py
 Size: 3,895 bytes
@@ -6807,7 +6856,7 @@ def test_gcs_rejects_bad_drone_auth():
 
 ============================================================
 
-FILE 36/84: tests\test_handshake_downgrade.py
+FILE 36/89: tests\test_handshake_downgrade.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake_downgrade.py
 Size: 1,430 bytes
@@ -6847,7 +6896,7 @@ def test_version_mismatch_signed_transcript_blocks_downgrade():
 
 ============================================================
 
-FILE 37/84: tests\test_hardening_features.py
+FILE 37/89: tests\test_hardening_features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_hardening_features.py
 Size: 7,879 bytes
@@ -7053,7 +7102,7 @@ class TestEpochGuard:
 
 ============================================================
 
-FILE 38/84: tests\test_kdf_roles.py
+FILE 38/89: tests\test_kdf_roles.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_kdf_roles.py
 Size: 1,630 bytes
@@ -7103,7 +7152,7 @@ def test_empty_kem_sig_name():
 
 ============================================================
 
-FILE 39/84: tests\test_loss_dup_oom.py
+FILE 39/89: tests\test_loss_dup_oom.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_loss_dup_oom.py
 Size: 149 bytes
@@ -7116,7 +7165,7 @@ def test_loss_dup_oom():
 
 ============================================================
 
-FILE 40/84: tests\test_packet_types.py
+FILE 40/89: tests\test_packet_types.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_packet_types.py
 Size: 4,544 bytes
@@ -7254,7 +7303,7 @@ def test_packet_type_disabled():
 
 ============================================================
 
-FILE 41/84: tests\test_rekey_epoch.py
+FILE 41/89: tests\test_rekey_epoch.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_rekey_epoch.py
 Size: 11,882 bytes
@@ -7545,7 +7594,7 @@ class TestRekeyEpoch:
 
 ============================================================
 
-FILE 42/84: tests\test_replay_window.py
+FILE 42/89: tests\test_replay_window.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_replay_window.py
 Size: 3,723 bytes
@@ -7684,7 +7733,7 @@ def test_reject_old_beyond_window():
 
 ============================================================
 
-FILE 43/84: tests\test_security_hardening.py
+FILE 43/89: tests\test_security_hardening.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_security_hardening.py
 Size: 5,207 bytes
@@ -7861,7 +7910,7 @@ def test_proxy_drops_spoofed_udp_source():
 
 ============================================================
 
-FILE 44/84: tests\test_suites_config.py
+FILE 44/89: tests\test_suites_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_suites_config.py
 Size: 13,736 bytes
@@ -8204,7 +8253,7 @@ class TestSuites:
 
 ============================================================
 
-FILE 45/84: tools\__init__.py
+FILE 45/89: tools\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\__init__.py
 Size: 69 bytes
@@ -8214,7 +8263,7 @@ Modified: 2025-09-26 15:16:07
 
 ============================================================
 
-FILE 46/84: tools\aggregate_lan_results.py
+FILE 46/89: tools\aggregate_lan_results.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\aggregate_lan_results.py
 Size: 4,639 bytes
@@ -8369,7 +8418,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 47/84: tools\audit_endpoints.py
+FILE 47/89: tools\audit_endpoints.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\audit_endpoints.py
 Size: 5,511 bytes
@@ -8526,11 +8575,737 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 48/84: tools\auto_test_drone.py
+FILE 48/89: tools\auto\drone_follower.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\auto\drone_follower.py
+Size: 9,149 bytes
+Modified: 2025-09-29 00:24:41
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""
+Drone follower/loopback + control server.
+
+- Starts the drone proxy (core.run_proxy drone) pinned to an initial suite
+  and the matching GCS public key from secrets/matrix/<suite>/gcs_signing.pub.
+- Runs a UDP echo server bound to DRONE_APP_RECV_PORT that bounces any payload
+  back to the sender (the local proxy), creating a true encrypted loopback path.
+- Exposes a small TCP JSON control API so the GCS scheduler can:
+    * ping / status
+    * rotate per-suite log files ("mark") when the GCS rekeys
+    * start/stop perf & pidstat tied to the proxy PID
+- Writes all artifacts under logs/auto/<suite>/ on the Pi.
+
+Run:
+  python -m tools.auto.drone_follower \
+    --gcs 192.168.0.101 --drone 192.168.0.102 \
+    --control-port 48080 \
+    --initial-suite cs-mlkem768-aesgcm-mldsa65 \
+    --app-recv-port 47004 \
+    --outdir logs/auto \
+    --secrets-dir secrets/matrix
+"""
+import argparse, json, os, socket, threading, time, subprocess, sys, pathlib, signal, shlex
+
+# ---------- Config defaults (override by CLI) ----------
+DEFAULT_CONTROL_PORT = 48080
+DEFAULT_APP_RECV_PORT = 47004   # drone side plaintext recv port (through proxy)
+PERF_EVENTS = "task-clock,cycles,instructions,cache-misses,context-switches"
+
+# ---------- Helpers ----------
+def ts():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+def mkdirp(p):
+    pathlib.Path(p).mkdir(parents=True, exist_ok=True)
+
+def popen(cmd, **kw):
+    print(f"[{ts()}] exec: {cmd}", flush=True)
+    return subprocess.Popen(cmd, **kw)
+
+def killtree(p: subprocess.Popen):
+    if p and p.poll() is None:
+        try:
+            p.terminate()
+            p.wait(timeout=3)
+        except Exception:
+            try:
+                p.kill()
+            except Exception:
+                pass
+
+# ---------- UDP Echo (loopback) ----------
+class UdpEcho(threading.Thread):
+    def __init__(self, port, stop_event):
+        super().__init__(daemon=True)
+        self.port = port
+        self.stop_event = stop_event
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind(("0.0.0.0", self.port))
+
+    def run(self):
+        print(f"[{ts()}] UDP echo listening on 0.0.0.0:{self.port}", flush=True)
+        self.sock.settimeout(0.5)
+        while not self.stop_event.is_set():
+            try:
+                data, addr = self.sock.recvfrom(65535)
+                # Echo to sender (local proxy)
+                self.sock.sendto(data, addr)
+            except socket.timeout:
+                pass
+            except Exception as e:
+                print(f"[{ts()}] UDP echo error: {e}", flush=True)
+
+# ---------- Perf/Pidstat ----------
+class Monitors:
+    def __init__(self):
+        self.perf = None
+        self.pidstat = None
+
+    def start(self, pid:int, outdir:str, suite:str):
+        mkdirp(outdir)
+        # perf stat (1s) -> CSV-like
+        perf_cmd = f"perf stat -I 1000 -e {PERF_EVENTS} -p {pid} --log-fd 1"
+        self.perf = popen(shlex.split(perf_cmd), stdout=open(f"{outdir}/perf_{suite}.csv","w"), stderr=subprocess.STDOUT)
+        # pidstat (1s)
+        self.pidstat = popen(["pidstat","-hlur","-p",str(pid),"1"], stdout=open(f"{outdir}/pidstat_{suite}.txt","w"), stderr=subprocess.STDOUT)
+
+    def rotate(self, pid:int, outdir:str, suite:str):
+        self.stop()
+        self.start(pid, outdir, suite)
+
+    def stop(self):
+        killtree(self.perf); self.perf = None
+        killtree(self.pidstat); self.pidstat = None
+
+# ---------- Control Server ----------
+class ControlServer(threading.Thread):
+    """
+    Simple line-delimited JSON over TCP.
+    Requests:
+      {"cmd":"ping"}
+      {"cmd":"status"}
+      {"cmd":"mark","suite":"cs-..."}              -> rotate monitor files to new suite
+      {"cmd":"stop"}                               -> stop monitors (keeps proxy+echo)
+    Replies:
+      {"ok":true, ...} or {"ok":false,"error":"..."}
+    """
+    def __init__(self, host, port, state):
+        super().__init__(daemon=True)
+        self.host, self.port = host, port
+        self.state = state
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.bind((self.host, self.port))
+        self.sock.listen(5)
+
+    def run(self):
+        print(f"[{ts()}] Control server on {self.host}:{self.port}", flush=True)
+        while not self.state["stop_event"].is_set():
+            try:
+                self.sock.settimeout(0.5)
+                conn, _ = self.sock.accept()
+            except socket.timeout:
+                continue
+            threading.Thread(target=self.handle, args=(conn,), daemon=True).start()
+
+    def send(self, conn, obj):
+        conn.sendall((json.dumps(obj)+"\n").encode())
+
+    def handle(self, conn: socket.socket):
+        f = conn.makefile("rwb", buffering=0)
+        try:
+            line = f.readline()
+            if not line:
+                return
+            req = json.loads(line.decode().strip() or "{}")
+            cmd = req.get("cmd")
+            if cmd == "ping":
+                self.send(conn, {"ok": True, "ts": ts()})
+            elif cmd == "status":
+                p = self.state["proxy"]
+                self.send(conn, {
+                    "ok": True,
+                    "suite": self.state["suite"],
+                    "proxy_pid": (p.pid if p else None),
+                    "running": (p and p.poll() is None),
+                })
+            elif cmd == "mark":
+                suite = req.get("suite")
+                if not suite:
+                    self.send(conn, {"ok": False, "error": "missing suite"})
+                else:
+                    self.state["suite"] = suite
+                    pid = self.state["proxy"].pid if self.state["proxy"] and self.state["proxy"].poll() is None else None
+                    if pid is None:
+                        self.send(conn, {"ok": False, "error": "proxy not running"})
+                    else:
+                        self.state["mon"].rotate(pid, self.state["suite_outdir"](suite), suite)
+                        self.send(conn, {"ok": True, "rotated": suite})
+            elif cmd == "stop":
+                self.state["mon"].stop()
+                self.send(conn, {"ok": True})
+            else:
+                self.send(conn, {"ok": False, "error": f"unknown cmd {cmd}"})
+        except Exception as e:
+            try: self.send(conn, {"ok": False, "error": str(e)})
+            except Exception: pass
+        finally:
+            try: conn.close()
+            except: pass
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--gcs", required=True, help="GCS host ip")
+    ap.add_argument("--drone", required=True, help="Drone host ip (this Pi)")
+    ap.add_argument("--control-port", type=int, default=DEFAULT_CONTROL_PORT)
+    ap.add_argument("--initial-suite", required=True)
+    ap.add_argument("--secrets-dir", default="secrets/matrix")
+    ap.add_argument("--app-recv-port", type=int, default=DEFAULT_APP_RECV_PORT)
+    ap.add_argument("--outdir", default="logs/auto")
+    args = ap.parse_args()
+
+    os.environ["DRONE_HOST"] = args.drone
+    os.environ["GCS_HOST"] = args.gcs
+    os.environ["ENABLE_PACKET_TYPE"] = "1"
+    os.environ["STRICT_UDP_PEER_MATCH"] = "1"
+
+    stop_event = threading.Event()
+
+    def suite_outdir(suite): 
+        p = f"{args.outdir}/{suite}"
+        mkdirp(p); return p
+
+    # Start drone proxy for initial suite
+    pub = f"{args.secrets_dir}/{args.initial_suite}/gcs_signing.pub"
+    if not os.path.exists(pub):
+        print(f"ERROR: missing pubkey {pub}", file=sys.stderr); sys.exit(2)
+    drone_sum = f"{suite_outdir(args.initial_suite)}/drone_summary.json"
+    log = open(f"{args.outdir}/drone_{time.strftime('%Y%m%d-%H%M%S')}.log","w")
+    proxy = popen([
+        sys.executable, "-m", "core.run_proxy", "drone",
+        "--suite", args.initial_suite,
+        "--peer-pubkey-file", pub,
+        "--json-out", drone_sum
+    ], stdout=log, stderr=subprocess.STDOUT)
+
+    # Start monitors & echo
+    mon = Monitors()
+    time.sleep(1)
+    if proxy.poll() is None:
+        mon.start(proxy.pid, suite_outdir(args.initial_suite), args.initial_suite)
+    echo = UdpEcho(args.app_recv_port, stop_event); echo.start()
+
+    # Control server
+    state = {
+        "proxy": proxy,
+        "suite": args.initial_suite,
+        "suite_outdir": suite_outdir,
+        "mon": mon,
+        "stop_event": stop_event,
+    }
+    ctl = ControlServer("0.0.0.0", args.control_port, state); ctl.start()
+
+    # Wait forever / until SIGINT
+    try:
+        while True:
+            time.sleep(0.5)
+            if proxy.poll() is not None:
+                print(f"[{ts()}] proxy exited with {proxy.returncode}", flush=True)
+                break
+    except KeyboardInterrupt:
+        pass
+    finally:
+        stop_event.set()
+        mon.stop()
+        killtree(proxy)
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 49/89: tools\auto\gcs_scheduler.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py
+Size: 10,773 bytes
+Modified: 2025-09-29 01:13:23
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""
+GCS matrix scheduler + traffic + rekey driver.
+
+- Starts GCS proxy with --control-manual (interactive stdin).
+- Ensures the drone follower is up via TCP control (48080).
+- For each suite in the list:
+    * if first: launch GCS proxy with that suite
+      else: write suite id + '\n' to proxy stdin to trigger in-band rekey
+    * tell the drone to "mark" to rotate perf/pidstat to the new suite
+    * run UDP traffic for D seconds at rate R (pps) on local app ports
+    * log NDJSON events (send/recv) for RTT/loss under logs/auto/<suite>/
+- Produces per-suite JSON/NDJSON + one CSV summary.
+
+Run:
+  python -m tools.auto.gcs_scheduler \
+    --gcs 192.168.0.101 --drone 192.168.0.102 \
+    --control-port 48080 \
+    --app-send-port 47001 --app-recv-port 47002 \
+    --duration 25 --rate 100
+"""
+import argparse, json, os, pathlib, socket, subprocess, sys, threading, time, csv
+
+SUITES = [
+"cs-mlkem512-aesgcm-mldsa44","cs-mlkem512-aesgcm-mldsa65","cs-mlkem512-aesgcm-mldsa87",
+"cs-mlkem512-aesgcm-falcon512","cs-mlkem512-aesgcm-falcon1024",
+"cs-mlkem512-aesgcm-sphincs128fsha2","cs-mlkem512-aesgcm-sphincs256fsha2",
+"cs-mlkem768-aesgcm-mldsa44","cs-mlkem768-aesgcm-mldsa65","cs-mlkem768-aesgcm-mldsa87",
+"cs-mlkem768-aesgcm-falcon512","cs-mlkem768-aesgcm-falcon1024",
+"cs-mlkem768-aesgcm-sphincs128fsha2","cs-mlkem768-aesgcm-sphincs256fsha2",
+"cs-mlkem1024-aesgcm-mldsa44","cs-mlkem1024-aesgcm-mldsa65","cs-mlkem1024-aesgcm-mldsa87",
+"cs-mlkem1024-aesgcm-falcon512","cs-mlkem1024-aesgcm-falcon1024",
+"cs-mlkem1024-aesgcm-sphincs128fsha2","cs-mlkem1024-aesgcm-sphincs256fsha2"
+]
+
+def ts(): return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+def mkdirp(p): pathlib.Path(p).mkdir(parents=True, exist_ok=True)
+
+# ---- Control client (to drone) ----
+def ctl_send(host, port, obj, timeout=2.0, retries=4, backoff=0.5):
+    """Send a line-delimited JSON request to the drone control server.
+
+    Retries a few times on transient failures (connection refused, timeout).
+    """
+    last_exc = None
+    for attempt in range(1, retries + 1):
+        try:
+            with socket.create_connection((host, port), timeout=timeout) as s:
+                s.sendall((json.dumps(obj) + "\n").encode())
+                s.shutdown(socket.SHUT_WR)
+                line = s.makefile().readline()
+                return json.loads(line.strip()) if line else {}
+        except Exception as e:
+            last_exc = e
+            if attempt < retries:
+                time.sleep(backoff * attempt)
+                continue
+            raise
+    if last_exc:
+        raise last_exc
+
+# ---- Traffic driver ----
+class UdpTraffic:
+    def __init__(self, send_port:int, recv_port:int, out_events_path:str, rate_pps:int):
+        self.send_addr = ("127.0.0.1", send_port)
+        self.recv_addr = ("0.0.0.0", recv_port)
+        self.rate_pps = rate_pps
+        self.stop = threading.Event()
+        self.out = open(out_events_path, "w")
+        self.tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.rx.bind(self.recv_addr)
+        self.sent = 0; self.rcvd = 0
+
+    def sender(self):
+        interval = 1.0 / max(self.rate_pps,1)
+        seq = 0
+        while not self.stop.is_set():
+            payload = seq.to_bytes(4,"big") + int(time.time_ns()).to_bytes(8,"big")
+            try:
+                self.tx.sendto(payload, self.send_addr)
+                self.out.write(json.dumps({"event":"send","seq":seq,"t_send_ns":time.time_ns()})+"\n")
+                self.out.flush()
+                self.sent += 1
+            except Exception as e:
+                self.out.write(json.dumps({"event":"send_error","err":str(e),"ts":ts()})+"\n"); self.out.flush()
+            seq += 1
+            time.sleep(interval)
+
+    def receiver(self):
+        self.rx.settimeout(0.2)
+        while not self.stop.is_set():
+            try:
+                data, _ = self.rx.recvfrom(65535)
+                now = time.time_ns()
+                seq = int.from_bytes(data[:4],"big") if len(data) >= 4 else -1
+                self.out.write(json.dumps({"event":"recv","seq":seq,"t_recv_ns":now})+"\n"); self.out.flush()
+                self.rcvd += 1
+            except socket.timeout:
+                pass
+            except Exception as e:
+                self.out.write(json.dumps({"event":"recv_error","err":str(e),"ts":ts()})+"\n"); self.out.flush()
+
+    def start(self):
+        self.t1 = threading.Thread(target=self.sender, daemon=True); self.t1.start()
+        self.t2 = threading.Thread(target=self.receiver, daemon=True); self.t2.start()
+
+    def stop_and_close(self):
+        self.stop.set()
+        for t in (self.t1, self.t2): 
+            if t.is_alive(): t.join(timeout=1.0)
+        self.out.close()
+        self.tx.close(); self.rx.close()
+
+def wait_handshake(status_file, timeout=15):
+    deadline = time.time()+timeout
+    while time.time()<deadline:
+        if os.path.exists(status_file):
+            try:
+                js = json.load(open(status_file))
+                if js.get("state") in ("running","completed","ready"):
+                    return True
+            except Exception: pass
+        time.sleep(0.3)
+    return False
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--gcs", required=True)
+    ap.add_argument("--drone", required=True)
+    ap.add_argument("--control-port", type=int, default=48080)
+    ap.add_argument("--app-send-port", type=int, default=47001)
+    ap.add_argument("--app-recv-port", type=int, default=47002)
+    ap.add_argument("--duration", type=int, default=25, help="seconds per suite")
+    ap.add_argument("--rate", type=int, default=100, help="pps")
+    ap.add_argument("--outdir", default="logs/auto")
+    ap.add_argument("--secrets-dir", default="secrets/matrix")
+    ap.add_argument("--suites", nargs="*", default=SUITES)
+    args = ap.parse_args()
+
+    os.environ["DRONE_HOST"] = args.drone
+    os.environ["GCS_HOST"] = args.gcs
+    os.environ["ENABLE_PACKET_TYPE"] = "1"
+    os.environ["STRICT_UDP_PEER_MATCH"] = "1"
+
+    def sdir(s): p=f"{args.outdir}/{s}"; mkdirp(p); return p
+
+    # Launch GCS proxy on first suite with manual control
+    first = args.suites[0]
+    key = f"{args.secrets_dir}/{first}/gcs_signing.key"
+    status_file = f"{sdir(first)}/gcs_status.json"
+    summary_file = f"{sdir(first)}/gcs_summary.json"
+    gcs_log_path = f"{args.outdir}/gcs_{time.strftime('%Y%m%d-%H%M%S')}.log"
+    gcs_log = open(gcs_log_path, "w", encoding="utf-8", errors="replace")
+    gcs = subprocess.Popen(
+        [
+            sys.executable, "-m", "core.run_proxy", "gcs",
+            "--suite", first,
+            "--gcs-secret-file", key,
+            "--control-manual",
+            "--status-file", status_file,
+            "--json-out", summary_file
+        ],
+        stdin=subprocess.PIPE, stdout=gcs_log, stderr=subprocess.STDOUT, text=True, bufsize=1
+    )
+
+    try:
+        # Ensure the drone follower is up; rotate monitors for the first suite
+        try:
+            ctl_send(args.drone, args.control_port, {"cmd": "ping"})
+            ctl_send(args.drone, args.control_port, {"cmd": "mark", "suite": first})
+        except Exception as e:
+            print(f"[WARN] control ping failed: {e}", file=sys.stderr)
+
+        # Wait handshake / readiness
+        ok = wait_handshake(status_file, timeout=20)
+        print(f"[{ts()}] initial handshake ready? {ok}")
+
+        # Traffic per suite
+        summary_rows = []
+        for idx, suite in enumerate(args.suites):
+            if idx>0:
+                # Rekey by writing suite id + newline to proxy stdin
+                print(f"[{ts()}] rekey -> {suite}")
+                gcs.stdin.write(suite + "\n"); gcs.stdin.flush()
+                # rotate drone monitors to the new suite
+                try:
+                    ctl_send(args.drone, args.control_port, {"cmd":"mark","suite": suite})
+                except Exception as e:
+                    print(f"[WARN] mark failed: {e}", file=sys.stderr)
+                # Switch output files for status/summary to keep per-suite artifacts
+                status_file = f"{sdir(suite)}/gcs_status.json"
+                summary_file = f"{sdir(suite)}/gcs_summary.json"
+                # (run_proxy will keep writing to the originally provided files; if you
+                #  prefer per-suite files from the proxy, relaunch per suite instead of rekeying.)
+
+            # Start traffic
+            events_path = f"{sdir(suite)}/gcs_events.jsonl"
+            traf = UdpTraffic(args.app_send_port, args.app_recv_port, events_path, args.rate)
+            start_ns = time.time_ns()
+            traf.start()
+            time.sleep(args.duration)
+            traf.stop_and_close()
+            end_ns = time.time_ns()
+
+            # Read current proxy summary (best-effort)
+            js = {}
+            try:
+                if os.path.exists(summary_file):
+                    js = json.load(open(summary_file))
+            except Exception: pass
+
+            summary_rows.append({
+                "suite": suite,
+                "duration_s": args.duration,
+                "sent": traf.sent,
+                "rcvd": traf.rcvd,
+                "start_ns": start_ns,
+                "end_ns": end_ns,
+                "enc_out": js.get("enc_out",0),
+                "enc_in": js.get("enc_in",0),
+                "drops": js.get("drops",0),
+                "rekeys_ok": js.get("rekeys_ok",0),
+                "rekeys_fail": js.get("rekeys_fail",0),
+            })
+            print(f"[{ts()}] {suite}: sent={traf.sent} rcvd={traf.rcvd} enc_out={js.get('enc_out')} enc_in={js.get('enc_in')}")
+
+        # Write CSV rollup
+        csv_path = f"{args.outdir}/summary.csv"
+        with open(csv_path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(summary_rows[0].keys()))
+            w.writeheader(); w.writerows(summary_rows)
+        print(f"[{ts()}] wrote {csv_path}")
+
+        # Clean shutdown
+        try:
+            ctl_send(args.drone, args.control_port, {"cmd": "stop"})
+        except Exception:
+            pass
+        try:
+            if gcs.stdin:
+                gcs.stdin.write("quit\n"); gcs.stdin.flush()
+        except Exception:
+            pass
+        try:
+            gcs.wait(timeout=3)
+        except Exception:
+            gcs.kill()
+    finally:
+        try:
+            if gcs_log:
+                gcs_log.close()
+        except Exception:
+            pass
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 50/89: tools\auto\gcs_scheduler_quickpass.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler_quickpass.py
+Size: 7,891 bytes
+Modified: 2025-09-29 01:45:05
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""
+Quick-pass scheduler: send-one?wait-echo?next suite.
+
+Minimal, self-contained scheduler intended to run on the GCS host.
+It assumes a running drone follower on the Pi exposing a tiny JSON control API
+and a running GCS proxy launched with "--control-manual" so rekeys can be
+performed by writing suite IDs to the proxy's stdin.
+
+Outputs:
+- logs/auto/quickpass_events.jsonl
+- logs/auto/quickpass_summary.csv
+
+Usage (example):
+  python -m tools.auto.gcs_scheduler_quickpass \
+    --gcs 192.168.0.101 --drone 192.168.0.102 \
+    --control-port 48080 --app-send-port 47001 --app-recv-port 47002 \
+    --passes 1
+"""
+import argparse
+import csv
+import json
+import os
+import pathlib
+import socket
+import subprocess
+import sys
+import time
+
+SUITES = [
+    "cs-mlkem512-aesgcm-mldsa44","cs-mlkem512-aesgcm-mldsa65","cs-mlkem512-aesgcm-mldsa87",
+    "cs-mlkem512-aesgcm-falcon512","cs-mlkem512-aesgcm-falcon1024",
+    "cs-mlkem512-aesgcm-sphincs128fsha2","cs-mlkem512-aesgcm-sphincs256fsha2",
+    "cs-mlkem768-aesgcm-mldsa44","cs-mlkem768-aesgcm-mldsa65","cs-mlkem768-aesgcm-mldsa87",
+    "cs-mlkem768-aesgcm-falcon512","cs-mlkem768-aesgcm-falcon1024",
+    "cs-mlkem768-aesgcm-sphincs128fsha2","cs-mlkem768-aesgcm-sphincs256fsha2",
+    "cs-mlkem1024-aesgcm-mldsa44","cs-mlkem1024-aesgcm-mldsa65","cs-mlkem1024-aesgcm-mldsa87",
+    "cs-mlkem1024-aesgcm-falcon512","cs-mlkem1024-aesgcm-falcon1024",
+    "cs-mlkem1024-aesgcm-sphincs128fsha2","cs-mlkem1024-aesgcm-sphincs256fsha2"
+]
+
+
+def ts():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def mkdirp(p):
+    pathlib.Path(p).mkdir(parents=True, exist_ok=True)
+
+
+# simple control client for drone follower
+def ctl(host, port, obj, timeout=3.0):
+    with socket.create_connection((host, port), timeout=timeout) as s:
+        s.sendall((json.dumps(obj) + "\n").encode())
+        s.shutdown(socket.SHUT_WR)
+        line = s.makefile().readline()
+        return json.loads(line.strip()) if line else {"ok": False, "error": "no reply"}
+
+
+# send a single UDP packet and wait for an echo
+def send_and_wait_echo(send_port: int, recv_port: int, payload: bytes, timeout_s: float):
+    tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        rx.bind(("0.0.0.0", recv_port))
+        rx.settimeout(min(0.2, timeout_s))
+        t0 = time.time_ns()
+        seq = int.from_bytes(payload[:4], "big") if len(payload) >= 4 else 0
+        tx.sendto(payload, ("127.0.0.1", send_port))
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            try:
+                data, _ = rx.recvfrom(65535)
+                if len(data) >= 4 and int.from_bytes(data[:4], "big") == seq:
+                    t1 = time.time_ns()
+                    return True, t0, t1, len(data)
+            except socket.timeout:
+                pass
+        return False, t0, None, 0
+    finally:
+        try:
+            tx.close()
+        except Exception:
+            pass
+        try:
+            rx.close()
+        except Exception:
+            pass
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--gcs", required=True)
+    ap.add_argument("--drone", required=True)
+    ap.add_argument("--control-port", type=int, default=48080)
+    ap.add_argument("--app-send-port", type=int, default=47001)
+    ap.add_argument("--app-recv-port", type=int, default=47002)
+    ap.add_argument("--verify-timeout", type=float, default=5.0)
+    ap.add_argument("--passes", type=int, default=1)
+    ap.add_argument("--outdir", default="logs/auto")
+    ap.add_argument("--secrets-dir", default="secrets/matrix")
+    ap.add_argument("--initial-suite", default=None)
+    ap.add_argument("--suites", nargs="*", default=SUITES)
+    args = ap.parse_args()
+
+    os.environ["DRONE_HOST"] = args.drone
+    os.environ["GCS_HOST"] = args.gcs
+    os.environ["ENABLE_PACKET_TYPE"] = "1"
+    os.environ["STRICT_UDP_PEER_MATCH"] = "1"
+
+    mkdirp(args.outdir)
+    evlog = open(f"{args.outdir}/quickpass_events.jsonl", "a", encoding="utf-8")
+
+    def log_event(**row):
+        row.setdefault("ts", ts())
+        evlog.write(json.dumps(row) + "\n")
+        evlog.flush()
+
+    suites = list(args.suites)
+    if args.initial_suite and args.initial_suite in suites:
+        i = suites.index(args.initial_suite)
+        suites = suites[i:] + suites[:i]
+
+    first = suites[0]
+    keyfile = f"{args.secrets_dir}/{first}/gcs_signing.key"
+    mkdirp(f"{args.outdir}/{first}")
+    status_file = f"{args.outdir}/{first}/gcs_status.json"
+    summary_file = f"{args.outdir}/{first}/gcs_summary.json"
+    gcs_log = open(f"{args.outdir}/gcs_{time.strftime('%Y%m%d-%H%M%S')}.log", "w", encoding="utf-8", errors="replace")
+
+    gcs = subprocess.Popen([
+        sys.executable, "-m", "core.run_proxy", "gcs",
+        "--suite", first, "--gcs-secret-file", keyfile,
+        "--control-manual",
+        "--status-file", status_file, "--json-out", summary_file
+    ], stdin=subprocess.PIPE, stdout=gcs_log, stderr=subprocess.STDOUT, text=True, bufsize=1)
+
+    # initial ping/mark
+    try:
+        ctl(args.drone, args.control_port, {"cmd": "ping"})
+        ctl(args.drone, args.control_port, {"cmd": "mark", "suite": first})
+    except Exception as e:
+        log_event(event="control_warn", msg=str(e))
+
+    csv_path = f"{args.outdir}/quickpass_summary.csv"
+    have_header = os.path.exists(csv_path)
+    csvf = open(csv_path, "a", newline="", encoding="utf-8")
+    w = csv.DictWriter(csvf, fieldnames=["pass_idx", "suite", "ok", "attempt_ns", "payload_bytes", "note"])
+    if not have_header:
+        w.writeheader(); csvf.flush()
+
+    def rekey(to_suite: str):
+        try:
+            gcs.stdin.write(to_suite + "\n"); gcs.stdin.flush()
+        except Exception as e:
+            log_event(event="gcs_write_fail", msg=str(e))
+        try:
+            ctl(args.drone, args.control_port, {"cmd": "mark", "suite": to_suite})
+        except Exception as e:
+            log_event(event="control_warn", msg=f"mark failed: {e}")
+
+    try:
+        for p in range(args.passes):
+            for idx, suite in enumerate(suites):
+                if p == 0 and idx == 0:
+                    current = first
+                else:
+                    current = suite
+                    log_event(event="rekey", to=current, pass_idx=p)
+                    rekey(current)
+
+                seq = int(time.time_ns() & 0xFFFFFFFF)
+                payload = seq.to_bytes(4, "big") + int(time.time_ns()).to_bytes(8, "big")
+                ok, t0_ns, t1_ns, nbytes = send_and_wait_echo(args.app_send_port, args.app_recv_port, payload, args.verify_timeout)
+
+                if ok:
+                    attempt_ns = t1_ns - t0_ns
+                    w.writerow({"pass_idx": p, "suite": current, "ok": True, "attempt_ns": attempt_ns, "payload_bytes": nbytes, "note": "echo"})
+                    csvf.flush()
+                    log_event(event="echo_ok", suite=current, pass_idx=p, rtt_ns=attempt_ns)
+                else:
+                    w.writerow({"pass_idx": p, "suite": current, "ok": False, "attempt_ns": "", "payload_bytes": 0, "note": "timeout"})
+                    csvf.flush()
+                    log_event(event="echo_timeout", suite=current, pass_idx=p)
+    finally:
+        try:
+            ctl(args.drone, args.control_port, {"cmd": "stop"})
+        except Exception:
+            pass
+        try:
+            gcs.stdin.write("quit\n"); gcs.stdin.flush()
+        except Exception:
+            pass
+        try:
+            gcs.wait(timeout=3)
+        except Exception:
+            gcs.kill()
+        evlog.close(); csvf.close(); gcs_log.close()
+
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 51/89: tools\auto_test_drone.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto_test_drone.py
-Size: 3,028 bytes
-Modified: 2025-09-28 04:11:29
+Size: 3,561 bytes
+Modified: 2025-09-28 19:12:42
 ------------------------------------------------------------
 #!/usr/bin/env python3
 """Drone-side runner for automated matrix tests.
@@ -8551,7 +9326,17 @@ import json
 import socket
 import struct
 import time
+import sys
+from pathlib import Path
 from typing import Tuple
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+_REPO = _HERE.parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from tools.socket_utils import open_udp_socket, close_socket
 
 
 def now_ms() -> float:
@@ -8565,8 +9350,9 @@ def run_test(control_sock: socket.socket, cmd: dict):
 
     print(f'Running test: suite={suite} count={count} -> {udp_host}:{udp_port}')
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(2.0)
+    # Use an ephemeral bound UDP socket so replies are received reliably and
+    # the socket is registered with our cleanup helper.
+    sock = open_udp_socket('0.0.0.0', 0, timeout=2.0)
 
     results = []
     for i in range(count):
@@ -8589,10 +9375,16 @@ def run_test(control_sock: socket.socket, cmd: dict):
         # small pacing
         time.sleep(0.05)
 
-    # send results back over control socket
-    out = {'suite': suite, 'count': count, 'results': results}
-    control_sock.sendall(json.dumps(out).encode('utf-8') + b'\n')
-    print('Sent results back to GCS control')
+    try:
+        # send results back over control socket
+        out = {'suite': suite, 'count': count, 'results': results}
+        control_sock.sendall(json.dumps(out).encode('utf-8') + b'\n')
+        print('Sent results back to GCS control')
+    finally:
+        try:
+            close_socket(sock)
+        except Exception:
+            pass
 
 
 def main():
@@ -8626,11 +9418,11 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 49/84: tools\auto_test_gcs.py
+FILE 52/89: tools\auto_test_gcs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto_test_gcs.py
-Size: 2,314 bytes
-Modified: 2025-09-28 14:41:06
+Size: 2,549 bytes
+Modified: 2025-09-28 19:12:42
 ------------------------------------------------------------
 #!/usr/bin/env python3
 """GCS-side controller for automated matrix tests.
@@ -8648,7 +9440,15 @@ import argparse
 import json
 import socket
 import time
+import sys
+from pathlib import Path
 from typing import Tuple
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+_REPO = _HERE.parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
 
 def handle_client(conn: socket.socket, addr: Tuple[str,int], args):
@@ -8703,7 +9503,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 50/84: tools\bench_cli.py
+FILE 53/89: tools\bench_cli.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\bench_cli.py
 Size: 841 bytes
@@ -8730,7 +9530,7 @@ if __name__=="__main__": main()
 
 ============================================================
 
-FILE 51/84: tools\check_matrix_keys.py
+FILE 54/89: tools\check_matrix_keys.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_matrix_keys.py
 Size: 1,373 bytes
@@ -8787,7 +9587,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 52/84: tools\check_no_hardcoded_ips.py
+FILE 55/89: tools\check_no_hardcoded_ips.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_no_hardcoded_ips.py
 Size: 2,448 bytes
@@ -8876,7 +9676,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 53/84: tools\check_ports.py
+FILE 56/89: tools\check_ports.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_ports.py
 Size: 3,618 bytes
@@ -8979,7 +9779,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 54/84: tools\check_suites.py
+FILE 57/89: tools\check_suites.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_suites.py
 Size: 1,030 bytes
@@ -9018,7 +9818,81 @@ print('total registry suites:', len(available))
 
 ============================================================
 
-FILE 55/84: tools\copy_pubs_to_pi.py
+FILE 58/89: tools\cleanup_bound_ports.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\cleanup_bound_ports.py
+Size: 2,136 bytes
+Modified: 2025-09-28 19:05:13
+------------------------------------------------------------
+"""Utility to inspect and optionally free known test ports on Windows.
+
+Usage (Windows):
+  python tools/cleanup_bound_ports.py --ports 46000 46011 47001 --kill
+
+This script is intentionally conservative: it will list processes bound to the
+given ports and only attempt to terminate them if --kill is provided.
+"""
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+# Ensure repo root is on sys.path when executed from tools/ directory
+_HERE = Path(__file__).resolve()
+_REPO = _HERE.parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+
+def _get_pid_for_port(port: int) -> int | None:
+    # Uses netstat -ano and finds the PID for lines containing :port
+    try:
+        out = subprocess.check_output(['netstat', '-ano'], shell=True, text=True)
+    except subprocess.CalledProcessError:
+        return None
+
+    for line in out.splitlines():
+        if f':{port} ' in line or f':{port}\r' in line:
+            parts = line.split()
+            if parts:
+                try:
+                    pid = int(parts[-1])
+                    return pid
+                except Exception:
+                    continue
+    return None
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument('--ports', type=int, nargs='+', required=True)
+    p.add_argument('--kill', action='store_true', help='Terminate processes owning the ports')
+    args = p.parse_args()
+
+    for port in args.ports:
+        pid = _get_pid_for_port(port)
+        if pid is None:
+            print(f'Port {port}: free')
+            continue
+        print(f'Port {port}: PID {pid}')
+        if args.kill:
+            try:
+                subprocess.check_call(['taskkill', '/PID', str(pid), '/F'], shell=True)
+                print(f'  Killed PID {pid}')
+            except subprocess.CalledProcessError as e:
+                print(f'  Failed to kill PID {pid}: {e}')
+
+
+if __name__ == '__main__':
+    if sys.platform != 'win32':
+        print('This cleanup helper is primarily intended for Windows hosts.')
+    main()
+
+============================================================
+
+FILE 59/89: tools\copy_pubs_to_pi.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\copy_pubs_to_pi.py
 Size: 5,456 bytes
@@ -9172,7 +10046,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 56/84: tools\counter_utils.py
+FILE 60/89: tools\counter_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\counter_utils.py
 Size: 6,381 bytes
@@ -9393,7 +10267,7 @@ __all__ = [
 
 ============================================================
 
-FILE 57/84: tools\diag_udp.py
+FILE 61/89: tools\diag_udp.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\diag_udp.py
 Size: 8,245 bytes
@@ -9615,7 +10489,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 58/84: tools\encrypted_sniffer.py
+FILE 62/89: tools\encrypted_sniffer.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\encrypted_sniffer.py
 Size: 1,570 bytes
@@ -9671,7 +10545,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 59/84: tools\full_comm_check.py
+FILE 63/89: tools\full_comm_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\full_comm_check.py
 Size: 9,657 bytes
@@ -9940,7 +10814,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 60/84: tools\generate_env_report.py
+FILE 64/89: tools\generate_env_report.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\generate_env_report.py
 Size: 5,905 bytes
@@ -10114,7 +10988,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 61/84: tools\generate_identity.py
+FILE 65/89: tools\generate_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\generate_identity.py
 Size: 2,266 bytes
@@ -10187,7 +11061,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 62/84: tools\manual_4term\drone_autopilot_sim.py
+FILE 66/89: tools\manual_4term\drone_autopilot_sim.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_autopilot_sim.py
 Size: 3,933 bytes
@@ -10299,7 +11173,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 63/84: tools\manual_4term\drone_tty.py
+FILE 67/89: tools\manual_4term\drone_tty.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_tty.py
 Size: 4,213 bytes
@@ -10447,7 +11321,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 64/84: tools\manual_4term\encrypted_bridge_logger.py
+FILE 68/89: tools\manual_4term\encrypted_bridge_logger.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\encrypted_bridge_logger.py
 Size: 4,355 bytes
@@ -10575,7 +11449,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 65/84: tools\manual_4term\gcs_ground_station_sim.py
+FILE 69/89: tools\manual_4term\gcs_ground_station_sim.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_ground_station_sim.py
 Size: 3,927 bytes
@@ -10689,7 +11563,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 66/84: tools\manual_4term\gcs_tty.py
+FILE 70/89: tools\manual_4term\gcs_tty.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_tty.py
 Size: 4,207 bytes
@@ -10837,7 +11711,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 67/84: tools\manual_4term\launch_manual_test.py
+FILE 71/89: tools\manual_4term\launch_manual_test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\launch_manual_test.py
 Size: 9,824 bytes
@@ -11133,7 +12007,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 68/84: tools\markers.py
+FILE 72/89: tools\markers.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\markers.py
 Size: 3,323 bytes
@@ -11250,7 +12124,7 @@ class UdpMarker:
 
 ============================================================
 
-FILE 69/84: tools\merge_power_csv.py
+FILE 73/89: tools\merge_power_csv.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\merge_power_csv.py
 Size: 5,656 bytes
@@ -11408,7 +12282,7 @@ def parse_args() -> argparse.Namespace:
 
 ============================================================
 
-FILE 70/84: tools\netcapture\drone_capture.py
+FILE 74/89: tools\netcapture\drone_capture.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\netcapture\drone_capture.py
 Size: 3,434 bytes
@@ -11530,7 +12404,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 71/84: tools\netcapture\gcs_capture.py
+FILE 75/89: tools\netcapture\gcs_capture.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\netcapture\gcs_capture.py
 Size: 5,576 bytes
@@ -11715,7 +12589,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 72/84: tools\packet_interceptor.py
+FILE 76/89: tools\packet_interceptor.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\packet_interceptor.py
 Size: 2,494 bytes
@@ -11790,7 +12664,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 73/84: tools\power_hooks.py
+FILE 77/89: tools\power_hooks.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\power_hooks.py
 Size: 208 bytes
@@ -11804,7 +12678,7 @@ class PowerHook:
 
 ============================================================
 
-FILE 74/84: tools\prepare_matrix_keys.py
+FILE 78/89: tools\prepare_matrix_keys.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\prepare_matrix_keys.py
 Size: 3,043 bytes
@@ -11911,7 +12785,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 75/84: tools\print_oqs_info.py
+FILE 79/89: tools\print_oqs_info.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\print_oqs_info.py
 Size: 4,200 bytes
@@ -12031,7 +12905,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 76/84: tools\scaffold_repo.py
+FILE 80/89: tools\scaffold_repo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\scaffold_repo.py
 Size: 17,074 bytes
@@ -12391,7 +13265,101 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 77/84: tools\traffic_common.py
+FILE 81/89: tools\socket_utils.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\tools\socket_utils.py
+Size: 2,295 bytes
+Modified: 2025-09-28 18:56:22
+------------------------------------------------------------
+"""Small socket helpers to ensure sockets are closed on process exit or signals.
+
+Provides open_udp_socket(...) which registers the socket for atexit and signal-driven
+cleanup. Designed to be low-risk and dependency-free.
+"""
+from __future__ import annotations
+
+import atexit
+import signal
+import socket
+from typing import List, Optional
+
+# Global registry of sockets to close on exit
+_REG_SOCKS: List[socket.socket] = []
+
+
+def _close_registered() -> None:
+    # Close all sockets that are still open
+    for s in list(_REG_SOCKS):
+        try:
+            s.close()
+        except Exception:
+            pass
+    _REG_SOCKS.clear()
+
+
+# Register atexit cleanup and signal handlers (best-effort)
+atexit.register(_close_registered)
+
+
+def _signal_handler(signum, frame):
+    # Best-effort: close sockets and continue shutdown
+    _close_registered()
+
+
+# Install handlers for common signals where available
+try:
+    signal.signal(signal.SIGINT, _signal_handler)
+except Exception:
+    pass
+
+try:
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, _signal_handler)
+except Exception:
+    pass
+
+
+def open_udp_socket(host: str, port: int, timeout: Optional[float] = None, reuseaddr: bool = True) -> socket.socket:
+    """Create, bind and return a UDP socket and register it for cleanup.
+
+    The returned socket is ready to use. Close it with close_socket(sock) when
+    you no longer need it to avoid relying on atexit cleanup.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        if reuseaddr:
+            try:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            except Exception:
+                pass
+        s.bind((host, port))
+        if timeout is not None:
+            s.settimeout(timeout)
+        _REG_SOCKS.append(s)
+        return s
+    except Exception:
+        try:
+            s.close()
+        except Exception:
+            pass
+        raise
+
+
+def close_socket(s: socket.socket) -> None:
+    """Close socket and unregister it from the cleanup list."""
+    try:
+        if s in _REG_SOCKS:
+            _REG_SOCKS.remove(s)
+    except Exception:
+        pass
+    try:
+        s.close()
+    except Exception:
+        pass
+
+============================================================
+
+FILE 82/89: tools\traffic_common.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\traffic_common.py
 Size: 3,551 bytes
@@ -12510,7 +13478,7 @@ def configured_selector(sock: socket.socket) -> selectors.BaseSelector:
 
 ============================================================
 
-FILE 78/84: tools\traffic_drone.py
+FILE 83/89: tools\traffic_drone.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\traffic_drone.py
 Size: 206 bytes
@@ -12529,7 +13497,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 79/84: tools\traffic_gcs.py
+FILE 84/89: tools\traffic_gcs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\traffic_gcs.py
 Size: 202 bytes
@@ -12548,7 +13516,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 80/84: tools\traffic_runner.py
+FILE 85/89: tools\traffic_runner.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\traffic_runner.py
 Size: 7,778 bytes
@@ -12756,7 +13724,7 @@ def run(role: str, argv: Optional[list[str]] = None) -> int:
 
 ============================================================
 
-FILE 81/84: tools\udp_dual_probe.py
+FILE 86/89: tools\udp_dual_probe.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\udp_dual_probe.py
 Size: 5,048 bytes
@@ -12910,11 +13878,11 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 82/84: tools\udp_echo.py
+FILE 87/89: tools\udp_echo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\udp_echo.py
-Size: 2,192 bytes
-Modified: 2025-09-28 18:01:42
+Size: 2,558 bytes
+Modified: 2025-09-28 19:05:13
 ------------------------------------------------------------
 #!/usr/bin/env python3
 """Simple UDP echo server for local testing.
@@ -12926,6 +13894,17 @@ import signal
 import socket
 import threading
 import time
+import sys
+from pathlib import Path
+
+# Ensure repository root is on sys.path when executed directly so
+# imports like 'from tools.socket_utils import ...' succeed.
+_HERE = Path(__file__).resolve()
+_REPO = _HERE.parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from tools.socket_utils import open_udp_socket, close_socket
 
 
 def main():
@@ -12950,10 +13929,9 @@ def main():
         # SIGTERM may not exist on some platforms (e.g., Windows old py versions)
         pass
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s = None
     try:
-        s.bind((args.host, args.port))
-        s.settimeout(args.timeout)
+        s = open_udp_socket(args.host, args.port, timeout=args.timeout)
         print(f'UDP echo server listening on {args.host}:{args.port} (timeout={args.timeout}s)')
 
         while not stop_event.is_set():
@@ -12976,10 +13954,11 @@ def main():
     except Exception as exc:
         print(f'udp_echo encountered error: {exc}')
     finally:
-        try:
-            s.close()
-        except Exception:
-            pass
+        if s is not None:
+            try:
+                close_socket(s)
+            except Exception:
+                pass
         # give a moment for prints to flush
         time.sleep(0.05)
         print('udp_echo exiting')
@@ -12990,7 +13969,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 83/84: tools\udp_echo_server.py
+FILE 88/89: tools\udp_echo_server.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\udp_echo_server.py
 Size: 2,488 bytes
@@ -13070,7 +14049,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 84/84: tools\udp_forward_log.py
+FILE 89/89: tools\udp_forward_log.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\udp_forward_log.py
 Size: 2,796 bytes
