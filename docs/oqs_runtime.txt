@@ -1,0 +1,23 @@
+PQC runtime summary
+
+- Binding used: python-oqs (exposed as the `oqs.oqs` module in this env).
+  - The code imports from `oqs.oqs` (e.g. `from oqs.oqs import KeyEncapsulation, Signature`).
+  - The installed binding exposes `Signature` and `KeyEncapsulation` classes and the mechanism query functions.
+
+- Mechanism discovery / availability:
+  - `core/suites.py` calls the oqs helper functions (e.g. `get_enabled_kem_mechanisms`, `get_enabled_sig_mechanisms` / supported variants) to determine which KEMs and signature schemes are enabled at runtime.
+  - Suite entries use `oqs_name` fields; availability is matched by normalizing those names against the enabled mechanism list.
+
+- Where imports occur in code:
+  - `core/handshake.py` imports `KeyEncapsulation` and `Signature` and uses them for KEM encapsulation/decapsulation and signing/verification during the handshake.
+  - `core/suites.py` imports and calls oqs API helpers to compute `enabled_kems()` and `enabled_sigs()`.
+  - `core/run_proxy.py` performs lazy imports and shows user-friendly errors if the `oqs` binding is missing.
+
+- Native liboqs:
+  - The environment probe shows the python binding (`oqs.oqs`) is present and usable, but the separate native `liboqs` module is not importable in this Python env ("No module named 'liboqs'").
+  - The python-oqs binding is sufficient for the project's runtime APIs (Signature, KeyEncapsulation, mechanism queries). Installing native `liboqs` is only necessary if you need direct C-level access or a different packaging variant.
+
+- Quick recommendation:
+  - If you need the native module available, install `liboqs`/`liboqs-python` via your platform's package manager or `pip install liboqs-python` (or the conda package if available). Otherwise, continue using the existing `oqs.oqs` binding; the codebase already works with it.
+
+Generated from `tools/print_oqs_info.py` probe on the current `gcs-env`.

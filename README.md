@@ -4,9 +4,438 @@ A safety-critical, post-quantum secure tunnel that bridges plaintext telemetry/c
 
 > **Status:** Fully operational with 82/82 automated tests passing (one scenario intentionally skipped). Recent LAN validation steps are documented in [`docs/lan-test.txt`](docs/lan-test.txt).
 
+## 🏗️ System Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Drone Side"
+        DA[Drone Application<br/>MAVLink/Telemetry] 
+        DP[Drone Proxy<br/>core/run_proxy.py]
+        DA --|Plaintext UDP<br/>47003→47004| DP
+    end
+    
+    subgraph "Network Layer"
+        DP --|TCP Handshake<br/>Port 46000| GP
+        DP --|Encrypted UDP<br/>46012→46011| GP
+    end
+    
+    subgraph "GCS Side"
+        GP[GCS Proxy<br/>core/run_proxy.py]
+        GA[GCS Application<br/>Ground Control]
+        GP --|Plaintext UDP<br/>47001→47002| GA
+    end
+    
+    subgraph "Security Layer"
+        PQC[Post-Quantum Crypto<br/>ML-KEM + ML-DSA/Falcon/SPHINCS+]
+        AEAD[AEAD Encryption<br/>AES-256-GCM + Replay Protection]
+        DP --> PQC
+        GP --> PQC
+        DP --> AEAD
+        GP --> AEAD
+    end
+    
+    style PQC fill:#e1f5fe
+    style AEAD fill:#f3e5f5
+    style DP fill:#e8f5e8
+    style GP fill:#fff3e0
+```
+
+## 🔐 Cryptographic Protocol Flow
+
+```mermaid
+sequenceDiagram
+    participant D as Drone Proxy
+    participant G as GCS Proxy
+    
+    Note over D,G: Phase 1: PQC Handshake (TCP)
+    D->>G: TCP Connect (Port 46000)
+    G->>D: Server Hello + KEM Public Key + Signature
+    D->>D: Verify GCS Signature
+    D->>G: KEM Ciphertext + Drone Auth Tag
+    G->>G: Verify Drone PSK + Decapsulate
+    Note over D,G: HKDF Key Derivation (k_d2g, k_g2d)
+    
+    Note over D,G: Phase 2: Encrypted Data Plane (UDP)
+    D->>G: Encrypted Packet (AES-256-GCM)
+    G->>G: Decrypt + Replay Check
+    G->>D: Encrypted Response
+    D->>D: Decrypt + Replay Check
+    
+    Note over D,G: Phase 3: Optional Rekeying
+    D->>G: Control Message (Suite Change)
+    Note over D,G: New TCP Handshake with Different Suite
+    D->>G: Continue with New Keys
+```
+
+## 🛡️ NIST Security Levels & Cryptographic Suites
+
+This system implements **21 cryptographic suites** across three NIST post-quantum security levels, providing flexible security-performance trade-offs for different operational requirements.
+
+### 📊 Suite Distribution by NIST Level
+
+```mermaid
+pie title Cryptographic Suite Distribution
+    "NIST Level 1 (Performance)" : 7
+    "NIST Level 3 (Balanced)" : 7  
+    "NIST Level 5 (Maximum Security)" : 7
+```
+
 ---
 
-## Highlights
+## 🔵 NIST Level 1 (L1) - Performance Optimized
+
+**Target Use Case:** High-throughput scenarios where performance is critical and basic post-quantum security is sufficient.
+
+### L1 Architecture Flow
+
+```mermaid
+graph LR
+    subgraph "L1 Cryptographic Components"
+        KEM1[ML-KEM-512<br/>🔑 128-bit security<br/>📦 Small keys/ciphertext]
+        SIG1[Signature Options<br/>📝 ML-DSA-44<br/>🦅 Falcon-512<br/>🌳 SLH-DSA-SHA2-128f]
+        AEAD1[AES-256-GCM<br/>🔒 256-bit security<br/>⚡ Hardware accelerated]
+    end
+    
+    KEM1 --> HKDF1[HKDF-SHA256<br/>Key Derivation]
+    SIG1 --> AUTH1[Authentication<br/>& Integrity]
+    HKDF1 --> AEAD1
+    AUTH1 --> AEAD1
+    
+    style KEM1 fill:#e3f2fd
+    style SIG1 fill:#f1f8e9
+    style AEAD1 fill:#fce4ec
+```
+
+### L1 Available Suites
+
+```mermaid
+graph TB
+    subgraph "L1 Suite Options (7 total)"
+        S1[cs-mlkem512-aesgcm-mldsa44<br/>📝 ML-DSA-44 signatures]
+        S2[cs-mlkem512-aesgcm-mldsa65<br/>📝 ML-DSA-65 signatures]
+        S3[cs-mlkem512-aesgcm-mldsa87<br/>📝 ML-DSA-87 signatures]
+        S4[cs-mlkem512-aesgcm-falcon512<br/>🦅 Falcon-512 signatures]
+        S5[cs-mlkem512-aesgcm-falcon1024<br/>🦅 Falcon-1024 signatures]
+        S6[cs-mlkem512-aesgcm-sphincs128fsha2<br/>🌳 SLH-DSA-SHA2-128f]
+        S7[cs-mlkem512-aesgcm-sphincs256fsha2<br/>🌳 SLH-DSA-SHA2-256f]
+    end
+    
+    style S1 fill:#e3f2fd
+    style S2 fill:#e3f2fd
+    style S3 fill:#e3f2fd
+    style S4 fill:#f1f8e9
+    style S5 fill:#f1f8e9
+    style S6 fill:#fce4ec
+    style S7 fill:#fce4ec
+```
+
+### L1 Suite Specifications
+
+| Suite ID | KEM | Signature | AEAD | KDF |
+|----------|-----|-----------|------|-----|
+| `cs-mlkem512-aesgcm-mldsa44` | ML-KEM-512 | ML-DSA-44 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem512-aesgcm-mldsa65` | ML-KEM-512 | ML-DSA-65 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem512-aesgcm-mldsa87` | ML-KEM-512 | ML-DSA-87 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem512-aesgcm-falcon512` | ML-KEM-512 | Falcon-512 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem512-aesgcm-falcon1024` | ML-KEM-512 | Falcon-1024 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem512-aesgcm-sphincs128fsha2` | ML-KEM-512 | SLH-DSA-SHA2-128f | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem512-aesgcm-sphincs256fsha2` | ML-KEM-512 | SLH-DSA-SHA2-256f | AES-256-GCM | HKDF-SHA256 |
+
+> **Note:** Performance benchmarks are planned but not yet completed. All suites provide NIST Level 1 post-quantum security.
+
+---
+
+## 🟡 NIST Level 3 (L3) - Balanced Security
+
+**Target Use Case:** Production deployments requiring strong security with acceptable performance overhead.
+
+### L3 Architecture Flow
+
+```mermaid
+graph LR
+    subgraph "L3 Cryptographic Components"
+        KEM3[ML-KEM-768<br/>🔑 192-bit security<br/>📦 Medium keys/ciphertext]
+        SIG3[Signature Options<br/>📝 ML-DSA-44/65/87<br/>🦅 Falcon-512/1024<br/>🌳 SLH-DSA variants]
+        AEAD3[AES-256-GCM<br/>🔒 256-bit security<br/>⚡ Hardware accelerated]
+    end
+    
+    KEM3 --> HKDF3[HKDF-SHA256<br/>Key Derivation]
+    SIG3 --> AUTH3[Authentication<br/>& Integrity]
+    HKDF3 --> AEAD3
+    AUTH3 --> AEAD3
+    
+    style KEM3 fill:#fff3e0
+    style SIG3 fill:#f1f8e9
+    style AEAD3 fill:#fce4ec
+```
+
+### L3 Available Suites
+
+```mermaid
+graph TB
+    subgraph "L3 Suite Options (7 total)"
+        S1[cs-mlkem768-aesgcm-mldsa44<br/>📝 ML-DSA-44 signatures]
+        S2[cs-mlkem768-aesgcm-mldsa65<br/>📝 ML-DSA-65 signatures]
+        S3[cs-mlkem768-aesgcm-mldsa87<br/>📝 ML-DSA-87 signatures]
+        S4[cs-mlkem768-aesgcm-falcon512<br/>🦅 Falcon-512 signatures]
+        S5[cs-mlkem768-aesgcm-falcon1024<br/>🦅 Falcon-1024 signatures]
+        S6[cs-mlkem768-aesgcm-sphincs128fsha2<br/>🌳 SLH-DSA-SHA2-128f]
+        S7[cs-mlkem768-aesgcm-sphincs256fsha2<br/>🌳 SLH-DSA-SHA2-256f]
+    end
+    
+    style S1 fill:#fff3e0
+    style S2 fill:#fff3e0
+    style S3 fill:#fff3e0
+    style S4 fill:#f1f8e9
+    style S5 fill:#f1f8e9
+    style S6 fill:#fce4ec
+    style S7 fill:#fce4ec
+```
+
+### L3 Suite Specifications
+
+| Suite ID | KEM | Signature | AEAD | KDF |
+|----------|-----|-----------|------|-----|
+| `cs-mlkem768-aesgcm-mldsa44` | ML-KEM-768 | ML-DSA-44 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem768-aesgcm-mldsa65` | ML-KEM-768 | ML-DSA-65 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem768-aesgcm-mldsa87` | ML-KEM-768 | ML-DSA-87 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem768-aesgcm-falcon512` | ML-KEM-768 | Falcon-512 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem768-aesgcm-falcon1024` | ML-KEM-768 | Falcon-1024 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem768-aesgcm-sphincs128fsha2` | ML-KEM-768 | SLH-DSA-SHA2-128f | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem768-aesgcm-sphincs256fsha2` | ML-KEM-768 | SLH-DSA-SHA2-256f | AES-256-GCM | HKDF-SHA256 |
+
+> **Note:** Performance benchmarks are planned but not yet completed. All suites provide NIST Level 3 post-quantum security.
+
+---
+
+## 🔴 NIST Level 5 (L5) - Maximum Security
+
+**Target Use Case:** High-value assets requiring maximum post-quantum security regardless of performance impact.
+
+### L5 Architecture Flow
+
+```mermaid
+graph LR
+    subgraph "L5 Cryptographic Components"
+        KEM5[ML-KEM-1024<br/>🔑 256-bit security<br/>📦 Large keys/ciphertext]
+        SIG5[Signature Options<br/>📝 ML-DSA-44/65/87<br/>🦅 Falcon-512/1024<br/>🌳 SLH-DSA variants]
+        AEAD5[AES-256-GCM<br/>🔒 256-bit security<br/>⚡ Hardware accelerated]
+    end
+    
+    KEM5 --> HKDF5[HKDF-SHA256<br/>Key Derivation]
+    SIG5 --> AUTH5[Authentication<br/>& Integrity]
+    HKDF5 --> AEAD5
+    AUTH5 --> AEAD5
+    
+    style KEM5 fill:#ffebee
+    style SIG5 fill:#f1f8e9
+    style AEAD5 fill:#fce4ec
+```
+
+### L5 Available Suites
+
+```mermaid
+graph TB
+    subgraph "L5 Suite Options (7 total)"
+        S1[cs-mlkem1024-aesgcm-mldsa44<br/>📝 ML-DSA-44 signatures]
+        S2[cs-mlkem1024-aesgcm-mldsa65<br/>📝 ML-DSA-65 signatures]
+        S3[cs-mlkem1024-aesgcm-mldsa87<br/>📝 ML-DSA-87 signatures]
+        S4[cs-mlkem1024-aesgcm-falcon512<br/>🦅 Falcon-512 signatures]
+        S5[cs-mlkem1024-aesgcm-falcon1024<br/>🦅 Falcon-1024 signatures]
+        S6[cs-mlkem1024-aesgcm-sphincs128fsha2<br/>🌳 SLH-DSA-SHA2-128f]
+        S7[cs-mlkem1024-aesgcm-sphincs256fsha2<br/>🌳 SLH-DSA-SHA2-256f]
+    end
+    
+    style S1 fill:#ffebee
+    style S2 fill:#ffebee
+    style S3 fill:#ffebee
+    style S4 fill:#f1f8e9
+    style S5 fill:#f1f8e9
+    style S6 fill:#fce4ec
+    style S7 fill:#fce4ec
+```
+
+### L5 Suite Specifications
+
+| Suite ID | KEM | Signature | AEAD | KDF |
+|----------|-----|-----------|------|-----|
+| `cs-mlkem1024-aesgcm-mldsa44` | ML-KEM-1024 | ML-DSA-44 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem1024-aesgcm-mldsa65` | ML-KEM-1024 | ML-DSA-65 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem1024-aesgcm-mldsa87` | ML-KEM-1024 | ML-DSA-87 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem1024-aesgcm-falcon512` | ML-KEM-1024 | Falcon-512 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem1024-aesgcm-falcon1024` | ML-KEM-1024 | Falcon-1024 | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem1024-aesgcm-sphincs128fsha2` | ML-KEM-1024 | SLH-DSA-SHA2-128f | AES-256-GCM | HKDF-SHA256 |
+| `cs-mlkem1024-aesgcm-sphincs256fsha2` | ML-KEM-1024 | SLH-DSA-SHA2-256f | AES-256-GCM | HKDF-SHA256 |
+
+> **Note:** Performance benchmarks are planned but not yet completed. All suites provide NIST Level 5 post-quantum security.
+
+---
+
+## 🔄 Dynamic Suite Selection & Rekeying
+
+The system supports **runtime cryptographic suite switching** during active communication sessions without connection interruption. This enables adaptive security and cryptographic agility for operational flexibility.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Initial_Handshake
+    Initial_Handshake --> Active_Session : Suite Negotiated
+    Active_Session --> Rekey_Request : Performance/Security Trigger
+    Rekey_Request --> New_Handshake : Control Message
+    New_Handshake --> Active_Session : New Suite Active
+    Active_Session --> [*] : Session End
+    
+    note right of Rekey_Request
+        Triggers:
+        • Manual operator command
+        • Performance degradation
+        • Security policy change
+        • Scheduled rotation
+    end note
+```
+
+### 🎯 **Runtime Suite Switching**
+
+**Key Features:**
+- **Zero-downtime algorithm changes** during active sessions
+- **Two-phase commit protocol** for safe transitions
+- **In-band control channel** (packet type `0x02`)
+- **Automatic PQC handshake** with new algorithms
+- **Interactive manual control** via GCS console
+
+**Quick Test:**
+```powershell
+# GCS: Start with manual control enabled
+python -m core.run_proxy gcs --suite cs-mlkem768-aesgcm-mldsa65 --control-manual --stop-seconds 300
+
+# In the GCS terminal, type new suite ID:
+rekey> cs-mlkem1024-aesgcm-falcon1024
+```
+
+📖 **[Complete Runtime Switching Guide](docs/RUNTIME_SUITE_SWITCHING.md)** - Detailed implementation, testing procedures, and research applications.
+
+## 🎯 Suite Selection Guidelines
+
+### Suite Selection Guidelines
+```mermaid
+flowchart TD
+    A[Security Requirements?] -->|Basic PQ Security| B[Use NIST L1]
+    B --> C[Choose from 7 L1 suites<br/>ML-KEM-512 based]
+    
+    A -->|Balanced Security| D[Use NIST L3]
+    D --> E[Choose from 7 L3 suites<br/>ML-KEM-768 based]
+    
+    A -->|Maximum Security| F[Use NIST L5]
+    F --> G[Choose from 7 L5 suites<br/>ML-KEM-1024 based]
+    
+    style B fill:#e3f2fd
+    style D fill:#fff3e0
+    style F fill:#ffebee
+```
+
+> **Note:** Specific performance characteristics and recommendations will be available after benchmark completion.
+
+---
+
+## 🛡️ Security Features & Guarantees
+
+### AEAD Packet Protection
+
+```mermaid
+graph LR
+    subgraph "Packet Structure"
+        H[Header<br/>22 bytes<br/>Version|IDs|Session|Seq|Epoch]
+        C[Ciphertext + Tag<br/>Variable length<br/>AES-256-GCM]
+    end
+    
+    subgraph "Security Properties"
+        A[Authentication<br/>Header as AAD]
+        I[Integrity<br/>GCM Tag]
+        R[Replay Protection<br/>1024-packet window]
+        F[Forward Secrecy<br/>Ephemeral keys]
+    end
+    
+    H --> A
+    C --> I
+    H --> R
+    C --> F
+    
+    style H fill:#e3f2fd
+    style C fill:#fce4ec
+    style A fill:#e8f5e8
+    style I fill:#fff3e0
+    style R fill:#f3e5f5
+    style F fill:#e0f2f1
+```
+
+### Replay Protection Mechanism
+
+```mermaid
+graph TB
+    subgraph "Sliding Window (1024 packets)"
+        W[Window State<br/>high_seq = 1000<br/>mask = 0x1FF...]
+        P1[Packet seq=1001<br/>✅ Accept: Future packet]
+        P2[Packet seq=999<br/>❓ Check: Within window]
+        P3[Packet seq=500<br/>❌ Reject: Too old]
+    end
+    
+    P1 --> A1[Shift window forward<br/>Update high_seq]
+    P2 --> A2[Check bit mask<br/>Mark if new]
+    P3 --> A3[Silent drop<br/>Log replay attempt]
+    
+    style P1 fill:#c8e6c9
+    style P2 fill:#fff3e0
+    style P3 fill:#ffcdd2
+```
+
+---
+
+## 🚀 Quick Start Guide
+
+### Environment Setup
+```bash
+# Create virtual environment
+python3 -m venv pqc_drone_env
+source pqc_drone_env/bin/activate  # Linux/Mac
+# pqc_drone_env\Scripts\activate   # Windows
+
+# Install dependencies
+pip install oqs cryptography pytest
+```
+
+### Basic Usage Examples
+
+#### NIST L1 Example
+```bash
+# GCS (server)
+python -m core.run_proxy gcs --suite cs-mlkem512-aesgcm-mldsa44 --stop-seconds 300
+
+# Drone (client)  
+python -m core.run_proxy drone --suite cs-mlkem512-aesgcm-mldsa44 --stop-seconds 300
+```
+
+#### NIST L3 Example
+```bash
+# GCS (server)
+python -m core.run_proxy gcs --suite cs-mlkem768-aesgcm-mldsa65 --stop-seconds 300
+
+# Drone (client)
+python -m core.run_proxy drone --suite cs-mlkem768-aesgcm-mldsa65 --stop-seconds 300
+```
+
+#### NIST L5 Example
+```bash
+# GCS (server)
+python -m core.run_proxy gcs --suite cs-mlkem1024-aesgcm-mldsa87 --stop-seconds 300
+
+# Drone (client)
+python -m core.run_proxy drone --suite cs-mlkem1024-aesgcm-mldsa87 --stop-seconds 300
+```
+
+> **Note:** Suite selection should be based on security requirements. Performance benchmarks are planned to provide data-driven recommendations.
+
+---
+
+## 📋 System Highlights
 
 - **Post-quantum handshake** – ML-KEM + signature (ML-DSA / Falcon / SPHINCS+) with HKDF-derived transport keys.
 - **Hardened AEAD framing** – AES-256-GCM, deterministic nonces, and a 1024-packet replay window.
@@ -15,297 +444,6 @@ A safety-critical, post-quantum secure tunnel that bridges plaintext telemetry/c
 - **Field-ready tooling** – TTY injectors, encrypted taps, and diagnostics scripts for LAN deployments.
 
 The implementation follows the security guidance captured in [`.github/copilot-instructions.md`](.github/copilot-instructions.md) and is organized so that **`core/` remains the only cryptographic source of truth**.
-
----
-
-## Repository layout
-
-```
-core/               PQC handshake, AEAD framing, async proxy, suites, config
-  ├─ config.py      Validated defaults + env override support
-  ├─ handshake.py   ML-KEM + signature transcript processing
-  ├─ aead.py        AES-GCM sender/receiver with replay window
-  ├─ async_proxy.py TCP↔UDP hybrid transport + policy hooks
-  ├─ run_proxy.py   CLI entry point used by both drone & GCS hosts
-  └─ suites.py      Immutable registry of 7 PQC suites
-
-tools/              Operational helpers
-  ├─ manual_4term/  `gcs_tty.py`, `drone_tty.py` plaintext consoles
-  ├─ udp_forward_log.py  Inline tap/forwarder with header logging
-  └─ ...            Capture harnesses, diagnostics, benchmarks
-
-tests/             55 unit/integration tests (100% pass rate)
-docs/              Field notes and validation reports (`lan-test.txt`)
-```
-
----
-
-## Prerequisites
-
-- Python **3.10+** (checked via `pyproject.toml`).
-- [`oqs-python`](https://github.com/open-quantum-safe/liboqs-python) ≥ 0.10.0 with liboqs installed.
-- [`cryptography`](https://cryptography.io/) ≥ 45.0.
-- Optional: `pytest`, `pytest-anyio` for the test suite.
-- Hardware tested on: Raspberry Pi 4B (drone role) + Windows 11 (GCS role).
-
-### Environment setup (example)
-
-```bash
-# Clone the repo
-git clone https://github.com/Kamalbura/research.git
-cd research
-
-# Create and activate a Python environment
-python -m venv .venv
-source .venv/bin/activate            # Linux / macOS
-#.venv\Scripts\activate              # Windows PowerShell
-
-# Install runtime dependencies
-pip install oqs cryptography
-
-# Install test extras if desired
-pip install -e .[test]
-```
-
-> On Windows with Conda, use `conda env create -f environment.yml` to mirror the maintained `gcs-env` setup.
-
----
-
-## Running the proxies
-
-You can operate the system either on a single machine (loopback testing) or across two hosts on a LAN. All examples below use the `cs-kyber768-aesgcm-dilithium3` suite, which balances performance and security.
-
-### Default ports
-
-Values are defined in `core/config.py` and validated at startup:
-
-| Purpose                | Default port |
-|------------------------|--------------|
-| TCP handshake          | 46000        |
-| GCS encrypted UDP RX   | 46011        |
-| Drone encrypted UDP RX | 46012        |
-| GCS plaintext TX/RX    | 47001 / 47002|
-| Drone plaintext TX/RX  | 47003 / 47004|
-
-Default host bindings (`DRONE_HOST`, `GCS_HOST`) target the LAN IPs defined in `core/config.py` (for example `192.168.0.102` and `192.168.0.103`). The new plaintext peers follow the same pattern via `DRONE_PLAINTEXT_HOST` / `GCS_PLAINTEXT_HOST`. Override any value by setting an environment variable before launching a proxy. Examples:
-
-```bash
-export UDP_DRONE_RX=56012
-export DRONE_HOST=127.0.0.1
-export GCS_PLAINTEXT_HOST=127.0.0.1
-```
-
-### Quick loopback smoke test (single host)
-
-1. **Start the GCS proxy** (TCP listener + UDP forwarder):
-
-  ```bash
-  python -m core.run_proxy gcs --suite cs-kyber768-aesgcm-dilithium3 --stop-seconds 180 --json-out gcs_debug.json --ephemeral
-  ```
-
-2. **Start the drone proxy** in another terminal. When using the ephemeral option above, copy the printed public key into `--gcs-pub-hex`:
-
-  ```bash
-  python -m core.run_proxy drone --suite cs-kyber768-aesgcm-dilithium3 --stop-seconds 180 --json-out drone_debug.json --gcs-pub-hex <hex-from-gcs>
-  ```
-
-3. **Attach plaintext injectors** to exercise both directions:
-
-  ```bash
-  python tools/manual_4term/gcs_tty.py
-  python tools/manual_4term/drone_tty.py
-  ```
-
-Type into the GCS TTY; the drone TTY should display each line, confirming end-to-end encryption/decryption.
-
-### 2. LAN deployment (two hosts)
-
-The sequence validated in September 2025 is recorded in [`docs/lan-test.txt`](docs/lan-test.txt). A condensed version:
-
-**Drone host (Raspberry Pi)**
-```bash
-export UDP_DRONE_RX=56012                      # tap backend
-source ~/cenv/bin/activate
-python -m core.run_proxy drone --suite cs-kyber768-aesgcm-mldsa65 --stop-seconds 360 --json-out drone_debug.json
-python tools/manual_4term/drone_tty.py         # keep open for plaintext output
-```
-
-**GCS host (Windows PowerShell)**
-```powershell
-conda activate gcs-env
-$Env:UDP_GCS_RX = "56011"                       # tap backend
-python -m core.run_proxy gcs --suite cs-kyber768-aesgcm-dilithium3 --stop-seconds 360 --json-out gcs_debug.json
-python tools\manual_4term\gcs_tty.py           # keep open for plaintext input
-```
-
-Keep both TTYs and proxies running simultaneously. Type in the GCS console and verify the drone console receives each line.
-
-> **Tip:** Stop proxies with `Ctrl+C` after traffic has flowed to ensure `gcs_debug.json` / `drone_debug.json` capture non-zero counters.
-
-### Automated traffic apps (headless loopback or LAN)
-
-For unattended, timestamped load on the plaintext sides, launch the dedicated traffic generators. They honour `core.config.CONFIG` (including environment overrides) and emit NDJSON event streams plus JSON summaries.
-
-```powershell
-# GCS side (Windows PowerShell example)
-conda activate gcs-env
-python tools/traffic_gcs.py --count 300 --rate 40 --duration 30 `
-  --out logs/gcs_traffic.jsonl --summary logs/gcs_summary.json
-
-# Drone side (Raspberry Pi example)
-source ~/cenv/bin/activate
-python tools/traffic_drone.py --count 300 --rate 40 --duration 30 \
-  --out logs/drone_traffic.jsonl --summary logs/drone_summary.json
-```
-
-Each app logs `send`/`recv` events with ISO timestamps, byte counts, and sequence numbers, then writes a summary containing:
-
-```
-sent_total, recv_total,
-first_send_ts, last_send_ts,
-first_recv_ts, last_recv_ts,
-out_of_order, unique_senders,
-rx_bytes_total, tx_bytes_total
-```
-
-Use `--payload-bytes` to pad messages for throughput tests and `--peer-hint` to annotate payloads for easier correlation.
-
----
-
-## Operational tooling
-
-| Tool | Purpose |
-|------|---------|
-| `tools/manual_4term/gcs_tty.py` | Sends plaintext commands to the GCS proxy and prints decrypted telemetry. Defaults to `127.0.0.1` loopback ports. |
-| `tools/manual_4term/drone_tty.py` | Symmetric console for the drone side. |
-| `tools/udp_forward_log.py` | Inline UDP forwarder that logs PQC header metadata (`session_id`, `seq`, `epoch`) while forwarding packets—ideal for LAN taps. |
-| `tools/netcapture/gcs_capture.py` / `drone_capture.py` | Windows `pktmon`/Linux `tcpdump` wrappers for handshake and encrypted traffic capture. |
-| `tools/udp_dual_probe.py` | Diagnostics probe that sends numbered messages in both directions to confirm port wiring before proxies are launched. |
-| `tools/traffic_gcs.py` / `traffic_drone.py` | Automated plaintext traffic apps that send/receive telemetry bursts, log NDJSON events, and emit counter summaries (see below). |
-| `tools/check_no_hardcoded_ips.py` | Static safety check ensuring code paths use `core.config.CONFIG` for IPs/ports. |
-
-Operational notes:
-
-- Logs are written to `logs/<role>-YYYYMMDD-HHMMSS.log`.
-- JSON summaries (`--json-out`) include plaintext/encrypted counters, drop causes, and rekey metadata.
-- Replay drops are classified: `drop_header`, `drop_auth`, `drop_session_epoch`, `drop_replay`, `drop_other`.
-
----
-
-## Suite matrix automation
-
-Use the matrix runners to iterate suites, collect proxy counters, and capture traffic statistics. Run the PowerShell script on the GCS host and the Bash script on the drone host with the **same ordered suite list**.
-
-```powershell
-# Windows (GCS)
-Set-ExecutionPolicy -Scope Process RemoteSigned
-pwsh tools/matrix_runner_gcs.ps1 -Suites @(
-  "cs-mlkem768-aesgcm-mldsa65",
-  "cs-mlkem768-aesgcm-falcon512",
-  "cs-mlkem1024-aesgcm-sphincs256f"
-)
-```
-
-```bash
-# Raspberry Pi (Drone)
-chmod +x tools/matrix_runner_drone.sh
-./tools/matrix_runner_drone.sh cs-mlkem768-aesgcm-mldsa65 cs-mlkem768-aesgcm-falcon512 cs-mlkem1024-aesgcm-sphincs256f
-```
-
-Each runner:
-
-- Starts the proxy with an auto-stop timer (`--stop-seconds`), picking longer windows for SPHINCS+ suites.
-- Invokes `traffic_*.py` with matching durations to drive plaintext packets.
-- Writes suite-specific JSON/NDJSON logs under `logs/traffic/<suite>/`.
-- Appends a CSV summary (`matrix_gcs_summary.csv` / `matrix_drone_summary.csv`) with proxy counters and traffic totals.
-
-## Automated two-host harness
-
-For a fully automated LAN validation run, use `scripts/orchestrate_e2e.py`. The harness
-starts the local GCS proxy (with in-band control enabled), boots the remote drone proxy
-over SSH, drives plaintext traffic in both directions, and triggers a live suite change.
-It captures proxy counters, traffic summaries, stdout/stderr logs, and a JSON manifest
-under `artifacts/harness/<run_id>/`.
-
-Key points:
-
-- The script automatically exports `ENABLE_PACKET_TYPE=1` so that control messages are
-  routed to the policy engine during the run.
-- Paramiko is used for SSH; pass `--ssh-key` or `--ssh-password` depending on how the
-  Raspberry Pi is provisioned. The default remote root is `~/research`.
-- Rekey success is verified by parsing both proxy counter files via
-  `tools.counter_utils.load_proxy_counters`, ensuring `rekeys_ok >= 1` and that
-  `last_rekey_suite` matches `--rekey-suite`.
-
-Example (PowerShell on the GCS host):
-
-```powershell
-python scripts/orchestrate_e2e.py `
-  --suite cs-kyber768-aesgcm-dilithium3 `
-  --rekey-suite cs-kyber1024-aesgcm-falcon1024 `
-  --remote-host 192.168.0.102 `
-  --remote-user dev `
-  --ssh-key $env:USERPROFILE\.ssh\id_ed25519
-```
-
-Adjust `--remote-python`, `--remote-root`, or `--local-python` if the interpreters live
-outside the defaults. Each run emits a `summary.json` and `summary.txt` describing the
-suite transition, packet counters, and artefact paths for downstream analysis.
-
-## Testing
-
-The repository ships with **82 automated tests** (plus one intentionally skipped long-running scenario) covering configuration, handshake, AEAD framing, replay prevention, control policy logic, and network transport.
-
-```bash
-python -m pytest tests/ -vv
-```
-
-To target a subset:
-
-```bash
-python -m pytest tests/test_handshake.py -vv
-python -m pytest tests/test_end_to_end_proxy.py -vv
-```
-
-> Test dependencies are defined under the `test` extra in `pyproject.toml`. End-to-end tests reserve loopback ports dynamically, so they are safe to run even if proxies are already bound to default ports during manual experiments.
-
-Run the static guardrail before committing code to confirm that all networking paths use `core.config.CONFIG` for host/port resolution:
-
-```bash
-python tools/check_no_hardcoded_ips.py
-```
-
----
-
-## Troubleshooting
-
-| Symptom | Resolution |
-|---------|------------|
-| `ModuleNotFoundError: No module named 'oqs'` | Install `oqs-python` in the active environment (ensure liboqs shared library is available). |
-| `WinError 10048` when starting a proxy | The default encrypted port is already bound (often by `udp_forward_log.py`). Override `UDP_GCS_RX`/`UDP_DRONE_RX` to the tap’s backend. |
-| JSON counters remain zero | The proxies were stopped before plaintext flowed. Keep TTYs active while proxies run, then terminate proxies with `Ctrl+C`. |
-| Handshake stalls | Confirm the GCS host is reachable on the TCP handshake port (default 46000) and that firewall rules allow inbound connections. |
-
----
-
-## Documentation & support
-
-- **LAN validation log** – [`docs/lan-test.txt`](docs/lan-test.txt)
-- **Project roadmap** – [`PROJECT_STATUS.md`](PROJECT_STATUS.md)
-- **Change history** – [`CHANGELOG.md`](CHANGELOG.md)
-- **AI coding guidelines** – [`.github/copilot-instructions.md`](.github/copilot-instructions.md)
-
-For issues or enhancements, open a GitHub issue in this repository. Security-sensitive disclosures should be coordinated privately prior to publication.
-
----
-
-## Security notes
-
-This project implements high-assurance cryptographic primitives, but no formal certification has been completed. Before production deployment:
-
-1. Commission an independent security review.
-2. Re-run the full automated test suite on the target hardware.
-3. Keep liboqs/`oqs-python` patched to the latest stable release.
 
 ---
 

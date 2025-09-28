@@ -129,7 +129,7 @@ _SIG_REGISTRY = {
         ),
     },
     "sphincs128fsha2": {
-        "oqs_name": "SLH-DSA-SHA2-128f",
+        "oqs_name": "SPHINCS+-SHA2-128f-simple",
         "token": "sphincs128fsha2",
         "sig_id": 3,
         "sig_param_id": 1,
@@ -141,7 +141,7 @@ _SIG_REGISTRY = {
         ),
     },
     "sphincs256fsha2": {
-        "oqs_name": "SLH-DSA-SHA2-256f",
+        "oqs_name": "SPHINCS+-SHA2-256f-simple",
         "token": "sphincs256fsha2",
         "sig_id": 3,
         "sig_param_id": 2,
