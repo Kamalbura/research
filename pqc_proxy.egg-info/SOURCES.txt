@@ -9,8 +9,8 @@ core/logging_utils.py
 core/policy_engine.py
 core/project_config.py
 core/run_proxy.py
-core/runner.py
 core/suites.py
+core/temp-file.py
 pqc_proxy.egg-info/PKG-INFO
 pqc_proxy.egg-info/SOURCES.txt
 pqc_proxy.egg-info/dependency_links.txt
@@ -19,6 +19,8 @@ pqc_proxy.egg-info/top_level.txt
 tests/test-oqs.py
 tests/test_aead_framing.py
 tests/test_cli_identity.py
+tests/test_control_sm.py
+tests/test_counter_utils.py
 tests/test_end_to_end_proxy.py
 tests/test_handshake.py
 tests/test_handshake_downgrade.py
@@ -28,4 +30,5 @@ tests/test_loss_dup_oom.py
 tests/test_packet_types.py
 tests/test_rekey_epoch.py
 tests/test_replay_window.py
+tests/test_security_hardening.py
 tests/test_suites_config.py

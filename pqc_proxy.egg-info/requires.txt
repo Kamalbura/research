@@ -1,5 +1,6 @@
 oqs>=0.10.0
 cryptography>=45.0
+paramiko>=3.4.0
 
 [test]
 pytest

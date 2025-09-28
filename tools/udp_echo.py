@@ -8,6 +8,7 @@ import signal
 import socket
 import threading
 import time
+from tools.socket_utils import open_udp_socket, close_socket
 
 
 def main():
@@ -32,10 +33,9 @@ def main():
         # SIGTERM may not exist on some platforms (e.g., Windows old py versions)
         pass
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s = None
     try:
-        s.bind((args.host, args.port))
-        s.settimeout(args.timeout)
+        s = open_udp_socket(args.host, args.port, timeout=args.timeout)
         print(f'UDP echo server listening on {args.host}:{args.port} (timeout={args.timeout}s)')
 
         while not stop_event.is_set():
@@ -58,10 +58,11 @@ def main():
     except Exception as exc:
         print(f'udp_echo encountered error: {exc}')
     finally:
-        try:
-            s.close()
-        except Exception:
-            pass
+        if s is not None:
+            try:
+                close_socket(s)
+            except Exception:
+                pass
         # give a moment for prints to flush
         time.sleep(0.05)
         print('udp_echo exiting')

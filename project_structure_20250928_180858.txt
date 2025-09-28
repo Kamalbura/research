@@ -1,20 +1,21 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Output File: C:\Users\burak\Desktop\research\project_structure_20250928_145049.txt
-Generated: 2025-09-28 14:50:49
+Output File: C:\Users\burak\Desktop\research\project_structure_20250928_180858.txt
+Generated: 2025-09-28 18:08:58
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Generated: 2025-09-28 14:50:49
+Generated: 2025-09-28 18:08:58
 
 ├── artifacts/
-│   └── gcs-test/
-│       └── traffic/
-│           └── cs-mlkem768-aesgcm-mldsa65/
+│   ├── gcs-test/
+│   │   └── traffic/
+│   │       └── cs-mlkem768-aesgcm-mldsa65/
+│   └── gcs-cs-mlkem512-aesgcm-mldsa44.json (0 bytes)
 ├── benchmarks/
 │   ├── matrix.yaml (159 bytes)
 │   └── run_matrix.py (11,095 bytes)
@@ -57,6 +58,7 @@ Generated: 2025-09-28 14:50:49
 ├── docs/
 │   ├── aead-and-framing.txt (961 bytes)
 │   ├── all-context.txt (49,418 bytes)
+│   ├── auto_test_playbook.md (4,526 bytes)
 │   ├── context.txt (10,234 bytes)
 │   ├── ddos-pipeline.txt (927 bytes)
 │   ├── deep-research.txt (62,258 bytes)
@@ -318,7 +320,7 @@ Generated: 2025-09-28 14:50:49
 │   │   ├── traffic_common.cpython-313.pyc (5,892 bytes)
 │   │   ├── traffic_gcs.cpython-313.pyc (451 bytes)
 │   │   ├── traffic_runner.cpython-313.pyc (8,529 bytes)
-│   │   └── udp_echo.cpython-313.pyc (1,434 bytes)
+│   │   └── udp_echo.cpython-313.pyc (3,530 bytes)
 │   ├── captures/
 │   ├── manual_4term/
 │   │   ├── __pycache__/
@@ -381,7 +383,7 @@ Generated: 2025-09-28 14:50:49
 │   ├── traffic_gcs.py (202 bytes)
 │   ├── traffic_runner.py (7,778 bytes)
 │   ├── udp_dual_probe.py (5,048 bytes)
-│   ├── udp_echo.py (733 bytes)
+│   ├── udp_echo.py (2,192 bytes)
 │   ├── udp_echo_server.py (2,488 bytes)
 │   └── udp_forward_log.py (2,796 bytes)
 ├── CHANGELOG.md (11,492 bytes)
@@ -399,7 +401,7 @@ Generated: 2025-09-28 14:50:49
 ├── project_no_tests.txt (354,956 bytes)
 ├── project_skip.txt (194,791 bytes)
 ├── PROJECT_STATUS.md (11,726 bytes)
-├── project_structure_20250928_145049.txt (16,418 bytes)
+├── project_structure_20250928_180858.txt (16,439 bytes)
 ├── pyproject.toml (479 bytes)
 ├── pytest.out (404 bytes)
 ├── README.md (15,701 bytes)
@@ -12911,8 +12913,8 @@ if __name__ == "__main__":
 FILE 82/84: tools\udp_echo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\udp_echo.py
-Size: 733 bytes
-Modified: 2025-09-28 14:33:05
+Size: 2,192 bytes
+Modified: 2025-09-28 18:01:42
 ------------------------------------------------------------
 #!/usr/bin/env python3
 """Simple UDP echo server for local testing.
@@ -12920,22 +12922,67 @@ Modified: 2025-09-28 14:33:05
 Usage: python tools/udp_echo.py --host 127.0.0.1 --port 47001
 """
 import argparse
+import signal
 import socket
+import threading
+import time
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--host', default='192.168.0.101')
     p.add_argument('--port', type=int, default=47001)
+    p.add_argument('--timeout', type=float, default=1.0,
+                   help='socket recv timeout in seconds (used for responsive shutdown)')
     args = p.parse_args()
 
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+    stop_event = threading.Event()
+
+    def _handle_signal(signum, frame):
+        print(f'received signal {signum}, shutting down...')
+        stop_event.set()
+
+    # install signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, _handle_signal)
+    try:
+        signal.signal(signal.SIGTERM, _handle_signal)
+    except AttributeError:
+        # SIGTERM may not exist on some platforms (e.g., Windows old py versions)
+        pass
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
         s.bind((args.host, args.port))
-        print(f'UDP echo server listening on {args.host}:{args.port}')
-        while True:
-            data, addr = s.recvfrom(65536)
+        s.settimeout(args.timeout)
+        print(f'UDP echo server listening on {args.host}:{args.port} (timeout={args.timeout}s)')
+
+        while not stop_event.is_set():
+            try:
+                data, addr = s.recvfrom(65536)
+            except socket.timeout:
+                # loop again, checking stop_event so Ctrl-C is responsive
+                continue
+            except OSError:
+                # socket closed from another thread or during shutdown
+                break
+
             # echo back exactly what we received
-            s.sendto(data, addr)
+            try:
+                s.sendto(data, addr)
+            except OSError:
+                # peer gone or socket closed, ignore and continue
+                continue
+
+    except Exception as exc:
+        print(f'udp_echo encountered error: {exc}')
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
+        # give a moment for prints to flush
+        time.sleep(0.05)
+        print('udp_echo exiting')
 
 
 if __name__ == '__main__':
