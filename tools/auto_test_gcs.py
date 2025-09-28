@@ -58,7 +58,7 @@ def main():
     p.add_argument('--listen-port', type=int, default=47010)
     p.add_argument('--suite', default='cs-mlkem512-aesgcm-mldsa44')
     p.add_argument('--count', type=int, default=8)
-    p.add_argument('--udp-host', default='192.168.0.101', help='UDP destination host (proxy plaintext endpoint)')
+    p.add_argument('--udp-host', default='192.168.0.103', help='UDP destination host (proxy plaintext endpoint)')
     p.add_argument('--udp-port', type=int, default=47001, help='UDP destination port')
     args = p.parse_args()
 

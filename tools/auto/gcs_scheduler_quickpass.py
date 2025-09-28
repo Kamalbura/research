@@ -13,7 +13,7 @@ Outputs:
 
 Usage (example):
   python -m tools.auto.gcs_scheduler_quickpass \
-    --gcs 192.168.0.101 --drone 192.168.0.102 \
+            --gcs 192.168.0.103 --drone 192.168.0.102 \
     --control-port 48080 --app-send-port 47001 --app-recv-port 47002 \
     --passes 1
 """
