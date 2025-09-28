@@ -59,6 +59,15 @@ CONFIG = {
 
     # Log real session IDs only when explicitly enabled (default False masks them to hashes).
     "LOG_SESSION_ID": False,
+
+    # --- Simple automation defaults (tools/auto/*_simple.py) ---
+    "DRONE_CONTROL_HOST": "0.0.0.0",
+    "DRONE_CONTROL_PORT": 48080,
+    "SIMPLE_VERIFY_TIMEOUT_S": 5.0,
+    "SIMPLE_PACKETS_PER_SUITE": 1,
+    "SIMPLE_PACKET_DELAY_S": 0.0,
+    "SIMPLE_SUITE_DWELL_S": 0.0,
+    "SIMPLE_INITIAL_SUITE": "cs-mlkem768-aesgcm-mldsa65",
 }
 
 

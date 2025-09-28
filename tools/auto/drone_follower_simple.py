@@ -2,33 +2,27 @@
 """
 Drone follower (no args required):
 - Starts the drone proxy with the initial suite.
-- Runs a UDP echo (recv 47004 -> send 47003).
-- Exposes a tiny TCP JSON control API on 0.0.0.0:48080:
-    {"cmd":"ping"} -> {"ok":true}
-    {"cmd":"mark","suite":"..."} -> rotate markers (for perf/log alignment)
-    {"cmd":"stop"} -> stop echo & exit (proxy keeps running)
+- Runs a UDP echo (recv -> send ports defined in CONFIG).
+- Exposes a tiny TCP JSON control API on CONFIG["DRONE_CONTROL_HOST"/"DRONE_CONTROL_PORT"].
 
-Constants are set for your LAN. Override via environment variables only if needed.
+All networking parameters are sourced from core.config.CONFIG.
 """
 
 import json, os, socket, threading, subprocess, sys, time, pathlib, signal
 
-# ---------- constants (match your LAN) ----------
-GCS_HOST = os.getenv("GCS_HOST", "192.168.0.101")
-DRONE_HOST = os.getenv("DRONE_HOST", "192.168.0.102")
-ENABLE_PACKET_TYPE = "1"
-STRICT_UDP_PEER_MATCH = "1"
+from core.config import CONFIG
 
-CONTROL_HOST = "0.0.0.0"
-CONTROL_PORT = 48080
+CONTROL_HOST = CONFIG.get("DRONE_CONTROL_HOST", "0.0.0.0")
+CONTROL_PORT = CONFIG.get("DRONE_CONTROL_PORT", 48080)
 
-APP_SEND_PORT = 47003  # local sender back to GCS via proxy
-APP_RECV_PORT = 47004  # local receiver from GCS via proxy
+APP_BIND_HOST = CONFIG.get("DRONE_PLAINTEXT_HOST", "127.0.0.1")
+APP_SEND_HOST = CONFIG.get("DRONE_PLAINTEXT_HOST", "127.0.0.1")
+APP_SEND_PORT = CONFIG.get("DRONE_PLAINTEXT_TX", 47003)
+APP_RECV_PORT = CONFIG.get("DRONE_PLAINTEXT_RX", 47004)
 
 SECRETS_DIR = "secrets/matrix"
 OUTDIR = "logs/auto/drone"
-INITIAL_SUITE = "cs-mlkem768-aesgcm-mldsa65"  # any valid suite is fine; GCS rekeys later
-# -----------------------------------------------
+INITIAL_SUITE = CONFIG.get("SIMPLE_INITIAL_SUITE", "cs-mlkem768-aesgcm-mldsa65")
 
 pathlib.Path(OUTDIR).mkdir(parents=True, exist_ok=True)
 pathlib.Path(f"{OUTDIR}/marks").mkdir(parents=True, exist_ok=True)
@@ -36,10 +30,10 @@ pathlib.Path(f"{OUTDIR}/marks").mkdir(parents=True, exist_ok=True)
 def ts(): return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 def start_drone_proxy(suite: str):
-    os.environ["DRONE_HOST"] = DRONE_HOST
-    os.environ["GCS_HOST"] = GCS_HOST
-    os.environ["ENABLE_PACKET_TYPE"] = ENABLE_PACKET_TYPE
-    os.environ["STRICT_UDP_PEER_MATCH"] = STRICT_UDP_PEER_MATCH
+    os.environ["DRONE_HOST"] = CONFIG["DRONE_HOST"]
+    os.environ["GCS_HOST"] = CONFIG["GCS_HOST"]
+    os.environ["ENABLE_PACKET_TYPE"] = "1" if CONFIG.get("ENABLE_PACKET_TYPE", True) else "0"
+    os.environ["STRICT_UDP_PEER_MATCH"] = "1" if CONFIG.get("STRICT_UDP_PEER_MATCH", True) else "0"
 
     pub = f"{SECRETS_DIR}/{suite}/gcs_signing.pub"
     if not os.path.exists(pub):
@@ -59,14 +53,14 @@ def start_drone_proxy(suite: str):
 
 def udp_echo(stop_evt: threading.Event):
     rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    rx.bind(("0.0.0.0", APP_RECV_PORT))
+    rx.bind((APP_BIND_HOST, APP_RECV_PORT))
     tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    print(f"[follower] UDP echo up: recv:{APP_RECV_PORT} -> send:{APP_SEND_PORT}", flush=True)
+    print(f"[follower] UDP echo up: recv:{APP_BIND_HOST}:{APP_RECV_PORT} -> send:{APP_SEND_HOST}:{APP_SEND_PORT}", flush=True)
     rx.settimeout(0.2)
     while not stop_evt.is_set():
         try:
             data, _ = rx.recvfrom(65535)
-            tx.sendto(data, ("127.0.0.1", APP_SEND_PORT))
+            tx.sendto(data, (APP_SEND_HOST, APP_SEND_PORT))
         except socket.timeout:
             pass
     rx.close(); tx.close()
