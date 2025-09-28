@@ -28,7 +28,7 @@ CONFIG = {
 
     # Hosts
     "DRONE_HOST": "192.168.0.102",
-    "GCS_HOST": "192.168.0.103",
+    "GCS_HOST": "192.168.0.101",
 
     # Pre-shared key (hex) for drone authentication during handshake.
     # Default is a placeholder; override in production via environment variable.
