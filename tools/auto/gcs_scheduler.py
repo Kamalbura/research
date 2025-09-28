@@ -72,6 +72,17 @@ def resolve_suites(requested: Optional[Iterable[str]]) -> List[str]:
     return resolved
 
 
+def preferred_initial_suite(candidates: List[str]) -> Optional[str]:
+    configured = CONFIG.get("SIMPLE_INITIAL_SUITE")
+    if not configured:
+        return None
+    try:
+        suite_id = suites_mod.get_suite(configured)["suite_id"]
+    except NotImplementedError:
+        return None
+    return suite_id if suite_id in candidates else None
+
+
 def ctl_send(obj: dict, timeout: float = 2.0, retries: int = 4, backoff: float = 0.5) -> dict:
     last_exc: Optional[Exception] = None
     for attempt in range(1, retries + 1):
@@ -349,6 +360,11 @@ def main() -> None:
     suites = resolve_suites(args.suites)
     if not suites:
         raise RuntimeError("No suites selected for execution")
+
+    initial_suite = preferred_initial_suite(suites)
+    if initial_suite and suites[0] != initial_suite:
+        suites = [initial_suite] + [s for s in suites if s != initial_suite]
+        print(f"[{ts()}] reordered suites to start with {initial_suite} (from CONFIG)")
 
     try:
         ctl_send({"cmd": "ping"})
