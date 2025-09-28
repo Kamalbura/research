@@ -14,7 +14,15 @@ import argparse
 import json
 import socket
 import time
+import sys
+from pathlib import Path
 from typing import Tuple
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+_REPO = _HERE.parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
 
 def handle_client(conn: socket.socket, addr: Tuple[str,int], args):

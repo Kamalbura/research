@@ -17,7 +17,17 @@ import json
 import socket
 import struct
 import time
+import sys
+from pathlib import Path
 from typing import Tuple
+
+# Ensure repository root is on sys.path when executed directly
+_HERE = Path(__file__).resolve()
+_REPO = _HERE.parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from tools.socket_utils import open_udp_socket, close_socket
 
 
 def now_ms() -> float:
@@ -31,8 +41,9 @@ def run_test(control_sock: socket.socket, cmd: dict):
 
     print(f'Running test: suite={suite} count={count} -> {udp_host}:{udp_port}')
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(2.0)
+    # Use an ephemeral bound UDP socket so replies are received reliably and
+    # the socket is registered with our cleanup helper.
+    sock = open_udp_socket('0.0.0.0', 0, timeout=2.0)
 
     results = []
     for i in range(count):
@@ -55,10 +66,16 @@ def run_test(control_sock: socket.socket, cmd: dict):
         # small pacing
         time.sleep(0.05)
 
-    # send results back over control socket
-    out = {'suite': suite, 'count': count, 'results': results}
-    control_sock.sendall(json.dumps(out).encode('utf-8') + b'\n')
-    print('Sent results back to GCS control')
+    try:
+        # send results back over control socket
+        out = {'suite': suite, 'count': count, 'results': results}
+        control_sock.sendall(json.dumps(out).encode('utf-8') + b'\n')
+        print('Sent results back to GCS control')
+    finally:
+        try:
+            close_socket(sock)
+        except Exception:
+            pass
 
 
 def main():
