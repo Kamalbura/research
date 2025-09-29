@@ -134,6 +134,7 @@ class Blaster:
         self.rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rx.bind(self.recv_addr)
         self.rx.settimeout(0.001)
+        self.rx_burst = max(1, int(os.getenv("GCS_RX_BURST", "32")))
         try:
             # Allow overriding socket buffer sizes via environment variables
             # Use GCS_SOCK_SNDBUF and GCS_SOCK_RCVBUF if present, otherwise default to 1 MiB
@@ -193,7 +194,8 @@ class Blaster:
                 packet = seq.to_bytes(4, "big") + int(t_send).to_bytes(8, "big") + payload_pad
                 try:
                     self.tx.sendto(packet, self.send_addr)
-                    self.pending[seq] = int(t_send)
+                    if self.sample_every == 0 or (self.sample_every and seq % self.sample_every == 0):
+                        self.pending[seq] = int(t_send)
                     self.sent += 1
                     self.sent_bytes += len(packet)
                     self._maybe_log("send", seq, int(t_send))
@@ -225,7 +227,14 @@ class Blaster:
 
     def _rx_loop(self, stop_event: threading.Event) -> None:
         while not stop_event.is_set():
-            self._rx_once()
+            progressed = False
+            for _ in range(self.rx_burst):
+                if self._rx_once():
+                    progressed = True
+                else:
+                    break
+            if not progressed:
+                time.sleep(0)
 
     def _rx_once(self) -> bool:
         try:

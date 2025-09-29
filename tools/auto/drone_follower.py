@@ -159,9 +159,9 @@ class UdpEcho(threading.Thread):
         self.stop_event = stop_event
         self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sndbuf = int(os.getenv("DRONE_SOCK_SNDBUF", str(64 << 20)))
-        rcvbuf = int(os.getenv("DRONE_SOCK_RCVBUF", str(64 << 20)))
         try:
+            sndbuf = int(os.getenv("DRONE_SOCK_SNDBUF", str(8 << 20)))
+            rcvbuf = int(os.getenv("DRONE_SOCK_RCVBUF", str(8 << 20)))
             self.rx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
             self.tx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, sndbuf)
         except Exception:
@@ -173,7 +173,7 @@ class UdpEcho(threading.Thread):
             f"[follower] UDP echo up: recv:{self.bind_host}:{self.recv_port} -> send:{self.send_host}:{self.send_port}",
             flush=True,
         )
-        self.rx_sock.settimeout(0.5)
+        self.rx_sock.settimeout(0.01)
         while not self.stop_event.is_set():
             try:
                 data, _ = self.rx_sock.recvfrom(65535)
