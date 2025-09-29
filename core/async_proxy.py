@@ -591,6 +591,34 @@ def run_proxy(
         },
     )
 
+    # Periodically persist counters to the status file while the proxy runs.
+    # This allows external automation (scheduler) to observe enc_in/enc_out
+    # during long-running experiments without waiting for process exit.
+    stop_status_writer = threading.Event()
+
+    def _status_writer() -> None:
+        while not stop_status_writer.is_set():
+            try:
+                with counters_lock:
+                    payload = {
+                        "status": "running",
+                        "suite": suite_id,
+                        "counters": counters.to_dict(),
+                        "ts_ns": time.time_ns(),
+                    }
+                write_status(payload)
+            except Exception:
+                logger.debug("status writer failed", extra={"role": role})
+            # sleep with event to allow quick shutdown
+            stop_status_writer.wait(1.0)
+
+    status_thread: Optional[threading.Thread] = None
+    try:
+        status_thread = threading.Thread(target=_status_writer, daemon=True)
+        status_thread.start()
+    except Exception:
+        status_thread = None
+
     aead_ids = _compute_aead_ids(suite, kem_name, sig_name)
     sender, receiver = _build_sender_receiver(role, aead_ids, session_id, k_d2g, k_g2d, cfg)
 
@@ -941,4 +969,27 @@ def run_proxy(
                 for thread in manual_threads:
                     thread.join(timeout=0.5)
 
-    return counters.to_dict()
+        # Final status write and stop the status writer thread if running
+        try:
+            with counters_lock:
+                write_status({
+                    "status": "stopped",
+                    "suite": suite_id,
+                    "counters": counters.to_dict(),
+                    "ts_ns": time.time_ns(),
+                })
+        except Exception:
+            pass
+
+        if 'stop_status_writer' in locals() and stop_status_writer is not None:
+            try:
+                stop_status_writer.set()
+            except Exception:
+                pass
+        if 'status_thread' in locals() and status_thread is not None and status_thread.is_alive():
+            try:
+                status_thread.join(timeout=1.0)
+            except Exception:
+                pass
+
+        return counters.to_dict()

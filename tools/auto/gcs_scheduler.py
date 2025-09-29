@@ -184,11 +184,31 @@ def wait_handshake(timeout: float = 20.0) -> bool:
         if PROXY_STATUS_PATH.exists():
             try:
                 js = json.load(open(PROXY_STATUS_PATH, encoding="utf-8"))
-                if js.get("state") in {"running", "completed", "ready"}:
-                    return True
             except Exception:
-                pass
+                js = {}
+            state = js.get("state") or js.get("status")
+            if state in {"running", "completed", "ready", "handshake_ok"}:
+                return True
         time.sleep(0.3)
+    return False
+
+
+def wait_active_suite(target: str, timeout: float = 10.0) -> bool:
+    """Wait until the proxy status file reports the given suite as active.
+
+    This is a small guard used after issuing a rekey so traffic isn't started
+    until the proxy has applied the new suite.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            js = json.load(open(PROXY_STATUS_PATH, encoding="utf-8"))
+        except Exception:
+            js = {}
+        active = js.get("suite") or js.get("active_suite") or js.get("last_rekey_suite")
+        if active == target:
+            return True
+        time.sleep(0.2)
     return False
 
 
@@ -239,6 +259,25 @@ def start_gcs_proxy(initial_suite: str) -> tuple[subprocess.Popen, Path]:
     return proc, log_handle
 
 
+def read_proxy_stats_live() -> dict:
+    """Read live proxy status file and return counters dict when available.
+
+    Returns an empty dict if the status file is missing or malformed.
+    """
+    try:
+        js = json.load(open(PROXY_STATUS_PATH, encoding="utf-8"))
+    except Exception:
+        return {}
+    # If the status payload wraps counters under "counters", return that.
+    if isinstance(js, dict):
+        if "counters" in js and isinstance(js["counters"], dict):
+            return js["counters"]
+        # Some builds may put counters at the top-level
+        if any(k in js for k in ("enc_out", "enc_in")):
+            return js
+    return {}
+
+
 def read_proxy_summary() -> dict:
     if not PROXY_SUMMARY_PATH.exists():
         return {}
@@ -275,6 +314,13 @@ def run_suite(
             ctl_send({"cmd": "mark", "suite": suite})
         except Exception as exc:
             print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
+        # Wait until the proxy reports the target suite as active to avoid early sends
+        try:
+            ok = wait_active_suite(suite, timeout=10.0)
+            if not ok:
+                print(f"[WARN] timed out waiting for proxy to activate suite {suite}", file=sys.stderr)
+        except Exception:
+            print(f"[WARN] error while waiting for active suite {suite}", file=sys.stderr)
 
     events_path = suite_outdir(suite) / EVENTS_FILENAME
     traffic = UdpTraffic(
@@ -299,7 +345,8 @@ def run_suite(
     end_ns = time.time_ns()
 
     snapshot_proxy_artifacts(suite)
-    proxy_stats = read_proxy_summary()
+    # Prefer live status counters if present, falling back to summary file emitted at exit
+    proxy_stats = read_proxy_stats_live() or read_proxy_summary()
 
     row = {
         "pass": pass_index,
@@ -366,11 +413,21 @@ def main() -> None:
         suites = [initial_suite] + [s for s in suites if s != initial_suite]
         print(f"[{ts()}] reordered suites to start with {initial_suite} (from CONFIG)")
 
-    try:
-        ctl_send({"cmd": "ping"})
+    # Ensure follower control is reachable with a few retries before starting
+    reachable = False
+    for attempt in range(8):
+        try:
+            resp = ctl_send({"cmd": "ping"}, timeout=1.0, retries=1)
+            if resp.get("ok"):
+                reachable = True
+                break
+        except Exception:
+            pass
+        time.sleep(0.5)
+    if reachable:
         print(f"[{ts()}] follower reachable at {DRONE_HOST}:{CONTROL_PORT}")
-    except Exception as exc:
-        print(f"[WARN] follower ping failed: {exc}", file=sys.stderr)
+    else:
+        print(f"[WARN] follower not reachable at {DRONE_HOST}:{CONTROL_PORT}", file=sys.stderr)
 
     gcs_proc, log_handle = start_gcs_proxy(suites[0])
 
