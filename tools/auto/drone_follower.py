@@ -159,6 +159,13 @@ class UdpEcho(threading.Thread):
         self.stop_event = stop_event
         self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sndbuf = int(os.getenv("DRONE_SOCK_SNDBUF", str(64 << 20)))
+        rcvbuf = int(os.getenv("DRONE_SOCK_RCVBUF", str(64 << 20)))
+        try:
+            self.rx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
+            self.tx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, sndbuf)
+        except Exception:
+            pass
         self.rx_sock.bind((self.bind_host, self.recv_port))
 
     def run(self) -> None:

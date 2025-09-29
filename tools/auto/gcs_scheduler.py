@@ -135,9 +135,14 @@ class Blaster:
         self.rx.bind(self.recv_addr)
         self.rx.settimeout(0.001)
         try:
-            self.tx.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1 << 20)
-            self.rx.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1 << 20)
+            # Allow overriding socket buffer sizes via environment variables
+            # Use GCS_SOCK_SNDBUF and GCS_SOCK_RCVBUF if present, otherwise default to 1 MiB
+            sndbuf = int(os.getenv("GCS_SOCK_SNDBUF", str(1 << 20)))
+            rcvbuf = int(os.getenv("GCS_SOCK_RCVBUF", str(1 << 20)))
+            self.tx.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, sndbuf)
+            self.rx.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
         except Exception:
+            # best-effort; continue even if setting buffers fails
             pass
 
         mkdirp(events_path.parent)
@@ -152,8 +157,8 @@ class Blaster:
         self.pending: Dict[int, int] = {}
 
     def _log_event(self, payload: dict) -> None:
+        # Buffered write; caller flushes at end of run()
         self.events.write(json.dumps(payload) + "\n")
-        self.events.flush()
 
     def _now(self) -> int:
         return time.time_ns() + self.offset_ns
@@ -178,21 +183,24 @@ class Blaster:
         rx_thread.start()
 
         seq = 0
+        burst = 32 if interval == 0.0 else 1
         while self._now() < stop_at:
-            t_send = self._now()
-            packet = seq.to_bytes(4, "big") + int(t_send).to_bytes(8, "big") + payload_pad
-            try:
-                self.tx.sendto(packet, self.send_addr)
-                self.pending[seq] = int(t_send)
-                self.sent += 1
-                self.sent_bytes += len(packet)
-                self._maybe_log("send", seq, int(t_send))
-            except Exception as exc:
-                self._log_event({"event": "send_error", "err": str(exc), "ts": ts()})
-            seq += 1
-            for _ in range(8):
-                if not self._rx_once():
+            sends_this_loop = burst
+            while sends_this_loop > 0:
+                if self._now() >= stop_at:
                     break
+                t_send = self._now()
+                packet = seq.to_bytes(4, "big") + int(t_send).to_bytes(8, "big") + payload_pad
+                try:
+                    self.tx.sendto(packet, self.send_addr)
+                    self.pending[seq] = int(t_send)
+                    self.sent += 1
+                    self.sent_bytes += len(packet)
+                    self._maybe_log("send", seq, int(t_send))
+                except Exception as exc:
+                    self._log_event({"event": "send_error", "err": str(exc), "ts": ts()})
+                seq += 1
+                sends_this_loop -= 1
             if max_packets is not None and self.sent >= max_packets:
                 break
             if interval > 0.0:
@@ -207,6 +215,10 @@ class Blaster:
 
         stop_event.set()
         rx_thread.join(timeout=0.2)
+        try:
+            self.events.flush()
+        except Exception:
+            pass
         self.events.close()
         self.tx.close()
         self.rx.close()
@@ -257,12 +269,10 @@ def wait_active_suite(target: str, timeout: float = 10.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            with open(PROXY_STATUS_PATH, encoding="utf-8") as handle:
-                js = json.load(handle)
+            status = ctl_send({"cmd": "status"}, timeout=0.6, retries=1)
         except Exception:
-            js = {}
-        active = js.get("suite") or js.get("active_suite") or js.get("last_rekey_suite")
-        if active == target:
+            status = {}
+        if status.get("suite") == target:
             return True
         time.sleep(0.2)
     return False
@@ -401,7 +411,8 @@ def run_suite(
     if pre_gap > 0:
         time.sleep(pre_gap)
 
-    start_ns = time.time_ns()
+    start_wall_ns = time.time_ns()
+    start_perf_ns = time.perf_counter_ns()
     sent_packets = 0
     rcvd_packets = 0
     rcvd_bytes = 0
@@ -428,13 +439,14 @@ def run_suite(
     else:
         time.sleep(duration_s)
 
-    end_ns = time.time_ns()
+    end_wall_ns = time.time_ns()
+    end_perf_ns = time.perf_counter_ns()
     print(f"[{ts()}] ===== POWER: STOP | suite={suite} =====")
 
     snapshot_proxy_artifacts(suite)
     proxy_stats = read_proxy_stats_live() or read_proxy_summary()
 
-    elapsed_s = max(1e-9, (end_ns - start_ns) / 1e9)
+    elapsed_s = max(1e-9, (end_perf_ns - start_perf_ns) / 1e9)
     pps = sent_packets / elapsed_s
     throughput_mbps = (rcvd_bytes * 8) / (elapsed_s * 1_000_000)
     avg_rtt_ms = avg_rtt_ns / 1_000_000
@@ -455,8 +467,8 @@ def run_suite(
         "drops": proxy_stats.get("drops", 0),
         "rekeys_ok": proxy_stats.get("rekeys_ok", 0),
         "rekeys_fail": proxy_stats.get("rekeys_fail", 0),
-        "start_ns": start_ns,
-        "end_ns": end_ns,
+        "start_ns": start_wall_ns,
+        "end_ns": end_wall_ns,
     }
 
     print(
