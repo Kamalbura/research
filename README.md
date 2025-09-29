@@ -1,3 +1,11 @@
+## Interpreting automated run logs
+
+When you run `tools/auto/gcs_scheduler.py` it writes run artifacts and a `summary.csv` under `logs/auto/gcs/`.
+See `logs/auto/gcs/README.md` for a short, human-friendly explanation of the console banners, `FINISH` summary lines, `POWER` START/STOP cues, and common WARN messages.
+
+## Where to go next
+
+ - If you want automatic post-processing, the CSV can be loaded into Python/pandas and plotted. Example quick analysis script:
 # PQC Drone ↔ GCS Secure Proxy
 
 A safety-critical, post-quantum secure tunnel that bridges plaintext telemetry/command traffic between a drone and a Ground Control Station (GCS). The system delivers authenticated PQC handshakes, AES-GCM packet protection, replay resistance, and operational tooling validated on a Raspberry Pi 4 (drone) and Windows host (GCS).
