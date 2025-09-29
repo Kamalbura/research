@@ -18,18 +18,17 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import csv
 import json
 import os
 import shlex
 import signal
 import socket
 import subprocess
+import sys
 import threading
 import time
-from typing import Optional
-
-import psutil
+from pathlib import Path
+from typing import Callable, Optional
 
 from core.config import CONFIG
 from core import suites as suites_mod
@@ -50,7 +49,7 @@ OUTDIR = Path("logs/auto/drone")
 MARK_DIR = OUTDIR / "marks"
 SECRETS_DIR = Path("secrets/matrix")
 
-PERF_EVENTS = "task-clock,cycles,instructions,cache-misses,branch-misses,context-switches,branches"
+PERF_EVENTS = "task-clock,cycles,instructions,cache-misses,context-switches"
 
 
 def ts() -> str:
@@ -180,227 +179,24 @@ class UdpEcho(threading.Thread):
 
 
 class Monitors:
-    """Structured performance/telemetry collectors for the drone proxy."""
-
-    PERF_FIELDS = [
-        "ts_unix_ns",
-        "t_offset_ms",
-        "instructions",
-        "cycles",
-        "cache-misses",
-        "branch-misses",
-        "task-clock",
-        "context-switches",
-        "branches",
-    ]
-
     def __init__(self, enabled: bool):
         self.enabled = enabled
         self.perf: Optional[subprocess.Popen] = None
         self.pidstat: Optional[subprocess.Popen] = None
-        self.perf_thread: Optional[threading.Thread] = None
-        self.perf_stop = threading.Event()
-        self.perf_csv_handle: Optional[object] = None
-        self.perf_writer: Optional[csv.DictWriter] = None
-        self.perf_start_ns = 0
-
-        self.psutil_thread: Optional[threading.Thread] = None
-        self.psutil_stop = threading.Event()
-        self.psutil_csv_handle: Optional[object] = None
-        self.psutil_writer: Optional[csv.DictWriter] = None
-        self.psutil_proc: Optional[psutil.Process] = None
-
-        self.temp_thread: Optional[threading.Thread] = None
-        self.temp_stop = threading.Event()
-        self.temp_csv_handle: Optional[object] = None
-        self.temp_writer: Optional[csv.DictWriter] = None
 
     def start(self, pid: int, outdir: Path, suite: str) -> None:
         if not self.enabled:
             return
         outdir.mkdir(parents=True, exist_ok=True)
-
-        # Structured perf samples
-        perf_cmd = [
-            "perf",
-            "stat",
-            "-I",
-            "1000",
-            "-x",
-            ",",
-            "-e",
-            PERF_EVENTS,
+        perf_cmd = f"perf stat -I 1000 -e {PERF_EVENTS} -p {pid} --log-fd 1"
+        self.perf = popen(shlex.split(perf_cmd), stdout=open(outdir / f"perf_{suite}.csv", "w"), stderr=subprocess.STDOUT)
+        self.pidstat = popen([
+            "pidstat",
+            "-hlur",
             "-p",
             str(pid),
-            "--log-fd",
             "1",
-        ]
-        perf_path = outdir / f"perf_samples_{suite}.csv"
-        self.perf_csv_handle = open(perf_path, "w", newline="", encoding="utf-8")
-        self.perf_writer = csv.DictWriter(self.perf_csv_handle, fieldnames=self.PERF_FIELDS)
-        self.perf_writer.writeheader()
-        self.perf_start_ns = time.time_ns()
-
-        self.perf = popen(
-            perf_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
-        self.perf_stop.clear()
-        self.perf_thread = threading.Thread(
-            target=self._consume_perf,
-            args=(self.perf.stdout,),
-            daemon=True,
-        )
-        self.perf_thread.start()
-
-        # pidstat baseline dump for parity with legacy tooling
-        self.pidstat = popen(
-            ["pidstat", "-hlur", "-p", str(pid), "1"],
-            stdout=open(outdir / f"pidstat_{suite}.txt", "w"),
-            stderr=subprocess.STDOUT,
-        )
-
-        # psutil metrics (CPU%, RSS, threads)
-        self.psutil_proc = psutil.Process(pid)
-        self.psutil_proc.cpu_percent(interval=None)
-        psutil_path = outdir / f"psutil_proc_{suite}.csv"
-        self.psutil_csv_handle = open(psutil_path, "w", newline="", encoding="utf-8")
-        self.psutil_writer = csv.DictWriter(
-            self.psutil_csv_handle,
-            fieldnames=["ts_unix_ns", "cpu_percent", "rss_bytes", "num_threads"],
-        )
-        self.psutil_writer.writeheader()
-        self.psutil_stop.clear()
-        self.psutil_thread = threading.Thread(target=self._psutil_loop, daemon=True)
-        self.psutil_thread.start()
-
-        # Temperature / frequency / throttled flags
-        temp_path = outdir / f"sys_telemetry_{suite}.csv"
-        self.temp_csv_handle = open(temp_path, "w", newline="", encoding="utf-8")
-        self.temp_writer = csv.DictWriter(
-            self.temp_csv_handle,
-            fieldnames=["ts_unix_ns", "temp_c", "freq_hz", "throttled_hex"],
-        )
-        self.temp_writer.writeheader()
-        self.temp_stop.clear()
-        self.temp_thread = threading.Thread(target=self._telemetry_loop, daemon=True)
-        self.temp_thread.start()
-
-    def _consume_perf(self, stream) -> None:
-        if not self.perf_writer:
-            return
-        current_ms = None
-        row = None
-        try:
-            for line in iter(stream.readline, ""):
-                if self.perf_stop.is_set():
-                    break
-                parts = [part.strip() for part in line.strip().split(",")]
-                if len(parts) < 4:
-                    continue
-                try:
-                    offset_ms = float(parts[0])
-                except ValueError:
-                    continue
-                event = parts[3]
-                if event.startswith("#"):
-                    continue
-                try:
-                    value = int(parts[1].replace(",", ""))
-                except Exception:
-                    value = ""
-
-                if current_ms is None or abs(offset_ms - current_ms) >= 0.5:
-                    if row:
-                        self.perf_writer.writerow(row)
-                        self.perf_csv_handle.flush()
-                    current_ms = offset_ms
-                    row = {field: "" for field in self.PERF_FIELDS}
-                    row["t_offset_ms"] = f"{offset_ms:.0f}"
-                    row["ts_unix_ns"] = str(self.perf_start_ns + int(offset_ms * 1_000_000))
-
-                key_map = {
-                    "instructions": "instructions",
-                    "cycles": "cycles",
-                    "cache-misses": "cache-misses",
-                    "branch-misses": "branch-misses",
-                    "task-clock": "task-clock",
-                    "context-switches": "context-switches",
-                    "branches": "branches",
-                }
-                column = key_map.get(event)
-                if row is not None and column:
-                    row[column] = value
-
-            if row:
-                self.perf_writer.writerow(row)
-                self.perf_csv_handle.flush()
-        finally:
-            try:
-                stream.close()
-            except Exception:
-                pass
-
-    def _psutil_loop(self) -> None:
-        while not self.psutil_stop.is_set():
-            try:
-                assert self.psutil_writer is not None
-                ts_now = time.time_ns()
-                cpu_percent = self.psutil_proc.cpu_percent(interval=None)  # type: ignore[arg-type]
-                rss_bytes = self.psutil_proc.memory_info().rss  # type: ignore[union-attr]
-                num_threads = self.psutil_proc.num_threads()  # type: ignore[union-attr]
-                self.psutil_writer.writerow({
-                    "ts_unix_ns": ts_now,
-                    "cpu_percent": cpu_percent,
-                    "rss_bytes": rss_bytes,
-                    "num_threads": num_threads,
-                })
-                self.psutil_csv_handle.flush()
-            except Exception:
-                pass
-            time.sleep(1.0)
-            try:
-                self.psutil_proc.cpu_percent(interval=None)  # type: ignore[arg-type]
-            except Exception:
-                pass
-
-    def _telemetry_loop(self) -> None:
-        while not self.temp_stop.is_set():
-            payload = {
-                "ts_unix_ns": time.time_ns(),
-                "temp_c": None,
-                "freq_hz": None,
-                "throttled_hex": "",
-            }
-            try:
-                out = subprocess.check_output(["vcgencmd", "measure_temp"]).decode(errors="ignore")
-                payload["temp_c"] = float(out.split("=")[1].split("'")[0])
-            except Exception:
-                pass
-            try:
-                freq_path = Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
-                if freq_path.exists():
-                    payload["freq_hz"] = int(freq_path.read_text().strip()) * 1000
-                else:
-                    out = subprocess.check_output(["vcgencmd", "measure_clock", "arm"]).decode(errors="ignore")
-                    payload["freq_hz"] = int(out.split("=")[1].strip())
-            except Exception:
-                pass
-            try:
-                out = subprocess.check_output(["vcgencmd", "get_throttled"]).decode(errors="ignore")
-                payload["throttled_hex"] = out.strip().split("=")[1]
-            except Exception:
-                pass
-            try:
-                assert self.temp_writer is not None
-                self.temp_writer.writerow(payload)
-                self.temp_csv_handle.flush()
-            except Exception:
-                pass
-            time.sleep(1.0)
+        ], stdout=open(outdir / f"pidstat_{suite}.txt", "w"), stderr=subprocess.STDOUT)
 
     def rotate(self, pid: int, outdir: Path, suite: str) -> None:
         if not self.enabled:
@@ -413,44 +209,10 @@ class Monitors:
     def stop(self) -> None:
         if not self.enabled:
             return
-
-        self.perf_stop.set()
-        if self.perf_thread:
-            self.perf_thread.join(timeout=1.0)
-        if self.perf:
-            killtree(self.perf)
-            self.perf = None
-        if self.perf_csv_handle:
-            try:
-                self.perf_csv_handle.close()
-            except Exception:
-                pass
-            self.perf_csv_handle = None
-
+        killtree(self.perf)
         killtree(self.pidstat)
+        self.perf = None
         self.pidstat = None
-
-        self.psutil_stop.set()
-        if self.psutil_thread:
-            self.psutil_thread.join(timeout=1.0)
-            self.psutil_thread = None
-        if self.psutil_csv_handle:
-            try:
-                self.psutil_csv_handle.close()
-            except Exception:
-                pass
-            self.psutil_csv_handle = None
-
-        self.temp_stop.set()
-        if self.temp_thread:
-            self.temp_thread.join(timeout=1.0)
-            self.temp_thread = None
-        if self.temp_csv_handle:
-            try:
-                self.temp_csv_handle.close()
-            except Exception:
-                pass
-            self.temp_csv_handle = None
 
 
 class ControlServer(threading.Thread):
@@ -489,12 +251,6 @@ class ControlServer(threading.Thread):
             if cmd == "ping":
                 self._send(conn, {"ok": True, "ts": ts()})
                 return
-            if cmd == "timesync":
-                t1 = int(request.get("t1_ns", 0))
-                t2 = time.time_ns()
-                t3 = time.time_ns()
-                self._send(conn, {"ok": True, "t1_ns": t1, "t2_ns": t2, "t3_ns": t3})
-                return
             if cmd == "status":
                 proxy = self.state["proxy"]
                 running = bool(proxy and proxy.poll() is None)
@@ -526,28 +282,6 @@ class ControlServer(threading.Thread):
                 outdir = self.state["suite_outdir"](suite)
                 self.state["monitors"].rotate(proxy.pid, outdir, suite)
                 self._send(conn, {"ok": True, "marked": suite})
-                return
-            if cmd == "schedule_mark":
-                suite = request.get("suite")
-                t0_ns = int(request.get("t0_ns", 0))
-                if not suite or not t0_ns:
-                    self._send(conn, {"ok": False, "error": "missing suite or t0_ns"})
-                    return
-
-                def _do_mark() -> None:
-                    delay = max(0.0, (t0_ns - time.time_ns()) / 1e9)
-                    if delay:
-                        time.sleep(delay)
-                    proxy = self.state["proxy"]
-                    if proxy and proxy.poll() is None:
-                        outdir = self.state["suite_outdir"](suite)
-                        self.state["monitors"].rotate(proxy.pid, outdir, suite)
-                    else:
-                        write_marker(suite)
-                    self.state["suite"] = suite
-
-                threading.Thread(target=_do_mark, daemon=True).start()
-                self._send(conn, {"ok": True, "scheduled": suite, "t0_ns": t0_ns})
                 return
             if cmd == "stop":
                 self.state["monitors"].stop()
