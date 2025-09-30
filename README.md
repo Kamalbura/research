@@ -17,31 +17,29 @@ A safety-critical, post-quantum secure tunnel that bridges plaintext telemetry/c
 ```mermaid
 graph TB
     subgraph "Drone Side"
-        DA[Drone Application<br/>MAVLink/Telemetry] 
+        DA[Drone Application<br/>MAVLink/Telemetry]
         DP[Drone Proxy<br/>core/run_proxy.py]
-        DA --|Plaintext UDP<br/>47003→47004| DP
+        DA -- "Plaintext UDP 47003→47004" --> DP
     end
-    
-    subgraph "Network Layer"
-        DP --|TCP Handshake<br/>Port 46000| GP
-        DP --|Encrypted UDP<br/>46012→46011| GP
-    end
-    
+
     subgraph "GCS Side"
         GP[GCS Proxy<br/>core/run_proxy.py]
         GA[GCS Application<br/>Ground Control]
-        GP --|Plaintext UDP<br/>47001→47002| GA
+        GP -- "Plaintext UDP 47001→47002" --> GA
     end
-    
+
     subgraph "Security Layer"
-        PQC[Post-Quantum Crypto<br/>ML-KEM + ML-DSA/Falcon/SPHINCS+]
+        PQC[Post-Quantum Crypto<br/>ML-KEM + Signatures]
         AEAD[AEAD Encryption<br/>AES-256-GCM + Replay Protection]
-        DP --> PQC
-        GP --> PQC
-        DP --> AEAD
-        GP --> AEAD
     end
-    
+
+    DP -- "TCP Handshake Port 46000" --> GP
+    DP -- "Encrypted UDP 46012→46011" --> GP
+    DP --> PQC
+    GP --> PQC
+    DP --> AEAD
+    GP --> AEAD
+
     style PQC fill:#e1f5fe
     style AEAD fill:#f3e5f5
     style DP fill:#e8f5e8
@@ -294,10 +292,10 @@ stateDiagram-v2
     
     note right of Rekey_Request
         Triggers:
-        • Manual operator command
-        • Performance degradation
-        • Security policy change
-        • Scheduled rotation
+        - Manual operator command
+        - Performance degradation
+        - Security policy change
+        - Scheduled rotation
     end note
 ```
 
@@ -351,7 +349,7 @@ flowchart TD
 ```mermaid
 graph LR
     subgraph "Packet Structure"
-        H[Header<br/>22 bytes<br/>Version|IDs|Session|Seq|Epoch]
+        H[Header<br/>22 bytes<br/>Version IDs Session Seq Epoch]
         C[Ciphertext + Tag<br/>Variable length<br/>AES-256-GCM]
     end
     
