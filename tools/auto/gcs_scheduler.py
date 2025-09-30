@@ -47,7 +47,24 @@ SECRETS_DIR = Path("secrets/matrix")
 
 EXCEL_OUTPUT_DIR = Path(
     CONFIG.get("GCS_EXCEL_OUTPUT")
-    or os.getenv("GCS_EXCEL_OUTPUT", "/home/dev/research/output/drone")
+    or os.getenv("GCS_EXCEL_OUTPUT", "output/gcs")
+)
+
+COMBINED_OUTPUT_DIR = Path(
+    CONFIG.get("GCS_COMBINED_OUTPUT_BASE")
+    or os.getenv("GCS_COMBINED_OUTPUT_BASE", "output/gcs")
+)
+
+DRONE_MONITOR_BASE = Path(
+    CONFIG.get("DRONE_MONITOR_OUTPUT_BASE")
+    or os.getenv("DRONE_MONITOR_OUTPUT_BASE", "output/drone")
+)
+
+TELEMETRY_BIND_HOST = CONFIG.get("GCS_TELEMETRY_BIND", "0.0.0.0")
+TELEMETRY_PORT = int(
+    CONFIG.get("GCS_TELEMETRY_PORT")
+    or CONFIG.get("DRONE_TELEMETRY_PORT")
+    or 52080
 )
 
 SATURATION_TEST_RATES = [5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200]
@@ -569,6 +586,7 @@ class SaturationTester:
             if rate > self.max_rate_mbps:
                 break
             metrics = self._run_rate(rate)
+            metrics["suite"] = self.suite
             self.records.append(metrics)
             avg_rtt = metrics["avg_rtt_ms"]
             achieved = metrics["throughput_mbps"]
@@ -650,6 +668,217 @@ class SaturationTester:
             ])
         wb.save(path)
         return path
+
+
+class TelemetryCollector:
+    def __init__(self, host: str, port: int) -> None:
+        self.host = host
+        self.port = port
+        self.stop_event = threading.Event()
+        self.server: Optional[socket.socket] = None
+        self.accept_thread: Optional[threading.Thread] = None
+        self.client_threads: List[threading.Thread] = []
+        self.samples: List[dict] = []
+        self.lock = threading.Lock()
+        self.enabled = True
+
+    def start(self) -> None:
+        try:
+            srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            srv.bind((self.host, self.port))
+            srv.listen(8)
+            srv.settimeout(0.5)
+            self.server = srv
+            self.accept_thread = threading.Thread(target=self._accept_loop, daemon=True)
+            self.accept_thread.start()
+            print(f"[{ts()}] telemetry collector listening on {self.host}:{self.port}")
+        except Exception as exc:
+            print(f"[WARN] telemetry collector disabled: {exc}", file=sys.stderr)
+            self.enabled = False
+            if self.server:
+                try:
+                    self.server.close()
+                except Exception:
+                    pass
+            self.server = None
+
+    def _accept_loop(self) -> None:
+        assert self.server is not None
+        while not self.stop_event.is_set():
+            try:
+                conn, addr = self.server.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            except Exception as exc:
+                if not self.stop_event.is_set():
+                    print(f"[WARN] telemetry accept error: {exc}", file=sys.stderr)
+                continue
+            thread = threading.Thread(target=self._client_loop, args=(conn, addr), daemon=True)
+            thread.start()
+            self.client_threads.append(thread)
+
+    def _client_loop(self, conn: socket.socket, addr) -> None:
+        peer = f"{addr[0]}:{addr[1]}"
+        try:
+            conn.settimeout(1.0)
+            with conn, conn.makefile("r", encoding="utf-8") as reader:
+                for line in reader:
+                    if self.stop_event.is_set():
+                        break
+                    data = line.strip()
+                    if not data:
+                        continue
+                    try:
+                        payload = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+                    payload.setdefault("collector_ts_ns", time.time_ns())
+                    payload.setdefault("source", "drone")
+                    payload.setdefault("peer", peer)
+                    with self.lock:
+                        self.samples.append(payload)
+        except Exception:
+            # drop connection silently
+            pass
+
+    def snapshot(self) -> List[dict]:
+        with self.lock:
+            return list(self.samples)
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        if self.server:
+            try:
+                self.server.close()
+            except Exception:
+                pass
+        if self.accept_thread and self.accept_thread.is_alive():
+            self.accept_thread.join(timeout=1.5)
+        for thread in self.client_threads:
+            if thread.is_alive():
+                thread.join(timeout=1.0)
+
+def resolve_under_root(path: Path) -> Path:
+    return path if path.is_absolute() else ROOT / path
+
+
+def safe_sheet_name(name: str) -> str:
+    sanitized = "".join("_" if ch in '[]:*?/\\' else ch for ch in name).strip()
+    if not sanitized:
+        sanitized = "Sheet"
+    return sanitized[:31]
+
+
+def unique_sheet_name(workbook, base_name: str) -> str:
+    base = safe_sheet_name(base_name)
+    if base not in workbook.sheetnames:
+        return base
+    index = 1
+    while True:
+        suffix = f"_{index}"
+        name = base[: 31 - len(suffix)] + suffix
+        if name not in workbook.sheetnames:
+            return name
+        index += 1
+
+
+def append_dict_sheet(workbook, title: str, rows: List[dict]) -> None:
+    if not rows:
+        return
+    sheet_name = unique_sheet_name(workbook, title)
+    ws = workbook.create_sheet(sheet_name)
+    headers: List[str] = []
+    for row in rows:
+        for key in row.keys():
+            if key not in headers:
+                headers.append(key)
+    ws.append(headers)
+    for row in rows:
+        ws.append([row.get(header, "") for header in headers])
+
+
+def append_csv_sheet(workbook, path: Path, title: str) -> None:
+    if not path.exists():
+        return
+    try:
+        with open(path, newline="", encoding="utf-8") as handle:
+            reader = csv.reader(handle)
+            rows = list(reader)
+    except Exception as exc:
+        print(f"[WARN] failed to read CSV {path}: {exc}", file=sys.stderr)
+        return
+    if not rows:
+        return
+    sheet_name = unique_sheet_name(workbook, title)
+    ws = workbook.create_sheet(sheet_name)
+    for row in rows:
+        ws.append(row)
+
+
+def locate_drone_session_dir(session_id: str) -> Optional[Path]:
+    candidates = []
+    try:
+        candidates.append(resolve_under_root(DRONE_MONITOR_BASE) / session_id)
+    except Exception:
+        pass
+    fallback = Path("/home/dev/research/output/drone") / session_id
+    candidates.append(fallback)
+    repo_default = ROOT / "output" / "drone" / session_id
+    candidates.append(repo_default)
+    seen = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        try:
+            if candidate.exists():
+                return candidate
+        except Exception:
+            continue
+    return None
+
+
+def export_combined_excel(
+    session_id: str,
+    summary_rows: List[dict],
+    saturation_overview: List[dict],
+    saturation_samples: List[dict],
+    telemetry_samples: List[dict],
+) -> Optional[Path]:
+    if Workbook is None:
+        print("[WARN] openpyxl not available; skipping combined Excel export", file=sys.stderr)
+        return None
+
+    workbook = Workbook()
+    info_sheet = workbook.active
+    info_sheet.title = "run_info"
+    info_sheet.append(["generated_utc", ts()])
+    info_sheet.append(["session_id", session_id])
+
+    append_dict_sheet(workbook, "gcs_summary", summary_rows)
+    append_dict_sheet(workbook, "saturation_overview", saturation_overview)
+    append_dict_sheet(workbook, "saturation_samples", saturation_samples)
+    append_dict_sheet(workbook, "telemetry_samples", telemetry_samples)
+
+    if SUMMARY_CSV.exists():
+        append_csv_sheet(workbook, SUMMARY_CSV, "gcs_summary_csv")
+
+    drone_session_dir = locate_drone_session_dir(session_id)
+    if drone_session_dir:
+        info_sheet.append(["drone_session_dir", str(drone_session_dir)])
+        for csv_path in sorted(drone_session_dir.glob("*.csv")):
+            append_csv_sheet(workbook, csv_path, csv_path.stem[:31])
+    else:
+        info_sheet.append(["drone_session_dir", "not_found"])
+
+    combined_dir = resolve_under_root(COMBINED_OUTPUT_DIR)
+    combined_dir.mkdir(parents=True, exist_ok=True)
+    target_path = combined_dir / f"{session_id}_combined.xlsx"
+    workbook.save(target_path)
+    return target_path
 
 
 def main() -> None:
@@ -754,14 +983,21 @@ def main() -> None:
     except Exception as exc:
         print(f"[WARN] timesync failed: {exc}", file=sys.stderr)
 
+    telemetry_collector = TelemetryCollector(TELEMETRY_BIND_HOST, TELEMETRY_PORT)
+    telemetry_collector.start()
+
     gcs_proc, log_handle = start_gcs_proxy(suites[0])
 
     try:
         ready = wait_handshake(timeout=20.0)
         print(f"[{ts()}] initial handshake ready? {ready}")
 
+        summary_rows: List[dict] = []
+        saturation_reports: List[dict] = []
+        all_rate_samples: List[dict] = []
+        telemetry_samples: List[dict] = []
+
         if args.traffic == "saturation":
-            saturation_reports = []
             for idx, suite in enumerate(suites):
                 rekey_ms = activate_suite(gcs_proc, suite, is_first=(idx == 0))
                 outdir = suite_outdir(suite)
@@ -780,6 +1016,7 @@ def main() -> None:
                 if excel_path:
                     summary["excel_path"] = str(excel_path)
                 saturation_reports.append(summary)
+                all_rate_samples.extend(dict(record) for record in tester.records)
                 if args.inter_gap > 0 and idx < len(suites) - 1:
                     time.sleep(args.inter_gap)
             report_path = OUTDIR / f"saturation_summary_{session_id}.json"
@@ -787,7 +1024,6 @@ def main() -> None:
                 json.dump(saturation_reports, handle, indent=2)
             print(f"[{ts()}] saturation summary written to {report_path}")
         else:
-            summary_rows: List[dict] = []
             for pass_index in range(args.passes):
                 for idx, suite in enumerate(suites):
                     row = run_suite(
@@ -811,6 +1047,19 @@ def main() -> None:
 
             write_summary(summary_rows)
 
+        if telemetry_collector.enabled:
+            telemetry_samples = telemetry_collector.snapshot()
+
+        combined_path = export_combined_excel(
+            session_id=session_id,
+            summary_rows=summary_rows,
+            saturation_overview=saturation_reports,
+            saturation_samples=all_rate_samples,
+            telemetry_samples=telemetry_samples,
+        )
+        if combined_path:
+            print(f"[{ts()}] combined workbook written to {combined_path}")
+
     finally:
         try:
             ctl_send({"cmd": "stop"})
@@ -832,6 +1081,8 @@ def main() -> None:
             log_handle.close()
         except Exception:
             pass
+
+        telemetry_collector.stop()
 
 
 if __name__ == "__main__":

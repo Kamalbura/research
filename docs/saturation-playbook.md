@@ -32,6 +32,8 @@ python tools/auto/drone_follower.py \
 
 > Override the telemetry destination by setting `DRONE_MONITOR_OUTPUT_BASE` before launch (default already points at `/home/dev/research/output/drone`).
 
+> Telemetry is streamed live to the GCS host on TCP port `52080` (override with `--telemetry-host/--telemetry-port`). If the port is blocked, the follower falls back to local CSVs only.
+
 Key files created on the Pi:
 
 - `system_stats.csv`: CPU %, memory, context switches, interrupts sampled ~10 Hz.
@@ -61,7 +63,7 @@ What happens:
 - Each suite run records per-rate metrics (`throughput_mbps`, `loss_pct`, `avg/min/max RTT`) into JSONL logs under `logs/auto/gcs/suites/<suite>/`.
 - Rekey time is measured via the control plane handshake (`rekey_ms`).
 - Overall saturation findings land in `logs/auto/gcs/saturation_summary_<SESSION>.json`.
-- If `openpyxl` is installed, an Excel workbook is emitted to `/home/dev/research/output/drone/saturation_<suite>_<SESSION>.xlsx` for each suite (easy charting).
+- A telemetry collector listens on `0.0.0.0:52080` and ingests the follower’s JSON stream (system stats, perf, UDP echo timings, rekey events). If `openpyxl` is installed, per-suite workbooks plus a combined run workbook are emitted under `output/gcs/`. The combined file (`<SESSION>_combined.xlsx`) merges GCS summaries, saturation sweeps, raw telemetry samples, and the drone monitor CSVs.
 
 ## 5. Interpreting the Results
 - **Saturation point**: For each suite, the JSON/Excel output lists the Mbps tier where RTT jumped above 1.8× the baseline or achieved throughput fell below 80% of the requested rate.

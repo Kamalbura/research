@@ -28,6 +28,7 @@ import struct
 import subprocess
 import threading
 import time
+import queue
 from typing import Optional
 def optimize_cpu_performance(target_khz: int = 1800000) -> None:
     governors = list(Path("/sys/devices/system/cpu").glob("cpu[0-9]*/cpufreq"))
@@ -67,6 +68,17 @@ APP_SEND_PORT = int(CONFIG.get("DRONE_PLAINTEXT_TX", 47003))
 DRONE_HOST = CONFIG["DRONE_HOST"]
 GCS_HOST = CONFIG["GCS_HOST"]
 
+TELEMETRY_DEFAULT_HOST = (
+    CONFIG.get("DRONE_TELEMETRY_HOST")
+    or CONFIG.get("GCS_HOST")
+    or "127.0.0.1"
+)
+TELEMETRY_DEFAULT_PORT = int(
+    CONFIG.get("DRONE_TELEMETRY_PORT")
+    or CONFIG.get("GCS_TELEMETRY_PORT")
+    or 52080
+)
+
 OUTDIR = Path("logs/auto/drone")
 MARK_DIR = OUTDIR / "marks"
 SECRETS_DIR = Path("secrets/matrix")
@@ -82,6 +94,104 @@ PERF_EVENTS = "task-clock,cycles,instructions,cache-misses,branch-misses,context
 
 def ts() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+class TelemetryPublisher:
+    """Best-effort telemetry pipe from the drone follower to the GCS scheduler."""
+
+    def __init__(self, host: str, port: int, session_id: str) -> None:
+        self.host = host
+        self.port = port
+        self.session_id = session_id
+        self.queue: "queue.Queue[dict]" = queue.Queue(maxsize=5000)
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.sock: Optional[socket.socket] = None
+        self.writer = None
+
+    def start(self) -> None:
+        self.thread.start()
+
+    def publish(self, kind: str, payload: dict) -> None:
+        if self.stop_event.is_set():
+            return
+        message = {"session_id": self.session_id, "kind": kind, **payload}
+        try:
+            self.queue.put_nowait(message)
+        except queue.Full:
+            # Drop oldest by removing one item to make space, then enqueue.
+            try:
+                self.queue.get_nowait()
+            except queue.Empty:
+                pass
+            try:
+                self.queue.put_nowait(message)
+            except queue.Full:
+                pass
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        if self.thread.is_alive():
+            self.thread.join(timeout=2.0)
+        self._close_socket()
+
+    def _close_socket(self) -> None:
+        if self.writer is not None:
+            try:
+                self.writer.close()
+            except Exception:
+                pass
+            self.writer = None
+        if self.sock is not None:
+            try:
+                self.sock.close()
+            except Exception:
+                pass
+            self.sock = None
+
+    def _ensure_connection(self) -> bool:
+        if self.sock is not None and self.writer is not None:
+            return True
+        try:
+            sock = socket.create_connection((self.host, self.port), timeout=3.0)
+            self.sock = sock
+            self.writer = sock.makefile("w", encoding="utf-8", buffering=1)
+            hello = {
+                "session_id": self.session_id,
+                "kind": "telemetry_hello",
+                "timestamp_ns": time.time_ns(),
+            }
+            self.writer.write(json.dumps(hello) + "\n")
+            self.writer.flush()
+            return True
+        except Exception as exc:
+            print(f"[follower] telemetry connect failed: {exc}")
+            self._close_socket()
+            return False
+
+    def _run(self) -> None:
+        backoff = 1.0
+        while not self.stop_event.is_set():
+            if not self._ensure_connection():
+                time.sleep(min(backoff, 5.0))
+                backoff = min(backoff * 1.5, 5.0)
+                continue
+            backoff = 1.0
+            try:
+                item = self.queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            try:
+                if self.writer is None:
+                    continue
+                if "timestamp_ns" not in item:
+                    item["timestamp_ns"] = time.time_ns()
+                self.writer.write(json.dumps(item) + "\n")
+                self.writer.flush()
+            except Exception as exc:
+                print(f"[follower] telemetry send failed: {exc}")
+                self._close_socket()
+
 
 
 def popen(cmd, **kw) -> subprocess.Popen:
@@ -177,7 +287,12 @@ def start_drone_proxy(suite: str) -> subprocess.Popen:
 
 
 class HighSpeedMonitor(threading.Thread):
-    def __init__(self, output_dir: Path, session_id: str):
+    def __init__(
+        self,
+        output_dir: Path,
+        session_id: str,
+        publisher: Optional[TelemetryPublisher],
+    ):
         super().__init__(daemon=True)
         self.output_dir = output_dir
         self.session_id = session_id
@@ -189,6 +304,7 @@ class HighSpeedMonitor(threading.Thread):
         self.csv_writer: Optional[csv.writer] = None
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.csv_path = self.output_dir / f"system_monitoring_{session_id}.csv"
+        self.publisher = publisher
 
     def attach_proxy(self, pid: int) -> None:
         self.proxy_pid = pid
@@ -197,12 +313,30 @@ class HighSpeedMonitor(threading.Thread):
         self.current_suite = new_suite
         self.rekey_start_ns = time.time_ns()
         print(f"[monitor] rekey transition {old_suite} -> {new_suite}")
+        if self.publisher:
+            self.publisher.publish(
+                "rekey_transition_start",
+                {
+                    "timestamp_ns": self.rekey_start_ns,
+                    "old_suite": old_suite,
+                    "new_suite": new_suite,
+                },
+            )
 
     def end_rekey(self) -> None:
         if self.rekey_start_ns is None:
             return
         duration_ms = (time.time_ns() - self.rekey_start_ns) / 1_000_000
         print(f"[monitor] rekey completed in {duration_ms:.2f} ms")
+        if self.publisher:
+            self.publisher.publish(
+                "rekey_transition_end",
+                {
+                    "timestamp_ns": time.time_ns(),
+                    "suite": self.current_suite,
+                    "duration_ms": duration_ms,
+                },
+            )
         self.rekey_start_ns = None
 
     def run(self) -> None:
@@ -268,6 +402,21 @@ class HighSpeedMonitor(threading.Thread):
             ]
         )
         self.csv_handle.flush()
+        if self.publisher:
+            sample = {
+                "timestamp_ns": timestamp_ns,
+                "timestamp_iso": timestamp_iso,
+                "suite": self.current_suite,
+                "proxy_pid": self.proxy_pid,
+                "cpu_percent": cpu_percent,
+                "cpu_freq_mhz": cpu_freq_mhz,
+                "cpu_temp_c": cpu_temp_c,
+                "mem_used_mb": mem.used / (1024 * 1024),
+                "mem_percent": mem.percent,
+            }
+            if self.rekey_start_ns is not None:
+                sample["rekey_elapsed_ms"] = (timestamp_ns - self.rekey_start_ns) / 1_000_000
+            self.publisher.publish("system_sample", sample)
 
     def stop(self) -> None:
         self.stop_event.set()
@@ -287,6 +436,7 @@ class UdpEcho(threading.Thread):
         stop_event: threading.Event,
         monitor: Optional[HighSpeedMonitor],
         session_dir: Path,
+        publisher: Optional[TelemetryPublisher],
     ):
         super().__init__(daemon=True)
         self.bind_host = bind_host
@@ -296,6 +446,7 @@ class UdpEcho(threading.Thread):
         self.stop_event = stop_event
         self.monitor = monitor
         self.session_dir = session_dir
+        self.publisher = publisher
         self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
@@ -366,6 +517,18 @@ class UdpEcho(threading.Thread):
             ])
             if self.packet_log_handle:
                 self.packet_log_handle.flush()
+            if self.publisher:
+                suite = self.monitor.current_suite if self.monitor else "unknown"
+                self.publisher.publish(
+                    "udp_echo_sample",
+                    {
+                        "recv_timestamp_ns": recv_ns,
+                        "send_timestamp_ns": send_ns,
+                        "processing_ns": processing_ns,
+                        "sequence": seq,
+                        "suite": suite,
+                    },
+                )
 
 
 
@@ -384,8 +547,9 @@ class Monitors:
         "branches",
     ]
 
-    def __init__(self, enabled: bool):
+    def __init__(self, enabled: bool, telemetry: Optional[TelemetryPublisher]):
         self.enabled = enabled
+        self.telemetry = telemetry
         self.perf: Optional[subprocess.Popen] = None
         self.pidstat: Optional[subprocess.Popen] = None
         self.perf_thread: Optional[threading.Thread] = None
@@ -393,6 +557,7 @@ class Monitors:
         self.perf_csv_handle: Optional[object] = None
         self.perf_writer: Optional[csv.DictWriter] = None
         self.perf_start_ns = 0
+        self.current_suite = "unknown"
 
         self.psutil_thread: Optional[threading.Thread] = None
         self.psutil_stop = threading.Event()
@@ -409,6 +574,7 @@ class Monitors:
         if not self.enabled:
             return
         outdir.mkdir(parents=True, exist_ok=True)
+        self.current_suite = suite
 
         # Structured perf samples
         perf_cmd = [
@@ -479,6 +645,16 @@ class Monitors:
         self.temp_thread = threading.Thread(target=self._telemetry_loop, daemon=True)
         self.temp_thread.start()
 
+        if self.telemetry:
+            self.telemetry.publish(
+                "monitors_started",
+                {
+                    "timestamp_ns": time.time_ns(),
+                    "suite": suite,
+                    "proxy_pid": pid,
+                },
+            )
+
     def _consume_perf(self, stream) -> None:
         if not self.perf_writer:
             return
@@ -528,6 +704,10 @@ class Monitors:
             if row:
                 self.perf_writer.writerow(row)
                 self.perf_csv_handle.flush()
+                if self.telemetry:
+                    sample = {k: row.get(k, "") for k in self.PERF_FIELDS}
+                    sample["suite"] = self.current_suite
+                    self.telemetry.publish("perf_sample", sample)
         finally:
             try:
                 stream.close()
@@ -549,6 +729,17 @@ class Monitors:
                     "num_threads": num_threads,
                 })
                 self.psutil_csv_handle.flush()
+                if self.telemetry:
+                    self.telemetry.publish(
+                        "psutil_sample",
+                        {
+                            "timestamp_ns": ts_now,
+                            "suite": self.current_suite,
+                            "cpu_percent": cpu_percent,
+                            "rss_bytes": rss_bytes,
+                            "num_threads": num_threads,
+                        },
+                    )
             except Exception:
                 pass
             time.sleep(1.0)
@@ -588,6 +779,10 @@ class Monitors:
                 assert self.temp_writer is not None
                 self.temp_writer.writerow(payload)
                 self.temp_csv_handle.flush()
+                if self.telemetry:
+                    payload = dict(payload)
+                    payload["suite"] = self.current_suite
+                    self.telemetry.publish("thermal_sample", payload)
             except Exception:
                 pass
             time.sleep(1.0)
@@ -642,6 +837,15 @@ class Monitors:
                 pass
             self.temp_csv_handle = None
 
+        if self.telemetry:
+            self.telemetry.publish(
+                "monitors_stopped",
+                {
+                    "timestamp_ns": time.time_ns(),
+                    "suite": self.current_suite,
+                },
+            )
+
 
 class ControlServer(threading.Thread):
     """Line-delimited JSON control server for the scheduler."""
@@ -688,6 +892,7 @@ class ControlServer(threading.Thread):
             if cmd == "status":
                 proxy = self.state["proxy"]
                 running = bool(proxy and proxy.poll() is None)
+                telemetry: Optional[TelemetryPublisher] = self.state.get("telemetry")
                 self._send(
                     conn,
                     {
@@ -702,6 +907,15 @@ class ControlServer(threading.Thread):
                         "monitors_enabled": self.state["monitors"].enabled,
                     },
                 )
+                if telemetry:
+                    telemetry.publish(
+                        "status_reply",
+                        {
+                            "timestamp_ns": time.time_ns(),
+                            "suite": self.state["suite"],
+                            "running": running,
+                        },
+                    )
                 return
             if cmd == "mark":
                 suite = request.get("suite")
@@ -720,12 +934,32 @@ class ControlServer(threading.Thread):
                 if monitor and old_suite != suite:
                     monitor.start_rekey(old_suite, suite)
                 self._send(conn, {"ok": True, "marked": suite})
+                telemetry = self.state.get("telemetry")
+                if telemetry:
+                    telemetry.publish(
+                        "mark",
+                        {
+                            "timestamp_ns": time.time_ns(),
+                            "suite": suite,
+                            "prev_suite": old_suite,
+                        },
+                    )
                 return
             if cmd == "rekey_complete":
                 monitor = self.state.get("high_speed_monitor")
                 if monitor:
                     monitor.end_rekey()
                 self._send(conn, {"ok": True})
+                telemetry = self.state.get("telemetry")
+                if telemetry:
+                    telemetry.publish(
+                        "rekey_complete",
+                        {
+                            "timestamp_ns": time.time_ns(),
+                            "suite": self.state["suite"],
+                            "status": request.get("status", "ok"),
+                        },
+                    )
                 return
             if cmd == "schedule_mark":
                 suite = request.get("suite")
@@ -752,11 +986,27 @@ class ControlServer(threading.Thread):
 
                 threading.Thread(target=_do_mark, daemon=True).start()
                 self._send(conn, {"ok": True, "scheduled": suite, "t0_ns": t0_ns})
+                telemetry = self.state.get("telemetry")
+                if telemetry:
+                    telemetry.publish(
+                        "schedule_mark",
+                        {
+                            "timestamp_ns": time.time_ns(),
+                            "suite": suite,
+                            "t0_ns": t0_ns,
+                        },
+                    )
                 return
             if cmd == "stop":
                 self.state["monitors"].stop()
                 self.state["stop_event"].set()
                 self._send(conn, {"ok": True, "stopping": True})
+                telemetry = self.state.get("telemetry")
+                if telemetry:
+                    telemetry.publish(
+                        "stop",
+                        {"timestamp_ns": time.time_ns()},
+                    )
                 return
             self._send(conn, {"ok": False, "error": "unknown_cmd"})
         finally:
@@ -796,6 +1046,17 @@ def main() -> None:
         action="store_true",
         help="Skip CPU governor adjustments",
     )
+    parser.add_argument(
+        "--telemetry-host",
+        default=TELEMETRY_DEFAULT_HOST,
+        help="GCS telemetry collector host (default: config GCS_HOST)",
+    )
+    parser.add_argument(
+        "--telemetry-port",
+        type=int,
+        default=TELEMETRY_DEFAULT_PORT,
+        help="Telemetry collector TCP port (default: 52080)",
+    )
     args = parser.parse_args()
 
     initial_suite = args.initial_suite
@@ -807,14 +1068,17 @@ def main() -> None:
     session_dir.mkdir(parents=True, exist_ok=True)
     print(f"[follower] monitor output -> {session_dir}")
 
+    telemetry = TelemetryPublisher(args.telemetry_host, args.telemetry_port, session_id)
+    telemetry.start()
+
     if not args.no_cpu_optimization:
         optimize_cpu_performance()
 
-    high_speed_monitor = HighSpeedMonitor(session_dir, session_id)
+    high_speed_monitor = HighSpeedMonitor(session_dir, session_id, telemetry)
     high_speed_monitor.start()
 
     proxy = start_drone_proxy(initial_suite)
-    monitors = Monitors(enabled=not args.disable_monitors)
+    monitors = Monitors(enabled=not args.disable_monitors, telemetry=telemetry)
     time.sleep(1)
     if proxy.poll() is None:
         monitors.start(proxy.pid, suite_outdir(initial_suite), initial_suite)
@@ -829,6 +1093,7 @@ def main() -> None:
         stop_event,
         high_speed_monitor,
         session_dir,
+        telemetry,
     )
     echo.start()
 
@@ -839,6 +1104,7 @@ def main() -> None:
         "monitors": monitors,
         "stop_event": stop_event,
         "high_speed_monitor": high_speed_monitor,
+        "telemetry": telemetry,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()
@@ -860,6 +1126,7 @@ def main() -> None:
             proxy.send_signal(signal.SIGTERM)
         except Exception:
             pass
+        telemetry.stop()
 
 
 if __name__ == "__main__":

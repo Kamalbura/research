@@ -1,0 +1,48 @@
+Drone & GCS Automation Scripts Overview
+=====================================
+
+1. tools/auto/drone_follower.py (Drone-side Automation Agent)
+-------------------------------------------------------------
+Purpose:
+- Boots the drone proxy according to core configuration, keeps the plaintext UDP echo service running, provides a control server for the scheduler, enforces telemetry/monitoring, and now streams live telemetry to the GCS host.
+
+Key Components:
+- Configuration bootstrap: resolves project root, imports CONFIG, derives host/port constants, and discovers the initial suite from secrets/config.
+- CPU tuning: optional governor clamp to performance mode via optimize_cpu_performance(), ensuring stable benchmarking on Pi-class hardware.
+- TelemetryPublisher: background thread maintaining a JSONL TCP connection to GCS (default host `GCS_HOST`, port 52080). It buffers messages per session, retries connections, and emits structured events (system samples, perf stats, control notifications, UDP echo timing, rekey phases).
+- HighSpeedMonitor: 10 Hz sampler capturing CPU, frequency, temperature, memory, and rekey timing into `system_monitoring_<session>.csv`, while forwarding the same data to the TelemetryPublisher.
+- Monitors class: wraps perf stat, pidstat, psutil, and vcgencmd telemetry for the drone proxy process. Each collector logs to CSV/TXT under `logs/auto/drone/<suite>/` and forwards structured rows (`perf_sample`, `psutil_sample`, `thermal_sample`) to the telemetry stream.
+- UdpEcho: UDP echo responder bridging the plaintext loopback ports. Writes packet timing CSV (every 100th packet) and publishes `udp_echo_sample` telemetry entries recording per-packet processing latency.
+- ControlServer: JSON/TCP control interface (default port 48080). Accepts `ping`, `timesync`, `status`, `mark`, `schedule_mark`, `rekey_complete`, and `stop`. Each relevant event is echoed into the telemetry stream for correlation on GCS.
+- Main loop: parses CLI (`--initial-suite`, `--disable-monitors`, `--session-id`, `--no-cpu-optimization`, plus new `--telemetry-host/--telemetry-port` overrides). Starts TelemetryPublisher, HighSpeedMonitor, Monitors, UDP echo, and the proxy; manages graceful shutdown on control `stop` or Ctrl+C.
+
+Outputs:
+- Session-specific CSV/TXT artifacts under `<monitor_base>/<session_id>` and `logs/auto/drone/<suite>/`.
+- Realtime telemetry feed to GCS for consolidation.
+
+2. tools/auto/gcs_scheduler.py (GCS-side Orchestrator)
+-----------------------------------------------------
+Purpose:
+- Drives suites over the proxy, handles rekeys, blasts traffic, executes saturation sweeps, captures runtime statistics, collects telemetry from the drone, and exports combined Excel workbooks.
+
+Key Components:
+- Configuration & constants: loads suite registry, plaintext UDP ports, secrets directory, output directories (`logs/auto/gcs`, `output/gcs`), saturation parameters, and telemetry listener address (default 0.0.0.0:52080).
+- Blaster: high-rate UDP sender/receiver measuring RTT, throughput, loss; logs events; supports configurable socket buffers and sampling cadence.
+- Suite orchestration:
+  * resolve_suites()/preferred_initial_suite() selects the execution order.
+  * activate_suite() drives rekeys via stdin to `core.run_proxy` and control `mark`/`rekey_complete` messages, timing each transition.
+  * run_suite() executes traffic (blast or placeholder for other modes), prints progress, snapshots proxy JSON, computes throughput/RTT/loss and logs summary rows.
+- SaturationTester: iterates a predefined Mbps ladder, records per-rate RTT/loss, stops on saturation conditions, and can export per-suite spreadsheets (openpyxl).
+- TelemetryCollector: TCP server running alongside the scheduler; accepts JSON lines from the drone follower, tags each message with collector timestamp/peer, and retains all samples for the session.
+- Combined Excel exporter: `export_combined_excel()` builds `<session>_combined.xlsx` in `output/gcs/`, embedding run info, GCS summaries, saturation overview, saturation rate samples, raw telemetry samples, the plain `summary.csv`, and every drone CSV located for the session.
+- CLI: `--traffic` (blast/mavproxy/saturation), `--pre-gap`, `--inter-gap`, `--duration`, `--rate`, `--max-rate`, `--payload-bytes`, `--event-sample`, `--passes`, optional `--suites`, `--session-id`.
+- Execution flow: starts telemetry collector, launches GCS proxy with preferred suite, waits for handshake, runs either saturation sweep or pass-based traffic, writes `summary.csv`, captures telemetry snapshot, exports combined workbook, issues control `stop`, and cleans up the proxy/collector.
+
+Outputs:
+- GCS logs under `logs/auto/gcs/` (per-suite JSON, global summary JSON).
+- Per-suite saturation workbooks (`output/gcs/saturation_<suite>_<session>.xlsx`) when openpyxl is available.
+- Unified session workbook (`output/gcs/<session>_combined.xlsx`) containing GCS stats, saturation data, drone telemetry samples, and mirrored drone CSVs—forming the comprehensive report per algorithm.
+
+Summary
+-------
+The drone follower handles proxy process management, UDP echo, telemetry generation, and command control on the drone. The GCS scheduler orchestrates suite execution, traffic generation, saturation analysis, telemetry aggregation, and reporting on the GCS side. Together, they now provide synchronized data collection across rekeys, throughput tests, and system metrics, resulting in a single Excel artifact summarizing every algorithm run.
