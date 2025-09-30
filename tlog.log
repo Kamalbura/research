@@ -800,3 +800,108 @@
 [launcher] Interrupt received, terminating child processes...
 [GCS-SIM] [GCS] 19:43:14 <- TELEM:VEL:N=5.1,E=0.4,D=-0.2 (from 127.0.0.1:50497)
 (gcs-env) PS C:\Users\burak\Desktop\research> 
+-----------------------------------------------------------------
+(gcs-env) PS C:\Users\burak\Desktop\research> python tools\auto\gcs_scheduler.py `
+>>   --traffic blast `
+>>   --duration 45 `
+>>   --payload-bytes 1400 `
+>>   --rate 0 `
+>>   --event-sample 1 `
+>>   --passes 1 `
+>>   --pre-gap 1 `
+>>   --inter-gap 0
+[2025-09-29T18:36:33Z] reordered suites to start with cs-mlkem768-aesgcm-mldsa65 (from CONFIG)
+[2025-09-29T18:36:33Z] follower reachable at 192.168.0.102:48080
+[2025-09-29T18:36:33Z] clocks synced: offset_ns=-235295715 ns, link_rtt~4562493 ns
+[2025-09-29T18:36:33Z] initial handshake ready? True
+[2025-09-29T18:36:35Z] ===== POWER: START in 1.0s | suite=cs-mlkem768-aesgcm-mldsa65 | duration=45.0s mode=blast =====
+[2025-09-29T18:37:21Z] ===== POWER: STOP | suite=cs-mlkem768-aesgcm-mldsa65 =====
+[2025-09-29T18:37:21Z] <<< FINISH suite=cs-mlkem768-aesgcm-mldsa65 mode=blast sent=5254077 rcvd=73402 pps~116053 thr~18.16 Mb/s rtt_avg=203.828ms rtt_max=1375.654ms enc_out=1197781 enc_in=73061 >>>
+[2025-09-29T18:37:21Z] rekey -> cs-mlkem512-aesgcm-mldsa44
+[2025-09-29T18:37:23Z] ===== POWER: START in 1.0s | suite=cs-mlkem512-aesgcm-mldsa44 | duration=45.0s mode=blast =====
+[2025-09-29T18:38:09Z] ===== POWER: STOP | suite=cs-mlkem512-aesgcm-mldsa44 =====
+[2025-09-29T18:38:09Z] <<< FINISH suite=cs-mlkem512-aesgcm-mldsa44 mode=blast sent=5547614 rcvd=26669 pps~122566 thr~6.60 Mb/s rtt_avg=390.075ms rtt_max=1934.024ms enc_out=2511748 enc_in=99844 >>>
+[2025-09-29T18:38:09Z] rekey -> cs-mlkem512-aesgcm-mldsa65
+[2025-09-29T18:38:11Z] ===== POWER: START in 1.0s | suite=cs-mlkem512-aesgcm-mldsa65 | duration=45.0s mode=blast =====
+[2025-09-29T18:38:57Z] ===== POWER: STOP | suite=cs-mlkem512-aesgcm-mldsa65 =====
+[2025-09-29T18:38:57Z] <<< FINISH suite=cs-mlkem512-aesgcm-mldsa65 mode=blast sent=5181898 rcvd=81494 pps~114426 thr~20.15 Mb/s rtt_avg=193.599ms rtt_max=2220.431ms enc_out=3558999 enc_in=181526 >>>
+[2025-09-29T18:38:58Z] rekey -> cs-mlkem512-aesgcm-mldsa87
+[2025-09-29T18:38:59Z] ===== POWER: START in 1.0s | suite=cs-mlkem512-aesgcm-mldsa87 | duration=45.0s mode=blast =====
+[2025-09-29T18:39:46Z] ===== POWER: STOP | suite=cs-mlkem512-aesgcm-mldsa87 =====
+[2025-09-29T18:39:46Z] <<< FINISH suite=cs-mlkem512-aesgcm-mldsa87 mode=blast sent=4470237 rcvd=42899 pps~98719 thr~10.61 Mb/s rtt_avg=195.934ms rtt_max=2087.747ms enc_out=4608608 enc_in=224470 >>>
+[2025-09-29T18:39:46Z] rekey -> cs-mlkem512-aesgcm-falcon512
+[WARN] control mark failed for cs-mlkem512-aesgcm-falcon512: timed out
+[WARN] timed out waiting for proxy to activate suite cs-mlkem512-aesgcm-falcon512
+[WARN] schedule_mark failed for cs-mlkem512-aesgcm-falcon512: timed out
+[2025-09-29T18:40:23Z] ===== POWER: START in 1.0s | suite=cs-mlkem512-aesgcm-falcon512 | duration=45.0s mode=blast =====
+[2025-09-29T18:41:10Z] ===== POWER: STOP | suite=cs-mlkem512-aesgcm-falcon512 =====
+[2025-09-29T18:41:10Z] <<< FINISH suite=cs-mlkem512-aesgcm-falcon512 mode=blast sent=3182635 rcvd=50984 pps~70296 thr~12.61 Mb/s rtt_avg=190.781ms rtt_max=673.942ms enc_out=5485353 enc_in=275454 >>>
+[2025-09-29T18:41:10Z] rekey -> cs-mlkem512-aesgcm-falcon1024
+[WARN] control mark failed for cs-mlkem512-aesgcm-falcon1024: timed out
+[WARN] timed out waiting for proxy to activate suite cs-mlkem512-aesgcm-falcon1024
+[WARN] schedule_mark failed for cs-mlkem512-aesgcm-falcon1024: timed out
+[2025-09-29T18:41:47Z] ===== POWER: START in 1.0s | suite=cs-mlkem512-aesgcm-falcon1024 | duration=45.0s mode=blast =====
+[2025-09-29T18:42:33Z] ===== POWER: STOP | suite=cs-mlkem512-aesgcm-falcon1024 =====
+[2025-09-29T18:42:33Z] <<< FINISH suite=cs-mlkem512-aesgcm-falcon1024 mode=blast sent=4567003 rcvd=44642 pps~100856 thr~11.04 Mb/s rtt_avg=178.968ms rtt_max=388.293ms enc_out=6341068 enc_in=318732 >>>
+[2025-09-29T18:42:33Z] rekey -> cs-mlkem512-aesgcm-sphincs128fsha2
+[2025-09-29T18:42:38Z] ===== POWER: START in 1.0s | suite=cs-mlkem512-aesgcm-sphincs128fsha2 | duration=45.0s mode=blast =====
+[2025-09-29T18:43:24Z] ===== POWER: STOP | suite=cs-mlkem512-aesgcm-sphincs128fsha2 =====
+[2025-09-29T18:43:24Z] <<< FINISH suite=cs-mlkem512-aesgcm-sphincs128fsha2 mode=blast sent=2936865 rcvd=74403 pps~64894 thr~18.41 Mb/s rtt_avg=177.823ms rtt_max=681.032ms enc_out=7043813 enc_in=394480 >>>      
+[2025-09-29T18:43:24Z] rekey -> cs-mlkem512-aesgcm-sphincs256fsha2
+[2025-09-29T18:43:26Z] ===== POWER: START in 1.0s | suite=cs-mlkem512-aesgcm-sphincs256fsha2 | duration=45.0s mode=blast =====
+[2025-09-29T18:44:12Z] ===== POWER: STOP | suite=cs-mlkem512-aesgcm-sphincs256fsha2 =====
+[2025-09-29T18:44:12Z] <<< FINISH suite=cs-mlkem512-aesgcm-sphincs256fsha2 mode=blast sent=5593433 rcvd=67338 pps~123540 thr~16.66 Mb/s rtt_avg=205.071ms rtt_max=1469.245ms enc_out=8001335 enc_in=461230 >>>    
+[2025-09-29T18:44:12Z] rekey -> cs-mlkem768-aesgcm-mldsa44
+[2025-09-29T18:44:14Z] ===== POWER: START in 1.0s | suite=cs-mlkem768-aesgcm-mldsa44 | duration=45.0s mode=blast =====
+[2025-09-29T18:45:01Z] ===== POWER: STOP | suite=cs-mlkem768-aesgcm-mldsa44 =====
+[2025-09-29T18:45:01Z] <<< FINISH suite=cs-mlkem768-aesgcm-mldsa44 mode=blast sent=3879696 rcvd=80559 pps~85710 thr~19.93 Mb/s rtt_avg=187.041ms rtt_max=1242.706ms enc_out=8771558 enc_in=541271 >>>
+[2025-09-29T18:45:01Z] rekey -> cs-mlkem768-aesgcm-mldsa87
+[2025-09-29T18:45:03Z] ===== POWER: START in 1.0s | suite=cs-mlkem768-aesgcm-mldsa87 | duration=45.0s mode=blast =====
+[2025-09-29T18:45:49Z] ===== POWER: STOP | suite=cs-mlkem768-aesgcm-mldsa87 =====
+[2025-09-29T18:45:49Z] <<< FINISH suite=cs-mlkem768-aesgcm-mldsa87 mode=blast sent=5654303 rcvd=44033 pps~124905 thr~10.89 Mb/s rtt_avg=265.529ms rtt_max=1342.046ms enc_out=9627353 enc_in=585121 >>>
+[2025-09-29T18:45:49Z] rekey -> cs-mlkem768-aesgcm-falcon512
+[2025-09-29T18:45:51Z] ===== POWER: START in 1.0s | suite=cs-mlkem768-aesgcm-falcon512 | duration=45.0s mode=blast =====
+[2025-09-29T18:46:37Z] ===== POWER: STOP | suite=cs-mlkem768-aesgcm-falcon512 =====
+[2025-09-29T18:46:37Z] <<< FINISH suite=cs-mlkem768-aesgcm-falcon512 mode=blast sent=5561508 rcvd=68754 pps~122849 thr~17.01 Mb/s rtt_avg=191.990ms rtt_max=1538.831ms enc_out=10548558 enc_in=655063 >>>
+[2025-09-29T18:46:37Z] rekey -> cs-mlkem768-aesgcm-falcon1024
+[2025-09-29T18:46:39Z] ===== POWER: START in 1.0s | suite=cs-mlkem768-aesgcm-falcon1024 | duration=45.0s mode=blast =====
+[2025-09-29T18:47:25Z] ===== POWER: STOP | suite=cs-mlkem768-aesgcm-falcon1024 =====
+[2025-09-29T18:47:25Z] <<< FINISH suite=cs-mlkem768-aesgcm-falcon1024 mode=blast sent=4888983 rcvd=75591 pps~107972 thr~18.70 Mb/s rtt_avg=189.416ms rtt_max=1852.826ms enc_out=11401486 enc_in=730406 >>>
+[2025-09-29T18:47:26Z] rekey -> cs-mlkem768-aesgcm-sphincs128fsha2
+[2025-09-29T18:47:27Z] ===== POWER: START in 1.0s | suite=cs-mlkem768-aesgcm-sphincs128fsha2 | duration=45.0s mode=blast =====
+[2025-09-29T18:48:14Z] ===== POWER: STOP | suite=cs-mlkem768-aesgcm-sphincs128fsha2 =====
+[2025-09-29T18:48:14Z] <<< FINISH suite=cs-mlkem768-aesgcm-sphincs128fsha2 mode=blast sent=4109319 rcvd=61596 pps~90749 thr~15.24 Mb/s rtt_avg=213.024ms rtt_max=2097.239ms enc_out=12166900 enc_in=792578 >>>    
+[2025-09-29T18:48:14Z] rekey -> cs-mlkem768-aesgcm-sphincs256fsha2
+[2025-09-29T18:48:16Z] ===== POWER: START in 1.0s | suite=cs-mlkem768-aesgcm-sphincs256fsha2 | duration=45.0s mode=blast =====
+[2025-09-29T18:49:02Z] ===== POWER: STOP | suite=cs-mlkem768-aesgcm-sphincs256fsha2 =====
+[2025-09-29T18:49:02Z] <<< FINISH suite=cs-mlkem768-aesgcm-sphincs256fsha2 mode=blast sent=4259932 rcvd=78986 pps~94104 thr~19.54 Mb/s rtt_avg=183.917ms rtt_max=2328.549ms enc_out=12983949 enc_in=870455 >>>
+[2025-09-29T18:49:02Z] rekey -> cs-mlkem1024-aesgcm-mldsa44        
+[2025-09-29T18:49:04Z] ===== POWER: START in 1.0s | suite=cs-mlkem1024-aesgcm-mldsa44 | duration=45.0s mode=blast =====
+[2025-09-29T18:49:50Z] ===== POWER: STOP | suite=cs-mlkem1024-aesgcm-mldsa44 =====
+[2025-09-29T18:49:50Z] <<< FINISH suite=cs-mlkem1024-aesgcm-mldsa44 mode=blast sent=5580537 rcvd=58871 pps~123261 thr~14.56 Mb/s rtt_avg=219.282ms rtt_max=2986.351ms enc_out=13894953 enc_in=929072 >>> 
+[2025-09-29T18:49:50Z] rekey -> cs-mlkem1024-aesgcm-mldsa65        
+[2025-09-29T18:49:52Z] ===== POWER: START in 1.0s | suite=cs-mlkem1024-aesgcm-mldsa65 | duration=45.0s mode=blast =====
+[2025-09-29T18:50:39Z] ===== POWER: STOP | suite=cs-mlkem1024-aesgcm-mldsa65 =====
+[2025-09-29T18:50:39Z] <<< FINISH suite=cs-mlkem1024-aesgcm-mldsa65 mode=blast sent=5259054 rcvd=84526 pps~116182 thr~20.91 Mb/s rtt_avg=177.098ms rtt_max=1319.257ms enc_out=14766981 enc_in=1013986 >>>
+[2025-09-29T18:50:39Z] rekey -> cs-mlkem1024-aesgcm-mldsa87        
+[2025-09-29T18:50:41Z] ===== POWER: START in 1.0s | suite=cs-mlkem1024-aesgcm-mldsa87 | duration=45.0s mode=blast =====
+[2025-09-29T18:51:27Z] ===== POWER: STOP | suite=cs-mlkem1024-aesgcm-mldsa87 =====
+[2025-09-29T18:51:27Z] <<< FINISH suite=cs-mlkem1024-aesgcm-mldsa87 mode=blast sent=5337942 rcvd=75915 pps~117917 thr~18.78 Mb/s rtt_avg=192.791ms rtt_max=3396.204ms enc_out=15632344 enc_in=1090350 >>>
+[2025-09-29T18:51:27Z] rekey -> cs-mlkem1024-aesgcm-falcon512      
+[2025-09-29T18:51:29Z] ===== POWER: START in 1.0s | suite=cs-mlkem1024-aesgcm-falcon512 | duration=45.0s mode=blast =====
+[2025-09-29T18:52:15Z] ===== POWER: STOP | suite=cs-mlkem1024-aesgcm-falcon512 =====
+[2025-09-29T18:52:15Z] <<< FINISH suite=cs-mlkem1024-aesgcm-falcon512 mode=blast sent=5365076 rcvd=67705 pps~118498 thr~16.75 Mb/s rtt_avg=203.680ms rtt_max=2218.796ms enc_out=16513262 enc_in=1158581 >>>
+[2025-09-29T18:52:15Z] rekey -> cs-mlkem1024-aesgcm-falcon1024
+[2025-09-29T18:52:17Z] ===== POWER: START in 1.0s | suite=cs-mlkem1024-aesgcm-falcon1024 | duration=45.0s mode=blast =====
+[2025-09-29T18:53:03Z] ===== POWER: STOP | suite=cs-mlkem1024-aesgcm-falcon1024 =====
+[2025-09-29T18:53:03Z] <<< FINISH suite=cs-mlkem1024-aesgcm-falcon1024 mode=blast sent=5259121 rcvd=51995 pps~116169 thr~12.86 Mb/s rtt_avg=243.135ms rtt_max=1932.553ms enc_out=17471819 enc_in=1210222 >>>
+[2025-09-29T18:53:03Z] rekey -> cs-mlkem1024-aesgcm-sphincs128fsha2
+[2025-09-29T18:53:05Z] ===== POWER: START in 1.0s | suite=cs-mlkem1024-aesgcm-sphincs128fsha2 | duration=45.0s mode=blast =====       
+[2025-09-29T18:53:52Z] ===== POWER: STOP | suite=cs-mlkem1024-aesgcm-sphincs128fsha2 =====
+[2025-09-29T18:53:52Z] <<< FINISH suite=cs-mlkem1024-aesgcm-sphincs128fsha2 mode=blast sent=4030574 rcvd=86387 pps~89046 thr~21.38 Mb/s rtt_avg=182.905ms rtt_max=680.391ms enc_out=18421464 enc_in=1295357 >>>
+[2025-09-29T18:53:52Z] rekey -> cs-mlkem1024-aesgcm-sphincs256fsha2
+[2025-09-29T18:53:54Z] ===== POWER: START in 1.0s | suite=cs-mlkem1024-aesgcm-sphincs256fsha2 | duration=45.0s mode=blast =====       
+[2025-09-29T18:54:40Z] ===== POWER: STOP | suite=cs-mlkem1024-aesgcm-sphincs256fsha2 =====
+[2025-09-29T18:54:40Z] <<< FINISH suite=cs-mlkem1024-aesgcm-sphincs256fsha2 mode=blast sent=4841232 rcvd=58785 pps~106970 thr~14.55 Mb/s rtt_avg=233.047ms rtt_max=2649.090ms enc_out=19680161 enc_in=1354719 >>>
+[2025-09-29T18:54:40Z] wrote logs\auto\gcs\summary.csv
+(gcs-env) PS C:\Users\burak\Desktop\research> 

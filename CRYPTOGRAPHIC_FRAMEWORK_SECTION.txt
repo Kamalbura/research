@@ -1,0 +1,151 @@
+4. Cryptographic Framework
+
+4.1. Introduction to Post-Quantum Cryptography
+
+The advent of quantum computing presents an existential threat to contemporary public-key cryptographic systems. Shor's algorithm, when executed on a sufficiently large quantum computer, can efficiently solve both the integer factorization and discrete logarithm problems that underpin RSA and elliptic curve cryptography (ECC) [1]. This threat is particularly acute in the context of "harvest-now, decrypt-later" attacks, where adversaries intercept and store encrypted communications today with the intent to decrypt them once quantum computers become available [2].
+
+Given the extended operational lifespan of unmanned aerial vehicle (UAV) systems and the sensitive nature of their communications, the transition to post-quantum cryptography (PQC) is not merely advisable but imperative. The National Institute of Standards and Technology (NIST) Post-Quantum Cryptography Standardization process has identified and standardized several quantum-resistant algorithms that form the foundation of our secure communication framework [3].
+
+4.2. Analysis of Selected PQC Primitives
+
+Our system incorporates a carefully selected portfolio of NIST-standardized post-quantum algorithms, each chosen for specific operational characteristics within the drone communication context.
+
+4.2.1. ML-KEM (CRYSTALS-Kyber)
+
+The Module Learning with Errors Key Encapsulation Mechanism (ML-KEM), standardized as FIPS 203 [4], serves as the primary key establishment primitive in our protocol. ML-KEM is based on the Module Learning with Errors (Module-LWE) problem, which is believed to be intractable even for quantum computers.
+
+ML-KEM functions as a Key Encapsulation Mechanism (KEM), providing a quantum-safe method for establishing shared secrets between communicating parties. The algorithm offers three security levels: ML-KEM-512 (NIST Level 1), ML-KEM-768 (NIST Level 3), and ML-KEM-1024 (NIST Level 5), corresponding to different security strengths and performance characteristics.
+
+Within our architecture, ML-KEM serves as the workhorse for ephemeral key exchange during the handshake phase. Its lattice-based construction provides strong security guarantees while maintaining computational efficiency suitable for real-time drone communications. The algorithm's deterministic encapsulation process ensures consistent performance characteristics across different operational environments.
+
+4.2.2. ML-DSA (CRYSTALS-Dilithium)
+
+The Module Lattice-Based Digital Signature Algorithm (ML-DSA), standardized as FIPS 204 [5], provides digital signature functionality based on the Module Learning with Errors over Rings (Module-LWE/LWR) problem. ML-DSA offers three parameter sets: ML-DSA-44, ML-DSA-65, and ML-DSA-87, providing increasing levels of security.
+
+ML-DSA serves as the default signature scheme in our implementation due to its well-balanced performance profile and robust security foundation. The algorithm has been specifically designed with secure implementation in mind, incorporating protection against side-channel attacks and providing deterministic signature generation when required.
+
+In our protocol, ML-DSA signatures authenticate the handshake transcript, ensuring that the drone can verify the authenticity of the ground control station and preventing man-in-the-middle attacks during session establishment.
+
+4.2.3. FN-DSA (Falcon)
+
+The Fast Fourier Transform over NTRU lattices Digital Signature Algorithm (FN-DSA), published as Draft FIPS 206 [6], represents an alternative signature primitive based on the Short Integer Solution (SIS) problem over NTRU lattices. Falcon offers two parameter sets: Falcon-512 and Falcon-1024.
+
+The primary advantage of Falcon lies in its exceptionally compact signature sizes—approximately 666 bytes for Falcon-512 and 1,280 bytes for Falcon-1024—making it particularly suitable for bandwidth-constrained communication channels. This characteristic is especially valuable in drone operations where communication links may be limited by range, interference, or regulatory constraints.
+
+However, Falcon's implementation complexity, stemming from its reliance on floating-point arithmetic for key generation and signing operations, requires careful consideration in resource-constrained environments. Our implementation supports Falcon as an optional high-efficiency mode for scenarios where signature size is the primary constraint.
+
+4.2.4. SLH-DSA (SPHINCS+)
+
+The Stateless Hash-Based Digital Signature Algorithm (SLH-DSA), standardized as FIPS 205 [7], provides a fundamentally different approach to post-quantum signatures. Unlike lattice-based schemes, SLH-DSA derives its security entirely from the cryptographic strength of hash functions, specifically SHA-256 in our implementation.
+
+SLH-DSA represents the most conservative cryptographic choice in our system, serving as a hedge against potential future advances in lattice cryptanalysis. The algorithm's security reduction to well-understood hash function properties provides exceptional confidence in its long-term viability.
+
+The primary trade-offs of SLH-DSA include significantly larger signature sizes (approximately 7,856 bytes for SLH-DSA-SHA2-128f and 29,792 bytes for SLH-DSA-SHA2-256f) and slower signature generation and verification times. These characteristics make SLH-DSA most suitable for high-security applications where conservative cryptographic assumptions outweigh performance considerations.
+
+4.3. System Architecture and Protocol Implementation
+
+Our post-quantum secure communication framework implements a hybrid transport protocol that leverages the strengths of both TCP and UDP while maintaining cryptographic agility and operational efficiency.
+
+4.3.1. Hybrid Transport Protocol Design
+
+The protocol architecture separates the reliability-critical handshake phase from the latency-sensitive data transport phase. The initial authenticated handshake occurs over TCP to ensure reliable delivery of cryptographic material, while subsequent data transport utilizes UDP to minimize latency and overhead—critical requirements for real-time drone control and telemetry.
+
+This design decision reflects the asymmetric requirements of drone communications: the handshake must be absolutely reliable to establish trust, while data transport must prioritize low latency to maintain responsive control loops.
+
+4.3.2. Authenticated Handshake Protocol
+
+The handshake protocol establishes mutual authentication and derives session-specific encryption keys through the following sequence:
+
+1. **Ephemeral Key Generation**: The Ground Control Station (GCS) generates an ephemeral ML-KEM key pair (public key PK_kem, secret key SK_kem) and a random 64-bit challenge value.
+
+2. **Transcript Construction**: The GCS constructs a cryptographic transcript consisting of:
+   - Protocol version identifier
+   - Session identifier (64-bit random value)
+   - Negotiated algorithm identifiers (KEM and signature)
+   - Ephemeral public key PK_kem
+   - Challenge value
+
+3. **Signature Generation**: The GCS signs this transcript using its long-term signature key (ML-DSA, Falcon, or SLH-DSA) to produce signature σ.
+
+4. **Server Hello Transmission**: The GCS transmits the ephemeral public key, signature, and metadata to the drone via TCP.
+
+5. **Signature Verification**: The drone verifies σ using the GCS's long-term public signature key, ensuring authenticity and preventing downgrade attacks.
+
+6. **Key Encapsulation**: Upon successful verification, the drone uses PK_kem to encapsulate a shared secret ss, producing ciphertext ct.
+
+7. **Authentication**: The drone computes an HMAC tag over the received transcript using a pre-shared key, providing bidirectional authentication.
+
+8. **Key Derivation**: Both parties derive symmetric session keys using HKDF-SHA256 [8] with the shared secret ss as input keying material.
+
+This protocol ensures that both parties possess identical session keys while providing strong authentication guarantees and resistance to quantum attacks.
+
+4.3.3. Encrypted Data Transport
+
+Following successful handshake completion, all application data flows through an AES-256-GCM authenticated encryption channel implemented over UDP datagrams.
+
+**Packet Structure**: Each encrypted packet consists of a 22-byte plaintext header followed by the AES-GCM ciphertext and authentication tag. The header contains:
+- Protocol version (1 byte)
+- Algorithm identifiers (4 bytes: KEM ID, KEM parameter, signature ID, signature parameter)
+- Session identifier (8 bytes)
+- Sequence number (8 bytes)
+- Epoch identifier (1 byte)
+
+**Associated Authenticated Data (AAD)**: The entire 22-byte header serves as AAD input to AES-256-GCM, binding the packet metadata cryptographically to the payload. This prevents header manipulation attacks and ensures that any tampering with packet metadata will cause authentication failure during decryption.
+
+**Nonce Management**: AES-GCM requires unique nonces for each encryption operation. Our implementation derives nonces deterministically by concatenating the epoch identifier (1 byte) with the sequence number (11 bytes), creating a 96-bit nonce. This approach eliminates nonce transmission overhead while guaranteeing uniqueness within each epoch.
+
+**Replay Protection**: The system implements a sliding window replay protection mechanism with a configurable window size (default: 1,024 packets). Out-of-order packet delivery within the window is permitted, while duplicate or excessively delayed packets are silently discarded.
+
+**Epoch Management**: To handle cryptographic key rotation and prevent sequence number overflow, the protocol supports epoch transitions. Each epoch represents a complete cryptographic context with fresh session keys and reset sequence numbers. Epoch transitions are coordinated through the in-band control channel described below.
+
+4.3.4. Runtime Cryptographic Agility
+
+A distinguishing feature of our implementation is its support for runtime cryptographic suite transitions without connection interruption. This capability enables dynamic adaptation to changing operational requirements or cryptographic policy updates.
+
+**In-Band Control Channel**: The system implements a typed packet mechanism where payload bytes are prefixed with a packet type identifier:
+- Type 0x01: Standard application data (forwarded to applications)
+- Type 0x02: Control plane messages (processed by the policy engine)
+
+**Two-Phase Commit Protocol**: Cryptographic suite transitions follow a two-phase commit protocol:
+1. **Prepare Phase**: The initiating party (typically GCS) sends a prepare_rekey message specifying the target cryptographic suite.
+2. **Commit Phase**: Upon receiving confirmation, both parties perform a new handshake using the target suite and atomically switch to the new cryptographic context.
+
+This mechanism ensures that both parties transition simultaneously, preventing cryptographic mismatch errors while maintaining communication continuity.
+
+4.4. Security Analysis
+
+The described cryptographic framework provides several layers of security guarantees:
+
+**Quantum Resistance**: All public-key operations utilize NIST-standardized post-quantum algorithms, providing protection against both classical and quantum cryptanalytic attacks.
+
+**Perfect Forward Secrecy**: Each session employs ephemeral key material derived from the ML-KEM encapsulation. Compromise of long-term signature keys does not retroactively compromise past session traffic.
+
+**Cryptographic Agility**: The runtime suite transition capability enables rapid response to cryptographic vulnerabilities or policy changes without service interruption.
+
+**Implementation Security**: The constant-time implementation patterns and careful secret handling throughout the codebase provide protection against side-channel attacks.
+
+**Downgrade Protection**: The signed transcript mechanism prevents protocol version rollback attacks, ensuring that adversaries cannot force the use of weaker cryptographic primitives.
+
+References
+
+[1] P. W. Shor, "Algorithms for quantum computation: discrete logarithms and factoring," Proceedings 35th Annual Symposium on Foundations of Computer Science, pp. 124-134, 1994.
+
+[2] M. Mosca, "Cybersecurity in an era with quantum computers: will we be ready?" IEEE Security & Privacy, vol. 16, no. 5, pp. 38-41, 2018.
+
+[3] National Institute of Standards and Technology, "Post-Quantum Cryptography Standardization," 2024. [Online]. Available: https://csrc.nist.gov/Projects/post-quantum-cryptography
+
+[4] National Institute of Standards and Technology, "Module-Lattice-Based Key-Encapsulation Mechanism Standard," Federal Information Processing Standards Publication 203, 2024.
+
+[5] National Institute of Standards and Technology, "Module-Lattice-Based Digital Signature Standard," Federal Information Processing Standards Publication 204, 2024.
+
+[6] National Institute of Standards and Technology, "Stateless Hash-Based Digital Signature Standard," Federal Information Processing Standards Publication 205, 2024.
+
+[7] National Institute of Standards and Technology, "FALCON Digital Signature Algorithm," Draft Federal Information Processing Standards Publication 206, 2024.
+
+[8] H. Krawczyk and P. Eronen, "HMAC-based Extract-and-Expand Key Derivation Function (HKDF)," RFC 5869, 2010.
+
+[9] J. Kelsey, S. Chang, and R. Perlner, "SHA-3 Derived Functions: cSHAKE, KMAC, TupleHash and ParallelHash," NIST Special Publication 800-185, 2016.
+
+[10] T. Pornin et al., "Falcon: Fast-Fourier Lattice-based Compact Signatures over NTRU," Post-Quantum Cryptography - 10th International Conference, PQCrypto 2019, pp. 44-61, 2019.
+
+[11] D. J. Bernstein et al., "SPHINCS+: Submission to the NIST Post-Quantum Cryptography project, v.3.1," 2022. [Online]. Available: https://sphincs.org/data/sphincs+-specification.pdf
