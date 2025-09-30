@@ -1,53 +1,8 @@
-# 4. Post-Quantum Cryptographic System
+# 4. Cryptographic Framework
 
-This section presents our novel post-quantum cryptographic framework for securing drone-to-ground control station communication against quantum computational threats. Our implementation provides comprehensive quantum-resistant security while maintaining the operational requirements of unmanned aerial vehicle systems.
+This section presents the post-quantum cryptographic framework developed for securing unmanned aerial vehicle (UAV) communication systems against quantum computational threats. Our implementation provides a comprehensive solution that addresses the unique operational constraints of drone-to-ground control station communication while ensuring cryptographic agility and forward-looking security guarantees.
 
-```mermaid
-graph TB
-    subgraph "Quantum Threat Timeline"
-        A[Current: Classical Crypto] --> B[15-50 Years: Quantum Computers]
-        B --> C[Harvest Now, Decrypt Later Attack]
-    end
-    
-    subgraph "Our Solution: Post-Quantum Framework"
-        D[ML-KEM Key Exchange] --> E[Hybrid TCP/UDP Transport]
-        F[ML-DSA/Falcon/SLH-DSA Signatures] --> E
-        G[AES-256-GCM Encryption] --> E
-        E --> H[Runtime Algorithm Switching]
-    end
-    
-    A -.-> D
-    C -.-> F
-    
-    style A fill:#ffcccc
-    style B fill:#ffcccc
-    style C fill:#ff9999
-    style D fill:#ccffcc
-    style F fill:#ccffcc
-    style G fill:#ccffcc
-    style H fill:#99ff99
-```
-
-## 4.1 The Quantum Threat to Drone Communications
-
-```mermaid
-timeline
-    title Quantum Threat Timeline for UAV Systems
-    
-    section Today
-        Classical Crypto : RSA/ECC vulnerable to quantum
-                        : "Harvest now, decrypt later" attacks begin
-                        
-    section 15-30 Years
-        Quantum Computers : 2,000-4,000 logical qubits
-                         : Break RSA-2048
-                         : Cryptographically relevant quantum computers
-                         
-    section UAV Constraints
-        20-30 Year Lifespan : Mission-critical data
-                           : Long-term confidentiality required
-                           : Immediate PQC deployment needed
-```
+## 4.1 Quantum Threat Analysis and System Requirements
 
 The emergence of quantum computing fundamentally challenges the mathematical foundations of contemporary public-key cryptography. Shor's polynomial-time quantum algorithm [1] for integer factorization and discrete logarithm computation renders RSA, DSA, and elliptic curve cryptographic systems vulnerable to attack by sufficiently large quantum computers. Current estimates suggest that a quantum computer with approximately 2,000-4,000 logical qubits could break RSA-2048, while 13 million physical qubits may be required when accounting for quantum error correction overhead [2].
 
@@ -57,64 +12,11 @@ Our threat analysis indicates that drone communication systems require immediate
 
 The NIST Post-Quantum Cryptography Standardization process [4] has identified quantum-resistant algorithms based on mathematical problems believed intractable for both classical and quantum computers. Our framework leverages these standardized algorithms while addressing the unique operational characteristics of UAV communication systems through novel protocol architecture and runtime cryptographic agility mechanisms.
 
-## 4.2 Post-Quantum Algorithms
-
-```mermaid
-graph LR
-    subgraph "Key Exchange: ML-KEM"
-        A1[ML-KEM-512<br/>NIST Level 1<br/>128-bit security]
-        A2[ML-KEM-768<br/>NIST Level 3<br/>192-bit security]
-        A3[ML-KEM-1024<br/>NIST Level 5<br/>256-bit security]
-    end
-    
-    subgraph "Digital Signatures"
-        B1[ML-DSA<br/>Lattice-based<br/>2,420-4,627 bytes]
-        B2[Falcon<br/>NTRU lattices<br/>666-1,280 bytes]
-        B3[SLH-DSA<br/>Hash-based<br/>7,856-29,792 bytes]
-    end
-    
-    subgraph "Symmetric Encryption"
-        C1[AES-256-GCM<br/>Quantum-resistant<br/>128-bit vs quantum]
-    end
-    
-    A1 --> D[21 Cryptographic Suites]
-    A2 --> D
-    A3 --> D
-    B1 --> D
-    B2 --> D
-    B3 --> D
-    C1 --> D
-    
-    style D fill:#99ff99
-```
+## 4.2 Post-Quantum Algorithm Selection and Analysis
 
 Our cryptographic framework incorporates four distinct post-quantum algorithm families, selected to provide cryptographic diversity and address different operational requirements within UAV communication systems. The selection process prioritized NIST-standardized algorithms with proven security foundations and implementation maturity suitable for safety-critical drone operations.
 
-### 4.2.1 ML-KEM Key Exchange
-
-```mermaid
-sequenceDiagram
-    participant GCS as Ground Control Station
-    participant Drone as UAV Drone
-    
-    Note over GCS: Key Generation
-    GCS->>GCS: Generate ML-KEM keypair (pk, sk)
-    GCS->>GCS: Sample polynomials from binomial distribution
-    
-    Note over GCS,Drone: Public Key Exchange
-    GCS->>Drone: Send ML-KEM public key (pk)
-    
-    Note over Drone: Encapsulation
-    Drone->>Drone: Generate shared secret (ss)
-    Drone->>Drone: Create ciphertext (ct) using pk
-    Drone->>GCS: Send ciphertext (ct)
-    
-    Note over GCS: Decapsulation
-    GCS->>GCS: Extract shared secret (ss) using sk and ct
-    
-    Note over GCS,Drone: Result
-    Note over GCS,Drone: Both parties have identical shared secret (ss)
-```
+### 4.2.1 Module Learning With Errors Key Encapsulation
 
 The Module Learning with Errors (MLWE) problem constitutes the security foundation for our key establishment mechanism. Formally, the MLWE problem asks to distinguish between uniformly random samples and samples derived from secret polynomials with small error terms over polynomial rings. The security of MLWE reduces to worst-case lattice problems including the Shortest Vector Problem (SVP) and the Closest Vector Problem (CVP) over module lattices [6].
 
@@ -122,41 +24,7 @@ Our implementation employs ML-KEM (Module Learning with Errors Key Encapsulation
 
 The key generation process samples secret and error polynomials from centered binomial distributions, computes public key components through polynomial arithmetic modulo $q$, and applies compression techniques to minimize key sizes. Encapsulation uses the public key to generate a shared secret and ciphertext through additional polynomial sampling and computation. Decapsulation recovers the shared secret using the private key through inverse polynomial operations. The best known classical attack against ML-KEM-768 requires approximately $2^{164}$ operations using lattice reduction techniques, while quantum attacks using Grover's algorithm provide at most quadratic speedup, requiring $2^{82}$ quantum operations.
 
-### 4.2.2 Digital Signature Algorithms
-
-```mermaid
-graph TD
-    subgraph "ML-DSA (Dilithium)"
-        A1[ML-DSA-44<br/>~2,420 bytes<br/>Fast performance]
-        A2[ML-DSA-65<br/>~3,293 bytes<br/>Balanced choice]
-        A3[ML-DSA-87<br/>~4,627 bytes<br/>Maximum security]
-    end
-    
-    subgraph "Falcon (NTRU)"
-        B1[Falcon-512<br/>~666 bytes<br/>Ultra-compact]
-        B2[Falcon-1024<br/>~1,280 bytes<br/>Higher security]
-    end
-    
-    subgraph "SLH-DSA (SPHINCS+)"
-        C1[SLH-DSA-128f<br/>~7,856 bytes<br/>Conservative security]
-        C2[SLH-DSA-256f<br/>~29,792 bytes<br/>Ultimate security]
-    end
-    
-    A1 --> D[Signature Verification Process]
-    A2 --> D
-    A3 --> D
-    B1 --> D
-    B2 --> D
-    C1 --> D
-    C2 --> D
-    
-    D --> E{Verification Result}
-    E -->|Valid| F[Accept Handshake]
-    E -->|Invalid| G[Reject & Terminate]
-    
-    style F fill:#ccffcc
-    style G fill:#ffcccc
-```
+### 4.2.2 Module Lattice-Based Digital Signatures
 
 ML-DSA (Module Lattice-Based Digital Signature Algorithm) provides digital signature functionality based on the Fiat-Shamir transformation applied to a commitment scheme over module lattices, as specified in FIPS 204 [7]. The security foundation rests on two computational problems: the Module Short Integer Solution (MSIS) problem and the Module Learning with Errors (MLWE) problem. The MSIS problem asks to find a non-zero vector with bounded infinity norm that satisfies a system of linear equations over polynomial rings.
 
@@ -182,37 +50,7 @@ FORS provides few-time signatures for signing multiple messages by partitioning 
 
 Our implementation supports two SLH-DSA parameter sets. SLH-DSA-SHA2-128f provides 128-bit post-quantum security with signature sizes of approximately 7,856 bytes using SHA-256 with 16-byte output truncation. SLH-DSA-SHA2-256f provides 256-bit post-quantum security with signature sizes of approximately 29,792 bytes. The security reduction for SLH-DSA provides direct reduction to hash function one-wayness and collision resistance through explicit, tight bounds, offering exceptional confidence in long-term security based solely on well-understood hash function properties.
 
-## 4.3 Hybrid Transport Protocol
-
-```mermaid
-graph TB
-    subgraph "Phase 1: Authentication (TCP)"
-        A[TCP Connection<br/>Port 46000] --> B[ML-KEM Key Exchange]
-        B --> C[Digital Signature Verification]
-        C --> D[HKDF Key Derivation]
-        D --> E[Session Keys Established]
-    end
-    
-    subgraph "Phase 2: Data Transport (UDP)"
-        F[UDP Encrypted Channel<br/>Ports 46011/46012] --> G[AES-256-GCM Encryption]
-        G --> H[22-byte Header + Ciphertext]
-        H --> I[Replay Protection]
-        I --> J[Low-latency Data Flow]
-    end
-    
-    E --> F
-    
-    subgraph "Novel Contribution"
-        K[Runtime Algorithm Switching<br/>Without Connection Loss]
-    end
-    
-    J --> K
-    K --> B
-    
-    style A fill:#e1f5fe
-    style F fill:#f3e5f5
-    style K fill:#e8f5e8
-```
+## 4.3 Hybrid Transport Protocol Architecture
 
 Our protocol architecture addresses the fundamental tension between reliability requirements for cryptographic handshakes and latency requirements for operational data through a hybrid transport approach that separates authentication establishment from data transmission. This design optimizes for the dual requirements of drone communication: reliable cryptographic establishment and low-latency data transmission critical for real-time flight control systems.
 
@@ -220,39 +58,7 @@ The transport layer separation employs TCP for the handshake protocol and UDP fo
 
 The system operates as a finite state automaton with states including initialization, handshake execution, transport operation, cryptographic rekeying, and error handling. State transitions are triggered by network events and cryptographic operations, with accepting states representing normal data flow conditions. This separation enables protocol optimization specific to each communication phase while maintaining cryptographic synchronization between endpoints.
 
-### 4.3.1 Handshake Protocol Details
-
-```mermaid
-sequenceDiagram
-    participant D as Drone (Client)
-    participant G as GCS (Server)
-    
-    Note over G: Server Hello Generation
-    G->>G: Generate session_id (8 bytes)
-    G->>G: Generate challenge (8 bytes)
-    G->>G: Generate ML-KEM keypair (pk_kem, sk_kem)
-    G->>G: Create transcript = version || session_id || alg_ids || pk_kem || challenge
-    G->>G: Sign transcript with ML-DSA/Falcon/SLH-DSA
-    
-    G->>D: ServerHello{version, alg_ids, session_id, challenge, pk_kem, signature}
-    
-    Note over D: Client Verification & Response
-    D->>D: Verify signature using GCS public key
-    alt Signature Valid
-        D->>D: ML-KEM encapsulation: (ciphertext, shared_secret)
-        D->>D: HMAC tag = HMAC(PSK, ServerHello)
-        D->>G: ClientResponse{ciphertext, hmac_tag}
-        
-        Note over D,G: Key Derivation (Both Parties)
-        D->>D: HKDF-SHA256(shared_secret, salt, info) → session_keys
-        G->>G: ML-KEM decapsulation: shared_secret ← (sk_kem, ciphertext)
-        G->>G: HKDF-SHA256(shared_secret, salt, info) → session_keys
-        
-        Note over D,G: Handshake Complete - Switch to UDP
-    else Signature Invalid
-        D->>D: Terminate handshake (Security violation)
-    end
-```
+### 4.3.1 Post-Quantum Handshake Protocol
 
 Our handshake protocol establishes mutually authenticated session keys through a carefully designed two-message exchange that prevents downgrade attacks and provides forward secrecy. The protocol participants include the Ground Control Station (GCS) acting in server role and the Unmanned Aerial Vehicle (UAV) acting in client role. The cryptographic primitives employed include ML-KEM for key encapsulation, digital signature schemes for authentication, HKDF for key derivation following RFC 5869, and HMAC for message authentication.
 
@@ -262,51 +68,7 @@ The UAV parses the server hello message, reconstructs the cryptographic transcri
 
 Both parties derive identical session keys using HKDF-SHA256 with the shared secret as input keying material, a fixed salt "pq-drone-gcs|hkdf|v1", and an info parameter containing session identifier and algorithm names. The 64-byte output is split into directional 32-byte AES-256 keys for drone-to-GCS and GCS-to-drone communication. The handshake completes with both endpoints possessing session-specific AES-256 keys for bidirectional encrypted communication, with distinct keys ensuring proper cryptographic separation between communication directions.
 
-### 4.3.2 Encrypted Data Transport
-
-```mermaid
-graph TB
-    subgraph "Packet Structure (38 bytes overhead)"
-        A["Header (22 bytes)<br/>version|kem_id|kem_param|sig_id|sig_param|session_id|sequence|epoch"]
-        B["Application Data<br/>(Variable length)"]
-        C["AES-GCM Tag<br/>(16 bytes)"]
-    end
-    
-    subgraph "Nonce Generation (Deterministic)"
-        D["Epoch Counter<br/>(1 byte)"]
-        E["Sequence Number<br/>(11 bytes)"]
-        F["96-bit Nonce<br/>(epoch || sequence)"]
-        D --> F
-        E --> F
-    end
-    
-    subgraph "Encryption Process"
-        G["AES-256-GCM<br/>Key from HKDF"]
-        H["Header as AAD<br/>(Additional Authenticated Data)"]
-        I["Encrypted Packet"]
-        
-        A --> H
-        B --> G
-        F --> G
-        G --> I
-        H --> I
-    end
-    
-    subgraph "Replay Protection"
-        J["Sliding Window<br/>(1024 packets default)"]
-        K["High Watermark + Bitmask"]
-        L["Accept/Reject Decision"]
-        
-        I --> J
-        J --> K
-        K --> L
-    end
-    
-    style A fill:#e3f2fd
-    style C fill:#f3e5f5
-    style F fill:#e8f5e8
-    style I fill:#fff3e0
-```
+### 4.3.2 Authenticated Encryption Data Plane
 
 Following successful handshake completion, all application data transmits through an optimized authenticated encryption channel designed for the specific requirements of UAV communication. Each encrypted packet follows a structured format consisting of a 22-byte plaintext header followed by AES-256-GCM encrypted data and authentication tag. The header contains protocol version identifier, cryptographic suite identifiers, session identifier from handshake, monotonic sequence number, and cryptographic epoch counter.
 
@@ -316,72 +78,7 @@ To eliminate nonce transmission overhead while maintaining cryptographic securit
 
 The system implements a sliding window anti-replay mechanism based on RFC 3711 with configurable window sizes defaulting to 1,024 packets. The receiver maintains a high watermark representing the highest sequence number received and a bitmask tracking recently received packet sequence numbers within the window. Future packets beyond the high watermark cause window advancement with appropriate bitmask updates. Packets within the current window are checked against the bitmask to detect duplicates, while packets outside the window are rejected as too old. This algorithm provides constant-time replay detection while accommodating legitimate packet reordering in UDP transport.
 
-## 4.4 Runtime Algorithm Switching (Novel Contribution)
-
-```mermaid
-stateDiagram-v2
-    [*] --> RUNNING : Initial Handshake Complete
-    
-    RUNNING --> NEGOTIATING : prepare_rekey(new_suite)
-    NEGOTIATING --> RUNNING : prepare_fail
-    NEGOTIATING --> SWAPPING : commit_rekey
-    
-    SWAPPING --> RUNNING : New handshake successful
-    SWAPPING --> FAILURE : Handshake failed
-    
-    FAILURE --> RUNNING : Fallback to previous suite
-    FAILURE --> [*] : Connection terminated
-    
-    note right of NEGOTIATING
-        Two-phase commit protocol:
-        1. Validate target suite
-        2. Check compatibility
-        3. Respond with commit/fail
-    end note
-    
-    note right of SWAPPING
-        Algorithm switching:
-        1. New ML-KEM handshake
-        2. Fresh session keys
-        3. Increment epoch
-        4. Resume with new crypto
-    end note
-```
-
-```mermaid
-sequenceDiagram
-    participant GCS as Ground Control
-    participant Drone as UAV
-    
-    Note over GCS,Drone: Phase 1 - Negotiation
-    GCS->>Drone: prepare_rekey(target_suite)
-    
-    alt Suite Available
-        Drone->>Drone: Validate suite compatibility
-        Drone->>GCS: commit_rekey
-        
-        Note over GCS,Drone: Phase 2 - Execution
-        par New Handshake
-            GCS->>GCS: Generate new ML-KEM keypair
-        and
-            Drone->>Drone: Prepare for new algorithms
-        end
-        
-        GCS->>Drone: New ServerHello (target algorithms)
-        Drone->>GCS: New ClientResponse
-        
-        Note over GCS,Drone: Atomic Switch
-        GCS->>GCS: epoch++, new session keys
-        Drone->>Drone: epoch++, new session keys
-        
-        Note over GCS,Drone: Resume Communication
-        GCS->>Drone: Data with new cryptographic protection
-        
-    else Suite Unavailable
-        Drone->>GCS: prepare_fail
-        Note over GCS,Drone: Continue with current suite
-    end
-```
+## 4.4 Runtime Cryptographic Agility
 
 A novel contribution of our framework is the runtime cryptographic suite transition capability, enabling dynamic algorithm adaptation during active communication sessions without service interruption. This mechanism addresses evolving cryptographic requirements and potential algorithm vulnerabilities by providing seamless transitions between different post-quantum algorithm combinations while maintaining communication continuity.
 
@@ -393,48 +90,7 @@ Cryptographic suite transitions employ a distributed consensus mechanism through
 
 The two-phase protocol ensures that both endpoints transition simultaneously, preventing cryptographic mismatch conditions where endpoints operate with incompatible algorithm suites. Consistency guarantees maintain communication continuity with high probability, limited only by network partition events during the commit phase. This approach provides robust algorithm switching capabilities while preserving the security properties established during initial handshake execution.
 
-## 4.5 Security Properties
-
-```mermaid
-graph TD
-    subgraph "Security Objectives"
-        A["Confidentiality<br/>IND-CCA2 Security"]
-        B["Authentication<br/>sEUF-CMA Security"]
-        C["Integrity<br/>Tamper Detection"]
-        D["Forward Secrecy<br/>Ephemeral Keys"]
-        E["Replay Protection<br/>Sliding Window"]
-    end
-    
-    subgraph "Quantum Security Levels"
-        F["NIST Level 1<br/>AES-128 equivalent<br/>2^64 quantum ops"]
-        G["NIST Level 3<br/>AES-192 equivalent<br/>2^96 quantum ops"]
-        H["NIST Level 5<br/>AES-256 equivalent<br/>2^128 quantum ops"]
-    end
-    
-    subgraph "Algorithm Diversity"
-        I["Lattice-based<br/>ML-KEM, ML-DSA"]
-        J["NTRU-based<br/>Falcon"]
-        K["Hash-based<br/>SLH-DSA"]
-    end
-    
-    A --> F
-    A --> G
-    A --> H
-    
-    B --> I
-    B --> J
-    B --> K
-    
-    C --> I
-    D --> I
-    E --> L["System Security"]
-    
-    I --> L
-    J --> L
-    K --> L
-    
-    style L fill:#ccffcc
-```
+## 4.5 Security Analysis and Formal Properties
 
 Our security analysis follows the computational indistinguishability paradigm, modeling adversaries as probabilistic polynomial-time algorithms with access to quantum computers. The adversary model considers quantum-capable adversaries with quantum polynomial-time computation capabilities, network message interception and injection abilities, adaptive corruption of long-term keys with forward secrecy limitations, and access to protocol transcripts and timing information.
 
@@ -444,47 +100,7 @@ Under the computational hardness assumptions of ML-KEM, ML-DSA, and the security
 
 The availability of multiple algorithm families provides protection against algorithmic breakthroughs through cryptographic diversity. Lattice-based algorithms including ML-KEM and ML-DSA share mathematical foundations but address different computational problems. NTRU-based Falcon provides alternative lattice structure reducing dependence on module lattice assumptions. Hash-based SLH-DSA offers conservative security foundation independent of number-theoretic or lattice assumptions. This diversity ensures that breakthroughs against any single mathematical foundation do not compromise the entire system.
 
-## 4.6 System Implementation
-
-```mermaid
-graph TB
-    subgraph "Core Modules"
-        A["core/suites.py<br/>21 Suite Registry<br/>Algorithm Management"]
-        B["core/handshake.py<br/>Post-Quantum Handshake<br/>ML-KEM + Signatures"]
-        C["core/aead.py<br/>AES-256-GCM Encryption<br/>Replay Protection"]
-        D["core/policy_engine.py<br/>Runtime Switching<br/>State Machine"]
-        E["core/async_proxy.py<br/>Network Coordination<br/>TCP/UDP Management"]
-    end
-    
-    subgraph "External Dependencies"
-        F["Open Quantum Safe (OQS)<br/>NIST Algorithm Implementations<br/>Constant-time Operations"]
-        G["Python Cryptography<br/>AES-GCM, HKDF<br/>Hash Functions"]
-    end
-    
-    subgraph "Network Interfaces"
-        H["TCP Handshake<br/>Port 46000"]
-        I["UDP Encrypted Data<br/>Ports 46011/46012"]
-        J["UDP Plaintext Loopback<br/>Ports 47001-47004"]
-    end
-    
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    
-    B --> F
-    C --> G
-    
-    E --> H
-    E --> I
-    E --> J
-    
-    style A fill:#e3f2fd
-    style B fill:#f3e5f5
-    style C fill:#e8f5e8
-    style D fill:#fff3e0
-    style E fill:#fce4ec
-```
+## 4.6 Implementation Architecture and Integration
 
 The implementation follows a modular design separating cryptographic concerns from network protocol logic through five core components. The suite registry in `core/suites.py` manages all 21 cryptographic suite combinations, provides algorithm parameter lookup and validation, handles legacy algorithm name aliases, and checks algorithm availability at runtime through Open Quantum Safe library integration.
 
@@ -494,42 +110,7 @@ The policy engine in `core/policy_engine.py` manages the cryptographic suite swi
 
 Algorithm integration leverages the Open Quantum Safe (OQS) library [10] providing NIST-approved post-quantum algorithm implementations, constant-time operations preventing side-channel attacks, cross-platform compatibility across Windows, Linux, and embedded systems, and regular security updates with algorithm optimizations. The modular architecture enables straightforward algorithm updates and additions while maintaining interface stability for application integration.
 
-## 4.7 Testing and Validation
-
-```mermaid
-graph LR
-    subgraph "Automated Testing (109 Test Functions)"
-        A["Cryptographic Correctness<br/>21 Suite Combinations<br/>Encrypt/Decrypt Validation"]
-        B["Protocol Compliance<br/>Handshake Specification<br/>All Algorithm Families"]
-        C["Security Properties<br/>Replay Protection<br/>Authentication Testing"]
-        D["Integration Testing<br/>End-to-End Communication<br/>Error Handling"]
-    end
-    
-    subgraph "Hardware Validation"
-        E["Windows 10/11<br/>GCS Environment<br/>Development Platform"]
-        F["Linux (Ubuntu/Debian)<br/>Server Environment<br/>Production Deployment"]
-        G["Raspberry Pi 4B<br/>Drone Hardware<br/>Resource Constraints"]
-    end
-    
-    subgraph "Performance Characteristics"
-        H["Handshake: <1 second<br/>Post-quantum overhead<br/>Acceptable for real-time"]
-        I["Data Plane: Minimal overhead<br/>38 bytes per packet<br/>AES hardware acceleration"]
-        J["Memory: 2-3 MB base<br/>2.4 KB per session<br/>Suitable for drones"]
-    end
-    
-    A --> E
-    B --> F
-    C --> G
-    D --> H
-    
-    E --> H
-    F --> I
-    G --> J
-    
-    style A fill:#e8f5e8
-    style E fill:#e3f2fd
-    style H fill:#fff3e0
-```
+## 4.7 Validation and Performance Analysis
 
 The implementation includes comprehensive validation through 109 automated test functions covering cryptographic correctness verification of all 21 suite combinations, protocol compliance ensuring handshake follows specifications exactly, security properties validation including replay protection and authentication, integration testing for end-to-end communication validation, and error handling verification for proper failure behavior under invalid inputs.
 
@@ -539,39 +120,7 @@ Performance analysis indicates that post-quantum handshakes require increased co
 
 Memory and storage requirements include basic proxy operation consuming 2-3 MB RAM, cryptographic context requiring 2.4 KB per active session, configurable replay window consuming 128 bytes for default 1,024 packet window, core implementation occupying 50 KB Python code, OQS library requiring 5 MB compiled binaries, and key storage needing 2-4 KB per cryptographic suite. These requirements demonstrate feasibility for deployment on resource-constrained drone platforms while maintaining full cryptographic functionality.
 
-## 4.8 Performance Analysis
-
-```mermaid
-graph TB
-    subgraph "Classical vs Post-Quantum Comparison"
-        A["Classical RSA/ECC<br/>⚡ Fast handshake<br/>📦 Small keys/signatures<br/>❌ Quantum vulnerable"]
-        B["Our PQC System<br/>🔄 2-5x handshake time<br/>📈 3-100x larger crypto objects<br/>✅ Quantum resistant"]
-    end
-    
-    subgraph "Performance Trade-offs"
-        C["Handshake Performance<br/>ML-KEM: Polynomial arithmetic<br/>Signatures: Lattice/hash operations<br/>Overall: <1 second"]
-        D["Data Plane Performance<br/>AES-256-GCM: Hardware accelerated<br/>Per-packet: +38 bytes overhead<br/>Latency: Negligible impact"]
-        E["Memory Requirements<br/>Base: 2-3 MB RAM<br/>Per session: 2.4 KB<br/>Replay window: 128 bytes"]
-    end
-    
-    subgraph "Novel Contributions"
-        F["🔄 Runtime Algorithm Switching<br/>First in UAV systems<br/>No service interruption"]
-        G["📊 Comprehensive Algorithm Matrix<br/>21 suite combinations<br/>3 NIST security levels"]
-        H["🚁 Drone-Optimized Protocol<br/>Hybrid TCP/UDP design<br/>Latency vs reliability separation"]
-    end
-    
-    A --> C
-    B --> D
-    C --> E
-    
-    B --> F
-    B --> G
-    B --> H
-    
-    style F fill:#99ff99
-    style G fill:#99ff99
-    style H fill:#99ff99
-```
+## 4.8 Comparative Analysis and Novel Contributions
 
 Compared to classical RSA/ECC-based drone communication systems, our post-quantum implementation provides quantum-resistant security with measured performance trade-offs. Security enhancements include quantum-resistant algorithms maintaining security properties against quantum computers, algorithm diversity through multiple independent algorithm families, and enhanced forward secrecy through ephemeral post-quantum key generation and runtime key rotation capabilities.
 
