@@ -2,8 +2,6 @@
 
 This section presents our novel post-quantum cryptographic framework for securing drone-to-ground control station communication against quantum computational threats. Our system addresses the critical need for quantum-resistant security in unmanned aerial vehicle (UAV) systems while maintaining operational requirements for real-time flight control.
 
-> **📖 Note**: This section provides an academic overview of our contributions. For complete technical documentation, implementation details, and comprehensive diagrams, see [Technical Documentation](docs/technical/README.md).
-
 ## 4.1 Motivation and Threat Model
 
 The emergence of quantum computing poses an existential threat to current drone communication security. Shor's algorithm enables polynomial-time factorization of RSA keys and discrete logarithm computation for elliptic curve cryptography [1]. Conservative estimates suggest cryptographically relevant quantum computers within 15-30 years, while UAV systems require 20-30 year operational security lifetimes.
@@ -72,8 +70,6 @@ graph TB
 
 Our architecture separates cryptographic concerns into three distinct phases: **TCP-based handshake** for reliable post-quantum key establishment, **UDP data plane** for low-latency encrypted communication, and **control plane** for runtime algorithm management.
 
-> **🔗 Detailed Architecture**: [Complete System Overview](docs/technical/system-overview.md)
-
 ## 4.4 Post-Quantum Algorithm Integration
 
 We implement all four NIST-standardized post-quantum algorithm families to provide cryptographic diversity and address different operational requirements:
@@ -108,8 +104,6 @@ graph LR
 - **Falcon**: Draft FIPS 206 NTRU-based, ultra-compact signatures for bandwidth constraints
 - **SLH-DSA**: FIPS 205 hash-based, conservative security independent of number theory assumptions
 
-> **🔗 Detailed Specifications**: [Algorithm Matrix](docs/technical/algorithm-matrix.md)
-
 ## 4.5 Security Properties and Performance
 
 Our security analysis demonstrates that the framework achieves **IND-CCA2 security** for confidentiality, **sEUF-CMA security** for authentication, and **perfect forward secrecy** through ephemeral key generation. The system provides quantum security levels equivalent to AES-128, AES-192, and AES-256 through NIST Level 1, 3, and 5 parameters respectively.
@@ -119,8 +113,6 @@ Our security analysis demonstrates that the framework achieves **IND-CCA2 securi
 - **Data Plane**: 38-byte per-packet overhead, negligible latency impact
 - **Memory**: 2-3 MB base requirements, suitable for embedded drone platforms
 - **Throughput**: Comparable to classical systems after handshake completion
-
-> **🔗 Detailed Analysis**: [Security Properties](docs/technical/security-analysis.md) | [Performance Benchmarks](docs/technical/performance-benchmarks.md)
 
 ## 4.6 Validation and Implementation
 
