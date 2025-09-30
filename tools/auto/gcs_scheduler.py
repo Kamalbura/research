@@ -9,12 +9,18 @@ import json
 import os
 import shutil
 import socket
+import struct
 import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
+
+try:
+    from openpyxl import Workbook
+except ImportError:  # pragma: no cover
+    Workbook = None
 
 # Ensure project root is on sys.path so `import core` works when running this file
 ROOT = Path(__file__).resolve().parents[2]
@@ -38,6 +44,14 @@ APP_RECV_PORT = int(CONFIG.get("GCS_PLAINTEXT_RX", 47002))
 OUTDIR = Path("logs/auto/gcs")
 SUITES_OUTDIR = OUTDIR / "suites"
 SECRETS_DIR = Path("secrets/matrix")
+
+EXCEL_OUTPUT_DIR = Path(
+    CONFIG.get("GCS_EXCEL_OUTPUT")
+    or os.getenv("GCS_EXCEL_OUTPUT", "/home/dev/research/output/drone")
+)
+
+SATURATION_TEST_RATES = [5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200]
+SATURATION_RTT_SPIKE = 1.8
 
 PROXY_STATUS_PATH = OUTDIR / "gcs_status.json"
 PROXY_SUMMARY_PATH = OUTDIR / "gcs_summary.json"
@@ -155,6 +169,7 @@ class Blaster:
         self.rcvd_bytes = 0
         self.rtt_sum_ns = 0
         self.rtt_max_ns = 0
+        self.rtt_min_ns: Optional[int] = None
         self.pending: Dict[int, int] = {}
 
     def _log_event(self, payload: dict) -> None:
@@ -254,6 +269,8 @@ class Blaster:
                 self.rtt_sum_ns += rtt
                 if rtt > self.rtt_max_ns:
                     self.rtt_max_ns = rtt
+                if self.rtt_min_ns is None or rtt < self.rtt_min_ns:
+                    self.rtt_min_ns = rtt
                 self._maybe_log("recv", seq, int(t_recv))
         return True
 
@@ -370,6 +387,46 @@ def read_proxy_summary() -> dict:
         return {}
 
 
+def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
+    if gcs.poll() is not None:
+        raise RuntimeError("GCS proxy is not running; cannot continue")
+    start_ns = time.time_ns()
+    if is_first:
+        try:
+            ctl_send({"cmd": "mark", "suite": suite})
+        except Exception as exc:
+            print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
+        finally:
+            try:
+                ctl_send({"cmd": "rekey_complete", "suite": suite})
+            except Exception:
+                pass
+    else:
+        assert gcs.stdin is not None
+        print(f"[{ts()}] rekey -> {suite}")
+        gcs.stdin.write(suite + "\n")
+        gcs.stdin.flush()
+        try:
+            ctl_send({"cmd": "mark", "suite": suite})
+        except Exception as exc:
+            print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
+        rekey_ok = False
+        try:
+            ok = wait_active_suite(suite, timeout=15.0)
+            if ok:
+                rekey_ok = True
+            else:
+                print(f"[WARN] timed out waiting for proxy to activate suite {suite}", file=sys.stderr)
+        except Exception:
+            print(f"[WARN] error while waiting for active suite {suite}", file=sys.stderr)
+        finally:
+            try:
+                ctl_send({"cmd": "rekey_complete", "suite": suite, "status": "ok" if rekey_ok else "timeout"})
+            except Exception as exc:
+                print(f"[WARN] rekey_complete failed for {suite}: {exc}", file=sys.stderr)
+    return (time.time_ns() - start_ns) / 1_000_000
+
+
 def run_suite(
     gcs: subprocess.Popen,
     suite: str,
@@ -383,29 +440,7 @@ def run_suite(
     pre_gap: float,
     rate_pps: int,
 ) -> dict:
-    if gcs.poll() is not None:
-        raise RuntimeError("GCS proxy is not running; cannot continue")
-
-    if is_first:
-        try:
-            ctl_send({"cmd": "mark", "suite": suite})
-        except Exception as exc:
-            print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
-    else:
-        assert gcs.stdin is not None
-        print(f"[{ts()}] rekey -> {suite}")
-        gcs.stdin.write(suite + "\n")
-        gcs.stdin.flush()
-        try:
-            ctl_send({"cmd": "mark", "suite": suite})
-        except Exception as exc:
-            print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
-        try:
-            ok = wait_active_suite(suite, timeout=15.0)
-            if not ok:
-                print(f"[WARN] timed out waiting for proxy to activate suite {suite}", file=sys.stderr)
-        except Exception:
-            print(f"[WARN] error while waiting for active suite {suite}", file=sys.stderr)
+    rekey_duration_ms = activate_suite(gcs, suite, is_first)
 
     events_path = suite_outdir(suite) / EVENTS_FILENAME
     start_mark_ns = time.time_ns() + offset_ns + int(0.150 * 1e9) + int(max(pre_gap, 0.0) * 1e9)
@@ -461,6 +496,10 @@ def run_suite(
     avg_rtt_ms = avg_rtt_ns / 1_000_000
     max_rtt_ms = max_rtt_ns / 1_000_000
 
+    loss_pct = 0.0
+    if sent_packets:
+        loss_pct = max(0.0, (sent_packets - rcvd_packets) * 100.0 / sent_packets)
+
     row = {
         "pass": pass_index,
         "suite": suite,
@@ -471,6 +510,7 @@ def run_suite(
         "throughput_mbps": round(throughput_mbps, 3),
         "rtt_avg_ms": round(avg_rtt_ms, 3),
         "rtt_max_ms": round(max_rtt_ms, 3),
+        "loss_pct": round(loss_pct, 3),
         "enc_out": proxy_stats.get("enc_out", 0),
         "enc_in": proxy_stats.get("enc_in", 0),
         "drops": proxy_stats.get("drops", 0),
@@ -478,12 +518,13 @@ def run_suite(
         "rekeys_fail": proxy_stats.get("rekeys_fail", 0),
         "start_ns": start_wall_ns,
         "end_ns": end_wall_ns,
+        "rekey_ms": round(rekey_duration_ms, 3),
     }
 
     print(
         f"[{ts()}] <<< FINISH suite={suite} mode={traffic_mode} sent={sent_packets} rcvd={rcvd_packets} "
-        f"pps~{pps:.0f} thr~{throughput_mbps:.2f} Mb/s "
-        f"rtt_avg={avg_rtt_ms:.3f}ms rtt_max={max_rtt_ms:.3f}ms "
+        f"pps~{pps:.0f} thr~{throughput_mbps:.2f} Mb/s loss={loss_pct:.2f}% "
+        f"rtt_avg={avg_rtt_ms:.3f}ms rtt_max={max_rtt_ms:.3f}ms rekey={rekey_duration_ms:.2f}ms "
         f"enc_out={row['enc_out']} enc_in={row['enc_in']} >>>"
     )
 
@@ -501,15 +542,125 @@ def write_summary(rows: List[dict]) -> None:
     print(f"[{ts()}] wrote {SUMMARY_CSV}")
 
 
+class SaturationTester:
+    def __init__(
+        self,
+        suite: str,
+        payload_bytes: int,
+        duration_s: float,
+        event_sample: int,
+        offset_ns: int,
+        output_dir: Path,
+        max_rate_mbps: int,
+    ):
+        self.suite = suite
+        self.payload_bytes = payload_bytes
+        self.duration_s = duration_s
+        self.event_sample = event_sample
+        self.offset_ns = offset_ns
+        self.output_dir = output_dir
+        self.max_rate_mbps = max_rate_mbps
+        self.records: List[Dict[str, float]] = []
+
+    def run(self) -> Dict[str, Optional[float]]:
+        baseline_rtt = None
+        saturation_point = None
+        for rate in SATURATION_TEST_RATES:
+            if rate > self.max_rate_mbps:
+                break
+            metrics = self._run_rate(rate)
+            self.records.append(metrics)
+            avg_rtt = metrics["avg_rtt_ms"]
+            achieved = metrics["throughput_mbps"]
+            if baseline_rtt is None and avg_rtt > 0:
+                baseline_rtt = avg_rtt
+            if baseline_rtt:
+                if avg_rtt > baseline_rtt * SATURATION_RTT_SPIKE or achieved < rate * 0.8:
+                    saturation_point = rate
+                    break
+        return {
+            "suite": self.suite,
+            "baseline_rtt_ms": baseline_rtt,
+            "saturation_point_mbps": saturation_point,
+        }
+
+    def _run_rate(self, rate_mbps: int) -> Dict[str, float]:
+        rate_pps = int((rate_mbps * 1_000_000) / (self.payload_bytes * 8))
+        if rate_pps <= 0:
+            rate_pps = 1
+        events_path = self.output_dir / f"saturation_{rate_mbps}Mbps.jsonl"
+        blaster = Blaster(
+            APP_SEND_HOST,
+            APP_SEND_PORT,
+            APP_RECV_HOST,
+            APP_RECV_PORT,
+            events_path,
+            payload_bytes=self.payload_bytes,
+            sample_every=max(1, self.event_sample),
+            offset_ns=self.offset_ns,
+        )
+        blaster.run(duration_s=self.duration_s, rate_pps=rate_pps)
+        duration = max(self.duration_s, 1e-3)
+        throughput_mbps = (blaster.rcvd_bytes * 8) / (duration * 1_000_000)
+        loss_pct = 0.0
+        if blaster.sent:
+            loss_pct = max(0.0, (blaster.sent - blaster.rcvd) * 100.0 / blaster.sent)
+        avg_rtt_ms = 0.0
+        if blaster.rcvd:
+            avg_rtt_ms = (blaster.rtt_sum_ns / blaster.rcvd) / 1_000_000
+        min_rtt_ms = (blaster.rtt_min_ns or 0) / 1_000_000
+        max_rtt_ms = blaster.rtt_max_ns / 1_000_000
+        return {
+            "rate_mbps": float(rate_mbps),
+            "pps": float(rate_pps),
+            "throughput_mbps": round(throughput_mbps, 3),
+            "loss_pct": round(loss_pct, 3),
+            "avg_rtt_ms": round(avg_rtt_ms, 3),
+            "min_rtt_ms": round(min_rtt_ms, 3),
+            "max_rtt_ms": round(max_rtt_ms, 3),
+        }
+
+    def export_excel(self, session_id: str) -> Optional[Path]:
+        if Workbook is None:
+            print("[WARN] openpyxl not available; skipping Excel export")
+            return None
+        EXCEL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        path = EXCEL_OUTPUT_DIR / f"saturation_{self.suite}_{session_id}.xlsx"
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Saturation"
+        ws.append([
+            "rate_mbps",
+            "pps",
+            "throughput_mbps",
+            "loss_pct",
+            "avg_rtt_ms",
+            "min_rtt_ms",
+            "max_rtt_ms",
+        ])
+        for record in self.records:
+            ws.append([
+                record["rate_mbps"],
+                record["pps"],
+                record["throughput_mbps"],
+                record["loss_pct"],
+                record["avg_rtt_ms"],
+                record["min_rtt_ms"],
+                record["max_rtt_ms"],
+            ])
+        wb.save(path)
+        return path
+
+
 def main() -> None:
     OUTDIR.mkdir(parents=True, exist_ok=True)
 
     parser = argparse.ArgumentParser(description="GCS automation scheduler (CONFIG-driven)")
     parser.add_argument(
         "--traffic",
-        choices=["blast", "mavproxy"],
+        choices=["blast", "mavproxy", "saturation"],
         default="blast",
-        help="blast = internal UDP blaster; mavproxy = external generator.",
+        help="blast = internal UDP blaster; saturation = ramp rates until RTT spike.",
     )
     parser.add_argument(
         "--pre-gap",
@@ -536,6 +687,12 @@ def main() -> None:
         help="Packets/sec for blast; 0 = as fast as possible.",
     )
     parser.add_argument(
+        "--max-rate",
+        type=int,
+        default=200,
+        help="Upper bound Mbps for saturation testing.",
+    )
+    parser.add_argument(
         "--payload-bytes",
         type=int,
         default=256,
@@ -549,6 +706,7 @@ def main() -> None:
     )
     parser.add_argument("--passes", type=int, default=1, help="Number of full sweeps across suites")
     parser.add_argument("--suites", nargs="*", help="Optional subset of suites to exercise")
+    parser.add_argument("--session-id", help="Identifier for output artifacts")
     args = parser.parse_args()
 
     if args.duration <= 0:
@@ -565,6 +723,8 @@ def main() -> None:
     suites = resolve_suites(args.suites)
     if not suites:
         raise RuntimeError("No suites selected for execution")
+
+    session_id = args.session_id or f"session_{int(time.time())}"
 
     initial_suite = preferred_initial_suite(suites)
     if initial_suite and suites[0] != initial_suite:
@@ -600,29 +760,56 @@ def main() -> None:
         ready = wait_handshake(timeout=20.0)
         print(f"[{ts()}] initial handshake ready? {ready}")
 
-        summary_rows: List[dict] = []
-        for pass_index in range(args.passes):
+        if args.traffic == "saturation":
+            saturation_reports = []
             for idx, suite in enumerate(suites):
-                row = run_suite(
-                    gcs_proc,
-                    suite,
-                    is_first=(pass_index == 0 and idx == 0),
-                    duration_s=args.duration,
+                rekey_ms = activate_suite(gcs_proc, suite, is_first=(idx == 0))
+                outdir = suite_outdir(suite)
+                tester = SaturationTester(
+                    suite=suite,
                     payload_bytes=args.payload_bytes,
+                    duration_s=args.duration,
                     event_sample=args.event_sample,
                     offset_ns=offset_ns,
-                    pass_index=pass_index,
-                    traffic_mode=args.traffic,
-                    pre_gap=args.pre_gap,
-                    rate_pps=args.rate,
+                    output_dir=outdir,
+                    max_rate_mbps=args.max_rate,
                 )
-                summary_rows.append(row)
-                is_last_suite = idx == len(suites) - 1
-                is_last_pass = pass_index == args.passes - 1
-                if args.inter_gap > 0 and not (is_last_suite and is_last_pass):
+                summary = tester.run()
+                summary["rekey_ms"] = rekey_ms
+                excel_path = tester.export_excel(session_id)
+                if excel_path:
+                    summary["excel_path"] = str(excel_path)
+                saturation_reports.append(summary)
+                if args.inter_gap > 0 and idx < len(suites) - 1:
                     time.sleep(args.inter_gap)
+            report_path = OUTDIR / f"saturation_summary_{session_id}.json"
+            with open(report_path, "w", encoding="utf-8") as handle:
+                json.dump(saturation_reports, handle, indent=2)
+            print(f"[{ts()}] saturation summary written to {report_path}")
+        else:
+            summary_rows: List[dict] = []
+            for pass_index in range(args.passes):
+                for idx, suite in enumerate(suites):
+                    row = run_suite(
+                        gcs_proc,
+                        suite,
+                        is_first=(pass_index == 0 and idx == 0),
+                        duration_s=args.duration,
+                        payload_bytes=args.payload_bytes,
+                        event_sample=args.event_sample,
+                        offset_ns=offset_ns,
+                        pass_index=pass_index,
+                        traffic_mode=args.traffic,
+                        pre_gap=args.pre_gap,
+                        rate_pps=args.rate,
+                    )
+                    summary_rows.append(row)
+                    is_last_suite = idx == len(suites) - 1
+                    is_last_pass = pass_index == args.passes - 1
+                    if args.inter_gap > 0 and not (is_last_suite and is_last_pass):
+                        time.sleep(args.inter_gap)
 
-        write_summary(summary_rows)
+            write_summary(summary_rows)
 
     finally:
         try:

@@ -24,10 +24,31 @@ import os
 import shlex
 import signal
 import socket
+import struct
 import subprocess
 import threading
 import time
 from typing import Optional
+def optimize_cpu_performance(target_khz: int = 1800000) -> None:
+    governors = list(Path("/sys/devices/system/cpu").glob("cpu[0-9]*/cpufreq"))
+    for governor_dir in governors:
+        gov = governor_dir / "scaling_governor"
+        min_freq = governor_dir / "scaling_min_freq"
+        max_freq = governor_dir / "scaling_max_freq"
+        try:
+            if gov.exists():
+                gov.write_text("performance\n", encoding="utf-8")
+            if min_freq.exists():
+                min_freq.write_text(f"{target_khz}\n", encoding="utf-8")
+            if max_freq.exists():
+                current_max = int(max_freq.read_text().strip())
+                if current_max < target_khz:
+                    max_freq.write_text(f"{target_khz}\n", encoding="utf-8")
+        except PermissionError:
+            print("[follower] insufficient permissions to adjust CPU governor")
+        except Exception as exc:
+            print(f"[follower] governor tuning failed: {exc}")
+
 
 import psutil
 
@@ -49,6 +70,12 @@ GCS_HOST = CONFIG["GCS_HOST"]
 OUTDIR = Path("logs/auto/drone")
 MARK_DIR = OUTDIR / "marks"
 SECRETS_DIR = Path("secrets/matrix")
+
+DEFAULT_MONITOR_BASE = Path(
+    CONFIG.get("DRONE_MONITOR_OUTPUT_BASE")
+    or os.getenv("DRONE_MONITOR_OUTPUT_BASE", "/home/dev/research/output/drone")
+)
+LOG_INTERVAL_MS = 100
 
 PERF_EVENTS = "task-clock,cycles,instructions,cache-misses,branch-misses,context-switches,branches"
 
@@ -149,41 +176,197 @@ def start_drone_proxy(suite: str) -> subprocess.Popen:
     ], stdout=log_handle, stderr=subprocess.STDOUT, text=True)
 
 
+class HighSpeedMonitor(threading.Thread):
+    def __init__(self, output_dir: Path, session_id: str):
+        super().__init__(daemon=True)
+        self.output_dir = output_dir
+        self.session_id = session_id
+        self.stop_event = threading.Event()
+        self.current_suite = "unknown"
+        self.proxy_pid: Optional[int] = None
+        self.rekey_start_ns: Optional[int] = None
+        self.csv_handle: Optional[object] = None
+        self.csv_writer: Optional[csv.writer] = None
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.csv_path = self.output_dir / f"system_monitoring_{session_id}.csv"
+
+    def attach_proxy(self, pid: int) -> None:
+        self.proxy_pid = pid
+
+    def start_rekey(self, old_suite: str, new_suite: str) -> None:
+        self.current_suite = new_suite
+        self.rekey_start_ns = time.time_ns()
+        print(f"[monitor] rekey transition {old_suite} -> {new_suite}")
+
+    def end_rekey(self) -> None:
+        if self.rekey_start_ns is None:
+            return
+        duration_ms = (time.time_ns() - self.rekey_start_ns) / 1_000_000
+        print(f"[monitor] rekey completed in {duration_ms:.2f} ms")
+        self.rekey_start_ns = None
+
+    def run(self) -> None:
+        self.csv_handle = open(self.csv_path, "w", newline="", encoding="utf-8")
+        self.csv_writer = csv.writer(self.csv_handle)
+        self.csv_writer.writerow(
+            [
+                "timestamp_iso",
+                "timestamp_ns",
+                "suite",
+                "proxy_pid",
+                "cpu_percent",
+                "cpu_freq_mhz",
+                "cpu_temp_c",
+                "mem_used_mb",
+                "mem_percent",
+                "rekey_duration_ms",
+            ]
+        )
+        interval = LOG_INTERVAL_MS / 1000.0
+        while not self.stop_event.is_set():
+            start = time.time()
+            self._sample()
+            elapsed = time.time() - start
+            sleep_for = max(0.0, interval - elapsed)
+            if sleep_for:
+                time.sleep(sleep_for)
+
+    def _sample(self) -> None:
+        timestamp_ns = time.time_ns()
+        timestamp_iso = time.strftime("%Y-%m-%d %H:%M:%S.%f", time.gmtime(timestamp_ns / 1e9))[:-3]
+        cpu_percent = psutil.cpu_percent(interval=None)
+        try:
+            with open("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "r", encoding="utf-8") as handle:
+                cpu_freq_mhz = int(handle.read().strip()) / 1000.0
+        except Exception:
+            cpu_freq_mhz = 0.0
+        cpu_temp_c = 0.0
+        try:
+            result = subprocess.run(["vcgencmd", "measure_temp"], capture_output=True, text=True)
+            if result.returncode == 0 and "=" in result.stdout:
+                cpu_temp_c = float(result.stdout.split("=")[1].split("'" )[0])
+        except Exception:
+            pass
+        mem = psutil.virtual_memory()
+        rekey_ms = ""
+        if self.rekey_start_ns is not None:
+            rekey_ms = f"{(timestamp_ns - self.rekey_start_ns) / 1_000_000:.2f}"
+        if self.csv_writer is None:
+            return
+        self.csv_writer.writerow(
+            [
+                timestamp_iso,
+                str(timestamp_ns),
+                self.current_suite,
+                self.proxy_pid or "",
+                f"{cpu_percent:.1f}",
+                f"{cpu_freq_mhz:.1f}",
+                f"{cpu_temp_c:.1f}",
+                f"{mem.used / (1024 * 1024):.1f}",
+                f"{mem.percent:.1f}",
+                rekey_ms,
+            ]
+        )
+        self.csv_handle.flush()
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        if self.is_alive():
+            self.join(timeout=2.0)
+        if self.csv_handle:
+            self.csv_handle.close()
+
+
 class UdpEcho(threading.Thread):
-    def __init__(self, bind_host: str, recv_port: int, send_host: str, send_port: int, stop_event: threading.Event):
+    def __init__(
+        self,
+        bind_host: str,
+        recv_port: int,
+        send_host: str,
+        send_port: int,
+        stop_event: threading.Event,
+        monitor: Optional[HighSpeedMonitor],
+        session_dir: Path,
+    ):
         super().__init__(daemon=True)
         self.bind_host = bind_host
         self.recv_port = recv_port
         self.send_host = send_host
         self.send_port = send_port
         self.stop_event = stop_event
+        self.monitor = monitor
+        self.session_dir = session_dir
         self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            sndbuf = int(os.getenv("DRONE_SOCK_SNDBUF", str(8 << 20)))
-            rcvbuf = int(os.getenv("DRONE_SOCK_RCVBUF", str(8 << 20)))
+            sndbuf = int(os.getenv("DRONE_SOCK_SNDBUF", str(16 << 20)))
+            rcvbuf = int(os.getenv("DRONE_SOCK_RCVBUF", str(16 << 20)))
             self.rx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
             self.tx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, sndbuf)
         except Exception:
             pass
         self.rx_sock.bind((self.bind_host, self.recv_port))
+        self.packet_log_path = self.session_dir / "packet_timing.csv"
+        self.packet_log_handle: Optional[object] = None
+        self.packet_writer: Optional[csv.writer] = None
+        self.samples = 0
 
     def run(self) -> None:
         print(
             f"[follower] UDP echo up: recv:{self.bind_host}:{self.recv_port} -> send:{self.send_host}:{self.send_port}",
             flush=True,
         )
-        self.rx_sock.settimeout(0.01)
+        self.packet_log_handle = open(self.packet_log_path, "w", newline="", encoding="utf-8")
+        self.packet_writer = csv.writer(self.packet_log_handle)
+        self.packet_writer.writerow([
+            "recv_timestamp_ns",
+            "send_timestamp_ns",
+            "processing_ns",
+            "processing_ms",
+            "sequence",
+        ])
+        self.rx_sock.settimeout(0.001)
         while not self.stop_event.is_set():
             try:
                 data, _ = self.rx_sock.recvfrom(65535)
-                self.tx_sock.sendto(data, (self.send_host, self.send_port))
+                recv_ns = time.time_ns()
+                enhanced = self._annotate_packet(data, recv_ns)
+                send_ns = time.time_ns()
+                self.tx_sock.sendto(enhanced, (self.send_host, self.send_port))
+                self._record_packet(data, recv_ns, send_ns)
             except socket.timeout:
                 continue
             except Exception as exc:
                 print(f"[follower] UDP echo error: {exc}", flush=True)
         self.rx_sock.close()
         self.tx_sock.close()
+        if self.packet_log_handle:
+            self.packet_log_handle.close()
+
+    def _annotate_packet(self, data: bytes, recv_ns: int) -> bytes:
+        if len(data) >= 20:
+            return data[:-8] + recv_ns.to_bytes(8, "big")
+        return data + recv_ns.to_bytes(8, "big")
+
+    def _record_packet(self, data: bytes, recv_ns: int, send_ns: int) -> None:
+        if self.packet_writer is None or len(data) < 4:
+            return
+        try:
+            seq, = struct.unpack("!I", data[:4])
+        except struct.error:
+            return
+        processing_ns = send_ns - recv_ns
+        if seq % 100 == 0:
+            self.packet_writer.writerow([
+                recv_ns,
+                send_ns,
+                processing_ns,
+                f"{processing_ns / 1_000_000:.6f}",
+                seq,
+            ])
+            if self.packet_log_handle:
+                self.packet_log_handle.flush()
+
 
 
 class Monitors:
@@ -529,10 +712,20 @@ class ControlServer(threading.Thread):
                 if not proxy or proxy.poll() is not None:
                     self._send(conn, {"ok": False, "error": "proxy not running"})
                     return
+                old_suite = self.state["suite"]
                 self.state["suite"] = suite
                 outdir = self.state["suite_outdir"](suite)
                 self.state["monitors"].rotate(proxy.pid, outdir, suite)
+                monitor = self.state.get("high_speed_monitor")
+                if monitor and old_suite != suite:
+                    monitor.start_rekey(old_suite, suite)
                 self._send(conn, {"ok": True, "marked": suite})
+                return
+            if cmd == "rekey_complete":
+                monitor = self.state.get("high_speed_monitor")
+                if monitor:
+                    monitor.end_rekey()
+                self._send(conn, {"ok": True})
                 return
             if cmd == "schedule_mark":
                 suite = request.get("suite")
@@ -545,6 +738,7 @@ class ControlServer(threading.Thread):
                     delay = max(0.0, (t0_ns - time.time_ns()) / 1e9)
                     if delay:
                         time.sleep(delay)
+                    old = self.state.get("suite", "unknown")
                     proxy = self.state["proxy"]
                     if proxy and proxy.poll() is None:
                         outdir = self.state["suite_outdir"](suite)
@@ -552,6 +746,9 @@ class ControlServer(threading.Thread):
                     else:
                         write_marker(suite)
                     self.state["suite"] = suite
+                    monitor = self.state.get("high_speed_monitor")
+                    if monitor and old != suite:
+                        monitor.start_rekey(old, suite)
 
                 threading.Thread(target=_do_mark, daemon=True).start()
                 self._send(conn, {"ok": True, "scheduled": suite, "t0_ns": t0_ns})
@@ -590,18 +787,49 @@ def main() -> None:
         action="store_true",
         help="Disable perf/pidstat monitors",
     )
+    parser.add_argument(
+        "--session-id",
+        help="Session identifier for monitoring output",
+    )
+    parser.add_argument(
+        "--no-cpu-optimization",
+        action="store_true",
+        help="Skip CPU governor adjustments",
+    )
     args = parser.parse_args()
 
     initial_suite = args.initial_suite
+    session_id = args.session_id or f"session_{int(time.time())}"
     stop_event = threading.Event()
+
+    monitor_base = DEFAULT_MONITOR_BASE.expanduser().resolve()
+    session_dir = monitor_base / session_id
+    session_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[follower] monitor output -> {session_dir}")
+
+    if not args.no_cpu_optimization:
+        optimize_cpu_performance()
+
+    high_speed_monitor = HighSpeedMonitor(session_dir, session_id)
+    high_speed_monitor.start()
 
     proxy = start_drone_proxy(initial_suite)
     monitors = Monitors(enabled=not args.disable_monitors)
     time.sleep(1)
     if proxy.poll() is None:
         monitors.start(proxy.pid, suite_outdir(initial_suite), initial_suite)
+        high_speed_monitor.attach_proxy(proxy.pid)
+        high_speed_monitor.current_suite = initial_suite
 
-    echo = UdpEcho(APP_BIND_HOST, APP_RECV_PORT, APP_SEND_HOST, APP_SEND_PORT, stop_event)
+    echo = UdpEcho(
+        APP_BIND_HOST,
+        APP_RECV_PORT,
+        APP_SEND_HOST,
+        APP_SEND_PORT,
+        stop_event,
+        high_speed_monitor,
+        session_dir,
+    )
     echo.start()
 
     state = {
@@ -610,6 +838,7 @@ def main() -> None:
         "suite_outdir": suite_outdir,
         "monitors": monitors,
         "stop_event": stop_event,
+        "high_speed_monitor": high_speed_monitor,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()
@@ -625,6 +854,7 @@ def main() -> None:
         stop_event.set()
     finally:
         monitors.stop()
+        high_speed_monitor.stop()
         killtree(proxy)
         try:
             proxy.send_signal(signal.SIGTERM)
