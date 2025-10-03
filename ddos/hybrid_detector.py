@@ -1,6 +1,3 @@
-import time
-import os
-import sys
 """Hybrid two-stage DDoS detector for MAVLink-over-UDP."""
 
 from __future__ import annotations
@@ -111,6 +108,34 @@ def load_tst_model():
 
     model.eval()
     torch.set_num_threads(1)
+
+    # Verify that the scaler + model pair accepts the configured sequence length and
+    # produces a 2-class output. This catches mismatched artifacts early instead of
+    # failing inside the inference threads.
+    try:
+        zero_counts = np.zeros((TST_SEQ_LENGTH, 1), dtype=np.float32)
+        scaled = scaler.transform(zero_counts).astype(np.float32)
+    except Exception as exc:
+        raise ValueError(
+            "Scaler failed to transform a zero vector; verify scaler.pkl matches training pipeline"
+        ) from exc
+
+    tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+    with torch.no_grad():
+        try:
+            logits = model(tensor)
+        except Exception as exc:
+            raise ValueError(
+                f"TST model rejected input shaped (1, 1, {TST_SEQ_LENGTH}); check seq length and architecture"
+            ) from exc
+
+    if logits.ndim != 2 or logits.shape[1] < 2:
+        raise ValueError(
+            "TST model must return a 2D tensor with >=2 classes; got shape "
+            f"{tuple(logits.shape)}"
+        )
+
+    LOGGER.info("Validated TST model output shape=%s", tuple(logits.shape))
     return scaler, model, scripted
 
 

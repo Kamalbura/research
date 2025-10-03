@@ -1,27 +1,27 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research\core
-Output File: C:\Users\burak\Desktop\research\core\project_structure_20250930_102145.txt
-Generated: 2025-09-30 10:21:45
+Output File: C:\Users\burak\Desktop\research\core\project_structure_20251003_171850.txt
+Generated: 2025-10-03 17:18:50
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research\core
-Generated: 2025-09-30 10:21:45
+Generated: 2025-10-03 17:18:50
 
 ├── __pycache__/
 │   ├── __init__.cpython-311.pyc (290 bytes)
 │   ├── __init__.cpython-313.pyc (273 bytes)
 │   ├── aead.cpython-311.pyc (14,355 bytes)
-│   ├── aead.cpython-313.pyc (14,211 bytes)
+│   ├── aead.cpython-313.pyc (14,160 bytes)
 │   ├── async_proxy.cpython-311.pyc (38,513 bytes)
-│   ├── async_proxy.cpython-313.pyc (42,814 bytes)
+│   ├── async_proxy.cpython-313.pyc (44,419 bytes)
 │   ├── config.cpython-311.pyc (5,682 bytes)
 │   ├── config.cpython-313.pyc (7,581 bytes)
 │   ├── handshake.cpython-311.pyc (13,111 bytes)
-│   ├── handshake.cpython-313.pyc (15,240 bytes)
+│   ├── handshake.cpython-313.pyc (15,313 bytes)
 │   ├── logging_utils.cpython-313.pyc (5,872 bytes)
 │   ├── policy_engine.cpython-311.pyc (11,201 bytes)
 │   ├── policy_engine.cpython-313.pyc (9,972 bytes)
@@ -30,14 +30,14 @@ Generated: 2025-09-30 10:21:45
 │   ├── suites.cpython-311.pyc (13,950 bytes)
 │   └── suites.cpython-313.pyc (11,653 bytes)
 ├── __init__.py (121 bytes)
-├── aead.py (11,338 bytes)
-├── async_proxy.py (40,770 bytes)
+├── aead.py (11,344 bytes)
+├── async_proxy.py (42,288 bytes)
 ├── config.py (9,164 bytes)
-├── handshake.py (12,545 bytes)
+├── handshake.py (12,622 bytes)
 ├── logging_utils.py (2,957 bytes)
 ├── policy_engine.py (7,034 bytes)
 ├── project_config.py (168 bytes)
-├── project_structure_20250930_102145.txt (0 bytes)
+├── project_structure_20251003_171850.txt (0 bytes)
 ├── run_proxy.py (20,487 bytes)
 ├── suites.py (11,618 bytes)
 └── temp-file.py (18,859 bytes)
@@ -79,8 +79,8 @@ Provides post-quantum cryptography secure communication components.
 FILE 2/11: aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\aead.py
-Size: 11,338 bytes
-Modified: 2025-09-27 04:34:49
+Size: 11,344 bytes
+Modified: 2025-10-03 03:17:13
 ------------------------------------------------------------
 """
 AEAD framing for PQC drone-GCS secure proxy.
@@ -200,8 +200,9 @@ class Sender:
             raise NotImplementedError("plaintext must be bytes")
         
         # Check for sequence overflow - header uses uint64, so check that limit
-        if self._seq >= (2**64 - 1):
-            raise NotImplementedError("packet_seq overflow imminent; rekey/epoch bump required")
+        # Bug #6 fix: Allow full uint64 range (0 to 2^64-1)
+        if self._seq >= 2**64:
+            raise NotImplementedError("packet_seq overflow; rekey/epoch bump required")
         
         # Pack header with current sequence
         header = self.pack_header(self._seq)
@@ -228,7 +229,7 @@ class Sender:
         """
         if self.epoch == 255:
             raise NotImplementedError("epoch wrap forbidden without rekey; perform handshake to rotate keys")
-        self.epoch = (self.epoch + 1) % 256
+        self.epoch += 1
         self._seq = 0
 
 
@@ -379,7 +380,7 @@ class Receiver:
         """
         if self.epoch == 255:
             raise NotImplementedError("epoch wrap forbidden without rekey; perform handshake to rotate keys")
-        self.epoch = (self.epoch + 1) % 256
+        self.epoch += 1
         self.reset_replay()
 
     def last_error_reason(self) -> Optional[str]:
@@ -390,8 +391,8 @@ class Receiver:
 FILE 3/11: async_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\async_proxy.py
-Size: 40,770 bytes
-Modified: 2025-09-29 04:43:49
+Size: 42,288 bytes
+Modified: 2025-10-03 03:17:13
 ------------------------------------------------------------
 """
 Selectors-based network transport proxy.
@@ -1188,10 +1189,11 @@ def run_proxy(
 
                     if data_type == "plaintext_in":
                         try:
-                            payload, _addr = sock.recvfrom(2048)
+                            payload, _addr = sock.recvfrom(16384)
                             if not payload:
                                 continue
-                            counters.ptx_in += 1
+                            with counters_lock:
+                                counters.ptx_in += 1
 
                             payload_out = (b"\x01" + payload) if cfg.get("ENABLE_PACKET_TYPE") else payload
                             with context_lock:
@@ -1200,15 +1202,17 @@ def run_proxy(
 
                             try:
                                 sockets["encrypted"].sendto(wire, sockets["encrypted_peer"])
-                                counters.enc_out += 1
+                                with counters_lock:
+                                    counters.enc_out += 1
                             except socket.error:
-                                counters.drops += 1
+                                with counters_lock:
+                                    counters.drops += 1
                         except socket.error:
                             continue
 
                     elif data_type == "encrypted":
                         try:
-                            wire, addr = sock.recvfrom(2048)
+                            wire, addr = sock.recvfrom(16384)
                             if not wire:
                                 continue
 
@@ -1226,78 +1230,90 @@ def run_proxy(
                                 else:
                                     mismatch = src_ip != exp_ip
                                 if mismatch:
-                                    counters.drops += 1
-                                    counters.drop_src_addr += 1
+                                    with counters_lock:
+                                        counters.drops += 1
+                                        counters.drop_src_addr += 1
                                     logger.debug(
                                         "Dropped encrypted packet from unauthorized source",
                                         extra={"role": role, "expected": expected_peer, "received": addr},
                                     )
                                     continue
 
-                            counters.enc_in += 1
+                            with counters_lock:
+                                counters.enc_in += 1
 
                             try:
                                 plaintext = current_receiver.decrypt(wire)
                                 if plaintext is None:
-                                    counters.drops += 1
-                                    last_reason = current_receiver.last_error_reason()
-                                    if last_reason == "auth":
-                                        counters.drop_auth += 1
-                                    elif last_reason == "header":
-                                        counters.drop_header += 1
-                                    elif last_reason == "replay":
-                                        counters.drop_replay += 1
-                                    elif last_reason == "session":
-                                        counters.drop_session_epoch += 1
-                                    else:
-                                        reason, _seq = _parse_header_fields(
-                                            CONFIG["WIRE_VERSION"],
-                                            current_receiver.ids,
-                                            current_receiver.session_id,
-                                            wire,
-                                        )
-                                        if reason in (
-                                            "version_mismatch",
-                                            "crypto_id_mismatch",
-                                            "header_too_short",
-                                            "header_unpack_error",
-                                        ):
-                                            counters.drop_header += 1
-                                        elif reason == "session_mismatch":
-                                            counters.drop_session_epoch += 1
-                                        elif reason == "auth_fail_or_replay":
+                                    with counters_lock:
+                                        counters.drops += 1
+                                        last_reason = current_receiver.last_error_reason()
+                                        # Bug #7 fix: Proper error classification without redundancy
+                                        if last_reason == "auth":
                                             counters.drop_auth += 1
+                                        elif last_reason == "header":
+                                            counters.drop_header += 1
+                                        elif last_reason == "replay":
+                                            counters.drop_replay += 1
+                                        elif last_reason == "session":
+                                            counters.drop_session_epoch += 1
+                                        elif last_reason is None or last_reason == "unknown":
+                                            # Only parse header if receiver didn't classify it
+                                            reason, _seq = _parse_header_fields(
+                                                CONFIG["WIRE_VERSION"],
+                                                current_receiver.ids,
+                                                current_receiver.session_id,
+                                                wire,
+                                            )
+                                            if reason in (
+                                                "version_mismatch",
+                                                "crypto_id_mismatch",
+                                                "header_too_short",
+                                                "header_unpack_error",
+                                            ):
+                                                counters.drop_header += 1
+                                            elif reason == "session_mismatch":
+                                                counters.drop_session_epoch += 1
+                                            elif reason == "auth_fail_or_replay":
+                                                counters.drop_auth += 1
+                                            else:
+                                                counters.drop_other += 1
                                         else:
+                                            # Unrecognized last_reason value
                                             counters.drop_other += 1
                                     continue
                             except ReplayError:
-                                counters.drops += 1
-                                counters.drop_replay += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_replay += 1
                                 continue
                             except HeaderMismatch:
-                                counters.drops += 1
-                                counters.drop_header += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_header += 1
                                 continue
                             except AeadAuthError:
-                                counters.drops += 1
-                                counters.drop_auth += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_auth += 1
                                 continue
                             except NotImplementedError as exc:
-                                counters.drops += 1
-                                reason, _seq = _parse_header_fields(
-                                    CONFIG["WIRE_VERSION"], current_receiver.ids, current_receiver.session_id, wire
-                                )
-                                if reason in (
-                                    "version_mismatch",
-                                    "crypto_id_mismatch",
-                                    "header_too_short",
-                                    "header_unpack_error",
-                                ):
-                                    counters.drop_header += 1
-                                elif reason == "session_mismatch":
-                                    counters.drop_session_epoch += 1
-                                else:
-                                    counters.drop_auth += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    reason, _seq = _parse_header_fields(
+                                        CONFIG["WIRE_VERSION"], current_receiver.ids, current_receiver.session_id, wire
+                                    )
+                                    if reason in (
+                                        "version_mismatch",
+                                        "crypto_id_mismatch",
+                                        "header_too_short",
+                                        "header_unpack_error",
+                                    ):
+                                        counters.drop_header += 1
+                                    elif reason == "session_mismatch":
+                                        counters.drop_session_epoch += 1
+                                    else:
+                                        counters.drop_auth += 1
                                 logger.warning(
                                     "Decrypt failed (classified)",
                                     extra={
@@ -1309,8 +1325,9 @@ def run_proxy(
                                 )
                                 continue
                             except Exception as exc:
-                                counters.drops += 1
-                                counters.drop_other += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_other += 1
                                 logger.warning(
                                     "Decrypt failed (other)",
                                     extra={"role": role, "error": str(exc), "wire_len": len(wire)},
@@ -1322,8 +1339,9 @@ def run_proxy(
                                     try:
                                         control_json = json.loads(plaintext[1:].decode("utf-8"))
                                     except (UnicodeDecodeError, json.JSONDecodeError):
-                                        counters.drops += 1
-                                        counters.drop_other += 1
+                                        with counters_lock:
+                                            counters.drops += 1
+                                            counters.drop_other += 1
                                         continue
                                     result = handle_control(control_json, role, control_state)
                                     for note in result.notes:
@@ -1342,17 +1360,20 @@ def run_proxy(
                                     if ptype == 0x01:
                                         out_bytes = plaintext[1:]
                                     else:
-                                        counters.drops += 1
-                                        counters.drop_other += 1
+                                        with counters_lock:
+                                            counters.drops += 1
+                                            counters.drop_other += 1
                                         continue
                                 else:
                                     out_bytes = plaintext
 
                                 sockets["plaintext_out"].sendto(out_bytes, sockets["plaintext_peer"])
-                                counters.ptx_out += 1
+                                with counters_lock:
+                                    counters.ptx_out += 1
                             except socket.error:
-                                counters.drops += 1
-                                counters.drop_other += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_other += 1
                         except socket.error:
                             continue
         except KeyboardInterrupt:
@@ -1633,8 +1654,8 @@ validate_config(CONFIG)
 FILE 5/11: handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\handshake.py
-Size: 12,545 bytes
-Modified: 2025-09-27 01:00:20
+Size: 12,622 bytes
+Modified: 2025-10-02 11:52:28
 ------------------------------------------------------------
 from dataclasses import dataclass
 import hashlib
@@ -1677,15 +1698,15 @@ def build_server_hello(suite_id: str, server_sig_obj):
     if not suite:
         raise NotImplementedError("suite_id not found")
     version = CONFIG["WIRE_VERSION"]
-    kem_name = suite["kem_name"].encode()
-    sig_name = suite["sig_name"].encode()
+    kem_name = suite["kem_name"].encode("utf-8")
+    sig_name = suite["sig_name"].encode("utf-8")
     if not kem_name or not sig_name:
         raise NotImplementedError("kem_name/sig_name empty")
     if not isinstance(server_sig_obj, Signature):
         raise NotImplementedError("server_sig_obj must be oqs.Signature")
     session_id = os.urandom(8)
     challenge = os.urandom(8)
-    kem_obj = KeyEncapsulation(kem_name.decode())
+    kem_obj = KeyEncapsulation(kem_name.decode("utf-8"))
     kem_pub = kem_obj.generate_keypair()
     # Include negotiated wire version as first byte of transcript to prevent downgrade
     transcript = (
@@ -1710,8 +1731,8 @@ def build_server_hello(suite_id: str, server_sig_obj):
     wire += struct.pack("!I", len(kem_pub)) + kem_pub
     wire += struct.pack("!H", len(signature)) + signature
     ephemeral = ServerEphemeral(
-        kem_name=kem_name.decode(),
-        sig_name=sig_name.decode(),
+        kem_name=kem_name.decode("utf-8"),
+        sig_name=sig_name.decode("utf-8"),
         session_id=session_id,
         kem_obj=kem_obj,
         challenge=challenge,
@@ -1761,7 +1782,7 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         + challenge
     )
     try:
-        sig = Signature(sig_name.decode())
+        sig = Signature(sig_name.decode("utf-8"))
         if not sig.verify(transcript, signature, server_sig_pub):
             raise HandshakeVerifyError("bad signature")
     except HandshakeVerifyError:
@@ -1791,7 +1812,7 @@ def _drone_psk_bytes() -> bytes:
 
 def client_encapsulate(server_hello: ServerHello):
     try:
-        kem = KeyEncapsulation(server_hello.kem_name.decode())
+        kem = KeyEncapsulation(server_hello.kem_name.decode("utf-8"))
         kem_ct, shared_secret = kem.encap_secret(server_hello.kem_pub)
         return kem_ct, shared_secret
     except Exception:
@@ -1898,8 +1919,8 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
     key_send, key_recv = derive_transport_keys(
         "server",
         ephemeral.session_id,
-        ephemeral.kem_name.encode(),
-        ephemeral.sig_name.encode(),
+        ephemeral.kem_name.encode("utf-8"),
+        ephemeral.sig_name.encode("utf-8"),
         shared_secret,
     )
     # Return (drone→gcs key, gcs→drone key, ...)
@@ -1934,8 +1955,8 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
 
     expected_kem = suite.get("kem_name") if isinstance(suite, dict) else None
     expected_sig = suite.get("sig_name") if isinstance(suite, dict) else None
-    negotiated_kem = hello.kem_name.decode() if isinstance(hello.kem_name, bytes) else hello.kem_name
-    negotiated_sig = hello.sig_name.decode() if isinstance(hello.sig_name, bytes) else hello.sig_name
+    negotiated_kem = hello.kem_name.decode("utf-8") if isinstance(hello.kem_name, bytes) else hello.kem_name
+    negotiated_sig = hello.sig_name.decode("utf-8") if isinstance(hello.sig_name, bytes) else hello.sig_name
     if expected_kem and negotiated_kem != expected_kem:
         logger.error(
             "Suite mismatch",

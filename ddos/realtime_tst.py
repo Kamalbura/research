@@ -84,6 +84,35 @@ def load_tst_model():
 
     model.eval()
     torch.set_num_threads(1)
+
+    # Validate that scaler and model agree with the configured sequence length and
+    # produce a 2-class output tensor. Failing fast here avoids obscure runtime errors
+    # deep inside the detector thread.
+    try:
+        zero_counts = np.zeros((TST_SEQ_LENGTH, 1), dtype=np.float32)
+        scaled = scaler.transform(zero_counts).astype(np.float32)
+    except Exception as exc:
+        raise ValueError(
+            "Scaler failed to transform a zero vector; ensure scaler.pkl matches training pipeline"
+        ) from exc
+
+    tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+    with torch.no_grad():
+        try:
+            logits = model(tensor)
+        except Exception as exc:
+            raise ValueError(
+                f"TST model rejected input shaped (1, 1, {TST_SEQ_LENGTH}); check seq length and architecture"
+            ) from exc
+
+    if logits.ndim != 2 or logits.shape[1] < 2:
+        raise ValueError(
+            "TST model must output a 2D tensor with >=2 classes; got shape "
+            f"{tuple(logits.shape)}"
+        )
+
+    LOGGER.info("Validated TST model output shape=%s", tuple(logits.shape))
+
     return scaler, model, scripted
 
 

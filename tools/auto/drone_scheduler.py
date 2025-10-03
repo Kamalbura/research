@@ -7,6 +7,7 @@ import argparse
 import csv
 import json
 import os
+import shlex
 import shutil
 import socket
 import subprocess
@@ -15,6 +16,8 @@ import threading
 import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
+
+import psutil
 
 try:
     from openpyxl import Workbook
@@ -75,6 +78,368 @@ def suite_outdir(suite: str) -> Path:
     target = SUITES_OUTDIR / suite
     mkdirp(target)
     return target
+
+
+PERF_EVENTS = "task-clock,cycles,instructions,cache-misses,branch-misses,context-switches,branches"
+
+
+def popen(cmd, **kw) -> subprocess.Popen:
+    if isinstance(cmd, (list, tuple)):
+        display = " ".join(shlex.quote(str(part)) for part in cmd)
+    else:
+        display = str(cmd)
+    print(f"[{ts()}] exec: {display}", flush=True)
+    return subprocess.Popen(cmd, **kw)
+
+
+def killtree(proc: Optional[subprocess.Popen]) -> None:
+    if not proc or proc.poll() is not None:
+        return
+    try:
+        proc.terminate()
+        proc.wait(timeout=3)
+    except Exception:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+
+
+class Monitors:
+    PERF_FIELDS = [
+        "ts_unix_ns",
+        "t_offset_ms",
+        "instructions",
+        "cycles",
+        "cache-misses",
+        "branch-misses",
+        "task-clock",
+        "context-switches",
+        "branches",
+    ]
+
+    def __init__(self, enabled: bool) -> None:
+        self.enabled = enabled
+        self.perf: Optional[subprocess.Popen] = None
+        self.pidstat: Optional[subprocess.Popen] = None
+        self.perf_thread: Optional[threading.Thread] = None
+        self.perf_stop = threading.Event()
+        self.perf_csv_handle = None
+        self.perf_writer: Optional[csv.DictWriter] = None
+        self.perf_start_ns = 0
+        self.current_suite = "unknown"
+
+        self.psutil_thread: Optional[threading.Thread] = None
+        self.psutil_stop = threading.Event()
+        self.psutil_csv_handle = None
+        self.psutil_writer: Optional[csv.DictWriter] = None
+        self.psutil_proc: Optional[psutil.Process] = None
+
+        self.temp_thread: Optional[threading.Thread] = None
+        self.temp_stop = threading.Event()
+        self.temp_csv_handle = None
+        self.temp_writer: Optional[csv.DictWriter] = None
+
+    def start(self, pid: int, suite: str) -> None:
+        if not self.enabled or pid <= 0:
+            return
+        self.stop()
+        outdir = suite_outdir(suite)
+        self.current_suite = suite
+        self._start_perf(pid, suite, outdir)
+        self._start_pidstat(pid, suite, outdir)
+        self._start_psutil(pid, suite, outdir)
+        self._start_sysmon(suite, outdir)
+
+    def rotate(self, pid: int, suite: str) -> None:
+        self.start(pid, suite)
+
+    def stop(self) -> None:
+        if not self.enabled:
+            return
+
+        self.perf_stop.set()
+        if self.perf_thread and self.perf_thread.is_alive():
+            self.perf_thread.join(timeout=1.0)
+        self.perf_thread = None
+        if self.perf:
+            killtree(self.perf)
+            self.perf = None
+        if self.perf_csv_handle:
+            try:
+                self.perf_csv_handle.close()
+            except Exception:
+                pass
+            self.perf_csv_handle = None
+        self.perf_writer = None
+
+        killtree(self.pidstat)
+        self.pidstat = None
+
+        self.psutil_stop.set()
+        if self.psutil_thread and self.psutil_thread.is_alive():
+            self.psutil_thread.join(timeout=1.0)
+        self.psutil_thread = None
+        if self.psutil_csv_handle:
+            try:
+                self.psutil_csv_handle.close()
+            except Exception:
+                pass
+            self.psutil_csv_handle = None
+        self.psutil_writer = None
+        self.psutil_proc = None
+
+        self.temp_stop.set()
+        if self.temp_thread and self.temp_thread.is_alive():
+            self.temp_thread.join(timeout=1.0)
+        self.temp_thread = None
+        if self.temp_csv_handle:
+            try:
+                self.temp_csv_handle.close()
+            except Exception:
+                pass
+            self.temp_csv_handle = None
+        self.temp_writer = None
+
+    def _start_perf(self, pid: int, suite: str, outdir: Path) -> None:
+        perf_cmd = [
+            "perf",
+            "stat",
+            "-I",
+            "1000",
+            "-x",
+            ",",
+            "-e",
+            PERF_EVENTS,
+            "-p",
+            str(pid),
+            "--log-fd",
+            "1",
+        ]
+        perf_path = outdir / f"perf_samples_{suite}.csv"
+        try:
+            self.perf_csv_handle = open(perf_path, "w", newline="", encoding="utf-8")
+            self.perf_writer = csv.DictWriter(self.perf_csv_handle, fieldnames=self.PERF_FIELDS)
+            self.perf_writer.writeheader()
+            self.perf_start_ns = time.time_ns()
+            self.perf_stop.clear()
+            self.perf = popen(
+                perf_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+            if self.perf.stdout:
+                self.perf_thread = threading.Thread(
+                    target=self._consume_perf,
+                    args=(self.perf.stdout,),
+                    daemon=True,
+                )
+                self.perf_thread.start()
+        except FileNotFoundError:
+            print("[WARN] perf not available; skipping counter capture", file=sys.stderr)
+            self._cleanup_perf_handles()
+        except Exception as exc:
+            print(f"[WARN] perf start failed: {exc}", file=sys.stderr)
+            self._cleanup_perf_handles()
+
+    def _cleanup_perf_handles(self) -> None:
+        if self.perf:
+            killtree(self.perf)
+            self.perf = None
+        if self.perf_csv_handle:
+            try:
+                self.perf_csv_handle.close()
+            except Exception:
+                pass
+            self.perf_csv_handle = None
+        self.perf_writer = None
+
+    def _start_pidstat(self, pid: int, suite: str, outdir: Path) -> None:
+        try:
+            log_handle = open(outdir / f"pidstat_{suite}.txt", "w", encoding="utf-8")
+        except Exception as exc:
+            print(f"[WARN] pidstat log open failed: {exc}", file=sys.stderr)
+            return
+        try:
+            self.pidstat = popen(
+                ["pidstat", "-hlur", "-p", str(pid), "1"],
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
+            )
+        except FileNotFoundError:
+            print("[WARN] pidstat not available; skipping", file=sys.stderr)
+            try:
+                log_handle.close()
+            except Exception:
+                pass
+            self.pidstat = None
+        except Exception as exc:
+            print(f"[WARN] pidstat start failed: {exc}", file=sys.stderr)
+            try:
+                log_handle.close()
+            except Exception:
+                pass
+            self.pidstat = None
+
+    def _start_psutil(self, pid: int, suite: str, outdir: Path) -> None:
+        try:
+            self.psutil_proc = psutil.Process(pid)
+            self.psutil_proc.cpu_percent(interval=None)
+        except Exception as exc:
+            print(f"[WARN] psutil cannot attach to pid {pid}: {exc}", file=sys.stderr)
+            self.psutil_proc = None
+            return
+        psutil_path = outdir / f"psutil_proc_{suite}.csv"
+        try:
+            self.psutil_csv_handle = open(psutil_path, "w", newline="", encoding="utf-8")
+        except Exception as exc:
+            print(f"[WARN] psutil log open failed: {exc}", file=sys.stderr)
+            self.psutil_proc = None
+            return
+        self.psutil_writer = csv.DictWriter(
+            self.psutil_csv_handle,
+            fieldnames=["ts_unix_ns", "cpu_percent", "rss_bytes", "num_threads"],
+        )
+        self.psutil_writer.writeheader()
+        self.psutil_stop.clear()
+        self.psutil_thread = threading.Thread(target=self._psutil_loop, daemon=True)
+        self.psutil_thread.start()
+
+    def _start_sysmon(self, suite: str, outdir: Path) -> None:
+        temp_path = outdir / f"sys_telemetry_{suite}.csv"
+        try:
+            self.temp_csv_handle = open(temp_path, "w", newline="", encoding="utf-8")
+        except Exception as exc:
+            print(f"[WARN] thermal log open failed: {exc}", file=sys.stderr)
+            self.temp_csv_handle = None
+            return
+        self.temp_writer = csv.DictWriter(
+            self.temp_csv_handle,
+            fieldnames=["ts_unix_ns", "temp_c", "freq_hz", "throttled_hex"],
+        )
+        self.temp_writer.writeheader()
+        self.temp_stop.clear()
+        self.temp_thread = threading.Thread(target=self._sysmon_loop, daemon=True)
+        self.temp_thread.start()
+
+    def _consume_perf(self, stream) -> None:
+        if self.perf_writer is None:
+            return
+        current_ms: Optional[float] = None
+        row = None
+        try:
+            for line in iter(stream.readline, ""):
+                if self.perf_stop.is_set():
+                    break
+                parts = [part.strip() for part in line.strip().split(",")]
+                if len(parts) < 4:
+                    continue
+                try:
+                    offset_ms = float(parts[0])
+                except ValueError:
+                    continue
+                event = parts[3]
+                if event.startswith("#"):
+                    continue
+                try:
+                    value = parts[1].replace(",", "")
+                    int(value)
+                except Exception:
+                    value = parts[1]
+                if current_ms is None or abs(offset_ms - current_ms) >= 0.5:
+                    if row and self.perf_writer and self.perf_csv_handle:
+                        self.perf_writer.writerow(row)
+                        self.perf_csv_handle.flush()
+                    current_ms = offset_ms
+                    row = {field: "" for field in self.PERF_FIELDS}
+                    row["t_offset_ms"] = f"{offset_ms:.0f}"
+                    row["ts_unix_ns"] = str(self.perf_start_ns + int(offset_ms * 1_000_000))
+                key_map = {
+                    "instructions": "instructions",
+                    "cycles": "cycles",
+                    "cache-misses": "cache-misses",
+                    "branch-misses": "branch-misses",
+                    "task-clock": "task-clock",
+                    "context-switches": "context-switches",
+                    "branches": "branches",
+                }
+                if row is not None:
+                    column = key_map.get(event)
+                    if column:
+                        row[column] = value
+            if row and self.perf_writer and self.perf_csv_handle:
+                self.perf_writer.writerow(row)
+                self.perf_csv_handle.flush()
+        finally:
+            try:
+                stream.close()
+            except Exception:
+                pass
+
+    def _psutil_loop(self) -> None:
+        while not self.psutil_stop.is_set():
+            proc = self.psutil_proc
+            writer = self.psutil_writer
+            handle = self.psutil_csv_handle
+            if proc is None or writer is None or handle is None:
+                break
+            try:
+                ts_now = time.time_ns()
+                cpu_percent = proc.cpu_percent(interval=None)
+                rss_bytes = proc.memory_info().rss
+                num_threads = proc.num_threads()
+                writer.writerow(
+                    {
+                        "ts_unix_ns": ts_now,
+                        "cpu_percent": cpu_percent,
+                        "rss_bytes": rss_bytes,
+                        "num_threads": num_threads,
+                    }
+                )
+                handle.flush()
+            except Exception:
+                break
+            time.sleep(1.0)
+
+    def _sysmon_loop(self) -> None:
+        while not self.temp_stop.is_set():
+            writer = self.temp_writer
+            handle = self.temp_csv_handle
+            if writer is None or handle is None:
+                break
+            payload = {
+                "ts_unix_ns": time.time_ns(),
+                "temp_c": None,
+                "freq_hz": None,
+                "throttled_hex": "",
+            }
+            try:
+                out = subprocess.check_output(["vcgencmd", "measure_temp"]).decode(errors="ignore")
+                payload["temp_c"] = float(out.split("=")[1].split("'")[0])
+            except Exception:
+                pass
+            try:
+                freq_path = Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
+                if freq_path.exists():
+                    payload["freq_hz"] = int(freq_path.read_text().strip()) * 1000
+                else:
+                    out = subprocess.check_output(["vcgencmd", "measure_clock", "arm"]).decode(errors="ignore")
+                    payload["freq_hz"] = int(out.split("=")[1].strip())
+            except Exception:
+                pass
+            try:
+                out = subprocess.check_output(["vcgencmd", "get_throttled"]).decode(errors="ignore")
+                payload["throttled_hex"] = out.strip().split("=")[1]
+            except Exception:
+                pass
+            try:
+                writer.writerow(payload)
+                handle.flush()
+            except Exception:
+                pass
+            time.sleep(1.0)
 
 
 def resolve_suites(requested: Optional[Iterable[str]]) -> List[str]:
@@ -389,7 +754,16 @@ def wait_remote_rekey(target_suite: str, baseline: Dict[str, object], timeout: f
     return "timeout"
 
 
-def activate_suite(suite: str, is_first: bool) -> float:
+def activate_suite(
+    suite: str,
+    is_first: bool,
+    monitors: Monitors,
+    drone_proc: Optional[subprocess.Popen],
+) -> float:
+    def _rotate_local() -> None:
+        if drone_proc and drone_proc.poll() is None:
+            monitors.rotate(drone_proc.pid, suite)
+
     if is_first:
         try:
             ctl_send({"cmd": "mark", "suite": suite})
@@ -400,6 +774,7 @@ def activate_suite(suite: str, is_first: bool) -> float:
         except Exception:
             pass
         wait_remote_active_suite(suite, timeout=5.0)
+        _rotate_local()
         return 0.0
 
     baseline = read_remote_counters()
@@ -421,6 +796,7 @@ def activate_suite(suite: str, is_first: bool) -> float:
         except Exception:
             pass
     wait_remote_active_suite(suite, timeout=5.0)
+    _rotate_local()
     return (time.time_ns() - start_ns) / 1_000_000
 
 
@@ -433,8 +809,10 @@ def run_suite(
     pass_index: int,
     pre_gap: float,
     rate_pps: int,
+    monitors: Monitors,
+    drone_proc: Optional[subprocess.Popen],
 ) -> dict:
-    rekey_ms = activate_suite(suite, is_first)
+    rekey_ms = activate_suite(suite, is_first, monitors, drone_proc)
 
     events_path = suite_outdir(suite) / EVENTS_FILENAME
     start_mark_ns = time.time_ns() + int(max(pre_gap, 0.0) * 1e9) + int(0.150 * 1e9)
@@ -704,6 +1082,11 @@ def main() -> None:
         action="store_true",
         help="Skip launching the local drone proxy (assumes external process)",
     )
+    parser.add_argument(
+        "--no-monitors",
+        action="store_true",
+        help="Disable perf/pidstat/psutil capture for the local drone proxy",
+    )
     args = parser.parse_args()
 
     if args.duration <= 0:
@@ -730,6 +1113,8 @@ def main() -> None:
 
     telemetry_collector = TelemetryCollector(TELEMETRY_BIND_HOST, TELEMETRY_PORT)
     telemetry_collector.start()
+
+    monitors = Monitors(enabled=not args.no_monitors and not args.no_local_proxy)
 
     drone_proc: Optional[subprocess.Popen] = None
     drone_log = None
@@ -771,7 +1156,9 @@ def main() -> None:
                     event_sample=args.event_sample,
                     pass_index=pass_index,
                     pre_gap=args.pre_gap,
-                    rate_pps=args.rate,
+                        rate_pps=args.rate,
+                        monitors=monitors,
+                        drone_proc=drone_proc,
                 )
                 summary_rows.append(row)
                 is_last_suite = idx == len(suites) - 1
@@ -798,6 +1185,8 @@ def main() -> None:
             ctl_send({"cmd": "stop"}, timeout=1.0, retries=1)
         except Exception:
             pass
+
+        monitors.stop()
 
         telemetry_collector.stop()
 
