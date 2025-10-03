@@ -619,6 +619,7 @@ def run_suite(
     avg_rtt_ns = 0
     max_rtt_ns = 0
     rtt_samples = 0
+    blaster_sent_bytes = 0
 
     if traffic_mode == "blast":
         blaster = Blaster(
@@ -635,6 +636,7 @@ def run_suite(
         sent_packets = blaster.sent
         rcvd_packets = blaster.rcvd
         rcvd_bytes = blaster.rcvd_bytes
+        blaster_sent_bytes = blaster.sent_bytes
         sample_count = max(1, blaster.rtt_samples)
         avg_rtt_ns = blaster.rtt_sum_ns // sample_count
         max_rtt_ns = blaster.rtt_max_ns
@@ -652,6 +654,8 @@ def run_suite(
     elapsed_s = max(1e-9, (end_perf_ns - start_perf_ns) / 1e9)
     pps = sent_packets / elapsed_s
     throughput_mbps = (rcvd_bytes * 8) / (elapsed_s * 1_000_000)
+    sent_mbps = (blaster_sent_bytes * 8) / (elapsed_s * 1_000_000) if blaster_sent_bytes else 0.0
+    delivered_ratio = throughput_mbps / sent_mbps if sent_mbps > 0 else 0.0
     avg_rtt_ms = avg_rtt_ns / 1_000_000
     max_rtt_ms = max_rtt_ns / 1_000_000
 
@@ -667,6 +671,8 @@ def run_suite(
         "rcvd": rcvd_packets,
         "pps": round(pps, 1),
         "throughput_mbps": round(throughput_mbps, 3),
+        "sent_mbps": round(sent_mbps, 3),
+        "delivered_ratio": round(delivered_ratio, 3) if sent_mbps > 0 else 0.0,
         "rtt_avg_ms": round(avg_rtt_ms, 3),
         "rtt_max_ms": round(max_rtt_ms, 3),
         "rtt_samples": rtt_samples,
@@ -683,7 +689,7 @@ def run_suite(
 
     print(
         f"[{ts()}] <<< FINISH suite={suite} mode={traffic_mode} sent={sent_packets} rcvd={rcvd_packets} "
-        f"pps~{pps:.0f} thr~{throughput_mbps:.2f} Mb/s loss={loss_pct:.2f}% "
+        f"pps~{pps:.0f} thr~{throughput_mbps:.2f} Mb/s sent~{sent_mbps:.2f} Mb/s loss={loss_pct:.2f}% "
         f"rtt_avg={avg_rtt_ms:.3f}ms rtt_max={max_rtt_ms:.3f}ms rekey={rekey_duration_ms:.2f}ms "
         f"enc_out={row['enc_out']} enc_in={row['enc_in']} >>>"
     )
@@ -733,11 +739,14 @@ class SaturationTester:
             self.records.append(metrics)
             avg_rtt = metrics["avg_rtt_ms"]
             achieved = metrics["throughput_mbps"]
+            sent_mbps = metrics.get("sent_mbps", 0.0)
+            ratio = metrics.get("delivered_ratio", 1.0) if sent_mbps > 0 else 1.0
             samples = metrics.get("rtt_samples", 0)
             if baseline_rtt is None and samples and avg_rtt > 0:
                 baseline_rtt = avg_rtt
             if baseline_rtt is not None and samples:
-                if avg_rtt > baseline_rtt * SATURATION_RTT_SPIKE or achieved < rate * 0.8:
+                delivery_degraded = sent_mbps > 0 and ratio < 0.8
+                if avg_rtt > baseline_rtt * SATURATION_RTT_SPIKE or delivery_degraded:
                     saturation_point = rate
                     break
         return {
@@ -764,6 +773,8 @@ class SaturationTester:
         blaster.run(duration_s=self.duration_s, rate_pps=rate_pps)
         duration = max(self.duration_s, 1e-3)
         throughput_mbps = (blaster.rcvd_bytes * 8) / (duration * 1_000_000)
+        sent_mbps = (blaster.sent_bytes * 8) / (duration * 1_000_000)
+        delivered_ratio = throughput_mbps / sent_mbps if sent_mbps > 0 else 0.0
         loss_pct = 0.0
         if blaster.sent:
             loss_pct = max(0.0, (blaster.sent - blaster.rcvd) * 100.0 / blaster.sent)
@@ -777,7 +788,9 @@ class SaturationTester:
             "rate_mbps": float(rate_mbps),
             "pps": float(rate_pps),
             "throughput_mbps": round(throughput_mbps, 3),
+            "sent_mbps": round(sent_mbps, 3),
             "loss_pct": round(loss_pct, 3),
+            "delivered_ratio": round(delivered_ratio, 3) if sent_mbps > 0 else 0.0,
             "avg_rtt_ms": round(avg_rtt_ms, 3),
             "min_rtt_ms": round(min_rtt_ms, 3),
             "max_rtt_ms": round(max_rtt_ms, 3),
@@ -796,8 +809,10 @@ class SaturationTester:
         ws.append([
             "rate_mbps",
             "pps",
+            "sent_mbps",
             "throughput_mbps",
             "loss_pct",
+            "delivered_ratio",
             "avg_rtt_ms",
             "min_rtt_ms",
             "max_rtt_ms",
@@ -807,8 +822,10 @@ class SaturationTester:
             ws.append([
                 record["rate_mbps"],
                 record["pps"],
+                record.get("sent_mbps", 0),
                 record["throughput_mbps"],
                 record["loss_pct"],
+                record.get("delivered_ratio", 0),
                 record["avg_rtt_ms"],
                 record["min_rtt_ms"],
                 record["max_rtt_ms"],
