@@ -249,13 +249,25 @@ class Blaster:
 
         stop_event.set()
         rx_thread.join(timeout=0.2)
+        # Bug #5 fix: Ensure cleanup happens even on exceptions
         try:
-            self.events.flush()
-        except Exception:
-            pass
-        self.events.close()
-        self.tx.close()
-        self.rx.close()
+            try:
+                self.events.flush()
+            except Exception:
+                pass
+        finally:
+            try:
+                self.events.close()
+            except Exception:
+                pass
+            try:
+                self.tx.close()
+            except Exception:
+                pass
+            try:
+                self.rx.close()
+            except Exception:
+                pass
 
     def _rx_loop(self, stop_event: threading.Event) -> None:
         while not stop_event.is_set():
@@ -273,7 +285,10 @@ class Blaster:
             data, _ = self.rx.recvfrom(65535)
         except socket.timeout:
             return False
-        except Exception:
+        except (socket.error, OSError) as exc:
+            # Bug #4 fix: Catch specific exceptions, log unexpected errors
+            if not isinstance(exc, (ConnectionResetError, ConnectionRefusedError)):
+                self._log_event({"event": "rx_error", "err": str(exc), "ts": ts()})
             return False
         t_recv = self._now()
         self.rcvd += 1
@@ -426,7 +441,8 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
         try:
             ctl_send({"cmd": "mark", "suite": suite})
         except Exception as exc:
-            print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
+            print(f"[ERROR] control mark failed for {suite}: {exc}", file=sys.stderr)
+            raise  # Bug #3 fix: Re-raise to prevent silent failures
         rekey_ok = False
         try:
             ok = wait_active_suite(suite, timeout=15.0)
@@ -678,7 +694,9 @@ class TelemetryCollector:
         self.server: Optional[socket.socket] = None
         self.accept_thread: Optional[threading.Thread] = None
         self.client_threads: List[threading.Thread] = []
-        self.samples: List[dict] = []
+        # Bug #9 fix: Use deque with maxlen to prevent unbounded memory growth
+        from collections import deque
+        self.samples: deque = deque(maxlen=100000)  # ~10MB limit for long tests
         self.lock = threading.Lock()
         self.enabled = True
 
@@ -746,6 +764,7 @@ class TelemetryCollector:
 
     def snapshot(self) -> List[dict]:
         with self.lock:
+            # Convert deque to list for compatibility
             return list(self.samples)
 
     def stop(self) -> None:

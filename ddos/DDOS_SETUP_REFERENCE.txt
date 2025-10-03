@@ -1,0 +1,145 @@
+DDOS DETECTION STACK – FILE MAP AND EXECUTION GUIDE
+===================================================
+Generated: 2025-10-03
+
+This document captures the current Raspberry Pi MAVLink DDoS detection setup, how the
+pieces fit together, and what to expect when running each component. Use it alongside
+`README.md` for quick orientation and deployment.
+
+1. Deployment snapshot
+----------------------
+- Architecture: multi-threaded collectors ingest MAVLink-over-UDP windows (0xFD header),
+  an XGBoost screener inspects short sequences, and a Time Series Transformer (TST)
+  confirmer validates streaks. Cooldown and queue bounds enforce stability.
+- Runtime footprint: designed for Raspberry Pi 4B class hardware, single-core heavy
+  lifting capped to 1 Torch thread. All binaries load from the project root unless
+  overridden.
+- Logging: every script calls `config.configure_logging()` so log destinations and
+  levels are uniform via environment variables.
+
+2. Configuration anchor – `config.py`
+-------------------------------------
+- Centralizes every tunable: capture interface/port, window length, screener/confrimer
+  sequence lengths, gating thresholds, queue sizes, and file paths.
+- Environment overrides: set `MAV_IFACE`, `DDOS_WINDOW_SIZE`, `DDOS_XGB_CONSEC`, etc.,
+  before launching to avoid editing code. Empty strings fall back to defaults.
+- Model discovery: `ensure_file()` validates model/scaler presence with friendly error
+  messages. `get_udp_bpf()` returns the exact BPF filter all collectors share.
+- Logging: `configure_logging(program_name)` wires stdout/file handlers with consistent
+  format (`timestamp level logger thread message`).
+
+3. Runtime components (what happens when you run each script)
+------------------------------------------------------------
+3.1 `hybrid_detector.py`
+    - Role: production detector that chains packet capture → window aggregation →
+      XGBoost streak gate → TST confirmation.
+    - Threads spawned: `collector`, `window`, `xgb`, `tst` (all daemonized) plus the
+      main supervisor loop with SIGINT/SIGTERM handlers.
+    - Inputs needed: `xgboost_model.bin`, `scaler.pkl`, and either
+      `tst_model.torchscript` (preferred) or `tst_model.pth`.
+    - Execution outcome: logs one entry per window including sample counts, screener
+      verdicts, streak length, and cooldown; on streak satisfaction, emits a WARNING
+      when the TST queue is populated, followed by a TST verdict (NORMAL vs CONFIRMED
+      ATTACK). Cooldown prevents repeated triggers for `TST_COOLDOWN_WINDOWS` windows.
+
+3.2 `realtime_tst.py`
+    - Role: TST-only live detector useful for latency profiling or fallback deployments.
+    - Threads: `collector`, `window`, `detector`.
+    - Execution outcome: every full sequence enqueued yields a TST inference log with
+      attack probability, predicted class index, inference time in milliseconds, and
+      window end timestamp. No XGBoost gating or cooldown is used; every window sequence
+      is scored once the buffer reaches `TST_SEQ_LENGTH`.
+
+3.3 `manual_control_detector.py`
+    - Role: lab-mode detector allowing console toggling between the screener and the
+      confirmer without restarting processes.
+    - Threads: `collector`, `window`, `detector`, and an `input` thread listening for
+      keyboard commands.
+    - Console controls: `1` selects XGBoost-only mode, `2` selects TST-only mode,
+      `q` quits. The current mode is stored in shared state guarded by a lock.
+    - Execution outcome: the active model logs per-window verdicts at WARNING level.
+      When buffers are too short the detector logs informational messages until enough
+      data accumulates.
+
+3.4 `run_xgboost.py`
+    - Role: sanity-check tool that loads the screener model, verifies feature count,
+      and prints sample predictions for canned "NORMAL" and "ATTACK" vectors.
+    - Execution outcome: prints to stdout, no threading or capture. Useful after
+      retraining or redeploying `xgboost_model.bin`.
+
+3.5 `run_tst.py`
+    - Role: offline validator for the TST model + scaler combo using
+      `tcp_test_ddos_data_0.1.csv` (adjust path via env if needed).
+    - Execution outcome: reports prediction probabilities, compares the attack
+      probability against `TST_ATTACK_THRESHOLD`, and echoes the dominant label from
+      the CSV slice. Exits non-zero if artifacts or dataset are missing.
+
+3.6 `tools/sim_driver.py`
+    - Role: synthetic traffic generator that walks through benign, pulse, or flood
+      scenarios to exercise the XGBoost streak gate and optional TST confirmations.
+    - Execution outcome: prints a per-window table showing counts, screener verdicts,
+      and when enabled (`--run-tst`), the confirmer probability and verdict. Handles
+      cooldown logic identical to `hybrid_detector.py`.
+
+4. Supporting artifacts
+-----------------------
+- Models: `xgboost_model.bin`, `tst_model.torchscript` (or `.pth` fallback).
+- Scaler: `scaler.pkl` storing the `StandardScaler` used during training.
+- Test CSV: `tcp_test_ddos_data_0.1.csv` for offline validation.
+- Optional: TorchScript companion modules (e.g., `tstplus.py`) when using `.pth`.
+- All paths default to the project root and are overridable through environment
+  variables documented in `config.py`.
+
+5. Service wrappers
+-------------------
+- `ddos-hybrid.service`: systemd unit that launches `hybrid_detector.py` inside the
+  virtual environment (`/home/pi/ddos-venv/bin/python`). Grants `CAP_NET_RAW` and
+  `CAP_NET_ADMIN` so packet capture works without running as root. Reads extra env vars
+  from `/etc/ddos-detector.env` when present and keeps the process alive via
+  `Restart=on-failure` with a 5-second backoff.
+- `ddos-tst-realtime.service`: identical structure targeting `realtime_tst.py` for
+  TST-only deployments.
+- Both units assume project files under `/home/pi/ddos`; adjust `User`,
+  `WorkingDirectory`, and `PYTHONPATH` if your host differs.
+
+6. Operational playbook
+-----------------------
+6.1 Manual runs (after activating your Python virtual environment)
+    - Hybrid detection:
+        `sudo --preserve-env=PYTHONPATH,DDOS_LOG_LEVEL python3 hybrid_detector.py`
+    - TST-only detection:
+        `sudo python3 realtime_tst.py`
+    - Manual control:
+        `sudo python3 manual_control_detector.py`
+    - Diagnostics:
+        `python3 run_xgboost.py`
+        `python3 run_tst.py`
+    - Simulator example:
+        `python3 tools/sim_driver.py pulse --run-tst`
+
+6.2 Shutting down or disabling
+    - Manual scripts: press `Ctrl+C` or send SIGINT/SIGTERM; each script installs
+      signal handlers to cleanly stop threads and join them.
+    - Systemd services:
+        Stop once: `sudo systemctl stop ddos-hybrid.service`
+        Disable on boot: `sudo systemctl disable ddos-hybrid.service`
+        (repeat for `ddos-tst-realtime.service` as needed)
+    - Cleanup (optional): remove `/etc/systemd/system/ddos-*.service`, run
+      `sudo systemctl daemon-reload`, and delete the project directory or virtual
+      environment if retiring the stack. Remove persisted logs at the path specified by
+      `DDOS_LOG_FILE`.
+
+7. Observability and troubleshooting
+------------------------------------
+- Log destinations are controlled by `DDOS_LOG_FILE`; default is stderr. Point this to
+  `/var/log/ddos-hybrid.log` (ensure writable) for persistent logs.
+- Queue saturation: the collectors use `RateLimiter` guards; repeated warnings about
+  "queue full" indicate the device cannot keep up—tune `XGB_QUEUE_MAX`,
+  `TST_QUEUE_MAX`, or lower window frequency.
+- Model drift: rerun `run_xgboost.py` and `run_tst.py` after updating any artifacts to
+  confirm compatibility.
+- Capture issues: verify interface and port via `MAV_IFACE` / `MAV_UDP_PORT`; the BPF
+  filter (`udp and port 14550 and udp[8] = 0xfd`) assumes MAVLink v2 framing.
+
+Keep this reference with the deployment so operators can map behaviors to files quickly.
+If you add new scripts or services, append them here to maintain parity with the codebase.

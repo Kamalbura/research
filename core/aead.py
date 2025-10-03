@@ -116,8 +116,9 @@ class Sender:
             raise NotImplementedError("plaintext must be bytes")
         
         # Check for sequence overflow - header uses uint64, so check that limit
-        if self._seq >= (2**64 - 1):
-            raise NotImplementedError("packet_seq overflow imminent; rekey/epoch bump required")
+        # Bug #6 fix: Allow full uint64 range (0 to 2^64-1)
+        if self._seq >= 2**64:
+            raise NotImplementedError("packet_seq overflow; rekey/epoch bump required")
         
         # Pack header with current sequence
         header = self.pack_header(self._seq)
@@ -144,7 +145,7 @@ class Sender:
         """
         if self.epoch == 255:
             raise NotImplementedError("epoch wrap forbidden without rekey; perform handshake to rotate keys")
-        self.epoch = (self.epoch + 1) % 256
+        self.epoch += 1
         self._seq = 0
 
 
@@ -295,7 +296,7 @@ class Receiver:
         """
         if self.epoch == 255:
             raise NotImplementedError("epoch wrap forbidden without rekey; perform handshake to rotate keys")
-        self.epoch = (self.epoch + 1) % 256
+        self.epoch += 1
         self.reset_replay()
 
     def last_error_reason(self) -> Optional[str]:

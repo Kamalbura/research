@@ -793,10 +793,11 @@ def run_proxy(
 
                     if data_type == "plaintext_in":
                         try:
-                            payload, _addr = sock.recvfrom(2048)
+                            payload, _addr = sock.recvfrom(16384)
                             if not payload:
                                 continue
-                            counters.ptx_in += 1
+                            with counters_lock:
+                                counters.ptx_in += 1
 
                             payload_out = (b"\x01" + payload) if cfg.get("ENABLE_PACKET_TYPE") else payload
                             with context_lock:
@@ -805,15 +806,17 @@ def run_proxy(
 
                             try:
                                 sockets["encrypted"].sendto(wire, sockets["encrypted_peer"])
-                                counters.enc_out += 1
+                                with counters_lock:
+                                    counters.enc_out += 1
                             except socket.error:
-                                counters.drops += 1
+                                with counters_lock:
+                                    counters.drops += 1
                         except socket.error:
                             continue
 
                     elif data_type == "encrypted":
                         try:
-                            wire, addr = sock.recvfrom(2048)
+                            wire, addr = sock.recvfrom(16384)
                             if not wire:
                                 continue
 
@@ -831,78 +834,90 @@ def run_proxy(
                                 else:
                                     mismatch = src_ip != exp_ip
                                 if mismatch:
-                                    counters.drops += 1
-                                    counters.drop_src_addr += 1
+                                    with counters_lock:
+                                        counters.drops += 1
+                                        counters.drop_src_addr += 1
                                     logger.debug(
                                         "Dropped encrypted packet from unauthorized source",
                                         extra={"role": role, "expected": expected_peer, "received": addr},
                                     )
                                     continue
 
-                            counters.enc_in += 1
+                            with counters_lock:
+                                counters.enc_in += 1
 
                             try:
                                 plaintext = current_receiver.decrypt(wire)
                                 if plaintext is None:
-                                    counters.drops += 1
-                                    last_reason = current_receiver.last_error_reason()
-                                    if last_reason == "auth":
-                                        counters.drop_auth += 1
-                                    elif last_reason == "header":
-                                        counters.drop_header += 1
-                                    elif last_reason == "replay":
-                                        counters.drop_replay += 1
-                                    elif last_reason == "session":
-                                        counters.drop_session_epoch += 1
-                                    else:
-                                        reason, _seq = _parse_header_fields(
-                                            CONFIG["WIRE_VERSION"],
-                                            current_receiver.ids,
-                                            current_receiver.session_id,
-                                            wire,
-                                        )
-                                        if reason in (
-                                            "version_mismatch",
-                                            "crypto_id_mismatch",
-                                            "header_too_short",
-                                            "header_unpack_error",
-                                        ):
-                                            counters.drop_header += 1
-                                        elif reason == "session_mismatch":
-                                            counters.drop_session_epoch += 1
-                                        elif reason == "auth_fail_or_replay":
+                                    with counters_lock:
+                                        counters.drops += 1
+                                        last_reason = current_receiver.last_error_reason()
+                                        # Bug #7 fix: Proper error classification without redundancy
+                                        if last_reason == "auth":
                                             counters.drop_auth += 1
+                                        elif last_reason == "header":
+                                            counters.drop_header += 1
+                                        elif last_reason == "replay":
+                                            counters.drop_replay += 1
+                                        elif last_reason == "session":
+                                            counters.drop_session_epoch += 1
+                                        elif last_reason is None or last_reason == "unknown":
+                                            # Only parse header if receiver didn't classify it
+                                            reason, _seq = _parse_header_fields(
+                                                CONFIG["WIRE_VERSION"],
+                                                current_receiver.ids,
+                                                current_receiver.session_id,
+                                                wire,
+                                            )
+                                            if reason in (
+                                                "version_mismatch",
+                                                "crypto_id_mismatch",
+                                                "header_too_short",
+                                                "header_unpack_error",
+                                            ):
+                                                counters.drop_header += 1
+                                            elif reason == "session_mismatch":
+                                                counters.drop_session_epoch += 1
+                                            elif reason == "auth_fail_or_replay":
+                                                counters.drop_auth += 1
+                                            else:
+                                                counters.drop_other += 1
                                         else:
+                                            # Unrecognized last_reason value
                                             counters.drop_other += 1
                                     continue
                             except ReplayError:
-                                counters.drops += 1
-                                counters.drop_replay += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_replay += 1
                                 continue
                             except HeaderMismatch:
-                                counters.drops += 1
-                                counters.drop_header += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_header += 1
                                 continue
                             except AeadAuthError:
-                                counters.drops += 1
-                                counters.drop_auth += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_auth += 1
                                 continue
                             except NotImplementedError as exc:
-                                counters.drops += 1
-                                reason, _seq = _parse_header_fields(
-                                    CONFIG["WIRE_VERSION"], current_receiver.ids, current_receiver.session_id, wire
-                                )
-                                if reason in (
-                                    "version_mismatch",
-                                    "crypto_id_mismatch",
-                                    "header_too_short",
-                                    "header_unpack_error",
-                                ):
-                                    counters.drop_header += 1
-                                elif reason == "session_mismatch":
-                                    counters.drop_session_epoch += 1
-                                else:
-                                    counters.drop_auth += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    reason, _seq = _parse_header_fields(
+                                        CONFIG["WIRE_VERSION"], current_receiver.ids, current_receiver.session_id, wire
+                                    )
+                                    if reason in (
+                                        "version_mismatch",
+                                        "crypto_id_mismatch",
+                                        "header_too_short",
+                                        "header_unpack_error",
+                                    ):
+                                        counters.drop_header += 1
+                                    elif reason == "session_mismatch":
+                                        counters.drop_session_epoch += 1
+                                    else:
+                                        counters.drop_auth += 1
                                 logger.warning(
                                     "Decrypt failed (classified)",
                                     extra={
@@ -914,8 +929,9 @@ def run_proxy(
                                 )
                                 continue
                             except Exception as exc:
-                                counters.drops += 1
-                                counters.drop_other += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_other += 1
                                 logger.warning(
                                     "Decrypt failed (other)",
                                     extra={"role": role, "error": str(exc), "wire_len": len(wire)},
@@ -927,8 +943,9 @@ def run_proxy(
                                     try:
                                         control_json = json.loads(plaintext[1:].decode("utf-8"))
                                     except (UnicodeDecodeError, json.JSONDecodeError):
-                                        counters.drops += 1
-                                        counters.drop_other += 1
+                                        with counters_lock:
+                                            counters.drops += 1
+                                            counters.drop_other += 1
                                         continue
                                     result = handle_control(control_json, role, control_state)
                                     for note in result.notes:
@@ -947,17 +964,20 @@ def run_proxy(
                                     if ptype == 0x01:
                                         out_bytes = plaintext[1:]
                                     else:
-                                        counters.drops += 1
-                                        counters.drop_other += 1
+                                        with counters_lock:
+                                            counters.drops += 1
+                                            counters.drop_other += 1
                                         continue
                                 else:
                                     out_bytes = plaintext
 
                                 sockets["plaintext_out"].sendto(out_bytes, sockets["plaintext_peer"])
-                                counters.ptx_out += 1
+                                with counters_lock:
+                                    counters.ptx_out += 1
                             except socket.error:
-                                counters.drops += 1
-                                counters.drop_other += 1
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_other += 1
                         except socket.error:
                             continue
         except KeyboardInterrupt:

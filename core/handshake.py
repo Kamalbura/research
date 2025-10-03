@@ -39,15 +39,15 @@ def build_server_hello(suite_id: str, server_sig_obj):
     if not suite:
         raise NotImplementedError("suite_id not found")
     version = CONFIG["WIRE_VERSION"]
-    kem_name = suite["kem_name"].encode()
-    sig_name = suite["sig_name"].encode()
+    kem_name = suite["kem_name"].encode("utf-8")
+    sig_name = suite["sig_name"].encode("utf-8")
     if not kem_name or not sig_name:
         raise NotImplementedError("kem_name/sig_name empty")
     if not isinstance(server_sig_obj, Signature):
         raise NotImplementedError("server_sig_obj must be oqs.Signature")
     session_id = os.urandom(8)
     challenge = os.urandom(8)
-    kem_obj = KeyEncapsulation(kem_name.decode())
+    kem_obj = KeyEncapsulation(kem_name.decode("utf-8"))
     kem_pub = kem_obj.generate_keypair()
     # Include negotiated wire version as first byte of transcript to prevent downgrade
     transcript = (
@@ -72,8 +72,8 @@ def build_server_hello(suite_id: str, server_sig_obj):
     wire += struct.pack("!I", len(kem_pub)) + kem_pub
     wire += struct.pack("!H", len(signature)) + signature
     ephemeral = ServerEphemeral(
-        kem_name=kem_name.decode(),
-        sig_name=sig_name.decode(),
+        kem_name=kem_name.decode("utf-8"),
+        sig_name=sig_name.decode("utf-8"),
         session_id=session_id,
         kem_obj=kem_obj,
         challenge=challenge,
@@ -123,7 +123,7 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         + challenge
     )
     try:
-        sig = Signature(sig_name.decode())
+        sig = Signature(sig_name.decode("utf-8"))
         if not sig.verify(transcript, signature, server_sig_pub):
             raise HandshakeVerifyError("bad signature")
     except HandshakeVerifyError:
@@ -153,7 +153,7 @@ def _drone_psk_bytes() -> bytes:
 
 def client_encapsulate(server_hello: ServerHello):
     try:
-        kem = KeyEncapsulation(server_hello.kem_name.decode())
+        kem = KeyEncapsulation(server_hello.kem_name.decode("utf-8"))
         kem_ct, shared_secret = kem.encap_secret(server_hello.kem_pub)
         return kem_ct, shared_secret
     except Exception:
@@ -260,8 +260,8 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
     key_send, key_recv = derive_transport_keys(
         "server",
         ephemeral.session_id,
-        ephemeral.kem_name.encode(),
-        ephemeral.sig_name.encode(),
+        ephemeral.kem_name.encode("utf-8"),
+        ephemeral.sig_name.encode("utf-8"),
         shared_secret,
     )
     # Return (drone→gcs key, gcs→drone key, ...)
@@ -296,8 +296,8 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
 
     expected_kem = suite.get("kem_name") if isinstance(suite, dict) else None
     expected_sig = suite.get("sig_name") if isinstance(suite, dict) else None
-    negotiated_kem = hello.kem_name.decode() if isinstance(hello.kem_name, bytes) else hello.kem_name
-    negotiated_sig = hello.sig_name.decode() if isinstance(hello.sig_name, bytes) else hello.sig_name
+    negotiated_kem = hello.kem_name.decode("utf-8") if isinstance(hello.kem_name, bytes) else hello.kem_name
+    negotiated_sig = hello.sig_name.decode("utf-8") if isinstance(hello.sig_name, bytes) else hello.sig_name
     if expected_kem and negotiated_kem != expected_kem:
         logger.error(
             "Suite mismatch",

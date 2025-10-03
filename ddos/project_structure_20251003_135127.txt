@@ -1,0 +1,1094 @@
+PROJECT STRUCTURE AND PYTHON FILES LOG
+================================================================================
+Root Directory: C:\Users\burak\Desktop\research\ddos
+Output File: C:\Users\burak\Desktop\research\ddos\project_structure_20251003_135127.txt
+Generated: 2025-10-03 13:51:27
+================================================================================
+
+================================================================================
+DIRECTORY TREE STRUCTURE
+================================================================================
+Root Directory: C:\Users\burak\Desktop\research\ddos
+Generated: 2025-10-03 13:51:27
+
+├── hybrid_detector.py (6,524 bytes)
+├── manual_control_detector.py (5,823 bytes)
+├── project_structure_20251003_135127.txt (0 bytes)
+├── realtime_tst.py (7,024 bytes)
+├── run_tst.py (4,287 bytes)
+├── run_xgboost.py (2,456 bytes)
+├── tcp_test_ddos_data_0.1.csv (112,209 bytes)
+├── train_ddos_data_0.1.csv (238,332 bytes)
+├── tst_model.pth (326,850 bytes)
+├── tstplus.py (17,194 bytes)
+└── xgboost_model.bin (106,667 bytes)
+
+
+================================================================================
+PYTHON FILE CONTENTS
+================================================================================
+
+Found 6 Python files:
+   1. hybrid_detector.py
+   2. manual_control_detector.py
+   3. realtime_tst.py
+   4. run_tst.py
+   5. run_xgboost.py
+   6. tstplus.py
+
+--------------------------------------------------------------------------------
+
+FILE 1/6: hybrid_detector.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\hybrid_detector.py
+Size: 6,524 bytes
+Modified: 2025-09-22 15:16:41
+------------------------------------------------------------
+import time
+import os
+import sys
+from queue import Queue
+from threading import Thread, Lock
+from collections import deque
+
+import numpy as np
+import pandas as pd
+import torch
+import xgboost as xgb
+from sklearn.preprocessing import StandardScaler
+
+from tstplus import TSTPlus, _TSTBackbone, _TSTEncoder, _TSTEncoderLayer
+
+# --- Scapy for Packet Sniffing ---
+try:
+    import scapy.all as scapy
+except ImportError:
+    print("Error: Scapy is not installed. Please run: pip install scapy")
+    sys.exit(1)
+
+# --- Configuration ---
+# Models
+XGB_MODEL_FILE = "xgboost_model.bin"
+TST_MODEL_FILE = "tst_model.pth"
+TRAIN_DATA_FILE = "train_ddos_data_0.1.csv"
+
+# Pipeline
+WINDOW_SIZE = 0.60  # Time window in seconds to count packets
+TST_SEQ_LENGTH = 400
+XGB_SEQ_LENGTH = 5
+BUFFER_SIZE = 900   # Store ~9 minutes of data (900 * 0.6s)
+
+# --- Thread 1: Data Collector & Buffer ---
+def collector_thread(buffer, buffer_lock, xgboost_queue):
+    """Sniffs packets, counts them, and maintains a shared buffer of recent counts."""
+    print("[Collector] Started. Sniffing packets...")
+    
+    packet_timestamps = Queue()
+
+    def packet_callback(packet):
+        if scapy.IP in packet and scapy.UDP in packet and scapy.Raw in packet:
+            if packet[scapy.Raw].load.startswith(b'\xfd'):
+                packet_timestamps.put(time.time())
+
+    # Start sniffing in a background thread
+    sniffer = Thread(target=scapy.sniff, kwargs={'prn': packet_callback, 'store': 0, 'iface': 'wlan0'}, daemon=True)
+    sniffer.start()
+    print("[Collector] Sniffer is running.")
+
+    last_time = time.time()
+    while True:
+        # Count packets within the time window
+        count = 0
+        while (time() - last_time) < WINDOW_SIZE:
+            if not packet_timestamps.empty():
+                packet_timestamps.get()
+                count += 1
+            time.sleep(0.01)
+        last_time = time.time()
+
+        # Safely add the new count to the shared buffer
+        with buffer_lock:
+            buffer.append(count)
+        
+        # Send the latest 5 counts to the XGBoost screener
+        if len(buffer) >= XGB_SEQ_LENGTH:
+            with buffer_lock:
+                # Create a list from the right-end of the deque
+                xgboost_input = list(buffer)[-XGB_SEQ_LENGTH:]
+            xgboost_queue.put(xgboost_input)
+
+# --- Thread 2: XGBoost "Screener" ---
+def xgboost_screener_thread(buffer, buffer_lock, xgboost_queue, tst_queue):
+    """Runs fast predictions on recent data and triggers TST if an attack is suspected."""
+    print("[XGBoost] Started. Loading model...")
+    model = xgb.XGBClassifier()
+    model.load_model(XGB_MODEL_FILE)
+    print("[XGBoost] Model loaded. Screening traffic...")
+
+    while True:
+        # Get the latest 5 data points from the collector
+        data_point = xgboost_queue.get()
+        
+        # Reshape for prediction
+        data_point_np = np.array(data_point).reshape(1, -1)
+        
+        prediction = model.predict(data_point_np)[0]
+
+        # If XGBoost flags an attack, trigger the TST confirmation
+        if prediction == 1:
+            print("\n[XGBoost] 🚨 Potential Attack Detected! Triggering TST for confirmation...")
+            with buffer_lock:
+                # Check if buffer has enough data for TST
+                if len(buffer) >= TST_SEQ_LENGTH:
+                    # Get the last 400 data points for deep analysis
+                    tst_sequence = list(buffer)[-TST_SEQ_LENGTH:]
+                    tst_queue.put(tst_sequence)
+                else:
+                    print("[XGBoost] Warning: Not enough data in buffer for TST confirmation yet.")
+        else:
+            # Print a dot for normal traffic to show it's working
+            print(".", end="", flush=True)
+
+# --- Thread 3: TST "Confirmer" ---
+def tst_confirmer_thread(tst_queue):
+    """Waits for a trigger and runs a deep analysis on the provided data sequence."""
+    print("[TST] Started. Loading model and scaler...")
+
+    # Load Scaler and TST Model
+    train_data = pd.read_csv(TRAIN_DATA_FILE)
+    scaler = StandardScaler().fit(train_data[['Mavlink_Count', 'Total_length']])
+    model = torch.load(TST_MODEL_FILE, map_location=torch.device('cpu'))
+    model.eval()
+    print("[TST] Model and scaler loaded. Waiting for confirmation tasks...")
+
+    while True:
+        # Wait for a sequence to analyze
+        sequence_to_predict = tst_queue.get()
+        print("[TST] Received sequence. Running deep analysis...")
+
+        # Prepare data for TST model
+        sequence_reshaped = np.array(sequence_to_predict).reshape(-1, 1)
+        dummy_column = np.zeros_like(sequence_reshaped)
+        sequence_scaled = scaler.transform(np.hstack([sequence_reshaped, dummy_column]))[:, 0]
+        x_tensor = torch.tensor(sequence_scaled, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+
+        # Make Prediction
+        with torch.no_grad():
+            output_logits = model(x_tensor)
+            probabilities = torch.nn.functional.softmax(output_logits, dim=1)
+            predicted_index = torch.argmax(probabilities, dim=1).item()
+
+        # Display Final Result
+        prediction_status = "CONFIRMED ATTACK" if predicted_index == 1 else "FALSE ALARM"
+        confidence = probabilities.max().item() * 100
+
+        print("--- TST CONFIRMATION ---")
+        if prediction_status == "CONFIRMED ATTACK":
+            print(f"   🔥🔥🔥 Result: {prediction_status} (Confidence: {confidence:.2f}%) 🔥🔥🔥")
+        else:
+            print(f"   ✅ Result: {prediction_status} (Confidence: {confidence:.2f}%)")
+        print("------------------------")
+
+# --- Main Execution ---
+if __name__ == "__main__":
+    print("--- Hybrid DDoS Detection System ---")
+    print("NOTE: This script requires root/administrator privileges.")
+
+    # Shared data structures
+    shared_buffer = deque(maxlen=BUFFER_SIZE)
+    buffer_lock = Lock()
+    
+    # Queues for inter-thread communication
+    xgboost_q = Queue()
+    tst_q = Queue()
+
+    # Create and start threads
+    collector = Thread(target=collector_thread, args=(shared_buffer, buffer_lock, xgboost_q), daemon=True)
+    xgboost_screener = Thread(target=xgboost_screener_thread, args=(shared_buffer, buffer_lock, xgboost_q, tst_q), daemon=True)
+    tst_confirmer = Thread(target=tst_confirmer_thread, args=(tst_q,), daemon=True)
+
+    collector.start()
+    xgboost_screener.start()
+    tst_confirmer.start()
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n--- System shutting down ---")
+
+============================================================
+
+FILE 2/6: manual_control_detector.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\manual_control_detector.py
+Size: 5,823 bytes
+Modified: 2025-09-22 15:16:53
+------------------------------------------------------------
+import time
+import os
+import sys
+from threading import Thread, Lock
+from collections import deque
+
+import numpy as np
+import pandas as pd
+import torch
+import xgboost as xgb
+from sklearn.preprocessing import StandardScaler
+
+from tstplus import TSTPlus, _TSTBackbone, _TSTEncoder, _TSTEncoderLayer
+
+# --- Scapy for Packet Sniffing ---
+try:
+    import scapy.all as scapy
+except ImportError:
+    print("Error: Scapy is not installed. Please run: pip install scapy")
+    sys.exit(1)
+
+# --- Configuration ---
+# Models
+XGB_MODEL_FILE = "xgboost_model.bin"
+TST_MODEL_FILE = "tst_model.pth"
+TRAIN_DATA_FILE = "train_ddos_data_0.1.csv"
+
+# Pipeline
+WINDOW_SIZE = 0.60
+TST_SEQ_LENGTH = 400
+XGB_SEQ_LENGTH = 5
+BUFFER_SIZE = 900
+
+# --- Shared State ---
+# This dictionary holds the configuration that can be changed at runtime.
+DETECTOR_CONFIG = {'current_model': 'XGBOOST'} # Start with XGBoost by default
+CONFIG_LOCK = Lock()
+
+# --- Thread 1: Data Collector ---
+def collector_thread(buffer, buffer_lock):
+    """Sniffs packets and continuously updates a shared buffer of packet counts."""
+    print("[Collector] Started. Sniffing packets...")
+    
+    # This queue is internal to the collector for thread-safe sniffing
+    packet_timestamps = deque()
+
+    def packet_callback(packet):
+        if scapy.IP in packet and scapy.UDP in packet and scapy.Raw in packet:
+            if packet[scapy.Raw].load.startswith(b'\xfd'):
+                packet_timestamps.append(time.time())
+
+    sniffer = Thread(target=scapy.sniff, kwargs={'prn': packet_callback, 'store': 0, 'iface': 'wlan0'}, daemon=True)
+    sniffer.start()
+    print("[Collector] Sniffer is running.")
+
+    while True:
+        time.sleep(WINDOW_SIZE) 
+        
+        # Count packets that arrived in the last window
+        count = len(packet_timestamps)
+        packet_timestamps.clear()
+
+        with buffer_lock:
+            buffer.append(count)
+
+# --- Thread 2: User Input Controller ---
+def input_controller_thread(config, lock):
+    """Waits for user input to change the active model."""
+    while True:
+        print("\n--- waiting for input ---")
+        choice = input("Enter '1' for XGBoost, '2' for TST: ")
+        with lock:
+            if choice == '1':
+                if config['current_model'] != 'XGBOOST':
+                    print("\n>>> Switching to XGBoost model...")
+                    config['current_model'] = 'XGBOOST'
+            elif choice == '2':
+                if config['current_model'] != 'TST':
+                    print("\n>>> Switching to TST model...")
+                    config['current_model'] = 'TST'
+
+# --- Thread 3: The Detector ---
+def detector_thread(config, config_lock, buffer, buffer_lock):
+    """The main detection loop. Checks the config and runs the appropriate model."""
+    print("[Detector] Started. Loading all models...")
+
+    # Load XGBoost
+    xgb_model = xgb.XGBClassifier()
+    xgb_model.load_model(XGB_MODEL_FILE)
+
+    # Load TST and Scaler
+    train_data = pd.read_csv(TRAIN_DATA_FILE)
+    scaler = StandardScaler().fit(train_data[['Mavlink_Count', 'Total_length']])
+    tst_model = torch.load(TST_MODEL_FILE, map_location=torch.device('cpu'))
+    tst_model.eval()
+    
+    print("[Detector] All models loaded.")
+
+    while True:
+        time.sleep(WINDOW_SIZE * 1.1) # Run slightly slower than the collector
+        
+        active_model = ""
+        with config_lock:
+            active_model = config['current_model']
+
+        # --- XGBOOST LOGIC ---
+        if active_model == 'XGBOOST':
+            with buffer_lock:
+                if len(buffer) < XGB_SEQ_LENGTH:
+                    print("[XGBoost] Collecting initial data...")
+                    continue
+                data_point = list(buffer)[-XGB_SEQ_LENGTH:]
+            
+            data_point_np = np.array(data_point).reshape(1, -1)
+            prediction = xgb_model.predict(data_point_np)[0]
+            status = "ATTACK" if prediction == 1 else "NORMAL"
+            print(f"[XGBoost ACTIVE] -> Prediction: {status}")
+
+        # --- TST LOGIC ---
+        elif active_model == 'TST':
+            with buffer_lock:
+                if len(buffer) < TST_SEQ_LENGTH:
+                    print(f"[TST ACTIVE] -> Collecting data... ({len(buffer)}/{TST_SEQ_LENGTH})")
+                    continue
+                sequence_to_predict = list(buffer)[-TST_SEQ_LENGTH:]
+
+            # Prepare data
+            sequence_reshaped = np.array(sequence_to_predict).reshape(-1, 1)
+            dummy_column = np.zeros_like(sequence_reshaped)
+            sequence_scaled = scaler.transform(np.hstack([sequence_reshaped, dummy_column]))[:, 0]
+            x_tensor = torch.tensor(sequence_scaled, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+
+            # Predict
+            with torch.no_grad():
+                pred_idx = torch.argmax(tst_model(x_tensor), dim=1).item()
+            
+            status = "ATTACK" if pred_idx == 1 else "NORMAL"
+            print(f"[TST ACTIVE] -> Prediction: {status}")
+
+# --- Main Execution ---
+if __name__ == "__main__":
+    print("--- Manual Control DDoS Detection System ---")
+    print("NOTE: This script requires root/administrator privileges.")
+
+    # Shared data structures
+    shared_buffer = deque(maxlen=BUFFER_SIZE)
+    buffer_lock = Lock()
+
+    # Create and start threads
+    collector = Thread(target=collector_thread, args=(shared_buffer, buffer_lock), daemon=True)
+    detector = Thread(target=detector_thread, args=(DETECTOR_CONFIG, CONFIG_LOCK, shared_buffer, buffer_lock), daemon=True)
+    input_controller = Thread(target=input_controller_thread, args=(DETECTOR_CONFIG, CONFIG_LOCK), daemon=True)
+
+    collector.start()
+    detector.start()
+    input_controller.start()
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n--- System shutting down ---")
+
+============================================================
+
+FILE 3/6: realtime_tst.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\realtime_tst.py
+Size: 7,024 bytes
+Modified: 2025-09-22 13:03:43
+------------------------------------------------------------
+
+import time
+import os
+import sys
+from queue import Queue
+from threading import Thread
+from statistics import mode
+
+import numpy as np
+import pandas as pd
+import torch
+from sklearn.preprocessing import StandardScaler
+
+# --- Add tstplus module to path ---
+# This allows us to import the model architecture
+from tstplus import TSTPlus
+
+# --- Scapy for Packet Sniffing ---
+# Scapy is a powerful packet manipulation tool.
+# Note: Scapy requires administrator/root privileges to run.
+try:
+    import scapy.all as scapy
+except ImportError:
+    print("Error: Scapy is not installed. Please run: pip install scapy")
+    sys.exit(1)
+except PermissionError:
+    print("Error: Scapy requires root/administrator privileges.")
+    print("Please run this script with sudo (Linux/macOS) or as Administrator (Windows).")
+    sys.exit(1)
+
+# --- Configuration ---
+# TST Model Config
+MODEL_FILE = "tst_model.pth"
+TRAIN_DATA_FILE = "train_ddos_data_0.1.csv" # Used to fit the scaler
+SEQ_LENGTH = 400 # This MUST match the model's training sequence length
+
+# Real-time Pipeline Config
+WINDOW_SIZE = 0.60 # Time window in seconds to count packets
+
+# --- Component 1: Packet Capture Thread ---
+def capture_packets(capture_queue):
+    """Sniffs network traffic and puts packet timestamps onto a queue."""
+    print("-> [Capture Thread] Started. Sniffing packets on 'wlan0'...")
+    
+    def packet_callback(packet):
+        # This callback is triggered for each packet sniffed.
+        # We are interested in a specific type of UDP packet as in the original script.
+        if scapy.IP in packet and scapy.UDP in packet and scapy.Raw in packet:
+            if packet[scapy.Raw].load.startswith(b'\xfd'):
+                capture_queue.put(time.time())
+
+    try:
+        scapy.sniff(prn=packet_callback, store=0, iface="wlan0")
+    except Exception as e:
+        print(f"-> [Capture Thread] Error: Could not start sniffing. Ensure 'wlan0' is a valid interface.")
+        print(f"   {e}")
+        os._exit(1) # Exit all threads if sniffing fails
+
+# --- Component 2: Preprocessing Thread ---
+def preprocess_for_tst(capture_queue, detection_queue):
+    """Collects packet counts and creates sequences of length 400 for the TST model."""
+    print(f"-> [Preprocess Thread] Started. Waiting for {SEQ_LENGTH} data points...")
+    
+    packet_counts = []
+    last_time = time.time()
+
+    while True:
+        # Count packets within the time window
+        count = 0
+        while (time() - last_time) < WINDOW_SIZE:
+            if not capture_queue.empty():
+                capture_queue.get() # We just need the count, not the timestamp itself
+                count += 1
+            time.sleep(0.01) # Small sleep to prevent busy-waiting
+        last_time = time.time()
+        
+        # Add the new packet count to our list
+        packet_counts.append(count)
+        
+        # If we have enough data to form a full sequence
+        if len(packet_counts) == SEQ_LENGTH:
+            print(f"\n-> [Preprocess Thread] Sequence of {SEQ_LENGTH} created. Sending to detector.")
+            # Send a copy of the sequence to the detection thread
+            detection_queue.put(list(packet_counts))
+            
+            # Slide the window: remove the oldest data point to make room for the next one
+            packet_counts.pop(0)
+        else:
+            # Print progress until the first sequence is ready
+            print(f"-> [Preprocess Thread] Collected {len(packet_counts)}/{SEQ_LENGTH} data points...", end='\r')
+
+# --- Component 3: Detection Thread ---
+def detect_ddos_with_tst(detection_queue):
+    """Loads the TST model and performs prediction on incoming sequences."""
+    print("-> [Detection Thread] Started. Loading model and scaler...")
+
+    # 1. Load the Scaler
+    try:
+        train_data = pd.read_csv(TRAIN_DATA_FILE)
+        scaler = StandardScaler()
+        # Fit the scaler on the same data used during training
+        scaler.fit(train_data[['Mavlink_Count', 'Total_length']])
+    except FileNotFoundError:
+        print(f"-> [Detection Thread] Error: Training data file '{TRAIN_DATA_FILE}' not found.")
+        os._exit(1)
+
+    # 2. Load the TST Model
+    try:
+        model = torch.load(MODEL_FILE, map_location=torch.device('cpu'))
+        model.eval() # Set model to evaluation mode
+    except FileNotFoundError:
+        print(f"-> [Detection Thread] Error: Model file '{MODEL_FILE}' not found.")
+        os._exit(1)
+
+    print("-> [Detection Thread] Model and scaler loaded successfully. Waiting for data...")
+
+    while True:
+        # Wait for a full sequence from the preprocessing thread
+        sequence_to_predict = detection_queue.get()
+        
+        start_time = time.time()
+
+        # Prepare the sequence for the model
+        # a. Scale the data (must be in the same format as the training scaler)
+        sequence_reshaped = np.array(sequence_to_predict).reshape(-1, 1)
+        dummy_column = np.zeros_like(sequence_reshaped)
+        sequence_scaled = scaler.transform(np.hstack([sequence_reshaped, dummy_column]))[:, 0]
+
+        # b. Convert to a PyTorch tensor with the correct shape: [batch_size, num_vars, seq_len]
+        x_tensor = torch.tensor(sequence_scaled, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+
+        # 3. Make Prediction
+        with torch.no_grad():
+            output_logits = model(x_tensor)
+            probabilities = torch.nn.functional.softmax(output_logits, dim=1)
+            predicted_index = torch.argmax(probabilities, dim=1).item()
+
+        end_time = time.time()
+        prediction_time_ms = (end_time - start_time) * 1000
+
+        # 4. Display Result
+        prediction_status = "ATTACK" if predicted_index == 1 else "NORMAL"
+        confidence = probabilities.max().item() * 100
+
+        print(f"--- PREDICTION RESULT ---")
+        if prediction_status == "ATTACK":
+            print(f"   🚨 Result: {prediction_status} DETECTED (Confidence: {confidence:.2f}%)")
+        else:
+            print(f"   ✅ Result: {prediction_status} Traffic (Confidence: {confidence:.2f}%)")
+        print(f"   (Prediction took {prediction_time_ms:.2f} ms)")
+        print(f"-------------------------")
+
+# --- Main Execution ---
+if __name__ == "__main__":
+    print("--- Real-Time TST DDoS Detection System ---")
+    print("NOTE: This script requires root/administrator privileges for packet sniffing.")
+
+    # Create queues to pass data between threads
+    capture_q = Queue()
+    detection_q = Queue()
+
+    # Create the threads
+    capture_thread = Thread(target=capture_packets, args=(capture_q,), daemon=True)
+    preprocess_thread = Thread(target=preprocess_for_tst, args=(capture_q, detection_q), daemon=True)
+    detection_thread = Thread(target=detect_ddos_with_tst, args=(detection_q,), daemon=True)
+
+    # Start the threads
+    capture_thread.start()
+    preprocess_thread.start()
+    detection_thread.start()
+
+    # Keep the main thread alive
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n--- System shutting down ---")
+
+============================================================
+
+FILE 4/6: run_tst.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\run_tst.py
+Size: 4,287 bytes
+Modified: 2025-09-22 12:58:24
+------------------------------------------------------------
+
+import torch
+import pandas as pd
+import numpy as np
+import os
+from statistics import mode
+from sklearn.preprocessing import StandardScaler
+
+# Import the TST model definition from the copied file
+# This assumes tstplus.py is in the same directory
+from tstplus import TSTPlus
+
+# --- Configuration ---
+MODEL_FILE = "tst_model.pth"
+TRAIN_DATA_FILE = "train_ddos_data_0.1.csv"
+TEST_DATA_FILE = "tcp_test_ddos_data_0.1.csv"
+
+# This must match the sequence length the model was trained with.
+SEQ_LENGTH = 400
+
+# --- File Checks ---
+print("--- Checking for necessary files ---")
+required_files = [MODEL_FILE, TRAIN_DATA_FILE, TEST_DATA_FILE, "tstplus.py"]
+all_files_found = True
+for f in required_files:
+    if not os.path.exists(f):
+        print(f"❌ Error: File not found: '{f}'")
+        all_files_found = False
+
+if not all_files_found:
+    print("\nPlease ensure all required files are in the same directory as this script.")
+    exit()
+else:
+    print("✅ All necessary files found.")
+
+# --- Model Loading ---
+print(f"\n--- Loading TST Model ---")
+print(f"Attempting to load model from '{MODEL_FILE}'...")
+
+# Load the entire model (architecture and weights)
+# Use map_location=torch.device('cpu') if you are not using a GPU
+model = torch.load(MODEL_FILE, map_location=torch.device('cpu'))
+model.eval()  # Set the model to evaluation mode
+
+print("✅ TST model loaded successfully.")
+
+# --- Data Preparation ---
+print("\n--- Preparing Data for Prediction ---")
+
+# 1. Load training data to fit the scaler
+print(f"1. Loading training data '{TRAIN_DATA_FILE}' to fit the scaler...")
+train_data = pd.read_csv(TRAIN_DATA_FILE)
+
+# 2. Initialize and fit the StandardScaler
+# The model was trained on scaled data, so we must apply the same transformation.
+scaler = StandardScaler()
+scaler.fit(train_data[['Mavlink_Count', 'Total_length']])
+print("✅ Scaler fitted on training data.")
+
+# 3. Load test data to get a sequence for prediction
+print(f"\n2. Loading test data '{TEST_DATA_FILE}' to get a sample sequence...")
+test_data = pd.read_csv(TEST_DATA_FILE)
+
+# 4. Create a single sequence from the test data
+# In a real application, this data would be coming from a live stream.
+if len(test_data) >= SEQ_LENGTH:
+    # Get the first possible sequence from the file
+    x_sequence_raw = test_data['Mavlink_Count'].iloc[0:SEQ_LENGTH].values
+    # Get the true label for this sequence for later comparison
+    true_label = mode(test_data['Status'].iloc[0:SEQ_LENGTH+1].values)
+    print(f"✅ Extracted a sample sequence of length {SEQ_LENGTH}.")
+else:
+    print(f"❌ Error: Test data has fewer than {SEQ_LENGTH} rows, cannot create a sequence.")
+    exit()
+
+# 5. Scale the sequence
+# The scaler expects a 2D array, so we reshape our sequence, scale it, and then flatten it back.
+# We create a dummy second column because the scaler was fitted on two features.
+x_sequence_scaled = scaler.transform(np.hstack([x_sequence_raw.reshape(-1, 1), np.zeros((SEQ_LENGTH, 1))]))[:, 0]
+
+# 6. Convert to a PyTorch Tensor
+# The model expects the input tensor to have a specific shape: [batch_size, num_variables, sequence_length]
+# For our case: [1, 1, 400]
+x_tensor = torch.tensor(x_sequence_scaled, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+print(f"✅ Sample sequence prepared and converted to tensor with shape: {x_tensor.shape}")
+
+# --- Prediction ---
+print("\n--- Running Prediction ---")
+
+with torch.no_grad():  # Disable gradient calculation for inference
+    # Get the raw output logits from the model
+    output_logits = model(x_tensor)
+    
+    # Apply softmax to get probabilities
+    probabilities = torch.nn.functional.softmax(output_logits, dim=1)
+    
+    # Get the predicted class index by finding the max probability
+    predicted_index = torch.argmax(probabilities, dim=1).item()
+
+# --- Display Results ---
+print(f"   - Raw model output (logits): {output_logits.numpy().flatten()}")
+print(f"   - Probabilities (Normal, Attack): {probabilities.numpy().flatten()}")
+print(f"   - Predicted Class Index: {predicted_index}")
+
+prediction_status = "ATTACK" if predicted_index == 1 else "NORMAL"
+
+print(f"\n   ✅ Final Prediction: Traffic is {prediction_status}")
+print(f"   - True Label for this sequence was: {'ATTACK' if true_label == 1 else 'NORMAL'}")
+
+print("\n--- Script Finished ---")
+
+============================================================
+
+FILE 5/6: run_xgboost.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\run_xgboost.py
+Size: 2,456 bytes
+Modified: 2025-09-22 12:58:02
+------------------------------------------------------------
+
+import xgboost as xgb
+import numpy as np
+import os
+
+# --- Configuration ---
+MODEL_FILE = "xgboost_model.bin"
+# The model expects input with this many features (timesteps).
+# This must match the 'lookback' parameter the model was trained with.
+EXPECTED_FEATURES = 5
+
+# --- Model Loading ---
+print(f"Attempting to load XGBoost model from '{MODEL_FILE}'...")
+
+# Check if the model file exists
+if not os.path.exists(MODEL_FILE):
+    print(f"\n--- ERROR ---")
+    print(f"Model file not found: '{MODEL_FILE}'")
+    print("Please make sure the model file is in the same directory as this script.")
+    exit()
+
+# Load the XGBoost model
+model = xgb.XGBClassifier()
+model.load_model(MODEL_FILE)
+
+print("✅ XGBoost model loaded successfully.")
+
+# --- Prediction ---
+print("\n--- Running Prediction Example ---")
+
+# Create a sample data point representing a sequence of packet counts.
+# This simulates the input the model would receive.
+# Shape: (1, EXPECTED_FEATURES)
+sample_data_normal = np.array([10, 15, 12, 18, 14]).reshape(1, -1)
+sample_data_attack = np.array([150, 200, 180, 220, 190]).reshape(1, -1)
+
+print(f"\n1. Simulating NORMAL traffic with data: {sample_data_normal.flatten()}")
+
+# Make a prediction
+try:
+    prediction_normal = model.predict(sample_data_normal)[0]
+    prediction_proba_normal = model.predict_proba(sample_data_normal)[0]
+
+    # --- Display Results ---
+    if prediction_normal == 1:
+        confidence = prediction_proba_normal[1] * 100
+        print(f"   🚨 Result: ATTACK DETECTED (Confidence: {confidence:.2f}%)")
+    else:
+        confidence = prediction_proba_normal[0] * 100
+        print(f"   ✅ Result: NORMAL traffic (Confidence: {confidence:.2f}%)")
+
+except Exception as e:
+    print(f"   ❌ Error during prediction: {e}")
+
+
+print(f"\n2. Simulating ATTACK traffic with data: {sample_data_attack.flatten()}")
+
+# Make a prediction
+try:
+    prediction_attack = model.predict(sample_data_attack)[0]
+    prediction_proba_attack = model.predict_proba(sample_data_attack)[0]
+
+    # --- Display Results ---
+    if prediction_attack == 1:
+        confidence = prediction_proba_attack[1] * 100
+        print(f"   🚨 Result: ATTACK DETECTED (Confidence: {confidence:.2f}%)")
+    else:
+        confidence = prediction_proba_attack[0] * 100
+        print(f"   ✅ Result: NORMAL traffic (Confidence: {confidence:.2f}%)")
+
+except Exception as e:
+    print(f"   ❌ Error during prediction: {e}")
+
+print("\n--- Script Finished ---")
+
+============================================================
+
+FILE 6/6: tstplus.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\tstplus.py
+Size: 17,194 bytes
+Modified: 2025-09-11 11:03:51
+------------------------------------------------------------
+from typing import Callable
+from tsai.imports import *
+from tsai.utils import *
+from tsai.models.layers import *
+from tsai.models.utils import *
+from tsai.models.positional_encoders import *
+from tsai.data.core import *
+
+"""## TST"""
+
+class _TSTEncoderLayer(Module):
+    def __init__(self, q_len, d_model, n_heads, d_k=None, d_v=None, d_ff=256, store_attn=False,
+                 norm='BatchNorm', attn_dropout=0, dropout=0., bias=True, activation="gelu", res_attention=False, pre_norm=False):
+
+        assert not d_model%n_heads, f"d_model ({d_model}) must be divisible by n_heads ({n_heads})"
+        d_k = ifnone(d_k, d_model // n_heads)
+        d_v = ifnone(d_v, d_model // n_heads)
+
+        # Multi-Head attention
+        self.res_attention = res_attention
+        self.self_attn = MultiheadAttention(d_model, n_heads, d_k, d_v, attn_dropout=attn_dropout, proj_dropout=dropout, res_attention=res_attention)
+
+        # Add & Norm
+        self.dropout_attn = nn.Dropout(dropout)
+        if "batch" in norm.lower():
+            self.norm_attn = nn.Sequential(Transpose(1,2), nn.BatchNorm1d(d_model), Transpose(1,2))
+        else:
+            self.norm_attn = nn.LayerNorm(d_model)
+
+        # Position-wise Feed-Forward
+        self.ff = nn.Sequential(nn.Linear(d_model, d_ff, bias=bias),
+                                get_act_fn(activation),
+                                nn.Dropout(dropout),
+                                nn.Linear(d_ff, d_model, bias=bias))
+
+        # Add & Norm
+        self.dropout_ffn = nn.Dropout(dropout)
+        if "batch" in norm.lower():
+            self.norm_ffn = nn.Sequential(Transpose(1,2), nn.BatchNorm1d(d_model), Transpose(1,2))
+        else:
+            self.norm_ffn = nn.LayerNorm(d_model)
+
+        self.pre_norm = pre_norm
+        self.store_attn = store_attn
+
+    def forward(self, src:Tensor, prev:Optional[Tensor]=None, key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None) -> Tensor:
+
+        # Multi-Head attention sublayer
+        if self.pre_norm:
+            src = self.norm_attn(src)
+        ## Multi-Head attention
+        if self.res_attention:
+            src2, attn, scores = self.self_attn(src, src, src, prev, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
+        else:
+            src2, attn = self.self_attn(src, src, src, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
+        if self.store_attn:
+            self.attn = attn
+        ## Add & Norm
+        src = src + self.dropout_attn(src2) # Add: residual connection with residual dropout
+        if not self.pre_norm:
+            src = self.norm_attn(src)
+
+        # Feed-forward sublayer
+        if self.pre_norm:
+            src = self.norm_ffn(src)
+        ## Position-wise Feed-Forward
+        src2 = self.ff(src)
+        ## Add & Norm
+        src = src + self.dropout_ffn(src2) # Add: residual connection with residual dropout
+        if not self.pre_norm:
+            src = self.norm_ffn(src)
+
+        if self.res_attention:
+            return src, scores
+        else:
+            return src
+
+class _TSTEncoder(Module):
+    def __init__(self, q_len, d_model, n_heads, d_k=None, d_v=None, d_ff=None, norm='BatchNorm', attn_dropout=0., dropout=0., activation='gelu',
+                 res_attention=False, n_layers=1, pre_norm=False, store_attn=False):
+        self.layers = nn.ModuleList([_TSTEncoderLayer(q_len, d_model, n_heads=n_heads, d_k=d_k, d_v=d_v, d_ff=d_ff, norm=norm,
+                                                      attn_dropout=attn_dropout, dropout=dropout,
+                                                      activation=activation, res_attention=res_attention,
+                                                      pre_norm=pre_norm, store_attn=store_attn) for i in range(n_layers)])
+        self.res_attention = res_attention
+
+    def forward(self, src:Tensor, key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None):
+        output = src
+        scores = None
+        if self.res_attention:
+            for mod in self.layers: output, scores = mod(output, prev=scores, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
+            return output
+        else:
+            for mod in self.layers: output = mod(output, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
+            return output
+
+#|exporti
+class _TSTBackbone(Module):
+    def __init__(self, c_in, seq_len, max_seq_len=512,
+                 n_layers=3, d_model=128, n_heads=16, d_k=None, d_v=None,
+                 d_ff=256, norm='BatchNorm', attn_dropout=0., dropout=0., act="gelu", store_attn=False,
+                 key_padding_mask='auto', padding_var=None, attn_mask=None, res_attention=True, pre_norm=False,
+                 pe='zeros', learn_pe=True, verbose=False, **kwargs):
+
+        # Input encoding
+        q_len = seq_len
+        self.new_q_len = False
+        if max_seq_len is not None and seq_len > max_seq_len: # Control temporal resolution
+            self.new_q_len = True
+            q_len = max_seq_len
+            tr_factor = math.ceil(seq_len / q_len)
+            total_padding = (tr_factor * q_len - seq_len)
+            padding = (total_padding // 2, total_padding - total_padding // 2)
+            self.W_P = nn.Sequential(Pad1d(padding), Conv1d(c_in, d_model, kernel_size=tr_factor, padding=0, stride=tr_factor))
+            pv(f'temporal resolution modified: {seq_len} --> {q_len} time steps: kernel_size={tr_factor}, stride={tr_factor}, padding={padding}.\n', verbose)
+        elif kwargs:
+            self.new_q_len = True
+            t = torch.rand(1, 1, seq_len)
+            q_len = Conv1d(1, 1, **kwargs)(t).shape[-1]
+            self.W_P = Conv1d(c_in, d_model, **kwargs) # Eq 2
+            pv(f'Conv1d with kwargs={kwargs} applied to input to create input encodings\n', verbose)
+        else:
+            self.W_P = nn.Linear(c_in, d_model)        # Eq 1: projection of feature vectors onto a d-dim vector space
+        self.seq_len = q_len
+
+        # Positional encoding
+        self.W_pos = self._positional_encoding(pe, learn_pe, q_len, d_model)
+
+        # Residual dropout
+        self.dropout = nn.Dropout(dropout)
+
+        # Encoder
+        self.encoder = _TSTEncoder(q_len, d_model, n_heads, d_k=d_k, d_v=d_v, d_ff=d_ff, norm=norm, attn_dropout=attn_dropout, dropout=dropout,
+                                   pre_norm=pre_norm, activation=act, res_attention=res_attention, n_layers=n_layers, store_attn=store_attn)
+        self.transpose = Transpose(-1, -2, contiguous=True)
+        self.key_padding_mask, self.padding_var, self.attn_mask = key_padding_mask, padding_var, attn_mask
+
+    def forward(self, inp) -> Tensor:
+        r"""Pass the input through the TST backbone.
+        Args:
+            inp: input (optionally with padding mask. 1s (meaning padded) in padding mask will be ignored while 0s (non-padded) will be unchanged.)
+        Shape:
+            There are 3 options:
+            1. inp: Tensor containing just time series data [bs x nvars x q_len]
+            2. inp: Tensor containing time series data plus a padding feature in the last channel [bs x (nvars + 1) x q_len]
+            3. inp: tuple containing a tensor with time series data plus a padding mask per batch ([bs x nvars x q_len] , [bs x q_len] )
+        """
+
+        # x and padding mask
+        if isinstance(inp, tuple): x, key_padding_mask = inp
+        elif self.key_padding_mask == 'auto': x, key_padding_mask = self._key_padding_mask(inp) # automatically identify padding mask
+        elif self.key_padding_mask == -1: x, key_padding_mask = inp[:, :-1], inp[:, -1]         # padding mask is the last channel
+        else: x, key_padding_mask = inp, None
+
+        # Input encoding
+        if self.new_q_len: u = self.W_P(x).transpose(2,1) # Eq 2        # u: [bs x d_model x q_len] transposed to [bs x q_len x d_model]
+        else: u = self.W_P(x.transpose(2,1))              # Eq 1        # u: [bs x q_len x nvars] converted to [bs x q_len x d_model]
+
+        # Positional encoding
+        u = self.dropout(u + self.W_pos)
+
+        # Encoder
+        z = self.encoder(u, key_padding_mask=key_padding_mask, attn_mask=self.attn_mask)    # z: [bs x q_len x d_model]
+        z = self.transpose(z)                                                               # z: [bs x d_model x q_len]
+        if key_padding_mask is not None:
+            z = z * torch.logical_not(key_padding_mask.unsqueeze(1))  # zero-out padding embeddings
+        return z
+
+    def _positional_encoding(self, pe, learn_pe, q_len, d_model):
+        # Positional encoding
+        if pe == None:
+            W_pos = torch.empty((q_len, d_model)) # pe = None and learn_pe = False can be used to measure impact of pe
+            nn.init.uniform_(W_pos, -0.02, 0.02)
+            learn_pe = False
+        elif pe == 'zero':
+            W_pos = torch.empty((q_len, 1))
+            nn.init.uniform_(W_pos, -0.02, 0.02)
+        elif pe == 'zeros':
+            W_pos = torch.empty((q_len, d_model))
+            nn.init.uniform_(W_pos, -0.02, 0.02)
+        elif pe == 'normal' or pe == 'gauss':
+            W_pos = torch.zeros((q_len, 1))
+            torch.nn.init.normal_(W_pos, mean=0.0, std=0.1)
+        elif pe == 'uniform':
+            W_pos = torch.zeros((q_len, 1))
+            nn.init.uniform_(W_pos, a=0.0, b=0.1)
+        elif pe == 'lin1d': W_pos = Coord1dPosEncoding(q_len, exponential=False, normalize=True)
+        elif pe == 'exp1d': W_pos = Coord1dPosEncoding(q_len, exponential=True, normalize=True)
+        elif pe == 'lin2d': W_pos = Coord2dPosEncoding(q_len, d_model, exponential=False, normalize=True)
+        elif pe == 'exp2d': W_pos = Coord2dPosEncoding(q_len, d_model, exponential=True, normalize=True)
+        elif pe == 'sincos': W_pos = PositionalEncoding(q_len, d_model, normalize=True)
+        else: raise ValueError(f"{pe} is not a valid pe (positional encoder. Available types: 'gauss'=='normal', \
+            'zeros', 'zero', uniform', 'lin1d', 'exp1d', 'lin2d', 'exp2d', 'sincos', None.)")
+        return nn.Parameter(W_pos, requires_grad=learn_pe)
+
+    def _key_padding_mask(self, x):
+        if self.padding_var is not None:
+            mask = TSMaskTensor(x[:, self.padding_var] == 1)            # key_padding_mask: [bs x q_len]
+            return x, mask
+        else:
+            mask = torch.isnan(x)
+            x[mask] = 0
+            if mask.any():
+                mask = TSMaskTensor((mask.float().mean(1)==1).bool())   # key_padding_mask: [bs x q_len]
+                return x, mask
+            else:
+                return x, None
+
+#|export
+class TSTPlus(nn.Sequential):
+    """TST (Time Series Transformer) is a Transformer that takes continuous time series as inputs"""
+    def __init__(self, c_in:int, c_out:int, seq_len:int, max_seq_len:Optional[int]=512,
+                 n_layers:int=3, d_model:int=128, n_heads:int=16, d_k:Optional[int]=None, d_v:Optional[int]=None,
+                 d_ff:int=256, norm:str='BatchNorm', attn_dropout:float=0., dropout:float=0., act:str="gelu", key_padding_mask:bool='auto',
+                 padding_var:Optional[int]=None, attn_mask:Optional[Tensor]=None, res_attention:bool=True, pre_norm:bool=False, store_attn:bool=False,
+                 pe:str='zeros', learn_pe:bool=True, flatten:bool=True, fc_dropout:float=0.,
+                 concat_pool:bool=False, bn:bool=False, custom_head:Optional[Callable]=None,
+                 y_range:Optional[tuple]=None, verbose:bool=False, **kwargs):
+        """
+        Args:
+            c_in: the number of features (aka variables, dimensions, channels) in the time series dataset.
+            c_out: the number of target classes.
+            seq_len: number of time steps in the time series.
+            max_seq_len: useful to control the temporal resolution in long time series to avoid memory issues. Default=512.
+            d_model: total dimension of the model (number of features created by the model). Default: 128 (range(64-512))
+            n_heads:  parallel attention heads. Default:16 (range(8-16)).
+            d_k: size of the learned linear projection of queries and keys in the MHA. Usual values: 16-512. Default: None -> (d_model/n_heads) = 32.
+            d_v: size of the learned linear projection of values in the MHA. Usual values: 16-512. Default: None -> (d_model/n_heads) = 32.
+            d_ff: the dimension of the feedforward network model. Default: 512 (range(256-512))
+            norm: flag to indicate whether BatchNorm (default) or LayerNorm is used in the encoder layers.
+            attn_dropout: dropout applied to the attention scores
+            dropout: amount of dropout applied to all linear layers except q,k&v projections in the encoder.
+            act: the activation function of intermediate layer, relu or gelu.
+            key_padding_mask:   a boolean padding mask will be applied to attention if 'auto' a mask to those steps in a sample where all features are nan.
+                                Other options include: True -->tuple (x, key_padding_mask), -1 --> key_padding_mask is the last channel, False: no mask.
+            padding_var: (optional) an int indicating the variable that contains the padded steps (0: non-padded, 1: padded).
+            attn_mask: a boolean mask will be applied to attention if a tensor of shape [min(seq_len, max_seq_len) x min(seq_len, max_seq_len)] if provided.
+            res_attention: if True Residual MultiheadAttention is applied.
+            pre_norm: if True normalization will be applied as the first step in the sublayers. Defaults to False
+            store_attn: can be used to visualize attention weights. Default: False.
+            n_layers: number of layers (or blocks) in the encoder. Default: 3 (range(1-4))
+            pe: type of positional encoder.
+                Available types (for experimenting): None, 'exp1d', 'lin1d', 'exp2d', 'lin2d', 'sincos', 'gauss' or 'normal',
+                'uniform', 'zero', 'zeros' (default, as in the paper).
+            learn_pe: learned positional encoder (True, default) or fixed positional encoder.
+            flatten: this will flatten the encoder output to be able to apply an mlp type of head (default=False)
+            fc_dropout: dropout applied to the final fully connected layer.
+            concat_pool: indicates if global adaptive concat pooling will be used instead of global adaptive pooling.
+            bn: indicates if batchnorm will be applied to the head.
+            custom_head: custom head that will be applied to the network. It must contain all kwargs (pass a partial function)
+            y_range: range of possible y values (used in regression tasks).
+            kwargs: nn.Conv1d kwargs. If not {}, a nn.Conv1d with those kwargs will be applied to original time series.
+        Input shape:
+            x: bs (batch size) x nvars (aka features, variables, dimensions, channels) x seq_len (aka time steps)
+            attn_mask: q_len x q_len
+            As mentioned in the paper, the input must be standardized by_var based on the entire training set.
+        """
+        # Backbone
+        backbone = _TSTBackbone(c_in, seq_len=seq_len, max_seq_len=max_seq_len,
+                                n_layers=n_layers, d_model=d_model, n_heads=n_heads, d_k=d_k, d_v=d_v, d_ff=d_ff,
+                                attn_dropout=attn_dropout, dropout=dropout, act=act, key_padding_mask=key_padding_mask, padding_var=padding_var,
+                                attn_mask=attn_mask, res_attention=res_attention, pre_norm=pre_norm, store_attn=store_attn,
+                                pe=pe, learn_pe=learn_pe, verbose=verbose, **kwargs)
+
+        # Head
+        self.head_nf = d_model
+        self.c_out = c_out
+        self.seq_len = backbone.seq_len
+        if custom_head is not None:
+            if isinstance(custom_head, nn.Module): head = custom_head
+            else: head = custom_head(self.head_nf, c_out, seq_len)
+        else: head = self.create_head(self.head_nf, c_out, self.seq_len, act=act, flatten=flatten, concat_pool=concat_pool,
+                                           fc_dropout=fc_dropout, bn=bn, y_range=y_range)
+        super().__init__(OrderedDict([('backbone', backbone), ('head', head)]))
+
+
+    def create_head(self, nf, c_out, seq_len, flatten=True, concat_pool=False, act="gelu", fc_dropout=0., bn=False, y_range=None):
+        layers = [get_act_fn(act)]
+        if flatten:
+            nf *= seq_len
+            layers += [Flatten()]
+        else:
+            if concat_pool: nf *= 2
+            layers = [GACP1d(1) if concat_pool else GAP1d(1)]
+        layers += [LinBnDrop(nf, c_out, bn=bn, p=fc_dropout)]
+        if y_range: layers += [SigmoidRange(*y_range)]
+        return nn.Sequential(*layers)
+
+
+    def show_pe(self, cmap='viridis', figsize=None):
+        plt.figure(figsize=figsize)
+        plt.pcolormesh(self.backbone.W_pos.detach().cpu().T, cmap=cmap)
+        plt.title('Positional Encoding')
+        plt.colorbar()
+        plt.show()
+        plt.figure(figsize=figsize)
+        plt.title('Positional Encoding - value along time axis')
+        plt.plot(F.relu(self.backbone.W_pos.data).mean(1).cpu())
+        plt.plot(-F.relu(-self.backbone.W_pos.data).mean(1).cpu())
+        plt.show()
+
+
+
+============================================================
+
+================================================================================
+END OF LOG
+================================================================================

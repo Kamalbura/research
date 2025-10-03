@@ -1,0 +1,21 @@
+[Unit]
+Description=Hybrid MAVLink DDoS Detector (XGBoost + TST)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/ddos
+Environment="PYTHONPATH=/home/pi/ddos"
+EnvironmentFile=-/etc/ddos-detector.env
+ExecStart=/home/pi/ddos-venv/bin/python -u hybrid_detector.py
+Restart=on-failure
+RestartSec=5
+
+# Give scapy access to the interface while running as an unprivileged user.
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+[Unit]
+Description=Realtime MAVLink TST Detector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/ddos
+Environment="PYTHONPATH=/home/pi/ddos"
+EnvironmentFile=-/etc/ddos-detector.env
+ExecStart=/home/pi/ddos-venv/bin/python -u realtime_tst.py
+Restart=on-failure
+RestartSec=5
+
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+
+[Install]
+WantedBy=multi-user.target
