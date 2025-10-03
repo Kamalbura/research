@@ -247,7 +247,6 @@ class Blaster:
         while self._now() < tail_deadline:
             if not self._rx_once():
                 time.sleep(0)
-
         stop_event.set()
         rx_thread.join(timeout=0.2)
         # Bug #5 fix: Ensure cleanup happens even on exceptions
@@ -269,7 +268,6 @@ class Blaster:
                 self.rx.close()
             except Exception:
                 pass
-
     def _rx_loop(self, stop_event: threading.Event) -> None:
         while not stop_event.is_set():
             progressed = False
@@ -541,19 +539,9 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
         baseline = _read_proxy_counters()
 
         try:
-
             ctl_send({"cmd": "mark", "suite": suite})
-
         except Exception as exc:
-<<<<<<< HEAD
-            print(f"[ERROR] control mark failed for {suite}: {exc}", file=sys.stderr)
-            raise  # Bug #3 fix: Re-raise to prevent silent failures
-        rekey_ok = False
-=======
-
             print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
-
->>>>>>> b47cbb6ee2661cd71e14aa87e71326658c9da68b
         try:
             follower_ready = wait_active_suite(suite, timeout=5.0)
             if not follower_ready:
