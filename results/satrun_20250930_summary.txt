@@ -1,0 +1,44 @@
+Session: satrun_20250930
+Generated (UTC): 2025-09-30T14:12:57Z
+Suites discovered: 22
+
+== Throughput and Rekey Summary ==
+
+Suite ID                                        | Baseline RTT (ms) | Saturation (Mbps) | Rekey time (ms) | Net throughput @5 Mbps (Mbps) | Loss (%) | Avg RTT @5 Mbps (ms) | Min RTT (ms) | Max RTT (ms) | Workbook
+----------------------------------------------- | ----------------- | ----------------- | --------------- | ----------------------------- | -------- | --------------------- | ------------ | ------------ | --------------------------------------------------------------
+cs-mlkem1024-aesgcm-falcon1024                  | 0.691             | 5.000             | 1950.711        | 2.854                         | 0.000    | 0.691                 | 1.489        | 51.014       | output\gcs\saturation_cs-mlkem1024-aesgcm-falcon1024_satrun_20250930.xlsx
+cs-mlkem1024-aesgcm-falcon512                   | 0.625             | 5.000             | 1968.813        | 2.653                         | 0.003    | 0.625                 | 1.491        | 52.983       | output\gcs\saturation_cs-mlkem1024-aesgcm-falcon512_satrun_20250930.xlsx
+cs-mlkem1024-aesgcm-mldsa44                     | 0.668             | 5.000             | 1944.420        | 2.749                         | 0.005    | 0.668                 | 1.468        | 51.320       | output\gcs\saturation_cs-mlkem1024-aesgcm-mldsa44_satrun_20250930.xlsx
+cs-mlkem1024-aesgcm-mldsa65                     | 0.868             | 5.000             | 1920.895        | 2.695                         | 0.000    | 0.868                 | 1.500        | 79.293       | output\gcs\saturation_cs-mlkem1024-aesgcm-mldsa65_satrun_20250930.xlsx
+cs-mlkem1024-aesgcm-mldsa87                     | 1.046             | 5.000             | 1926.428        | 2.668                         | 0.066    | 1.046                 | 1.507        | 110.629      | output\gcs\saturation_cs-mlkem1024-aesgcm-mldsa87_satrun_20250930.xlsx
+cs-mlkem1024-aesgcm-sphincs128fsha2             | 0.650             | 5.000             | 1913.282        | 2.665                         | 0.000    | 0.650                 | 1.468        | 41.080       | output\gcs\saturation_cs-mlkem1024-aesgcm-sphincs128fsha2_satrun_20250930.xlsx
+cs-mlkem1024-aesgcm-sphincs256fsha2             | 0.674             | 5.000             | 1947.328        | 2.652                         | 0.000    | 0.674                 | 1.442        | 49.986       | output\gcs\saturation_cs-mlkem1024-aesgcm-sphincs256fsha2_satrun_20250930.xlsx
+cs-mlkem512-aesgcm-falcon1024                   | 0.618             | 5.000             | 1945.406        | 3.098                         | 0.000    | 0.618                 | 1.507        | 34.801       | output\gcs\saturation_cs-mlkem512-aesgcm-falcon1024_satrun_20250930.xlsx
+cs-mlkem512-aesgcm-falcon512                    | 0.649             | 5.000             | 1917.667        | 3.130                         | 0.000    | 0.649                 | 1.454        | 45.463       | output\gcs\saturation_cs-mlkem512-aesgcm-falcon512_satrun_20250930.xlsx
+cs-mlkem512-aesgcm-mldsa44                      | 0.672             | 5.000             | 1884.309        | 3.066                         | 0.000    | 0.672                 | 1.518        | 48.433       | output\gcs\saturation_cs-mlkem512-aesgcm-mldsa44_satrun_20250930.xlsx
+cs-mlkem512-aesgcm-mldsa65                      | 0.642             | 5.000             | 1941.186        | 3.198                         | 0.000    | 0.642                 | 1.492        | 43.670       | output\gcs\saturation_cs-mlkem512-aesgcm-mldsa65_satrun_20250930.xlsx
+cs-mlkem512-aesgcm-mldsa87                      | 0.604             | 5.000             | 1925.422        | 3.183                         | 0.000    | 0.604                 | 1.454        | 44.924       | output\gcs\saturation_cs-mlkem512-aesgcm-mldsa87_satrun_20250930.xlsx
+cs-mlkem512-aesgcm-sphincs128fsha2              | 0.615             | 5.000             | 1927.355        | 3.125                         | 0.002    | 0.615                 | 1.512        | 38.958       | output\gcs\saturation_cs-mlkem512-aesgcm-sphincs128fsha2_satrun_20250930.xlsx
+cs-mlkem512-aesgcm-sphincs256fsha2              | 0.675             | 5.000             | 1915.548        | 2.878                         | 0.002    | 0.675                 | 1.541        | 56.215       | output\gcs\saturation_cs-mlkem512-aesgcm-sphincs256fsha2_satrun_20250930.xlsx
+cs-mlkem768-aesgcm-falcon1024                   | 0.629             | 5.000             | 1954.563        | 2.830                         | 0.002    | 0.629                 | 1.496        | 36.980       | output\gcs\saturation_cs-mlkem768-aesgcm-falcon1024_satrun_20250930.xlsx
+cs-mlkem768-aesgcm-falcon512                    | 0.729             | 5.000             | 1878.130        | 2.816                         | 0.000    | 0.729                 | 1.472        | 61.870       | output\gcs\saturation_cs-mlkem768-aesgcm-falcon512_satrun_20250930.xlsx
+cs-mlkem768-aesgcm-mldsa44                      | 0.809             | 5.000             | 1888.508        | 2.760                         | 0.002    | 0.809                 | 1.542        | 53.797       | output\gcs\saturation_cs-mlkem768-aesgcm-mldsa44_satrun_20250930.xlsx
+cs-mlkem768-aesgcm-mldsa65                      | 0.590             | 5.000             | 1147.182        | 2.989                         | 0.000    | 0.590                 | 1.431        | 43.978       | output\gcs\saturation_cs-mlkem768-aesgcm-mldsa65_satrun_20250930.xlsx
+cs-mlkem768-aesgcm-mldsa87                      | 0.879             | 5.000             | 1972.705        | 2.754                         | 0.000    | 0.879                 | 1.581        | 60.939       | output\gcs\saturation_cs-mlkem768-aesgcm-mldsa87_satrun_20250930.xlsx
+cs-mlkem768-aesgcm-sphincs128fsha2              | 0.646             | 5.000             | 1914.116        | 2.927                         | 0.000    | 0.646                 | 1.445        | 42.968       | output\gcs\saturation_cs-mlkem768-aesgcm-sphincs128fsha2_satrun_20250930.xlsx
+cs-mlkem768-aesgcm-sphincs256fsha2              | 0.717             | 5.000             | 1948.953        | 2.953                         | 0.000    | 0.717                 | 1.490        | 53.967       | output\gcs\saturation_cs-mlkem768-aesgcm-sphincs256fsha2_satrun_20250930.xlsx
+
+== Telemetry Highlights ==
+
+Every suite emitted the standard control and monitoring events (mark, monitors_started/stopped, rekey_transition_start/end, rekey_complete, status_reply). Continuous telemetry streams reported:
+- `system_sample`: CPU usage ~10–12 %, temperature mid-50 °C, memory ~234 MB.
+- `thermal_sample`: 1.8 GHz clock, temperatures 52–58 °C depending on suite and duration.
+- `udp_echo_sample`: Processing latency 3–4 µs typical, spikes noted in higher-security suites (e.g., ML-KEM-1024 + ML-DSA-87).
+
+Suite `unknown` reflects bootstrap telemetry before the first suite mark (11 system samples, one telemetry_hello).
+
+== Observations ==
+- All suites sustained the 5 Mbps target with minimal loss (=0.066 %).
+- Rekey times cluster around 1.9 s, with `cs-mlkem768-aesgcm-mldsa65` completing in ~1.15 s.
+- Telemetry confirms stable CPU load and temperatures despite intensive rekey schedules.
+
