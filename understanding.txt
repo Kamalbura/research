@@ -1,0 +1,374 @@
+# PQC Drone-GCS Secure Proxy: Deep-Dive Onboarding Guide
+
+This document is written for a new developer who is comfortable with Python but new to applied cryptography. It explains every essential file in the repository, the purpose of each component, and how they interact during a live run. Read it sequentially before touching the code.
+
+---
+
+## 1. Mindset and Prerequisites
+1. **What you need to know already**
+   - Basic Python (functions, classes, modules, `argparse`, `subprocess`).
+   - Familiarity with sockets (TCP vs UDP) helps, but we explain the essentials.
+2. **What you will learn here**
+   - Why the project uses *post-quantum* (PQC) key exchanges and digital signatures.
+   - How the drone and GCS proxies perform a PQC handshake and then exchange encrypted UDP traffic.
+   - How rekeying, replay protection, and telemetry are implemented.
+   - How the automation scripts (`gcs_scheduler.py`, `drone_follower.py`) orchestrate experiments.
+3. **Reading order**
+   1. Section 2: Cryptography primer.
+   2. Section 3: System architecture and lifecycle.
+   3. Section 4: Core module deep dive (file-by-file, function-by-function).
+   4. Section 5: Automation scripts (scheduler and follower).
+   5. Section 6 onward: Testing, operations, and glossary.
+
+---
+
+## 2. Cryptography Primer (plain English)
+This project combines several cryptographic building blocks. Here is what each term means.
+
+| Concept | Definition | Where used |
+|---------|------------|-----------|
+| **Symmetric key** | Same key encrypts and decrypts data. | AES-256-GCM data-plane packets. |
+| **Asymmetric key** | Public/private key pair; public key shared, private key secret. | PQC signature (ML-DSA/Falcon/SPHINCS+) and KEM (ML-KEM). |
+| **KEM (Key Encapsulation Mechanism)** | Allows the client (drone) to derive a shared secret using the server’s public key. Works like a PQC version of Diffie-Hellman. | `core.handshake` uses ML-KEM to derive AES keys. |
+| **Digital signature** | Proves authenticity of a message using a private key; anyone with the public key can verify. | GCS signs the handshake transcript so the drone can detect impostors. |
+| **Post-quantum cryptography (PQC)** | Algorithms believed safe even if adversaries have quantum computers. NIST standardises these (ML-KEM, ML-DSA, etc.). | Entire handshake. |
+| **AES-256-GCM** | Symmetric cipher providing confidentiality and integrity (AEAD). Requires a unique IV per key/epoch. | UDP data-plane encryption. |
+| **AEAD (Authenticated Encryption with Associated Data)** | Combines encryption and MAC; header is authenticated but not encrypted. | `core/aead.py`. |
+| **HKDF (HMAC-based Key Derivation Function)** | Turns shared secrets into multiple keys. | Derives encrypt/decrypt keys after KEM exchange. |
+| **IV (Initialization Vector)** | Nonce required for AES-GCM. Must be unique per key. This project derives IV deterministically from epoch + packet counter. | `core/aead.Sender`. |
+| **Replay attack** | Re-sending old encrypted packets to confuse the receiver. | Prevented by sliding window in `core/aead.Receiver`. |
+| **PSK (Pre-Shared Key)** | 32-byte value preloaded on drone and GCS. Used to authenticate the drone during handshake (HMAC tag). |
+| **Suite** | Specific combination of KEM, AEAD, and signature algorithms. Represented as `cs-<kem>-aesgcm-<sig>`. |
+
+### PQC Handshake Summary (step-by-step)
+1. **Preparation**: GCS generates a signing key pair (once) and stores secret/public keys under `secrets/<suite>/`.
+2. **Connection**: Drone opens TCP connection to GCS handshake port.
+3. **Server Hello** (GCS → Drone):
+   - Contains suite IDs, random session ID, ML-KEM public key, random challenge.
+   - Signed with GCS private signature key so the drone verifies authenticity.
+4. **Client Response** (Drone → GCS):
+   - Drone verifies the signature using stored GCS public key.
+   - Encapsulates a shared secret using ML-KEM and the server’s public key.
+   - Adds an HMAC tag computed from the PSK, defending against rogue drones.
+5. **Key Derivation**: Both sides use HKDF on the shared secret, session ID, and suite names to derive two separate 32-byte AES keys (drone→GCS, GCS→drone).
+6. **Confirmation**: GCS verifies the HMAC. If success, both sides switch to UDP data-plane using AEAD.
+
+### AES-GCM Data-Plane
+- Each packet header stores: protocol version, KEM ID, signature ID, session ID, packet sequence number, epoch.
+- Sender builds IV = `epoch (1 byte) || seq (11 bytes)`; this IV never travels over the wire, saving 12 bytes per packet.
+- Receiver recomputes the IV, authenticates header and ciphertext, and enforces a replay window of 1024 packets by default.
+- Epoch increments during rekey; sequence resets to zero when epoch changes.
+
+### Rekey Protocol Overview
+- Managed via control packets tagged with packet type 0x02.
+- **Phase 1**: GCS sends `prepare_rekey` (with RID + target suite), drone acknowledges `prepare_ok` if safe.
+- **Phase 2**: GCS sends `commit_rekey`, both sides run handshake with new suite.
+- After handshake completes, they swap AES keys and update session IDs. If something fails, the drone follower rolls back to the previous suite (latest fix).
+
+---
+
+## 3. System Architecture and Lifecycle
+
+ASCII diagram summarising the main components:
+```
++-----------------------------+                   +------------------------------+
+|  Drone Side                 |                   |  GCS Side                     |
+|                             |                   |                              |
+|  [Drone App] <--UDP--> [core.async_proxy] <--TCP--> [core.async_proxy] <--UDP--> [GCS App]
+|                        ^   |  encrypt/decrypt        |   ^
+|                        |   |  status JSON            |   |
+|                control JSON (tools/auto/drone_follower.py) control JSON
++-----------------------------+                   +------------------------------+
+```
+Key stages during a full run:
+1. Start drone follower (Python script) → launches drone proxy, telemetry, echo server, and control server.
+2. Start GCS scheduler → timesync, launches GCS proxy, monitors handshake status.
+3. For each cryptographic suite:
+   - Scheduler instructs follower to rekey.
+   - Proxies perform handshake, derive new keys.
+   - Scheduler fires traffic (Blaster) and records counters.
+   - Scheduler writes summary CSV/Excel and telemetry snapshots.
+4. Scheduler sends `stop`, follower shuts down monitors, proxies exit.
+
+---
+
+## 4. Core Module Deep Dive (file-by-file)
+Every file in `core/` is covered below. Use the listed functions as an index for investigation.
+
+### 4.1 `core/config.py`
+Responsibilities:
+- Provide canonical runtime configuration.
+- Apply environment overrides safely.
+- Reject invalid values immediately. 
+
+Key symbols:
+- `CONFIG`: default config dictionary (ports, hosts, PSK placeholder, flags).
+- `_REQUIRED_KEYS`: ensures every key exists with correct type.
+- `_ENV_OVERRIDABLE`: list of keys that can be overridden via environment variables.
+- `validate_config(cfg)`: performs type checks, port range checks, host validation (loopback by default), DSCP range, and PSK length.
+- `_apply_env_overrides(cfg)`: reads overrides, converts to proper types (`int`, `str`, `bool`). Raises `NotImplementedError` on invalid override.
+- At import time: `CONFIG = _apply_env_overrides(CONFIG)` followed by `validate_config(CONFIG)` ensures downstream code never runs with bogus settings.
+
+Usage tips:
+- If adding a new configurable knob, add it to `CONFIG`, `_REQUIRED_KEYS` and optionally `_ENV_OVERRIDABLE`.
+- Always run tests after modifications; misconfiguration can break handshake and proxies.
+
+### 4.2 `core/suites.py`
+Responsibilities:
+- Registry of cryptographic suites and helper functions for aliases and IDs.
+
+Key data structures:
+- `_KEM_REGISTRY`, `_SIG_REGISTRY`, `_AEAD_REGISTRY`: dictionaries describing algorithms, tokens, display names, and on-wire IDs.
+- `_SUITE_ALIASES`: maps legacy or shorthand names to canonical ones.
+- `SUITES`: mapping from canonical suite IDs to read-only dicts.
+
+Important functions:
+- `_normalize_alias(value)`: strips punctuation/case for matching.
+- `build_suite_id(kem, aead, sig)`: normalises components, throws `NotImplementedError` if an alias is unknown.
+- `list_suites()`: returns copy for CLI display.
+- `get_suite(suite_id)`: resolves alias, ensures required fields present.
+- `enabled_kems()` / `enabled_sigs()`: ask oqs runtime for supported mechanisms.
+- `header_ids_for_suite(suite)`: returns `(kem_id, kem_param, sig_id, sig_param)` for embedding in AEAD headers.
+- `suite_bytes_for_hkdf(suite)`: obtains canonical ID bytes for HKDF info.
+
+### 4.3 `core/aead.py`
+Responsibilities:
+- Implement header layout, encryption, decryption, and replay safety for UDP packets.
+
+Key types:
+- `AeadIds`: dataclass forcing each ID into [0,255].
+- `Sender`:
+  - Validates configuration (version, IDs, session_id length, epoch range, key length).
+  - `pack_header(seq)`: builds binary header.
+  - `encrypt(plaintext)`: ensures sequence not overflowing, builds deterministic IV (epoch + seq), calls `AESGCM.encrypt`, increments sequence.
+  - `bump_epoch()`: increments epoch and resets sequence; forbids wrap from 255 to 0 without rekey.
+- `Receiver`:
+  - Validates header fields; optional `strict_mode` turns silent drops into exceptions.
+  - `_check_replay(seq)`: maintains sliding window bitmask.
+  - `decrypt(wire)`: authenticates header (ADI), reconstructs IV, attempts decrypt, records error cause (`_last_error`). Returns plaintext or `None` for soft failures.
+  - `reset_replay()` / `bump_epoch()` maintain state across rekeys.
+
+### 4.4 `core/handshake.py`
+Responsibilities:
+- Execute PQC handshake, authenticate GCS, and derive symmetric keys.
+
+Key elements:
+- `build_server_hello(suite_id, server_sig_obj)`: builds signed hello packet.
+- `parse_and_verify_server_hello(wire, expected_version, server_sig_pub)`: checks version, extracts fields, verifies signature.
+- `_drone_psk_bytes()`: returns PSK as bytes (enforces 32 bytes).
+- `client_encapsulate(server_hello)`: uses ML-KEM to encapsulate.
+- `server_decapsulate(ephemeral, kem_ct)`: decapsulates to shared secret.
+- `derive_transport_keys(role, session_id, kem_name, sig_name, shared_secret)`: returns a tuple `(send_key, recv_key)` depending on role.
+- `server_gcs_handshake(conn, suite, gcs_sig_secret)`: full server handshake, includes PSK HMAC check.
+- `client_drone_handshake(client_sock, suite, gcs_sig_public)`: full client handshake, enforces suite matching, sends PSK tag.
+
+### 4.5 `core/policy_engine.py`
+Responsibilities:
+- Manage in-band control state for rekey negotiation.
+
+Key structures:
+- `ControlState`: holds role, current suite, safe guard callable, locks, outbox queue, pending RID map, stats, and seen RIDs.
+- `ControlResult`: response package with `send` messages, `start_handshake` directive, and `notes`.
+
+Main functions:
+- `create_control_state(role, suite_id, safe_guard=None)`: instantiate control state.
+- `generate_rid()`: random 64-bit identifier.
+- `enqueue_json(state, payload)`: queue outbound JSON.
+- `request_prepare(state, suite_id)`: ensure state RUNNING, generate RID, mark NEGOTIATING, queue `prepare_rekey`.
+- `record_rekey_result(...)`: update stats, set current suite, mark RUNNING, queue status message.
+- `handle_control(msg, role, state)`: logic for both sides:
+  - GCS handles `prepare_ok`, `prepare_fail`, `status`.
+  - Drone handles `prepare_rekey`, `commit_rekey`, `status`, plus safe guard evaluation.
+
+### 4.6 `core/async_proxy.py`
+Responsibilities:
+- Represent the runtime proxy connecting plaintext UDP to encrypted UDP while handling handshakes, rekeys, telemetry, and replay enforcement.
+
+Key components:
+- `ProxyCounters`: metrics container. Fields updated atomically within run loop.
+- `_dscp_to_tos`, `_parse_header_fields`: helper functions for QoS and error classification.
+- `_TokenBucket`: simple per-IP rate limiter to protect handshake socket from floods.
+- `_validate_config(cfg)`: ensures essential config keys exist.
+- `_perform_handshake(...)`: orchestrates handshake for GCS (server) and drone (client). Steps include binding sockets, verifying IP allowlist, calling `core.handshake`, and returning derived keys plus peer address.
+- `_setup_sockets(role, cfg, encrypted_peer=None)`: binds encrypted UDP and plaintext loopback sockets, applies DSCP/TOS if configured, returns dict of sockets and peer addresses.
+- `_compute_aead_ids` / `_build_sender_receiver`: convert suite info into `AeadIds` and instantiate `Sender`/`Receiver` objects with correct replay window.
+- `_launch_manual_console(control_state, *, quiet)`: optional CLI (GCS side) for interactive rekey requests.
+- `run_proxy(...)`: orchestrates entire proxy lifecycle:
+  1. Validate config.
+  2. Initialise counters, logging, status writers.
+  3. Run `_perform_handshake` to obtain AES keys, session ID, peer address.
+  4. Build `Sender`/`Receiver` pair and create `ControlState` (policy engine).
+  5. Start background status writer thread (writes counters to status file every second).
+  6. Optionally launch manual console for operator.
+  7. Enter selectors loop:
+     - Handle plaintext_in events: optionally prefix type byte, encrypt, send to encrypted socket, update counters.
+     - Handle encrypted events: validate peer, decrypt; if payload type 0x02, treat as control JSON; else forward plaintext to local app.
+     - Process control_state queued messages (send control frames by encrypting JSON).
+     - Enforce replay, header, auth rules; increment drop counters with classification.
+  8. Manage rekey requests: when `ControlResult.start_handshake` is set, spawn worker thread to run `_perform_handshake` with new suite, update context (sender/receiver), rotate peer address, record counters, and notify control engine.
+  9. On shutdown (stop_after_seconds, manual stop, KeyboardInterrupt) ensure threads stopped, sockets closed, telemetry flushed, and final status written.
+
+### 4.7 `core/run_proxy.py`
+Responsibilities:
+- Provide CLI for generating identities and running proxies.
+
+Important functions:
+- `_require_signature_class()` / `_require_run_proxy()`: defensive imports.
+- `signal_handler`: prints message and exits gracefully on SIGINT/SIGTERM.
+- `create_secrets_dir()`: ensures `secrets/` folder exists.
+- `write_json_report(json_path, payload, quiet=False)`: serialises counters to JSON.
+- `_resolve_suite(args, role_label)`: ensures CLI arguments specify suite via either `--suite` or components.
+- `init_identity_command(args)`: builds or updates `secrets/<suite>/gcs_signing.{key,pub}` using oqs.
+- `gcs_command(args)`: loads secret key (file or ephemeral), configures logging, spawns `async_proxy.run_proxy`, prints counters, writes final JSON.
+- `drone_command(args)`: loads GCS pubkey (file/hex/default), runs proxy, prints counters, writes final JSON.
+- `main()`: registers subcommands, validates config, routes to respective handlers.
+
+### 4.8 `core/logging_utils.py`
+Responsibilities:
+- JSON logging infrastructure shared across proxies and tools.
+
+Key pieces:
+- `JsonFormatter`: ensures logs contain `ts` (UTC ISO8601), level, name, message, plus serialisable extras.
+- `get_logger(name="pqc")`: configures stdout JSON logging, no propagation.
+- `configure_file_logger(role, logger=None)`: attaches per-role JSON file handler under `logs/` while avoiding duplicate handlers.
+- `Metrics`, `Counter`, `Gauge`: simple counters for optional instrumentation.
+
+### 4.9 `core/project_config.py`
+- Re-exports `CONFIG` for older tooling referencing `project_config`.
+
+### 4.10 `core/temp-file.py`
+- Legacy copy of selector proxy kept for backward compatibility. Avoid editing unless required for older integrations.
+
+### 4.11 `core/__init__.py`
+- Package docstring only.
+
+---
+
+## 5. Automation Scripts Deep Dive
+### 5.1 `tools/auto/gcs_scheduler.py`
+Purpose: Drive GCS proxy, coordinate rekeys across suites, generate UDP traffic, collect telemetry, and summarise results.
+
+Key sections:
+1. **Config constants**: Ingest host/port info for handshake, encrypted/unencrypted UDP, telemetry, and output directories.
+2. **Suite utilities**: `resolve_suites`, `preferred_initial_suite` choose suite order per config.
+3. **Control helpers**:
+   - `wait_handshake`: polls `gcs_status.json` until handshake success, or times out.
+   - `wait_active_suite`: asks follower (control `status`) whether requested suite is active.
+   - `_read_proxy_counters` + `wait_proxy_rekey`: read status/summary JSON to confirm `rekeys_ok` increment and watch for `rekeys_fail`.
+4. **`Blaster`**: UDP data generator; logs send/recv events, calculates throughput, loss, RTT averages; supports sampled event logging via `sample_every`.
+5. **`activate_suite`**: handles first suite and subsequent rekeys. Sends `mark`, triggers rekey via stdin, waits for follower ack, and waits for proxy counters to signal success/failure; sends `rekey_complete` with accurate status string.
+6. **`run_suite`**: orchestrates suite execution, traffic generation, metrics capture, and printing of summary row.
+7. **`write_summary`**: writes `summary.csv` containing all metrics including `rtt_samples`.
+8. **`SaturationTester`**: Steps through `SATURATION_TEST_RATES` (Mbps) to detect when RTT spikes or throughput collapses; writes per-rate JSON Lines and optional Excel sheet.
+9. **`TelemetryCollector`**: Accepts TCP connections from follower telemetry publisher and stores JSON entries.
+10. **Excel exports**: `append_dict_sheet`, `append_csv_sheet`, `export_combined_excel` aggregate summary, saturation samples, telemetry, and drone CSVs.
+11. **`main()`**: CLI handling (traffic mode, durations, gaps, payload sizes, passes, suites, session ID), initial reachability checks (`ping`, `timesync`), suite loops, summary writing, combined Excel export, and final shutdown (control `stop`, kill proxy if needed).
+
+### 5.2 `tools/auto/drone_follower.py`
+Purpose: Operate on the drone side during automated runs—launch proxy, provide control API, run telemetry, local UDP echo, and resource monitors.
+
+Key subsystems:
+1. **TelemetryPublisher**: Non-blocking queue feeding GCS telemetry collector using newline-delimited JSON.
+2. **`start_drone_proxy`**: Validates `secrets/matrix/<suite>/gcs_signing.pub` exists, sets environment (`DRONE_HOST`, `GCS_HOST`, etc.), spawns `python -m core.run_proxy drone` with status JSON and log file.
+3. **`HighSpeedMonitor`**: 100 ms sampling of CPU usage, frequency, temperature (via `vcgencmd`), memory usage; logs to `system_monitoring_<session>.csv` and publishes telemetry events.
+4. **`UdpEcho`**: Plaintext UDP echo server. On each packet: records receive timestamp, reattaches to payload (last 8 bytes), forwards to send port, logs processing latency every 100th packet, publishes telemetry sample.
+5. **`Monitors`**: Launches `perf stat`, `pidstat`, psutil sampling, and `vcgencmd` thermal loop. Each writes CSV/TXT in suite-specific directory and publishes telemetry (perf/psutil/thermal). Provides `rotate` to restart per suite and `stop` to terminate processes.
+6. **`ControlServer`**: JSON-over-TCP interface for scheduler. Commands:
+   - `ping`: health check.
+   - `timesync`: returns `t1`, `t2`, `t3` timestamps for offset calculation.
+   - `status`: returns `suite`, `proxy_pid`, running flag, UDP ports, monitors state.
+   - `mark`: store `prev_suite`, `pending_suite`, rotate monitors, update suite, notify high-speed monitor.
+   - `schedule_mark`: same as `mark` but performs rotation at requested timestamp.
+   - `rekey_complete`: inspects status; if not `ok`, revert to `prev_suite`, rotate monitors back, update telemetry.
+   - `stop`: stops monitors, sets termination event, publishes telemetry.
+7. **`main()`**: CLI parsing (initial suite, disable monitors, session ID, skip CPU optimisation, telemetry host/port). Creates session directory, starts telemetry, optionally optimises CPU, launches high-speed monitor, starts proxy, starts monitors, spawns UDP echo, prepares shared state (including `prev_suite`, `pending_suite`), starts control server, and loops until proxy exit or `KeyboardInterrupt`. Ensures clean shutdown (stop monitors, stop high-speed monitor, terminate proxy process tree, stop telemetry).
+
+---
+
+## 6. Testing and Validation
+- Run `pytest` at repository root. Important suites:
+  - `tests/test_handshake.py`: Validates full handshake success and PSK enforcement.
+  - `tests/test_handshake_downgrade.py`: Ensures suite mismatch triggers downgrade protection.
+  - `tests/test_aead_framing.py`: Covers header packing, deterministic IV, encrypt/decrypt symmetry, and replay errors.
+  - `tests/test_replay_window.py`, `tests/test_rekey_epoch.py`: Focus on replay defence and epoch transitions.
+  - `tests/test_control_sm.py`: Validates policy engine transitions and message handling.
+  - `tests/test_end_to_end_proxy.py`: Spins up both proxies on localhost, sends packets both directions, asserts counters.
+- Continuous integration or manual runs should include both unit tests and mixed suite automation to detect regressions.
+
+---
+
+## 7. Operational Workflow (Step-by-Step)
+1. **Generate keys (one-time per suite)**
+   ```bash
+   python -m core.run_proxy init-identity --suite cs-mlkem768-aesgcm-mldsa65
+   ```
+2. **Prepare environment**
+   - Ensure both machines share `secrets/matrix/<suite>/gcs_signing.*` (secret stays on GCS, public on drone).
+   - Confirm firewall allows TCP handshake port and UDP ports.
+3. **Drone side**
+   ```bash
+   python tools/auto/drone_follower.py --initial-suite cs-mlkem768-aesgcm-mldsa65
+   ```
+   Observe console for monitor startup and control listening port.
+4. **GCS side**
+   ```bash
+   python tools/auto/gcs_scheduler.py --traffic blast --duration 45 --passes 1 --suites cs-mlkem768-aesgcm-mldsa65
+   ```
+   - Scheduler will `ping`, `timesync`, start proxy, wait for handshake.
+   - Traffic results appear on console and in `logs/auto/gcs/`.
+5. **Review output**
+   - `logs/auto/gcs/summary.csv`, `gcs_status.json`, `gcs_summary.json`.
+   - Combined workbook under `output/gcs/<session>_combined.xlsx` (if openpyxl installed).
+   - Drone telemetry in `logs/auto/drone/` and session-specific CSVs.
+6. **Shutdown**
+   - Scheduler sends `stop`, follower terminates monitors and proxy.
+   - Inspect logs for warnings (rekey failures, handshake rate-limit drops, replay errors).
+
+---
+
+## 8. Extending and Debugging Tips
+- **Adding a new suite**: Update `core/suites` registries and ensure oqs runtime supports the KEM/signature.
+- **Changing ports or hosts**: Edit `core/config.CONFIG` and re-run tests. Ensure firewall rules match.
+- **Troubleshooting handshake failures**:
+  - Check `logs/auto/gcs/gcs_status.json` for `drops`, `rekeys_fail`, `last_rekey_suite`.
+  - Ensure drone follower logs show GCS public key and no PSK/HMAC warnings.
+- **Replay/auth drops**: Inspect proxy logs for `Dropped encrypted packet` messages; they include reason classification (`auth`, `header`, `replay`, `session`).
+- **Performance tuning**: Review `perf_samples_<suite>.csv`, `psutil_proc_<suite>.csv`, and `system_monitoring_<session>.csv` for CPU load, cache misses, temperature warnings.
+- **Telemetry pipeline**: If `TelemetryCollector` shows connection errors, confirm drone follower telemetry host/port matches scheduler configuration.
+
+---
+
+## 9. Glossary (Extended)
+- **AES-256-GCM**: Symmetric cipher with 256-bit key. Provides both confidentiality and integrity.
+- **AEAD**: Authenticated Encryption with Associated Data; ensures header authenticity while allowing it to remain in plaintext.
+- **Blaster**: An internal tool that floods UDP traffic to measure throughput under encryption.
+- **Control plane**: TCP connection carrying handshake data and rekey commands.
+- **Data plane**: UDP channels carrying encrypted telemetry/commands.
+- **DSCP**: Differentiated Services Code Point. Marks packets for QoS; converted to IPv4 TOS byte.
+- **Epoch**: Single-byte counter representing key generation phase. Incremented on rekey.
+- **HKDF**: Standard key derivation function using HMAC-SHA256.
+- **IV**: Initialization Vector (nonce). Must be unique per key and sequence. Derived deterministically here to avoid transmitting extra bytes.
+- **KEM**: Key Encapsulation Mechanism, PQC equivalent of Diffie-Hellman.
+- **ML-KEM**: NIST-standard PQC KEM (formerly Kyber). Offers different security levels (ML-KEM-512/768/1024).
+- **ML-DSA**: NIST-standard PQC signature scheme (formerly Dilithium). Provides post-quantum authentication.
+- **Policy engine**: Logic (`core/policy_engine`) that manages rekey negotiation via in-band JSON messages.
+- **PSK**: Pre-shared key; used here for drone authenticity check (HMAC of server hello).
+- **Replay window**: Sliding window of recent sequence numbers to reject duplicates or delayed packets outside tolerance.
+- **RID**: Request ID in rekey protocol, preventing replayed control messages.
+- **Suite**: A specific combination of KEM, AEAD, and signature used simultaneously.
+- **Telemetry**: Real-time operational metrics (CPU load, temperatures, packet processing times) streamed from follower to scheduler.
+
+---
+
+## 10. Final Checklist for New Contributors
+- [ ] Read this guide fully and keep it open for reference.
+- [ ] Clone repo, set up Python environment (match versions from `pyproject.toml`).
+- [ ] Run `pytest` to confirm environment compatibility.
+- [ ] Walk through `core/config`, `core/suites`, `core/handshake`, `core/aead` in an IDE to internalise flow.
+- [ ] Run a local end-to-end test using `tests/test_end_to_end_proxy.py` to see proxies exchange traffic on localhost.
+- [ ] Execute automation scripts in a lab network to observe actual telemetry and rekeys.
+- [ ] Review logs (JSON) and CSV outputs to understand how counters and telemetry look in practice.
+- [ ] Before changing cryptographic code, ensure you understand the replay window, deterministic IV, and handshake authentication steps.
+- [ ] Coordinate with the team before adding new suites or altering control-plane messages; update unit tests accordingly.
+
+Welcome aboard, and refer back to the modules and functions listed here whenever you dive into implementation. This repository is intentionally strict about validation and logging to minimise surprises during field deployment—take advantage of that rigor when you extend the system.

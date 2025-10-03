@@ -927,6 +927,7 @@ class ControlServer(threading.Thread):
                 if not suite:
                     self._send(conn, {"ok": False, "error": "missing suite"})
                     return
+<<<<<<< HEAD
                 with self.state.get("lock", threading.Lock()):
                     proxy = self.state["proxy"]
                     if not proxy or proxy.poll() is not None:
@@ -939,6 +940,21 @@ class ControlServer(threading.Thread):
                     monitor = self.state.get("high_speed_monitor")
                     if monitor and old_suite != suite:
                         monitor.start_rekey(old_suite, suite)
+=======
+                proxy = self.state["proxy"]
+                if not proxy or proxy.poll() is not None:
+                    self._send(conn, {"ok": False, "error": "proxy not running"})
+                    return
+                old_suite = self.state.get("suite")
+                self.state["prev_suite"] = old_suite
+                self.state["pending_suite"] = suite
+                self.state["suite"] = suite
+                outdir = self.state["suite_outdir"](suite)
+                self.state["monitors"].rotate(proxy.pid, outdir, suite)
+                monitor = self.state.get("high_speed_monitor")
+                if monitor and old_suite != suite:
+                    monitor.start_rekey(old_suite or "unknown", suite)
+>>>>>>> b47cbb6ee2661cd71e14aa87e71326658c9da68b
                 self._send(conn, {"ok": True, "marked": suite})
                 telemetry = self.state.get("telemetry")
                 if telemetry:
@@ -952,9 +968,29 @@ class ControlServer(threading.Thread):
                     )
                 return
             if cmd == "rekey_complete":
+                status_value = str(request.get("status", "ok"))
                 monitor = self.state.get("high_speed_monitor")
+                proxy = self.state.get("proxy")
+                if status_value.lower() != "ok":
+                    previous = self.state.get("prev_suite")
+                    pending = self.state.get("pending_suite")
+                    if previous is not None and pending and previous != pending:
+                        print(f"[follower] rekey to {pending} reported {status_value}; reverting to {previous}", flush=True)
+                    if previous is not None and previous != self.state.get("suite"):
+                        self.state["suite"] = previous
+                        if proxy and proxy.poll() is None:
+                            outdir = self.state["suite_outdir"](previous)
+                            self.state["monitors"].rotate(proxy.pid, outdir, previous)
+                    if monitor and previous:
+                        monitor.current_suite = previous
+                else:
+                    pending_suite = self.state.get("pending_suite")
+                    if pending_suite:
+                        self.state["suite"] = pending_suite
                 if monitor:
                     monitor.end_rekey()
+                self.state.pop("pending_suite", None)
+                self.state.pop("prev_suite", None)
                 self._send(conn, {"ok": True})
                 telemetry = self.state.get("telemetry")
                 if telemetry:
@@ -962,8 +998,8 @@ class ControlServer(threading.Thread):
                         "rekey_complete",
                         {
                             "timestamp_ns": time.time_ns(),
-                            "suite": self.state["suite"],
-                            "status": request.get("status", "ok"),
+                            "suite": self.state.get("suite"),
+                            "status": status_value,
                         },
                     )
                 return
@@ -978,6 +1014,7 @@ class ControlServer(threading.Thread):
                     delay = max(0.0, (t0_ns - time.time_ns()) / 1e9)
                     if delay:
                         time.sleep(delay)
+<<<<<<< HEAD
                     with self.state.get("lock", threading.Lock()):
                         old = self.state.get("suite", "unknown")
                         proxy = self.state["proxy"]
@@ -990,6 +1027,21 @@ class ControlServer(threading.Thread):
                         monitor = self.state.get("high_speed_monitor")
                         if monitor and old != suite:
                             monitor.start_rekey(old, suite)
+=======
+                    current_suite = self.state.get("suite")
+                    proxy = self.state["proxy"]
+                    self.state["prev_suite"] = current_suite
+                    self.state["pending_suite"] = suite
+                    if proxy and proxy.poll() is None:
+                        outdir = self.state["suite_outdir"](suite)
+                        self.state["monitors"].rotate(proxy.pid, outdir, suite)
+                    else:
+                        write_marker(suite)
+                    self.state["suite"] = suite
+                    monitor = self.state.get("high_speed_monitor")
+                    if monitor and current_suite != suite:
+                        monitor.start_rekey(current_suite or "unknown", suite)
+>>>>>>> b47cbb6ee2661cd71e14aa87e71326658c9da68b
 
                 threading.Thread(target=_do_mark, daemon=True).start()
                 self._send(conn, {"ok": True, "scheduled": suite, "t0_ns": t0_ns})
@@ -1112,6 +1164,8 @@ def main() -> None:
         "stop_event": stop_event,
         "high_speed_monitor": high_speed_monitor,
         "telemetry": telemetry,
+        "prev_suite": None,
+        "pending_suite": None,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()

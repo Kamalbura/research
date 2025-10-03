@@ -185,6 +185,7 @@ class Blaster:
         self.sent_bytes = 0
         self.rcvd_bytes = 0
         self.rtt_sum_ns = 0
+        self.rtt_samples = 0
         self.rtt_max_ns = 0
         self.rtt_min_ns: Optional[int] = None
         self.pending: Dict[int, int] = {}
@@ -299,6 +300,7 @@ class Blaster:
             if t_send is not None:
                 rtt = t_recv - t_send
                 self.rtt_sum_ns += rtt
+                self.rtt_samples += 1
                 if rtt > self.rtt_max_ns:
                     self.rtt_max_ns = rtt
                 if self.rtt_min_ns is None or rtt < self.rtt_min_ns:
@@ -419,45 +421,187 @@ def read_proxy_summary() -> dict:
         return {}
 
 
+
+def _read_proxy_counters() -> dict:
+
+    counters = read_proxy_stats_live()
+
+    if isinstance(counters, dict) and counters:
+
+        return counters
+
+    summary = read_proxy_summary()
+
+    if isinstance(summary, dict):
+
+        summary_counters = summary.get("counters")
+
+        if isinstance(summary_counters, dict):
+
+            return summary_counters
+
+        if any(key in summary for key in ("enc_out", "enc_in", "rekeys_ok", "rekeys_fail", "last_rekey_suite")):
+
+            return summary
+
+    return {}
+
+
+
+
+
+def wait_proxy_rekey(
+
+    target_suite: str,
+
+    baseline: Dict[str, object],
+
+    *,
+
+    timeout: float = 20.0,
+
+    poll_interval: float = 0.4,
+
+    proc: subprocess.Popen,
+
+) -> str:
+
+    start = time.time()
+
+    baseline_ok = int(baseline.get("rekeys_ok", 0) or 0)
+
+    baseline_fail = int(baseline.get("rekeys_fail", 0) or 0)
+
+    while time.time() - start < timeout:
+
+        if proc.poll() is not None:
+
+            raise RuntimeError("GCS proxy exited during rekey")
+
+        counters = _read_proxy_counters()
+
+        if counters:
+
+            rekeys_ok = int(counters.get("rekeys_ok", 0) or 0)
+
+            rekeys_fail = int(counters.get("rekeys_fail", 0) or 0)
+
+            last_suite = counters.get("last_rekey_suite") or counters.get("suite") or ""
+
+            if rekeys_fail > baseline_fail:
+
+                return "fail"
+
+            if rekeys_ok > baseline_ok and (not last_suite or last_suite == target_suite):
+
+                return "ok"
+
+        time.sleep(poll_interval)
+
+    return "timeout"
+
+
 def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
+
     if gcs.poll() is not None:
+
         raise RuntimeError("GCS proxy is not running; cannot continue")
+
     start_ns = time.time_ns()
+
     if is_first:
+
         try:
+
             ctl_send({"cmd": "mark", "suite": suite})
+
         except Exception as exc:
+
             print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
+
         finally:
+
             try:
-                ctl_send({"cmd": "rekey_complete", "suite": suite})
+
+                ctl_send({"cmd": "rekey_complete", "suite": suite, "status": "ok"})
+
             except Exception:
+
                 pass
+
     else:
+
         assert gcs.stdin is not None
+
         print(f"[{ts()}] rekey -> {suite}")
+
         gcs.stdin.write(suite + "\n")
         gcs.stdin.flush()
+
+        baseline = _read_proxy_counters()
+
         try:
+
             ctl_send({"cmd": "mark", "suite": suite})
+
         except Exception as exc:
+<<<<<<< HEAD
             print(f"[ERROR] control mark failed for {suite}: {exc}", file=sys.stderr)
             raise  # Bug #3 fix: Re-raise to prevent silent failures
         rekey_ok = False
+=======
+
+            print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
+
+>>>>>>> b47cbb6ee2661cd71e14aa87e71326658c9da68b
         try:
-            ok = wait_active_suite(suite, timeout=15.0)
-            if ok:
-                rekey_ok = True
-            else:
-                print(f"[WARN] timed out waiting for proxy to activate suite {suite}", file=sys.stderr)
+            follower_ready = wait_active_suite(suite, timeout=5.0)
+            if not follower_ready:
+                print(f"[WARN] follower did not report suite {suite} active before timeout", file=sys.stderr)
         except Exception:
-            print(f"[WARN] error while waiting for active suite {suite}", file=sys.stderr)
+            print(f"[WARN] follower status check failed for suite {suite}", file=sys.stderr)
+
+        rekey_status = "timeout"
+
+        try:
+
+            result = wait_proxy_rekey(suite, baseline, timeout=15.0, proc=gcs)
+
+            rekey_status = result
+
+            if result == "timeout":
+
+                print(f"[WARN] timed out waiting for proxy to activate suite {suite}", file=sys.stderr)
+
+            elif result == "fail":
+
+                print(f"[WARN] proxy reported failed rekey for suite {suite}", file=sys.stderr)
+
+        except RuntimeError as exc:
+
+            rekey_status = "error"
+
+            raise
+
+        except Exception as exc:
+
+            rekey_status = "error"
+
+            print(f"[WARN] error while waiting for proxy rekey {suite}: {exc}", file=sys.stderr)
+
         finally:
+
             try:
-                ctl_send({"cmd": "rekey_complete", "suite": suite, "status": "ok" if rekey_ok else "timeout"})
+
+                ctl_send({"cmd": "rekey_complete", "suite": suite, "status": rekey_status})
+
             except Exception as exc:
+
                 print(f"[WARN] rekey_complete failed for {suite}: {exc}", file=sys.stderr)
+
     return (time.time_ns() - start_ns) / 1_000_000
+
+
 
 
 def run_suite(
@@ -495,6 +639,8 @@ def run_suite(
     rcvd_bytes = 0
     avg_rtt_ns = 0
     max_rtt_ns = 0
+    rtt_samples = 0
+    blaster_sent_bytes = 0
 
     if traffic_mode == "blast":
         blaster = Blaster(
@@ -511,8 +657,11 @@ def run_suite(
         sent_packets = blaster.sent
         rcvd_packets = blaster.rcvd
         rcvd_bytes = blaster.rcvd_bytes
-        avg_rtt_ns = blaster.rtt_sum_ns // max(1, blaster.rcvd)
+        blaster_sent_bytes = blaster.sent_bytes
+        sample_count = max(1, blaster.rtt_samples)
+        avg_rtt_ns = blaster.rtt_sum_ns // sample_count
         max_rtt_ns = blaster.rtt_max_ns
+        rtt_samples = blaster.rtt_samples
     else:
         time.sleep(duration_s)
 
@@ -526,6 +675,8 @@ def run_suite(
     elapsed_s = max(1e-9, (end_perf_ns - start_perf_ns) / 1e9)
     pps = sent_packets / elapsed_s
     throughput_mbps = (rcvd_bytes * 8) / (elapsed_s * 1_000_000)
+    sent_mbps = (blaster_sent_bytes * 8) / (elapsed_s * 1_000_000) if blaster_sent_bytes else 0.0
+    delivered_ratio = throughput_mbps / sent_mbps if sent_mbps > 0 else 0.0
     avg_rtt_ms = avg_rtt_ns / 1_000_000
     max_rtt_ms = max_rtt_ns / 1_000_000
 
@@ -541,8 +692,11 @@ def run_suite(
         "rcvd": rcvd_packets,
         "pps": round(pps, 1),
         "throughput_mbps": round(throughput_mbps, 3),
+        "sent_mbps": round(sent_mbps, 3),
+        "delivered_ratio": round(delivered_ratio, 3) if sent_mbps > 0 else 0.0,
         "rtt_avg_ms": round(avg_rtt_ms, 3),
         "rtt_max_ms": round(max_rtt_ms, 3),
+        "rtt_samples": rtt_samples,
         "loss_pct": round(loss_pct, 3),
         "enc_out": proxy_stats.get("enc_out", 0),
         "enc_in": proxy_stats.get("enc_in", 0),
@@ -556,7 +710,7 @@ def run_suite(
 
     print(
         f"[{ts()}] <<< FINISH suite={suite} mode={traffic_mode} sent={sent_packets} rcvd={rcvd_packets} "
-        f"pps~{pps:.0f} thr~{throughput_mbps:.2f} Mb/s loss={loss_pct:.2f}% "
+        f"pps~{pps:.0f} thr~{throughput_mbps:.2f} Mb/s sent~{sent_mbps:.2f} Mb/s loss={loss_pct:.2f}% "
         f"rtt_avg={avg_rtt_ms:.3f}ms rtt_max={max_rtt_ms:.3f}ms rekey={rekey_duration_ms:.2f}ms "
         f"enc_out={row['enc_out']} enc_in={row['enc_in']} >>>"
     )
@@ -606,10 +760,14 @@ class SaturationTester:
             self.records.append(metrics)
             avg_rtt = metrics["avg_rtt_ms"]
             achieved = metrics["throughput_mbps"]
-            if baseline_rtt is None and avg_rtt > 0:
+            sent_mbps = metrics.get("sent_mbps", 0.0)
+            ratio = metrics.get("delivered_ratio", 1.0) if sent_mbps > 0 else 1.0
+            samples = metrics.get("rtt_samples", 0)
+            if baseline_rtt is None and samples and avg_rtt > 0:
                 baseline_rtt = avg_rtt
-            if baseline_rtt:
-                if avg_rtt > baseline_rtt * SATURATION_RTT_SPIKE or achieved < rate * 0.8:
+            if baseline_rtt is not None and samples:
+                delivery_degraded = sent_mbps > 0 and ratio < 0.8
+                if avg_rtt > baseline_rtt * SATURATION_RTT_SPIKE or delivery_degraded:
                     saturation_point = rate
                     break
         return {
@@ -636,22 +794,28 @@ class SaturationTester:
         blaster.run(duration_s=self.duration_s, rate_pps=rate_pps)
         duration = max(self.duration_s, 1e-3)
         throughput_mbps = (blaster.rcvd_bytes * 8) / (duration * 1_000_000)
+        sent_mbps = (blaster.sent_bytes * 8) / (duration * 1_000_000)
+        delivered_ratio = throughput_mbps / sent_mbps if sent_mbps > 0 else 0.0
         loss_pct = 0.0
         if blaster.sent:
             loss_pct = max(0.0, (blaster.sent - blaster.rcvd) * 100.0 / blaster.sent)
-        avg_rtt_ms = 0.0
-        if blaster.rcvd:
-            avg_rtt_ms = (blaster.rtt_sum_ns / blaster.rcvd) / 1_000_000
+        if blaster.rtt_samples:
+            avg_rtt_ms = (blaster.rtt_sum_ns / blaster.rtt_samples) / 1_000_000
+        else:
+            avg_rtt_ms = 0.0
         min_rtt_ms = (blaster.rtt_min_ns or 0) / 1_000_000
         max_rtt_ms = blaster.rtt_max_ns / 1_000_000
         return {
             "rate_mbps": float(rate_mbps),
             "pps": float(rate_pps),
             "throughput_mbps": round(throughput_mbps, 3),
+            "sent_mbps": round(sent_mbps, 3),
             "loss_pct": round(loss_pct, 3),
+            "delivered_ratio": round(delivered_ratio, 3) if sent_mbps > 0 else 0.0,
             "avg_rtt_ms": round(avg_rtt_ms, 3),
             "min_rtt_ms": round(min_rtt_ms, 3),
             "max_rtt_ms": round(max_rtt_ms, 3),
+            "rtt_samples": blaster.rtt_samples,
         }
 
     def export_excel(self, session_id: str) -> Optional[Path]:
@@ -666,21 +830,27 @@ class SaturationTester:
         ws.append([
             "rate_mbps",
             "pps",
+            "sent_mbps",
             "throughput_mbps",
             "loss_pct",
+            "delivered_ratio",
             "avg_rtt_ms",
             "min_rtt_ms",
             "max_rtt_ms",
+            "rtt_samples",
         ])
         for record in self.records:
             ws.append([
                 record["rate_mbps"],
                 record["pps"],
+                record.get("sent_mbps", 0),
                 record["throughput_mbps"],
                 record["loss_pct"],
+                record.get("delivered_ratio", 0),
                 record["avg_rtt_ms"],
                 record["min_rtt_ms"],
                 record["max_rtt_ms"],
+                record.get("rtt_samples", 0),
             ])
         wb.save(path)
         return path
