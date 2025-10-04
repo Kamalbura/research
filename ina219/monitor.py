@@ -143,18 +143,18 @@ def main():
         w = csv.writer(f)
         w.writerow(["ts", "phase", "amps_A", "vbus_V", "vshunt_V", "amps_raw_A", "sign_factor"])
 
-    print(f"Phase A: idle ({PHASE_SEC:.1f}s)...")
+        print(f"Phase A: idle ({PHASE_SEC:.1f}s)...")
         negA, countA, elapsedA = sample_phase("idle1", PHASE_SEC, w, sign_factor)
         print(f"  Captured {countA} samples in {elapsedA:.2f} s")
 
-    print(f"Phase B: CPU load ({PHASE_SEC:.1f}s)...")
+        print(f"Phase B: CPU load ({PHASE_SEC:.1f}s)...")
         p = mp.Process(target=cpu_stress, args=(PHASE_SEC,))
         p.start()
         negB, countB, elapsedB = sample_phase("load", PHASE_SEC, w, sign_factor)
         p.join()
         print(f"  Captured {countB} samples in {elapsedB:.2f} s")
 
-    print(f"Phase C: idle ({PHASE_SEC:.1f}s)...")
+        print(f"Phase C: idle ({PHASE_SEC:.1f}s)...")
         negC, countC, elapsedC = sample_phase("idle2", PHASE_SEC, w, sign_factor)
         print(f"  Captured {countC} samples in {elapsedC:.2f} s")
 
