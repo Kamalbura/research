@@ -8,7 +8,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Iterator, Optional
 
 try:  # Best-effort hardware import; unavailable on dev hosts.
     import smbus  # type: ignore
@@ -50,6 +50,16 @@ class PowerSummary:
     csv_path: str
     start_ns: int
     end_ns: int
+
+
+@dataclass
+class PowerSample:
+    """Single instantaneous sample from the INA219."""
+
+    timestamp_ns: int
+    current_a: float
+    voltage_v: float
+    power_w: float
 
 
 class PowerMonitorUnavailable(RuntimeError):
@@ -110,6 +120,10 @@ class Ina219PowerMonitor:
             self._sign_factor = self._resolve_sign()
         except Exception as exc:  # pragma: no cover - requires hardware
             raise PowerMonitorUnavailable(f"INA219 init failed: {exc}") from exc
+
+    @property
+    def sign_factor(self) -> int:
+        return self._sign_factor
 
     def capture(
         self,
@@ -193,6 +207,30 @@ class Ina219PowerMonitor:
             end_ns=end_wall_ns,
         )
 
+    def iter_samples(self, duration_s: Optional[float] = None) -> Iterator[PowerSample]:
+        if self._bus is None:
+            raise PowerMonitorUnavailable("power monitor not initialised")
+        limit = None if duration_s is None or duration_s <= 0 else duration_s
+        dt = 1.0 / float(self.sample_hz)
+        next_tick = time.perf_counter()
+        start_perf = time.perf_counter()
+        while True:
+            if limit is not None and (time.perf_counter() - start_perf) >= limit:
+                break
+            timestamp_ns = time.time_ns()
+            current_a, voltage_v = self._read_current_voltage()
+            power_w = current_a * voltage_v
+            yield PowerSample(
+                timestamp_ns=timestamp_ns,
+                current_a=current_a,
+                voltage_v=voltage_v,
+                power_w=power_w,
+            )
+            next_tick += dt
+            sleep_for = next_tick - time.perf_counter()
+            if sleep_for > 0:
+                time.sleep(sleep_for)
+
     def _configure(self, sample_hz: float) -> None:
         profile_key, profile = _pick_profile(sample_hz)
         cfg = (
@@ -254,5 +292,6 @@ class Ina219PowerMonitor:
 __all__ = [
     "Ina219PowerMonitor",
     "PowerSummary",
+    "PowerSample",
     "PowerMonitorUnavailable",
 ]
