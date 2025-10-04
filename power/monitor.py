@@ -20,6 +20,17 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Iterable, Optional
 
+
+def _ensure_core_on_path() -> None:
+    """Ensure the project root is importable when run as a script."""
+    repo_root = Path(__file__).resolve().parent.parent
+    repo_str = str(repo_root)
+    if repo_str not in sys.path:
+        sys.path.insert(0, repo_str)
+
+
+_ensure_core_on_path()
+
 from core.power_monitor import (
     Ina219PowerMonitor,
     PowerMonitorUnavailable,
