@@ -377,9 +377,9 @@ class Rpi5PowerMonitor:
             current_file,
             power_file,
         )
-    self._voltage_scale = self._resolve_scale(voltage_scale, _RPI5_VOLTAGE_SCALE_ENV, 1e-6)
-    self._current_scale = self._resolve_scale(current_scale, _RPI5_CURRENT_SCALE_ENV, 1e-6)
-    self._power_scale = self._resolve_scale(power_scale, _RPI5_POWER_SCALE_ENV, 1e-6)
+        self._voltage_scale = self._resolve_scale(voltage_scale, _RPI5_VOLTAGE_SCALE_ENV, 1e-6)
+        self._current_scale = self._resolve_scale(current_scale, _RPI5_CURRENT_SCALE_ENV, 1e-6)
+        self._power_scale = self._resolve_scale(power_scale, _RPI5_POWER_SCALE_ENV, 1e-6)
 
     @property
     def sign_factor(self) -> int:
