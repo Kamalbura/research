@@ -1,0 +1,7 @@
+# Optional ML/DDoS stack (install in separate env)
+joblib>=1.3
+numpy>=1.26
+pandas>=2.1
+scapy>=2.5
+torch>=2.2
+xgboost>=2.0

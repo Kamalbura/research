@@ -11,8 +11,8 @@ import multiprocessing as mp
 I2C_BUS = 1
 INA_ADDR = int(os.getenv("INA_ADDR", "0x40"), 16)
 SHUNT_OHM = float(os.getenv("SHUNT_OHMS", "0.1"))  # R100=0.10 ohm, R050=0.05 ohm
-SAMPLE_HZ = int(os.getenv("SAMPLE_HZ", "10"))
-PHASE_SEC = float(os.getenv("PHASE_SEC", "30"))
+SAMPLE_HZ = int(os.getenv("SAMPLE_HZ", "1000"))
+PHASE_SEC = float(os.getenv("PHASE_SEC", "10"))
 SIGN_MODE = os.getenv("FORCE_SIGN", "auto").lower()  # 'auto' | 'positive' | 'negative'
 SIGN_PROBE_SEC = float(os.getenv("SIGN_PROBE_SEC", "3"))  # how long to sniff orientation at start (auto mode)
 
@@ -93,6 +93,7 @@ def sample_phase(label, seconds, writer, sign_factor):
     dt = 1.0 / SAMPLE_HZ
     t0 = time.time()
     neg_seen = False
+    sample_count = 0
     while True:
         now = time.time()
         if now - t0 >= seconds:
@@ -110,8 +111,10 @@ def sample_phase(label, seconds, writer, sign_factor):
             f"{amps_raw:.6f}",
             f"{sign_factor:+d}",
         ])
+        sample_count += 1
         time.sleep(max(0, dt - (time.time() - now)))
-    return neg_seen
+    elapsed = time.time() - t0
+    return neg_seen, sample_count, elapsed
 
 def summarize(csv_path):
     phases = {"idle1": [], "load": [], "idle2": []}
@@ -140,23 +143,32 @@ def main():
         w = csv.writer(f)
         w.writerow(["ts", "phase", "amps_A", "vbus_V", "vshunt_V", "amps_raw_A", "sign_factor"])
 
-        print("Phase A: idle (30s)...")
-        negA = sample_phase("idle1", PHASE_SEC, w, sign_factor)
+    print(f"Phase A: idle ({PHASE_SEC:.1f}s)...")
+        negA, countA, elapsedA = sample_phase("idle1", PHASE_SEC, w, sign_factor)
+        print(f"  Captured {countA} samples in {elapsedA:.2f} s")
 
-        print("Phase B: CPU load (30s)...")
+    print(f"Phase B: CPU load ({PHASE_SEC:.1f}s)...")
         p = mp.Process(target=cpu_stress, args=(PHASE_SEC,))
         p.start()
-        negB = sample_phase("load", PHASE_SEC, w, sign_factor)
+        negB, countB, elapsedB = sample_phase("load", PHASE_SEC, w, sign_factor)
         p.join()
+        print(f"  Captured {countB} samples in {elapsedB:.2f} s")
 
-        print("Phase C: idle (30s)...")
-        negC = sample_phase("idle2", PHASE_SEC, w, sign_factor)
+    print(f"Phase C: idle ({PHASE_SEC:.1f}s)...")
+        negC, countC, elapsedC = sample_phase("idle2", PHASE_SEC, w, sign_factor)
+        print(f"  Captured {countC} samples in {elapsedC:.2f} s")
 
     res = summarize(CSV_OUT)
     print("\n--- Summary (corrected current in A) ---")
     for k in ["idle1", "load", "idle2"]:
         r = res[k]
         print(f"{k:>6s}: mean={r['mean']:.3f}  stdev={r['stdev']:.3f}  n={r['n']}")
+
+    total_samples = countA + countB + countC
+    total_time = elapsedA + elapsedB + elapsedC
+    print(f"\nTotal samples captured: {total_samples} across {total_time:.2f} s")
+    if total_time > 0:
+        print(f"Effective average sample rate: {total_samples / total_time:.1f} Hz")
 
     print(f"\nCSV saved -> {CSV_OUT}")
 
