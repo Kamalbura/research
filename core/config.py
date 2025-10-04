@@ -9,6 +9,11 @@ from ipaddress import ip_address
 from typing import Dict, Any
 
 
+# Baseline host defaults reused throughout the configuration payload.
+_DEFAULT_DRONE_HOST = "192.168.0.102"
+_DEFAULT_GCS_HOST = "192.168.0.103"
+
+
 # Default configuration - all required keys with correct types
 CONFIG = {
     # Handshake (TCP)
@@ -27,8 +32,8 @@ CONFIG = {
     "GCS_PLAINTEXT_HOST": "127.0.0.1",
 
     # Hosts
-    "DRONE_HOST": "192.168.0.102",
-    "GCS_HOST": "192.168.0.103",
+    "DRONE_HOST": _DEFAULT_DRONE_HOST,
+    "GCS_HOST": _DEFAULT_GCS_HOST,
 
     # Pre-shared key (hex) for drone authentication during handshake.
     # Default is a placeholder; override in production via environment variable.
@@ -82,7 +87,7 @@ CONFIG = {
         # Enable telemetry publisher back to the scheduler
         "telemetry_enabled": True,
         # Optional explicit telemetry host/port (None -> derive from CONFIG)
-        "telemetry_host": CONFIG.get("GCS_HOST"),
+    "telemetry_host": _DEFAULT_GCS_HOST,
         "telemetry_port": 52080,
         # Override monitoring output base directory (None -> DEFAULT_MONITOR_BASE)
         "monitor_output_base": None,
