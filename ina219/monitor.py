@@ -18,6 +18,36 @@ SIGN_PROBE_SEC = float(os.getenv("SIGN_PROBE_SEC", "3"))  # how long to sniff or
 
 CSV_OUT = f"ina219_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
+# Default register masks (INA219 datasheet)
+_CFG_BUS_RANGE_32V = 0x2000
+_CFG_GAIN_8_320MV = 0x1800
+_CFG_MODE_SANDBUS_CONT = 0x0007
+_CFG_RESET = 0x8000
+
+_ADC_PROFILES = {
+    "highspeed": {
+        "badc": 0x0080,   # 9-bit 84us
+        "sadc": 0x0000,   # 9-bit 84us
+        "label": "9-bit (84us conversions)",
+        "max_hz": 1100,
+        "settle": 0.0004,
+    },
+    "balanced": {
+        "badc": 0x0400,   # 12-bit 532us
+        "sadc": 0x0018,   # 12-bit 532us
+        "label": "12-bit (532us conversions)",
+        "max_hz": 900,
+        "settle": 0.001,
+    },
+    "precision": {
+        "badc": 0x0400,
+        "sadc": 0x0048,   # 12-bit w/2x averaging (~1.06ms)
+        "label": "12-bit w/2x averaging (~1.06ms)",
+        "max_hz": 450,
+        "settle": 0.002,
+    },
+}
+
 # ----------------- I2C helpers -----------------
 bus = smbus.SMBus(I2C_BUS)
 
@@ -72,6 +102,33 @@ def read_current_A(sign_factor):
     amps = amps_raw * sign_factor  # corrected to positive for your wiring
     return amps, vsh, amps_raw
 
+# ----------------- Device setup -----------------
+def _pick_profile(sample_hz: float) -> tuple[str, dict]:
+    profile_key = os.getenv("INA219_ADC_PROFILE", "auto").lower()
+    if profile_key == "auto":
+        if sample_hz >= 900:
+            profile_key = "highspeed"
+        elif sample_hz >= 500:
+            profile_key = "balanced"
+        else:
+            profile_key = "precision"
+    if profile_key not in _ADC_PROFILES:
+        profile_key = "balanced"
+    return profile_key, _ADC_PROFILES[profile_key]
+
+def configure_ina219(sample_hz: float) -> tuple[str, float]:
+    profile_key, profile = _pick_profile(sample_hz)
+    cfg = (
+        _CFG_BUS_RANGE_32V
+        | _CFG_GAIN_8_320MV
+        | profile["badc"]
+        | profile["sadc"]
+        | _CFG_MODE_SANDBUS_CONT
+    )
+    bus.write_i2c_block_data(INA_ADDR, 0x00, [(cfg >> 8) & 0xFF, cfg & 0xFF])
+    time.sleep(profile["settle"])
+    return profile["label"], profile["max_hz"]
+
 # ----------------- Load generator (for the 'load' phase) -----------------
 def _burn(stop_ts):
     x = 0.0
@@ -91,19 +148,23 @@ def cpu_stress(seconds, procs=None):
 # ----------------- Phases & summary -----------------
 def sample_phase(label, seconds, writer, sign_factor):
     dt = 1.0 / SAMPLE_HZ
-    t0 = time.time()
+    t0 = time.perf_counter()
     neg_seen = False
     sample_count = 0
+    target = t0
+    read_time = time.time
+    sleep_fn = time.sleep
+    writerow = writer.writerow
     while True:
-        now = time.time()
+        now = time.perf_counter()
         if now - t0 >= seconds:
             break
         amps, vsh, amps_raw = read_current_A(sign_factor)
         vbus = read_bus_voltage_V()
         if vsh < 0:
             neg_seen = True
-        writer.writerow([
-            f"{time.time():.3f}",
+        writerow([
+            f"{read_time():.3f}",
             label,
             f"{amps:.6f}",
             f"{vbus:.3f}",
@@ -112,8 +173,11 @@ def sample_phase(label, seconds, writer, sign_factor):
             f"{sign_factor:+d}",
         ])
         sample_count += 1
-        time.sleep(max(0, dt - (time.time() - now)))
-    elapsed = time.time() - t0
+        target += dt
+        sleep_duration = target - time.perf_counter()
+        if sleep_duration > 0:
+            sleep_fn(sleep_duration)
+    elapsed = time.perf_counter() - t0
     return neg_seen, sample_count, elapsed
 
 def summarize(csv_path):
@@ -135,7 +199,9 @@ def summarize(csv_path):
     return results
 
 def main():
+    profile_label, profile_ceiling = configure_ina219(SAMPLE_HZ)
     print(f"INA219 @ {hex(INA_ADDR)}, SHUNT={SHUNT_OHM} ohm, sample={SAMPLE_HZ} Hz, each phase={PHASE_SEC}s")
+    print(f"ADC profile     : {profile_label} (recommended <= {profile_ceiling} Hz)")
     sign_factor, sign_mode = resolve_sign()
     print(f"Sign handling  : {sign_mode} (factor {sign_factor:+d})")
 
