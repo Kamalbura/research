@@ -153,7 +153,12 @@ def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
     parser.add_argument("--sample-hz", type=int, default=1000, help="Sampling frequency in Hz")
     parser.add_argument("--shunt-ohm", type=float, default=0.1, help="Shunt resistor value in ohms")
     parser.add_argument("--sign-mode", default="auto", choices=["auto", "positive", "negative"], help="Sign correction mode")
-    parser.add_argument("--backend", choices=["auto", "ina219", "rpi5"], default="auto", help="Select power monitor backend")
+    parser.add_argument(
+        "--backend",
+        choices=["auto", "ina219", "rpi5", "rpi5-pmic"],
+        default="auto",
+        help="Select power monitor backend",
+    )
     parser.add_argument("--hwmon-path", help="Explicit hwmon directory for rpi5 backend")
     parser.add_argument("--hwmon-name-hint", help="Comma-separated substrings to match hwmon name (auto discovery)")
     parser.add_argument("--voltage-file", help="Override voltage channel filename (rpi5 backend)")

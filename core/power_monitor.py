@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import csv
+import math
 import os
+import re
+import shutil
+import subprocess
 import threading
 import time
 from dataclasses import dataclass
@@ -654,6 +658,188 @@ class Rpi5PowerMonitor:
             raise PowerMonitorUnavailable(f"invalid {env_name} value: {raw!r}") from exc
 
 
+class Rpi5PmicPowerMonitor:
+    """Power monitor backend using Raspberry Pi 5 PMIC telemetry via `vcgencmd`."""
+
+    _RAIL_PATTERN = re.compile(
+        r"^\s*(?P<name>[A-Z0-9_]+)\s+(?P<kind>current|volt)\(\d+\)=(?P<value>[0-9.]+)(?P<unit>A|V)\s*$"
+    )
+
+    def __init__(
+        self,
+        output_dir: Path,
+        *,
+        sample_hz: int = 10,
+        sign_mode: str = "auto",
+    ) -> None:
+        del sign_mode  # PMIC telemetry is unsigned
+        if sample_hz <= 0 or sample_hz > 20:
+            raise PowerMonitorUnavailable("rpi5-pmic sample_hz must be between 1 and 20")
+
+        self.output_dir = output_dir
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.sample_hz = sample_hz
+        self._sign_factor = 1
+
+    @property
+    def sign_factor(self) -> int:
+        return self._sign_factor
+
+    def capture(
+        self,
+        *,
+        label: str,
+        duration_s: float,
+        start_ns: Optional[int] = None,
+    ) -> PowerSummary:
+        if duration_s <= 0:
+            raise ValueError("duration_s must be positive")
+        if start_ns is not None:
+            delay_ns = start_ns - time.time_ns()
+            if delay_ns > 0:
+                time.sleep(delay_ns / 1_000_000_000)
+
+        safe_label = _sanitize_label(label)
+        ts = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+        csv_path = self.output_dir / f"power_{safe_label}_{ts}.csv"
+
+        dt = 1.0 / float(self.sample_hz)
+        start_wall_ns = time.time_ns()
+        start_perf = time.perf_counter()
+
+        sum_current = 0.0
+        sum_voltage = 0.0
+        sum_power = 0.0
+        samples = 0
+
+        with open(csv_path, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["timestamp_ns", "current_a", "voltage_v", "power_w", "sign_factor"])
+
+            while (time.perf_counter() - start_perf) < duration_s:
+                rails = self._read_once()
+                voltage_v = self._choose_voltage(rails)
+                power_w = self._sum_power(rails)
+                current_a = self._derive_current(power_w, voltage_v)
+
+                writer.writerow([
+                    time.time_ns(),
+                    f"{current_a:.6f}" if not math.isnan(current_a) else "nan",
+                    f"{voltage_v:.6f}" if not math.isnan(voltage_v) else "nan",
+                    f"{power_w:.6f}",
+                    self._sign_factor,
+                ])
+                if samples % 10 == 0:
+                    handle.flush()
+
+                if not math.isnan(current_a):
+                    sum_current += current_a
+                if not math.isnan(voltage_v):
+                    sum_voltage += voltage_v
+                sum_power += power_w
+                samples += 1
+
+                next_tick = start_perf + samples * dt
+                sleep_for = next_tick - time.perf_counter()
+                if sleep_for > 0:
+                    time.sleep(sleep_for)
+
+        end_perf = time.perf_counter()
+        end_wall_ns = time.time_ns()
+        elapsed = max(end_perf - start_perf, 1e-9)
+        avg_current = (sum_current / samples) if samples else 0.0
+        avg_voltage = (sum_voltage / samples) if samples else 0.0
+        avg_power = (sum_power / samples) if samples else 0.0
+        energy_j = avg_power * elapsed
+        sample_rate = samples / elapsed if elapsed > 0 else 0.0
+
+        return PowerSummary(
+            label=safe_label,
+            duration_s=elapsed,
+            samples=samples,
+            avg_current_a=avg_current,
+            avg_voltage_v=avg_voltage,
+            avg_power_w=avg_power,
+            energy_j=energy_j,
+            sample_rate_hz=sample_rate,
+            csv_path=str(csv_path.resolve()),
+            start_ns=start_wall_ns,
+            end_ns=end_wall_ns,
+        )
+
+    def iter_samples(self, duration_s: Optional[float] = None) -> Iterator[PowerSample]:
+        limit = None if duration_s is None or duration_s <= 0 else duration_s
+        dt = 1.0 / float(self.sample_hz)
+        start_perf = time.perf_counter()
+        samples = 0
+        while True:
+            if limit is not None and (time.perf_counter() - start_perf) >= limit:
+                break
+            rails = self._read_once()
+            voltage_v = self._choose_voltage(rails)
+            power_w = self._sum_power(rails)
+            current_a = self._derive_current(power_w, voltage_v)
+
+            yield PowerSample(
+                timestamp_ns=time.time_ns(),
+                current_a=current_a,
+                voltage_v=voltage_v,
+                power_w=power_w,
+            )
+
+            samples += 1
+            next_tick = start_perf + samples * dt
+            sleep_for = next_tick - time.perf_counter()
+            if sleep_for > 0:
+                time.sleep(sleep_for)
+
+    def _read_once(self) -> dict[str, dict[str, Optional[float]]]:
+        try:
+            output = subprocess.check_output(["vcgencmd", "pmic_read_adc"], text=True, timeout=1.0)
+        except FileNotFoundError as exc:
+            raise PowerMonitorUnavailable("vcgencmd not found; install raspberrypi-userland") from exc
+        except subprocess.SubprocessError as exc:
+            raise PowerMonitorUnavailable(f"vcgencmd pmic_read_adc failed: {exc}") from exc
+
+        rails: dict[str, dict[str, Optional[float]]] = {}
+        for line in output.splitlines():
+            match = self._RAIL_PATTERN.match(line)
+            if not match:
+                continue
+            name = match.group("name")
+            kind = match.group("kind")
+            value = float(match.group("value"))
+            rail = rails.setdefault(name, {"current_a": None, "voltage_v": None})
+            if kind == "current":
+                rail["current_a"] = value
+            else:
+                rail["voltage_v"] = value
+        if not rails:
+            raise PowerMonitorUnavailable("pmic_read_adc returned no rail telemetry")
+        return rails
+
+    def _sum_power(self, rails: dict[str, dict[str, Optional[float]]]) -> float:
+        total = 0.0
+        for rail in rails.values():
+            current_a = rail.get("current_a")
+            voltage_v = rail.get("voltage_v")
+            if current_a is None or voltage_v is None:
+                continue
+            total += current_a * voltage_v
+        return total
+
+    def _choose_voltage(self, rails: dict[str, dict[str, Optional[float]]]) -> float:
+        ext5 = rails.get("EXT5V_V", {}).get("voltage_v") if "EXT5V_V" in rails else None
+        if ext5 is not None and ext5 > 0:
+            return ext5
+        return max((rail.get("voltage_v") or float("nan") for rail in rails.values()), default=float("nan"))
+
+    def _derive_current(self, power_w: float, voltage_v: float) -> float:
+        if math.isnan(voltage_v) or voltage_v <= 0:
+            return float("nan")
+        return power_w / voltage_v
+
+
 def create_power_monitor(
     output_dir: Path,
     *,
@@ -709,19 +895,30 @@ def create_power_monitor(
         return Ina219PowerMonitor(output_dir, **ina_kwargs)
     if resolved_backend == "rpi5":
         return Rpi5PowerMonitor(output_dir, **rpi_kwargs)
+    if resolved_backend == "rpi5-pmic":
+        return Rpi5PmicPowerMonitor(output_dir, sample_hz=resolved_sample_hz, sign_mode=resolved_sign_mode)
     if resolved_backend != "auto":
         raise ValueError(f"unknown power monitor backend: {backend}")
 
     rpi_error: Optional[PowerMonitorUnavailable] = None
+    pmic_error: Optional[PowerMonitorUnavailable] = None
     if Rpi5PowerMonitor.is_supported(hwmon_path=hwmon_path, hwmon_name_hint=hwmon_name_hint):
         try:
             return Rpi5PowerMonitor(output_dir, **rpi_kwargs)
         except PowerMonitorUnavailable as exc:
             rpi_error = exc
 
+    if shutil.which("vcgencmd"):
+        try:
+            return Rpi5PmicPowerMonitor(output_dir, sample_hz=resolved_sample_hz, sign_mode=resolved_sign_mode)
+        except PowerMonitorUnavailable as exc:
+            pmic_error = exc
+
     try:
         return Ina219PowerMonitor(output_dir, **ina_kwargs)
     except PowerMonitorUnavailable as exc:
+        if pmic_error is not None:
+            raise pmic_error
         if rpi_error is not None:
             raise rpi_error
         raise
@@ -730,6 +927,7 @@ def create_power_monitor(
 __all__ = [
     "Ina219PowerMonitor",
     "Rpi5PowerMonitor",
+    "Rpi5PmicPowerMonitor",
     "PowerMonitor",
     "PowerSummary",
     "PowerSample",
