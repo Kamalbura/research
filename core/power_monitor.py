@@ -13,7 +13,10 @@ from typing import Iterator, Optional
 try:  # Best-effort hardware import; unavailable on dev hosts.
     import smbus  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover - exercised on non-Pi hosts
-    smbus = None  # type: ignore[assignment]
+    try:
+        import smbus2 as smbus  # type: ignore
+    except ModuleNotFoundError:  # pragma: no cover - exercised on hosts without I2C libs
+        smbus = None  # type: ignore[assignment]
 
 
 _DEFAULT_SAMPLE_HZ = int(os.getenv("INA219_SAMPLE_HZ", "1000"))
