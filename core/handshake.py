@@ -246,9 +246,14 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
 
     expected_tag = hmac.new(_drone_psk_bytes(), hello_wire, hashlib.sha256).digest()
     if not hmac.compare_digest(tag, expected_tag):
+        peer_ip = "unknown"
         try:
-            peer_ip, _peer_port = conn.getpeername()
-        except OSError:
+            peer_info = conn.getpeername()
+            if isinstance(peer_info, tuple) and peer_info:
+                peer_ip = str(peer_info[0])
+            elif isinstance(peer_info, str) and peer_info:
+                peer_ip = peer_info
+        except (OSError, ValueError):
             peer_ip = "unknown"
         logger.warning(
             "Rejected drone handshake with bad authentication tag",

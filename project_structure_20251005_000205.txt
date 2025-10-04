@@ -1,15 +1,15 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Output File: C:\Users\burak\Desktop\research\project_structure_20251004_161528.txt
-Generated: 2025-10-04 16:15:28
+Output File: C:\Users\burak\Desktop\research\project_structure_20251005_000205.txt
+Generated: 2025-10-05 00:02:05
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research
-Generated: 2025-10-04 16:15:28
+Generated: 2025-10-05 00:02:05
 
 ├── artifacts/
 │   ├── gcs-test/
@@ -135,6 +135,8 @@ Generated: 2025-10-04 16:15:28
 │       ├── env_check.py (396 bytes)
 │       ├── start_suite.ps1 (700 bytes)
 │       └── start_suite.sh (692 bytes)
+├── ina219/
+│   └── monitor.py (8,713 bytes)
 ├── legacy/
 │   ├── drone/
 │   │   ├── __pycache__/
@@ -814,12 +816,14 @@ Generated: 2025-10-04 16:15:28
 ├── project_no_tests.txt (354,956 bytes)
 ├── project_skip.txt (194,791 bytes)
 ├── PROJECT_STATUS.md (11,726 bytes)
-├── project_structure_20251004_161528.txt (41,044 bytes)
+├── project_structure_20251005_000205.txt (41,105 bytes)
 ├── PROJECT_SUMMARY.txt (8,729 bytes)
 ├── pyproject.toml (479 bytes)
 ├── pytest.out (404 bytes)
 ├── README.md (16,072 bytes)
 ├── README_original.md (13,831 bytes)
+├── requirements-ddos.txt (129 bytes)
+├── requirements.txt (149 bytes)
 ├── RESEARCH_PAPER_CRYPTOGRAPHIC_SECTION.txt (14,475 bytes)
 ├── section 4 -theory.md (31,171 bytes)
 ├── SECTION_4_CRYPTOGRAPHIC_FRAMEWORK copy 2.md (44,620 bytes)
@@ -838,7 +842,7 @@ Generated: 2025-10-04 16:15:28
 PYTHON FILE CONTENTS
 ================================================================================
 
-Found 225 Python files:
+Found 226 Python files:
    1. benchmarks\run_matrix.py
    2. core\__init__.py
    3. core\aead.py
@@ -867,207 +871,208 @@ Found 225 Python files:
   26. drone\scripts\env_check.py
   27. gcs\scripts\env_check.py
   28. import_check.py
-  29. legacy\drone\custom_speck.py
-  30. legacy\drone\demo_aes_receiver.py
-  31. legacy\drone\demo_aes_sender.py
-  32. legacy\drone\drneha\New folder\ascon\Working.py
-  33. legacy\drone\drneha\New folder\ascon\ascon.py
-  34. legacy\drone\drneha\New folder\ascon\check.py
-  35. legacy\drone\drneha\New folder\ascon\pyascon_git\ascon.py
-  36. legacy\drone\drneha\New folder\ascon\pyascon_git\genkat.py
-  37. legacy\drone\drneha\New folder\ascon\pyascon_git\writer.py
-  38. legacy\drone\drneha\ascon\Working.py
-  39. legacy\drone\drneha\ascon\ascon.py
-  40. legacy\drone\drneha\ascon\check.py
-  41. legacy\drone\drneha\ascon\pyascon_git\ascon.py
-  42. legacy\drone\drneha\ascon\pyascon_git\genkat.py
-  43. legacy\drone\drneha\ascon\pyascon_git\writer.py
-  44. legacy\drone\drneha\camellia\camellia.py
-  45. legacy\drone\drneha\camellia\gcs_camellia_test.py
-  46. legacy\drone\drneha\cryterion\cryterion.py
-  47. legacy\drone\drneha\hight\hight.py
-  48. legacy\drone\drneha\hight\hight_CBC.py
-  49. legacy\drone\drneha\hight\hight_test_CBC.py
-  50. legacy\drone\drneha\hwcounter-master\hwcounter-master\setup.py
-  51. legacy\drone\drneha\new_git_repos\HIGHT\hight.py
-  52. legacy\drone\drneha\new_git_repos\HIGHT\hight_CBC.py
-  53. legacy\drone\drneha\new_git_repos\HIGHT\hight_CFB.py
-  54. legacy\drone\drneha\new_git_repos\HIGHT\hight_ECB.py
-  55. legacy\drone\drneha\new_git_repos\HIGHT\test_CBC.py
-  56. legacy\drone\drneha\new_git_repos\HIGHT\test_CFB.py
-  57. legacy\drone\drneha\new_git_repos\HIGHT\test_ECB.py
-  58. legacy\drone\drneha\new_git_repos\PrintCipher\cipher.py
-  59. legacy\drone\drneha\new_git_repos\Speck\speck.py
-  60. legacy\drone\drneha\simon\simon.py
-  61. legacy\drone\drneha\simon\simon_test.py
-  62. legacy\drone\drone_aes.py
-  63. legacy\drone\drone_ascon.py
-  64. legacy\drone\drone_camellia.py
-  65. legacy\drone\drone_dilithium.py
-  66. legacy\drone\drone_falcon.py
-  67. legacy\drone\drone_hight.py
-  68. legacy\drone\drone_kyber.py
-  69. legacy\drone\drone_kyber512.py
-  70. legacy\drone\drone_kyber_hybrid.py
-  71. legacy\drone\drone_mqtt_scheduler.py
-  72. legacy\drone\drone_scheduler_v14.py
-  73. legacy\drone\drone_speck.py
-  74. legacy\drone\drone_sphincs.py
-  75. legacy\drone\hight.py
-  76. legacy\drone\hight_CBC.py
-  77. legacy\drone\ip_config.py
-  78. legacy\drone\local_endpoint.py
-  79. legacy\gcs\algorithm_config.py
-  80. legacy\gcs\crypto_manager.py
-  81. legacy\gcs\custom_speck.py
-  82. legacy\gcs\drneha\New folder\ascon\Working.py
-  83. legacy\gcs\drneha\New folder\ascon\ascon.py
-  84. legacy\gcs\drneha\New folder\ascon\check.py
-  85. legacy\gcs\drneha\New folder\ascon\pyascon_git\ascon.py
-  86. legacy\gcs\drneha\New folder\ascon\pyascon_git\genkat.py
-  87. legacy\gcs\drneha\New folder\ascon\pyascon_git\writer.py
-  88. legacy\gcs\drneha\ascon\Working.py
-  89. legacy\gcs\drneha\ascon\ascon.py
-  90. legacy\gcs\drneha\ascon\check.py
-  91. legacy\gcs\drneha\ascon\pyascon_git\ascon.py
-  92. legacy\gcs\drneha\ascon\pyascon_git\genkat.py
-  93. legacy\gcs\drneha\ascon\pyascon_git\writer.py
-  94. legacy\gcs\drneha\camellia\camellia.py
-  95. legacy\gcs\drneha\camellia\gcs_camellia_test.py
-  96. legacy\gcs\drneha\cryterion\cryterion.py
-  97. legacy\gcs\drneha\hight\hight.py
-  98. legacy\gcs\drneha\hight\hight_CBC.py
-  99. legacy\gcs\drneha\hight\hight_test_CBC.py
-  100. legacy\gcs\drneha\hwcounter-master\hwcounter-master\setup.py
-  101. legacy\gcs\drneha\new_git_repos\HIGHT\hight.py
-  102. legacy\gcs\drneha\new_git_repos\HIGHT\hight_CBC.py
-  103. legacy\gcs\drneha\new_git_repos\HIGHT\hight_CFB.py
-  104. legacy\gcs\drneha\new_git_repos\HIGHT\hight_ECB.py
-  105. legacy\gcs\drneha\new_git_repos\HIGHT\test_CBC.py
-  106. legacy\gcs\drneha\new_git_repos\HIGHT\test_CFB.py
-  107. legacy\gcs\drneha\new_git_repos\HIGHT\test_ECB.py
-  108. legacy\gcs\drneha\new_git_repos\PrintCipher\cipher.py
-  109. legacy\gcs\drneha\new_git_repos\Speck\speck.py
-  110. legacy\gcs\drneha\simon\simon.py
-  111. legacy\gcs\drneha\simon\simon_test.py
-  112. legacy\gcs\framework_validation.py
-  113. legacy\gcs\gcs-endpoint.py
-  114. legacy\gcs\gcs-test.py
-  115. legacy\gcs\gcs_aes.py
-  116. legacy\gcs\gcs_ascon.py
-  117. legacy\gcs\gcs_camellia.py
-  118. legacy\gcs\gcs_controller.py
-  119. legacy\gcs\gcs_dilithium.py
-  120. legacy\gcs\gcs_dilithium2.py
-  121. legacy\gcs\gcs_endpoint.py
-  122. legacy\gcs\gcs_falcon.py
-  123. legacy\gcs\gcs_hight.py
-  124. legacy\gcs\gcs_kyber.py
-  125. legacy\gcs\gcs_kyber512.py
-  126. legacy\gcs\gcs_kyber768.py
-  127. legacy\gcs\gcs_kyber_hybrid.py
-  128. legacy\gcs\gcs_mqtt_scheduler.py
-  129. legacy\gcs\gcs_ntru_hps_2048_509.py
-  130. legacy\gcs\gcs_saber.py
-  131. legacy\gcs\gcs_speck.py
-  132. legacy\gcs\gcs_sphincs.py
-  133. legacy\gcs\gcs_sphincs_128f.py
-  134. legacy\gcs\hight.py
-  135. legacy\gcs\hight_CBC.py
-  136. legacy\gcs\ip_config.py
-  137. legacy\gcs\mqtt\client.py
-  138. legacy\gcs\mqtt\controller.py
-  139. legacy\gcs\mqtt\simple.py
-  140. legacy\gcs\mqtt\test.py
-  141. legacy\gcs\mqtt_algorithm_listener_test.py
-  142. legacy\gcs\mqtt_algorithm_test_publisher.py
-  143. legacy\gcs\simple_config_check.py
-  144. legacy\gcs\simple_mqtt_algorithm_listener.py
-  145. legacy\gcs\test-gcs.py
-  146. legacy\gcs\test_config.py
-  147. legacy\gcs\ws_bridge.py
-  148. log_project_structure.py
-  149. log_text_docs.py
-  150. rl\agent_runtime.py
-  151. rl\linucb.py
-  152. rl\safety.py
-  153. scripts\orchestrate_e2e.py
-  154. strict_mode_demo.py
-  155. tests\__init__.py
-  156. tests\test-oqs.py
-  157. tests\test_aead_framing.py
-  158. tests\test_cli_identity.py
-  159. tests\test_control_sm.py
-  160. tests\test_counter_utils.py
-  161. tests\test_end_to_end_proxy.py
-  162. tests\test_handshake.py
-  163. tests\test_handshake_downgrade.py
-  164. tests\test_hardening_features.py
-  165. tests\test_kdf_roles.py
-  166. tests\test_loss_dup_oom.py
-  167. tests\test_packet_types.py
-  168. tests\test_rekey_epoch.py
-  169. tests\test_replay_window.py
-  170. tests\test_security_hardening.py
-  171. tests\test_suites_config.py
-  172. tools\__init__.py
-  173. tools\aggregate_lan_results.py
-  174. tools\audit_endpoints.py
-  175. tools\auto\consolidate_json_logs.py
-  176. tools\auto\drone_follower copy.py
-  177. tools\auto\drone_follower.py
-  178. tools\auto\drone_follower_simple.py
-  179. tools\auto\drone_scheduler.py
-  180. tools\auto\gcs_follower.py
-  181. tools\auto\gcs_scheduler copy.py
-  182. tools\auto\gcs_scheduler.py
-  183. tools\auto\gcs_scheduler_quickpass.py
-  184. tools\auto\gcs_scheduler_simple.py
-  185. tools\auto_test_drone.py
-  186. tools\auto_test_gcs.py
-  187. tools\bench_cli.py
-  188. tools\check_matrix_keys.py
-  189. tools\check_no_hardcoded_ips.py
-  190. tools\check_ports.py
-  191. tools\check_suites.py
-  192. tools\cleanup_bound_ports.py
-  193. tools\copy_pubs_to_pi.py
-  194. tools\counter_utils.py
-  195. tools\diag_udp.py
-  196. tools\encrypted_sniffer.py
-  197. tools\full_comm_check.py
-  198. tools\generate_env_report.py
-  199. tools\generate_identity.py
-  200. tools\manual_4term\drone_autopilot_sim.py
-  201. tools\manual_4term\drone_tty.py
-  202. tools\manual_4term\encrypted_bridge_logger.py
-  203. tools\manual_4term\gcs_ground_station_sim.py
-  204. tools\manual_4term\gcs_tty.py
-  205. tools\manual_4term\launch_manual_test.py
-  206. tools\markers.py
-  207. tools\merge_power_csv.py
-  208. tools\netcapture\drone_capture.py
-  209. tools\netcapture\gcs_capture.py
-  210. tools\packet_interceptor.py
-  211. tools\power_hooks.py
-  212. tools\prepare_matrix_keys.py
-  213. tools\print_oqs_info.py
-  214. tools\report_saturation_summary.py
-  215. tools\scaffold_repo.py
-  216. tools\sim_driver.py
-  217. tools\socket_utils.py
-  218. tools\traffic_common.py
-  219. tools\traffic_drone.py
-  220. tools\traffic_gcs.py
-  221. tools\traffic_runner.py
-  222. tools\udp_dual_probe.py
-  223. tools\udp_echo.py
-  224. tools\udp_echo_server.py
-  225. tools\udp_forward_log.py
+  29. ina219\monitor.py
+  30. legacy\drone\custom_speck.py
+  31. legacy\drone\demo_aes_receiver.py
+  32. legacy\drone\demo_aes_sender.py
+  33. legacy\drone\drneha\New folder\ascon\Working.py
+  34. legacy\drone\drneha\New folder\ascon\ascon.py
+  35. legacy\drone\drneha\New folder\ascon\check.py
+  36. legacy\drone\drneha\New folder\ascon\pyascon_git\ascon.py
+  37. legacy\drone\drneha\New folder\ascon\pyascon_git\genkat.py
+  38. legacy\drone\drneha\New folder\ascon\pyascon_git\writer.py
+  39. legacy\drone\drneha\ascon\Working.py
+  40. legacy\drone\drneha\ascon\ascon.py
+  41. legacy\drone\drneha\ascon\check.py
+  42. legacy\drone\drneha\ascon\pyascon_git\ascon.py
+  43. legacy\drone\drneha\ascon\pyascon_git\genkat.py
+  44. legacy\drone\drneha\ascon\pyascon_git\writer.py
+  45. legacy\drone\drneha\camellia\camellia.py
+  46. legacy\drone\drneha\camellia\gcs_camellia_test.py
+  47. legacy\drone\drneha\cryterion\cryterion.py
+  48. legacy\drone\drneha\hight\hight.py
+  49. legacy\drone\drneha\hight\hight_CBC.py
+  50. legacy\drone\drneha\hight\hight_test_CBC.py
+  51. legacy\drone\drneha\hwcounter-master\hwcounter-master\setup.py
+  52. legacy\drone\drneha\new_git_repos\HIGHT\hight.py
+  53. legacy\drone\drneha\new_git_repos\HIGHT\hight_CBC.py
+  54. legacy\drone\drneha\new_git_repos\HIGHT\hight_CFB.py
+  55. legacy\drone\drneha\new_git_repos\HIGHT\hight_ECB.py
+  56. legacy\drone\drneha\new_git_repos\HIGHT\test_CBC.py
+  57. legacy\drone\drneha\new_git_repos\HIGHT\test_CFB.py
+  58. legacy\drone\drneha\new_git_repos\HIGHT\test_ECB.py
+  59. legacy\drone\drneha\new_git_repos\PrintCipher\cipher.py
+  60. legacy\drone\drneha\new_git_repos\Speck\speck.py
+  61. legacy\drone\drneha\simon\simon.py
+  62. legacy\drone\drneha\simon\simon_test.py
+  63. legacy\drone\drone_aes.py
+  64. legacy\drone\drone_ascon.py
+  65. legacy\drone\drone_camellia.py
+  66. legacy\drone\drone_dilithium.py
+  67. legacy\drone\drone_falcon.py
+  68. legacy\drone\drone_hight.py
+  69. legacy\drone\drone_kyber.py
+  70. legacy\drone\drone_kyber512.py
+  71. legacy\drone\drone_kyber_hybrid.py
+  72. legacy\drone\drone_mqtt_scheduler.py
+  73. legacy\drone\drone_scheduler_v14.py
+  74. legacy\drone\drone_speck.py
+  75. legacy\drone\drone_sphincs.py
+  76. legacy\drone\hight.py
+  77. legacy\drone\hight_CBC.py
+  78. legacy\drone\ip_config.py
+  79. legacy\drone\local_endpoint.py
+  80. legacy\gcs\algorithm_config.py
+  81. legacy\gcs\crypto_manager.py
+  82. legacy\gcs\custom_speck.py
+  83. legacy\gcs\drneha\New folder\ascon\Working.py
+  84. legacy\gcs\drneha\New folder\ascon\ascon.py
+  85. legacy\gcs\drneha\New folder\ascon\check.py
+  86. legacy\gcs\drneha\New folder\ascon\pyascon_git\ascon.py
+  87. legacy\gcs\drneha\New folder\ascon\pyascon_git\genkat.py
+  88. legacy\gcs\drneha\New folder\ascon\pyascon_git\writer.py
+  89. legacy\gcs\drneha\ascon\Working.py
+  90. legacy\gcs\drneha\ascon\ascon.py
+  91. legacy\gcs\drneha\ascon\check.py
+  92. legacy\gcs\drneha\ascon\pyascon_git\ascon.py
+  93. legacy\gcs\drneha\ascon\pyascon_git\genkat.py
+  94. legacy\gcs\drneha\ascon\pyascon_git\writer.py
+  95. legacy\gcs\drneha\camellia\camellia.py
+  96. legacy\gcs\drneha\camellia\gcs_camellia_test.py
+  97. legacy\gcs\drneha\cryterion\cryterion.py
+  98. legacy\gcs\drneha\hight\hight.py
+  99. legacy\gcs\drneha\hight\hight_CBC.py
+  100. legacy\gcs\drneha\hight\hight_test_CBC.py
+  101. legacy\gcs\drneha\hwcounter-master\hwcounter-master\setup.py
+  102. legacy\gcs\drneha\new_git_repos\HIGHT\hight.py
+  103. legacy\gcs\drneha\new_git_repos\HIGHT\hight_CBC.py
+  104. legacy\gcs\drneha\new_git_repos\HIGHT\hight_CFB.py
+  105. legacy\gcs\drneha\new_git_repos\HIGHT\hight_ECB.py
+  106. legacy\gcs\drneha\new_git_repos\HIGHT\test_CBC.py
+  107. legacy\gcs\drneha\new_git_repos\HIGHT\test_CFB.py
+  108. legacy\gcs\drneha\new_git_repos\HIGHT\test_ECB.py
+  109. legacy\gcs\drneha\new_git_repos\PrintCipher\cipher.py
+  110. legacy\gcs\drneha\new_git_repos\Speck\speck.py
+  111. legacy\gcs\drneha\simon\simon.py
+  112. legacy\gcs\drneha\simon\simon_test.py
+  113. legacy\gcs\framework_validation.py
+  114. legacy\gcs\gcs-endpoint.py
+  115. legacy\gcs\gcs-test.py
+  116. legacy\gcs\gcs_aes.py
+  117. legacy\gcs\gcs_ascon.py
+  118. legacy\gcs\gcs_camellia.py
+  119. legacy\gcs\gcs_controller.py
+  120. legacy\gcs\gcs_dilithium.py
+  121. legacy\gcs\gcs_dilithium2.py
+  122. legacy\gcs\gcs_endpoint.py
+  123. legacy\gcs\gcs_falcon.py
+  124. legacy\gcs\gcs_hight.py
+  125. legacy\gcs\gcs_kyber.py
+  126. legacy\gcs\gcs_kyber512.py
+  127. legacy\gcs\gcs_kyber768.py
+  128. legacy\gcs\gcs_kyber_hybrid.py
+  129. legacy\gcs\gcs_mqtt_scheduler.py
+  130. legacy\gcs\gcs_ntru_hps_2048_509.py
+  131. legacy\gcs\gcs_saber.py
+  132. legacy\gcs\gcs_speck.py
+  133. legacy\gcs\gcs_sphincs.py
+  134. legacy\gcs\gcs_sphincs_128f.py
+  135. legacy\gcs\hight.py
+  136. legacy\gcs\hight_CBC.py
+  137. legacy\gcs\ip_config.py
+  138. legacy\gcs\mqtt\client.py
+  139. legacy\gcs\mqtt\controller.py
+  140. legacy\gcs\mqtt\simple.py
+  141. legacy\gcs\mqtt\test.py
+  142. legacy\gcs\mqtt_algorithm_listener_test.py
+  143. legacy\gcs\mqtt_algorithm_test_publisher.py
+  144. legacy\gcs\simple_config_check.py
+  145. legacy\gcs\simple_mqtt_algorithm_listener.py
+  146. legacy\gcs\test-gcs.py
+  147. legacy\gcs\test_config.py
+  148. legacy\gcs\ws_bridge.py
+  149. log_project_structure.py
+  150. log_text_docs.py
+  151. rl\agent_runtime.py
+  152. rl\linucb.py
+  153. rl\safety.py
+  154. scripts\orchestrate_e2e.py
+  155. strict_mode_demo.py
+  156. tests\__init__.py
+  157. tests\test-oqs.py
+  158. tests\test_aead_framing.py
+  159. tests\test_cli_identity.py
+  160. tests\test_control_sm.py
+  161. tests\test_counter_utils.py
+  162. tests\test_end_to_end_proxy.py
+  163. tests\test_handshake.py
+  164. tests\test_handshake_downgrade.py
+  165. tests\test_hardening_features.py
+  166. tests\test_kdf_roles.py
+  167. tests\test_loss_dup_oom.py
+  168. tests\test_packet_types.py
+  169. tests\test_rekey_epoch.py
+  170. tests\test_replay_window.py
+  171. tests\test_security_hardening.py
+  172. tests\test_suites_config.py
+  173. tools\__init__.py
+  174. tools\aggregate_lan_results.py
+  175. tools\audit_endpoints.py
+  176. tools\auto\consolidate_json_logs.py
+  177. tools\auto\drone_follower copy.py
+  178. tools\auto\drone_follower.py
+  179. tools\auto\drone_follower_simple.py
+  180. tools\auto\drone_scheduler.py
+  181. tools\auto\gcs_follower.py
+  182. tools\auto\gcs_scheduler copy.py
+  183. tools\auto\gcs_scheduler.py
+  184. tools\auto\gcs_scheduler_quickpass.py
+  185. tools\auto\gcs_scheduler_simple.py
+  186. tools\auto_test_drone.py
+  187. tools\auto_test_gcs.py
+  188. tools\bench_cli.py
+  189. tools\check_matrix_keys.py
+  190. tools\check_no_hardcoded_ips.py
+  191. tools\check_ports.py
+  192. tools\check_suites.py
+  193. tools\cleanup_bound_ports.py
+  194. tools\copy_pubs_to_pi.py
+  195. tools\counter_utils.py
+  196. tools\diag_udp.py
+  197. tools\encrypted_sniffer.py
+  198. tools\full_comm_check.py
+  199. tools\generate_env_report.py
+  200. tools\generate_identity.py
+  201. tools\manual_4term\drone_autopilot_sim.py
+  202. tools\manual_4term\drone_tty.py
+  203. tools\manual_4term\encrypted_bridge_logger.py
+  204. tools\manual_4term\gcs_ground_station_sim.py
+  205. tools\manual_4term\gcs_tty.py
+  206. tools\manual_4term\launch_manual_test.py
+  207. tools\markers.py
+  208. tools\merge_power_csv.py
+  209. tools\netcapture\drone_capture.py
+  210. tools\netcapture\gcs_capture.py
+  211. tools\packet_interceptor.py
+  212. tools\power_hooks.py
+  213. tools\prepare_matrix_keys.py
+  214. tools\print_oqs_info.py
+  215. tools\report_saturation_summary.py
+  216. tools\scaffold_repo.py
+  217. tools\sim_driver.py
+  218. tools\socket_utils.py
+  219. tools\traffic_common.py
+  220. tools\traffic_drone.py
+  221. tools\traffic_gcs.py
+  222. tools\traffic_runner.py
+  223. tools\udp_dual_probe.py
+  224. tools\udp_echo.py
+  225. tools\udp_echo_server.py
+  226. tools\udp_forward_log.py
 
 --------------------------------------------------------------------------------
 
-FILE 1/225: benchmarks\run_matrix.py
+FILE 1/226: benchmarks\run_matrix.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\benchmarks\run_matrix.py
 Size: 11,095 bytes
@@ -1384,7 +1389,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 2/225: core\__init__.py
+FILE 2/226: core\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\__init__.py
 Size: 121 bytes
@@ -1398,7 +1403,7 @@ Provides post-quantum cryptography secure communication components.
 
 ============================================================
 
-FILE 3/225: core\aead.py
+FILE 3/226: core\aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\aead.py
 Size: 11,344 bytes
@@ -1710,7 +1715,7 @@ class Receiver:
 
 ============================================================
 
-FILE 4/225: core\async_proxy.py
+FILE 4/226: core\async_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\async_proxy.py
 Size: 42,288 bytes
@@ -2734,7 +2739,7 @@ def run_proxy(
 
 ============================================================
 
-FILE 5/225: core\config.py
+FILE 5/226: core\config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\config.py
 Size: 9,164 bytes
@@ -2973,7 +2978,7 @@ validate_config(CONFIG)
 
 ============================================================
 
-FILE 6/225: core\handshake.py
+FILE 6/226: core\handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\handshake.py
 Size: 12,622 bytes
@@ -3330,7 +3335,7 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
 
 ============================================================
 
-FILE 7/225: core\logging_utils.py
+FILE 7/226: core\logging_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\logging_utils.py
 Size: 2,957 bytes
@@ -3421,7 +3426,7 @@ METRICS = Metrics()
 
 ============================================================
 
-FILE 8/225: core\policy_engine.py
+FILE 8/226: core\policy_engine.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\policy_engine.py
 Size: 7,034 bytes
@@ -3648,7 +3653,7 @@ def handle_control(msg: dict, role: str, state: ControlState) -> ControlResult:
 
 ============================================================
 
-FILE 9/225: core\project_config.py
+FILE 9/226: core\project_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\project_config.py
 Size: 168 bytes
@@ -3661,7 +3666,7 @@ __all__ = ["CONFIG"]
 
 ============================================================
 
-FILE 10/225: core\run_proxy.py
+FILE 10/226: core\run_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\run_proxy.py
 Size: 20,487 bytes
@@ -4202,7 +4207,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 11/225: core\suites.py
+FILE 11/226: core\suites.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\suites.py
 Size: 11,618 bytes
@@ -4603,7 +4608,7 @@ def suite_bytes_for_hkdf(suite: Dict) -> bytes:
 
 ============================================================
 
-FILE 12/225: core\temp-file.py
+FILE 12/226: core\temp-file.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\temp-file.py
 Size: 18,859 bytes
@@ -5084,7 +5089,7 @@ def run_proxy(
 
 ============================================================
 
-FILE 13/225: ddos-1\features.py
+FILE 13/226: ddos-1\features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos-1\features.py
 Size: 107 bytes
@@ -5095,7 +5100,7 @@ def extract_features(pkt_batch):
 
 ============================================================
 
-FILE 14/225: ddos-1\mitigations.py
+FILE 14/226: ddos-1\mitigations.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos-1\mitigations.py
 Size: 112 bytes
@@ -5106,7 +5111,7 @@ def apply(action):
 
 ============================================================
 
-FILE 15/225: ddos-1\tst_stage2.py
+FILE 15/226: ddos-1\tst_stage2.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos-1\tst_stage2.py
 Size: 104 bytes
@@ -5117,7 +5122,7 @@ def confirm(features):
 
 ============================================================
 
-FILE 16/225: ddos-1\xgb_stage1.py
+FILE 16/226: ddos-1\xgb_stage1.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos-1\xgb_stage1.py
 Size: 106 bytes
@@ -5128,7 +5133,7 @@ def score(features):
 
 ============================================================
 
-FILE 17/225: ddos\config.py
+FILE 17/226: ddos\config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\config.py
 Size: 5,479 bytes
@@ -5285,7 +5290,7 @@ def get_udp_bpf() -> str:
 
 ============================================================
 
-FILE 18/225: ddos\hybrid_detector.py
+FILE 18/226: ddos\hybrid_detector.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\hybrid_detector.py
 Size: 12,323 bytes
@@ -5720,7 +5725,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 19/225: ddos\manual_control_detector.py
+FILE 19/226: ddos\manual_control_detector.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\manual_control_detector.py
 Size: 11,232 bytes
@@ -6110,7 +6115,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 20/225: ddos\realtime_tst.py
+FILE 20/226: ddos\realtime_tst.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\realtime_tst.py
 Size: 9,188 bytes
@@ -6438,7 +6443,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 21/225: ddos\run_tst.py
+FILE 21/226: ddos\run_tst.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\run_tst.py
 Size: 2,943 bytes
@@ -6543,7 +6548,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 22/225: ddos\run_xgboost.py
+FILE 22/226: ddos\run_xgboost.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\run_xgboost.py
 Size: 1,989 bytes
@@ -6619,7 +6624,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 23/225: ddos\tstplus.py
+FILE 23/226: ddos\tstplus.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\ddos\tstplus.py
 Size: 17,194 bytes
@@ -6930,7 +6935,7 @@ class TSTPlus(nn.Sequential):
 
 ============================================================
 
-FILE 24/225: diagnose_aead.py
+FILE 24/226: diagnose_aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\diagnose_aead.py
 Size: 620 bytes
@@ -6955,7 +6960,7 @@ print("decrypt", plain)
 
 ============================================================
 
-FILE 25/225: diagnose_handshake.py
+FILE 25/226: diagnose_handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\diagnose_handshake.py
 Size: 1,566 bytes
@@ -7018,7 +7023,7 @@ for name, value in keys.items():
 
 ============================================================
 
-FILE 26/225: drone\scripts\env_check.py
+FILE 26/226: drone\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\drone\scripts\env_check.py
 Size: 396 bytes
@@ -7040,7 +7045,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 27/225: gcs\scripts\env_check.py
+FILE 27/226: gcs\scripts\env_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\gcs\scripts\env_check.py
 Size: 396 bytes
@@ -7062,7 +7067,7 @@ print(status); sys.exit(0 if all("ERROR" not in v for v in status.values()) else
 
 ============================================================
 
-FILE 28/225: import_check.py
+FILE 28/226: import_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\import_check.py
 Size: 268 bytes
@@ -7080,7 +7085,265 @@ except Exception as e:
 
 ============================================================
 
-FILE 29/225: legacy\drone\custom_speck.py
+FILE 29/226: ina219\monitor.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ina219\monitor.py
+Size: 8,713 bytes
+Modified: 2025-10-04 23:45:18
+------------------------------------------------------------
+#!/usr/bin/env python3
+import os
+import time
+import csv
+import math
+from datetime import datetime
+import smbus
+import multiprocessing as mp
+
+# ----------------- Config (overridable by env) -----------------
+I2C_BUS = 1
+INA_ADDR = int(os.getenv("INA_ADDR", "0x40"), 16)
+SHUNT_OHM = float(os.getenv("SHUNT_OHMS", "0.1"))  # R100=0.10 ohm, R050=0.05 ohm
+SAMPLE_HZ = int(os.getenv("SAMPLE_HZ", "1000"))
+PHASE_SEC = float(os.getenv("PHASE_SEC", "10"))
+SIGN_MODE = os.getenv("FORCE_SIGN", "auto").lower()  # 'auto' | 'positive' | 'negative'
+SIGN_PROBE_SEC = float(os.getenv("SIGN_PROBE_SEC", "3"))  # how long to sniff orientation at start (auto mode)
+
+CSV_OUT = f"ina219_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+# Default register masks (INA219 datasheet)
+_CFG_BUS_RANGE_32V = 0x2000
+_CFG_GAIN_8_320MV = 0x1800
+_CFG_MODE_SANDBUS_CONT = 0x0007
+_CFG_RESET = 0x8000
+
+_ADC_PROFILES = {
+    "highspeed": {
+        "badc": 0x0080,   # 9-bit 84us
+        "sadc": 0x0000,   # 9-bit 84us
+        "label": "9-bit (84us conversions)",
+        "max_hz": 1100,
+        "settle": 0.0004,
+    },
+    "balanced": {
+        "badc": 0x0400,   # 12-bit 532us
+        "sadc": 0x0018,   # 12-bit 532us
+        "label": "12-bit (532us conversions)",
+        "max_hz": 900,
+        "settle": 0.001,
+    },
+    "precision": {
+        "badc": 0x0400,
+        "sadc": 0x0048,   # 12-bit w/2x averaging (~1.06ms)
+        "label": "12-bit w/2x averaging (~1.06ms)",
+        "max_hz": 450,
+        "settle": 0.002,
+    },
+}
+
+# ----------------- I2C helpers -----------------
+bus = smbus.SMBus(I2C_BUS)
+
+def read_u16(addr, reg):
+    hi, lo = bus.read_i2c_block_data(addr, reg, 2)
+    return (hi << 8) | lo
+
+def read_s16(addr, reg):
+    val = read_u16(addr, reg)
+    if val & 0x8000:
+        val -= 1 << 16
+    return val
+
+def read_shunt_voltage_V():
+    # 0x01: shunt voltage, 10 microvolt LSB, signed
+    raw = read_s16(INA_ADDR, 0x01)
+    return raw * 10e-6
+
+def read_bus_voltage_V():
+    # 0x02: bus voltage, bits 15..3 value, LSB = 4 mV
+    raw = read_u16(INA_ADDR, 0x02)
+    return ((raw >> 3) & 0x1FFF) * 0.004
+
+# ----------------- Current calc w/ sign handling -----------------
+def detect_sign_auto(seconds=SIGN_PROBE_SEC):
+    """Sniff shunt polarity for a short window. If median shunt V < -20 microvolt, assume reversed."""
+    if seconds <= 0:
+        return +1
+    samples = []
+    t0 = time.time()
+    dt = 1.0 / max(5, SAMPLE_HZ)  # at least 5 Hz during probe
+    while time.time() - t0 < seconds:
+        samples.append(read_shunt_voltage_V())
+        time.sleep(dt)
+    if not samples:
+        return +1
+    med = sorted(samples)[len(samples) // 2]
+    # Threshold avoids flipping due to noise around 0
+    return -1 if med < -20e-6 else +1
+
+def resolve_sign():
+    if SIGN_MODE.startswith("pos"):
+        return +1, "forced-positive"
+    if SIGN_MODE.startswith("neg"):
+        return -1, "forced-negative"
+    s = detect_sign_auto()
+    return s, "auto-inverted" if s == -1 else "auto-normal"
+
+def read_current_A(sign_factor):
+    vsh = read_shunt_voltage_V()  # raw (can be negative)
+    amps_raw = vsh / SHUNT_OHM
+    amps = amps_raw * sign_factor  # corrected to positive for your wiring
+    return amps, vsh, amps_raw
+
+# ----------------- Device setup -----------------
+def _pick_profile(sample_hz: float) -> tuple[str, dict]:
+    profile_key = os.getenv("INA219_ADC_PROFILE", "auto").lower()
+    if profile_key == "auto":
+        if sample_hz >= 900:
+            profile_key = "highspeed"
+        elif sample_hz >= 500:
+            profile_key = "balanced"
+        else:
+            profile_key = "precision"
+    if profile_key not in _ADC_PROFILES:
+        profile_key = "balanced"
+    return profile_key, _ADC_PROFILES[profile_key]
+
+def configure_ina219(sample_hz: float) -> tuple[str, float]:
+    profile_key, profile = _pick_profile(sample_hz)
+    cfg = (
+        _CFG_BUS_RANGE_32V
+        | _CFG_GAIN_8_320MV
+        | profile["badc"]
+        | profile["sadc"]
+        | _CFG_MODE_SANDBUS_CONT
+    )
+    bus.write_i2c_block_data(INA_ADDR, 0x00, [(cfg >> 8) & 0xFF, cfg & 0xFF])
+    time.sleep(profile["settle"])
+    return profile["label"], profile["max_hz"]
+
+# ----------------- Load generator (for the 'load' phase) -----------------
+def _burn(stop_ts):
+    x = 0.0
+    while time.time() < stop_ts:
+        x = math.sin(x) * math.cos(x) + 1.234567
+
+def cpu_stress(seconds, procs=None):
+    if procs is None:
+        procs = max(1, mp.cpu_count() - 1)
+    stop_ts = time.time() + seconds
+    ps = [mp.Process(target=_burn, args=(stop_ts,)) for _ in range(procs)]
+    for p in ps:
+        p.start()
+    for p in ps:
+        p.join()
+
+# ----------------- Phases & summary -----------------
+def sample_phase(label, seconds, writer, sign_factor):
+    dt = 1.0 / SAMPLE_HZ
+    t0 = time.perf_counter()
+    neg_seen = False
+    sample_count = 0
+    target = t0
+    read_time = time.time
+    sleep_fn = time.sleep
+    writerow = writer.writerow
+    while True:
+        now = time.perf_counter()
+        if now - t0 >= seconds:
+            break
+        amps, vsh, amps_raw = read_current_A(sign_factor)
+        vbus = read_bus_voltage_V()
+        if vsh < 0:
+            neg_seen = True
+        writerow([
+            f"{read_time():.3f}",
+            label,
+            f"{amps:.6f}",
+            f"{vbus:.3f}",
+            f"{vsh:.6e}",
+            f"{amps_raw:.6f}",
+            f"{sign_factor:+d}",
+        ])
+        sample_count += 1
+        target += dt
+        sleep_duration = target - time.perf_counter()
+        if sleep_duration > 0:
+            sleep_fn(sleep_duration)
+    elapsed = time.perf_counter() - t0
+    return neg_seen, sample_count, elapsed
+
+def summarize(csv_path):
+    phases = {"idle1": [], "load": [], "idle2": []}
+    with open(csv_path, newline="") as f:
+        r = csv.reader(f)
+        next(r)
+        for ts, phase, amps, vbus, vsh, amps_raw, signf in r:
+            if phase in phases:
+                phases[phase].append(float(amps))
+    results = {}
+    for k, arr in phases.items():
+        if arr:
+            mean = sum(arr) / len(arr)
+            var = sum((x - mean) ** 2 for x in arr) / len(arr)
+            results[k] = dict(mean=mean, stdev=var ** 0.5, n=len(arr))
+        else:
+            results[k] = dict(mean=0.0, stdev=0.0, n=0)
+    return results
+
+def main():
+    profile_label, profile_ceiling = configure_ina219(SAMPLE_HZ)
+    print(f"INA219 @ {hex(INA_ADDR)}, SHUNT={SHUNT_OHM} ohm, sample={SAMPLE_HZ} Hz, each phase={PHASE_SEC}s")
+    print(f"ADC profile     : {profile_label} (recommended <= {profile_ceiling} Hz)")
+    sign_factor, sign_mode = resolve_sign()
+    print(f"Sign handling  : {sign_mode} (factor {sign_factor:+d})")
+
+    with open(CSV_OUT, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["ts", "phase", "amps_A", "vbus_V", "vshunt_V", "amps_raw_A", "sign_factor"])
+
+        print(f"Phase A: idle ({PHASE_SEC:.1f}s)...")
+        negA, countA, elapsedA = sample_phase("idle1", PHASE_SEC, w, sign_factor)
+        print(f"  Captured {countA} samples in {elapsedA:.2f} s")
+
+        print(f"Phase B: CPU load ({PHASE_SEC:.1f}s)...")
+        p = mp.Process(target=cpu_stress, args=(PHASE_SEC,))
+        p.start()
+        negB, countB, elapsedB = sample_phase("load", PHASE_SEC, w, sign_factor)
+        p.join()
+        print(f"  Captured {countB} samples in {elapsedB:.2f} s")
+
+        print(f"Phase C: idle ({PHASE_SEC:.1f}s)...")
+        negC, countC, elapsedC = sample_phase("idle2", PHASE_SEC, w, sign_factor)
+        print(f"  Captured {countC} samples in {elapsedC:.2f} s")
+
+    res = summarize(CSV_OUT)
+    print("\n--- Summary (corrected current in A) ---")
+    for k in ["idle1", "load", "idle2"]:
+        r = res[k]
+        print(f"{k:>6s}: mean={r['mean']:.3f}  stdev={r['stdev']:.3f}  n={r['n']}")
+
+    total_samples = countA + countB + countC
+    total_time = elapsedA + elapsedB + elapsedC
+    print(f"\nTotal samples captured: {total_samples} across {total_time:.2f} s")
+    if total_time > 0:
+        print(f"Effective average sample rate: {total_samples / total_time:.1f} Hz")
+
+    print(f"\nCSV saved -> {CSV_OUT}")
+
+    if (negA or negB or negC) and sign_factor == +1:
+        print(
+            "WARNING: Negative shunt voltage was seen while sign factor is +1. "
+            "If your wiring intentionally measures reverse current, ignore. "
+            "Otherwise set FORCE_SIGN=negative or swap VIN+/VIN-."
+        )
+
+if __name__ == "__main__":
+    main()
+
+============================================================
+
+FILE 30/226: legacy\drone\custom_speck.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\custom_speck.py
 Size: 1,714 bytes
@@ -7131,7 +7394,7 @@ class Python_SPECK:
 
 ============================================================
 
-FILE 30/225: legacy\drone\demo_aes_receiver.py
+FILE 31/226: legacy\drone\demo_aes_receiver.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\demo_aes_receiver.py
 Size: 1,638 bytes
@@ -7185,7 +7448,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 31/225: legacy\drone\demo_aes_sender.py
+FILE 32/226: legacy\drone\demo_aes_sender.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\demo_aes_sender.py
 Size: 1,215 bytes
@@ -7232,7 +7495,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 32/225: legacy\drone\drneha\New folder\ascon\Working.py
+FILE 33/226: legacy\drone\drneha\New folder\ascon\Working.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\New folder\ascon\Working.py
 Size: 1,251 bytes
@@ -7303,7 +7566,7 @@ print("The time of execution of above program is :",(end-start) * 10**3, "ms")
 
 ============================================================
 
-FILE 33/225: legacy\drone\drneha\New folder\ascon\ascon.py
+FILE 34/226: legacy\drone\drneha\New folder\ascon\ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\New folder\ascon\ascon.py
 Size: 15,117 bytes
@@ -7706,7 +7969,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 34/225: legacy\drone\drneha\New folder\ascon\check.py
+FILE 35/226: legacy\drone\drneha\New folder\ascon\check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\New folder\ascon\check.py
 Size: 541 bytes
@@ -7746,7 +8009,7 @@ print(m1+m2==m3, end='\n')
 
 ============================================================
 
-FILE 35/225: legacy\drone\drneha\New folder\ascon\pyascon_git\ascon.py
+FILE 36/226: legacy\drone\drneha\New folder\ascon\pyascon_git\ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\New folder\ascon\pyascon_git\ascon.py
 Size: 19,766 bytes
@@ -8243,7 +8506,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 36/225: legacy\drone\drneha\New folder\ascon\pyascon_git\genkat.py
+FILE 37/226: legacy\drone\drneha\New folder\ascon\pyascon_git\genkat.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\New folder\ascon\pyascon_git\genkat.py
 Size: 3,613 bytes
@@ -8358,7 +8621,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 37/225: legacy\drone\drneha\New folder\ascon\pyascon_git\writer.py
+FILE 38/226: legacy\drone\drneha\New folder\ascon\pyascon_git\writer.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\New folder\ascon\pyascon_git\writer.py
 Size: 3,081 bytes
@@ -8485,7 +8748,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 38/225: legacy\drone\drneha\ascon\Working.py
+FILE 39/226: legacy\drone\drneha\ascon\Working.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\ascon\Working.py
 Size: 1,251 bytes
@@ -8556,7 +8819,7 @@ print("The time of execution of above program is :",(end-start) * 10**3, "ms")
 
 ============================================================
 
-FILE 39/225: legacy\drone\drneha\ascon\ascon.py
+FILE 40/226: legacy\drone\drneha\ascon\ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\ascon\ascon.py
 Size: 15,117 bytes
@@ -8959,7 +9222,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 40/225: legacy\drone\drneha\ascon\check.py
+FILE 41/226: legacy\drone\drneha\ascon\check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\ascon\check.py
 Size: 541 bytes
@@ -8999,7 +9262,7 @@ print(m1+m2==m3, end='\n')
 
 ============================================================
 
-FILE 41/225: legacy\drone\drneha\ascon\pyascon_git\ascon.py
+FILE 42/226: legacy\drone\drneha\ascon\pyascon_git\ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\ascon\pyascon_git\ascon.py
 Size: 19,766 bytes
@@ -9496,7 +9759,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 42/225: legacy\drone\drneha\ascon\pyascon_git\genkat.py
+FILE 43/226: legacy\drone\drneha\ascon\pyascon_git\genkat.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\ascon\pyascon_git\genkat.py
 Size: 3,613 bytes
@@ -9611,7 +9874,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 43/225: legacy\drone\drneha\ascon\pyascon_git\writer.py
+FILE 44/226: legacy\drone\drneha\ascon\pyascon_git\writer.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\ascon\pyascon_git\writer.py
 Size: 3,081 bytes
@@ -9738,7 +10001,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 44/225: legacy\drone\drneha\camellia\camellia.py
+FILE 45/226: legacy\drone\drneha\camellia\camellia.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\camellia\camellia.py
 Size: 10,233 bytes
@@ -10121,7 +10384,7 @@ self_test()
 
 ============================================================
 
-FILE 45/225: legacy\drone\drneha\camellia\gcs_camellia_test.py
+FILE 46/226: legacy\drone\drneha\camellia\gcs_camellia_test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\camellia\gcs_camellia_test.py
 Size: 15 bytes
@@ -10131,7 +10394,7 @@ import camellia
 
 ============================================================
 
-FILE 46/225: legacy\drone\drneha\cryterion\cryterion.py
+FILE 47/226: legacy\drone\drneha\cryterion\cryterion.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\cryterion\cryterion.py
 Size: 7,630 bytes
@@ -10409,7 +10672,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 47/225: legacy\drone\drneha\hight\hight.py
+FILE 48/226: legacy\drone\drneha\hight\hight.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\hight\hight.py
 Size: 3,838 bytes
@@ -10588,7 +10851,7 @@ def hight_decryption(C, MK):
 
 ============================================================
 
-FILE 48/225: legacy\drone\drneha\hight\hight_CBC.py
+FILE 49/226: legacy\drone\drneha\hight\hight_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\hight\hight_CBC.py
 Size: 1,921 bytes
@@ -10661,7 +10924,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 49/225: legacy\drone\drneha\hight\hight_test_CBC.py
+FILE 50/226: legacy\drone\drneha\hight\hight_test_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\hight\hight_test_CBC.py
 Size: 1,642 bytes
@@ -10730,7 +10993,7 @@ else:
 
 ============================================================
 
-FILE 50/225: legacy\drone\drneha\hwcounter-master\hwcounter-master\setup.py
+FILE 51/226: legacy\drone\drneha\hwcounter-master\hwcounter-master\setup.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\hwcounter-master\hwcounter-master\setup.py
 Size: 1,089 bytes
@@ -10768,7 +11031,7 @@ setup(name = 'hwcounter',
 
 ============================================================
 
-FILE 51/225: legacy\drone\drneha\new_git_repos\HIGHT\hight.py
+FILE 52/226: legacy\drone\drneha\new_git_repos\HIGHT\hight.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\new_git_repos\HIGHT\hight.py
 Size: 3,807 bytes
@@ -10929,7 +11192,7 @@ def hight_decryption(C, MK):
 
 ============================================================
 
-FILE 52/225: legacy\drone\drneha\new_git_repos\HIGHT\hight_CBC.py
+FILE 53/226: legacy\drone\drneha\new_git_repos\HIGHT\hight_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\new_git_repos\HIGHT\hight_CBC.py
 Size: 1,602 bytes
@@ -10981,7 +11244,7 @@ assert D == P
 
 ============================================================
 
-FILE 53/225: legacy\drone\drneha\new_git_repos\HIGHT\hight_CFB.py
+FILE 54/226: legacy\drone\drneha\new_git_repos\HIGHT\hight_CFB.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\new_git_repos\HIGHT\hight_CFB.py
 Size: 1,533 bytes
@@ -11031,7 +11294,7 @@ assert D == P
 
 ============================================================
 
-FILE 54/225: legacy\drone\drneha\new_git_repos\HIGHT\hight_ECB.py
+FILE 55/226: legacy\drone\drneha\new_git_repos\HIGHT\hight_ECB.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\new_git_repos\HIGHT\hight_ECB.py
 Size: 1,275 bytes
@@ -11080,7 +11343,7 @@ assert D == P
 
 ============================================================
 
-FILE 55/225: legacy\drone\drneha\new_git_repos\HIGHT\test_CBC.py
+FILE 56/226: legacy\drone\drneha\new_git_repos\HIGHT\test_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\new_git_repos\HIGHT\test_CBC.py
 Size: 1,195 bytes
@@ -11128,7 +11391,7 @@ assert D == P
 
 ============================================================
 
-FILE 56/225: legacy\drone\drneha\new_git_repos\HIGHT\test_CFB.py
+FILE 57/226: legacy\drone\drneha\new_git_repos\HIGHT\test_CFB.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\new_git_repos\HIGHT\test_CFB.py
 Size: 1,043 bytes
@@ -11168,7 +11431,7 @@ assert D == P
 
 ============================================================
 
-FILE 57/225: legacy\drone\drneha\new_git_repos\HIGHT\test_ECB.py
+FILE 58/226: legacy\drone\drneha\new_git_repos\HIGHT\test_ECB.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\new_git_repos\HIGHT\test_ECB.py
 Size: 981 bytes
@@ -11207,7 +11470,7 @@ assert D == P
 
 ============================================================
 
-FILE 58/225: legacy\drone\drneha\new_git_repos\PrintCipher\cipher.py
+FILE 59/226: legacy\drone\drneha\new_git_repos\PrintCipher\cipher.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\new_git_repos\PrintCipher\cipher.py
 Size: 3,978 bytes
@@ -11366,7 +11629,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 59/225: legacy\drone\drneha\new_git_repos\Speck\speck.py
+FILE 60/226: legacy\drone\drneha\new_git_repos\Speck\speck.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\new_git_repos\Speck\speck.py
 Size: 6,876 bytes
@@ -11604,7 +11867,7 @@ if __name__== '__main__':
 
 ============================================================
 
-FILE 60/225: legacy\drone\drneha\simon\simon.py
+FILE 61/226: legacy\drone\drneha\simon\simon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\simon\simon.py
 Size: 13,244 bytes
@@ -11998,7 +12261,7 @@ class SimonCipher:
 
 ============================================================
 
-FILE 61/225: legacy\drone\drneha\simon\simon_test.py
+FILE 62/226: legacy\drone\drneha\simon\simon_test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drneha\simon\simon_test.py
 Size: 2,199 bytes
@@ -12093,7 +12356,7 @@ else:
 
 ============================================================
 
-FILE 62/225: legacy\drone\drone_aes.py
+FILE 63/226: legacy\drone\drone_aes.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_aes.py
 Size: 3,268 bytes
@@ -12188,7 +12451,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 63/225: legacy\drone\drone_ascon.py
+FILE 64/226: legacy\drone\drone_ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_ascon.py
 Size: 3,569 bytes
@@ -12297,7 +12560,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 64/225: legacy\drone\drone_camellia.py
+FILE 65/226: legacy\drone\drone_camellia.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_camellia.py
 Size: 4,109 bytes
@@ -12406,7 +12669,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 65/225: legacy\drone\drone_dilithium.py
+FILE 66/226: legacy\drone\drone_dilithium.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_dilithium.py
 Size: 7,079 bytes
@@ -12598,7 +12861,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 66/225: legacy\drone\drone_falcon.py
+FILE 67/226: legacy\drone\drone_falcon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_falcon.py
 Size: 6,276 bytes
@@ -12779,7 +13042,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 67/225: legacy\drone\drone_hight.py
+FILE 68/226: legacy\drone\drone_hight.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_hight.py
 Size: 2,916 bytes
@@ -12864,7 +13127,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 68/225: legacy\drone\drone_kyber.py
+FILE 69/226: legacy\drone\drone_kyber.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_kyber.py
 Size: 4,024 bytes
@@ -12987,7 +13250,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 69/225: legacy\drone\drone_kyber512.py
+FILE 70/226: legacy\drone\drone_kyber512.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_kyber512.py
 Size: 5,068 bytes
@@ -13135,7 +13398,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 70/225: legacy\drone\drone_kyber_hybrid.py
+FILE 71/226: legacy\drone\drone_kyber_hybrid.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_kyber_hybrid.py
 Size: 6,139 bytes
@@ -13311,7 +13574,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 71/225: legacy\drone\drone_mqtt_scheduler.py
+FILE 72/226: legacy\drone\drone_mqtt_scheduler.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_mqtt_scheduler.py
 Size: 24,054 bytes
@@ -13803,7 +14066,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 72/225: legacy\drone\drone_scheduler_v14.py
+FILE 73/226: legacy\drone\drone_scheduler_v14.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_scheduler_v14.py
 Size: 25,087 bytes
@@ -14399,7 +14662,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 73/225: legacy\drone\drone_speck.py
+FILE 74/226: legacy\drone\drone_speck.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_speck.py
 Size: 3,214 bytes
@@ -14493,7 +14756,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 74/225: legacy\drone\drone_sphincs.py
+FILE 75/226: legacy\drone\drone_sphincs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\drone_sphincs.py
 Size: 5,164 bytes
@@ -14641,7 +14904,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 75/225: legacy\drone\hight.py
+FILE 76/226: legacy\drone\hight.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\hight.py
 Size: 1,834 bytes
@@ -14697,7 +14960,7 @@ def hight_decrypt(ciphertext_block, master_key):
 
 ============================================================
 
-FILE 76/225: legacy\drone\hight_CBC.py
+FILE 77/226: legacy\drone\hight_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\hight_CBC.py
 Size: 631 bytes
@@ -14725,7 +14988,7 @@ def cbc_hight_decryption(ciphertext_bytes, iv, master_key):
 
 ============================================================
 
-FILE 77/225: legacy\drone\ip_config.py
+FILE 78/226: legacy\drone\ip_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\ip_config.py
 Size: 2,960 bytes
@@ -14812,7 +15075,7 @@ def update_hosts_persistent(new_gcs: Optional[str]=None, new_drone: Optional[str
 
 ============================================================
 
-FILE 78/225: legacy\drone\local_endpoint.py
+FILE 79/226: legacy\drone\local_endpoint.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\drone\local_endpoint.py
 Size: 4,703 bytes
@@ -14942,7 +15205,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 79/225: legacy\gcs\algorithm_config.py
+FILE 80/226: legacy\gcs\algorithm_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\algorithm_config.py
 Size: 3,247 bytes
@@ -15053,7 +15316,7 @@ for log_dir in [LOG_BASE_DIR, POWER_LOG_DIR, ALGORITHM_LOG_DIR, CONTROLLER_LOG_D
 
 ============================================================
 
-FILE 80/225: legacy\gcs\crypto_manager.py
+FILE 81/226: legacy\gcs\crypto_manager.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\crypto_manager.py
 Size: 7,546 bytes
@@ -15243,7 +15506,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 81/225: legacy\gcs\custom_speck.py
+FILE 82/226: legacy\gcs\custom_speck.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\custom_speck.py
 Size: 1,714 bytes
@@ -15294,7 +15557,7 @@ class Python_SPECK:
 
 ============================================================
 
-FILE 82/225: legacy\gcs\drneha\New folder\ascon\Working.py
+FILE 83/226: legacy\gcs\drneha\New folder\ascon\Working.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\New folder\ascon\Working.py
 Size: 1,251 bytes
@@ -15365,7 +15628,7 @@ print("The time of execution of above program is :",(end-start) * 10**3, "ms")
 
 ============================================================
 
-FILE 83/225: legacy\gcs\drneha\New folder\ascon\ascon.py
+FILE 84/226: legacy\gcs\drneha\New folder\ascon\ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\New folder\ascon\ascon.py
 Size: 15,117 bytes
@@ -15768,7 +16031,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 84/225: legacy\gcs\drneha\New folder\ascon\check.py
+FILE 85/226: legacy\gcs\drneha\New folder\ascon\check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\New folder\ascon\check.py
 Size: 541 bytes
@@ -15808,7 +16071,7 @@ print(m1+m2==m3, end='\n')
 
 ============================================================
 
-FILE 85/225: legacy\gcs\drneha\New folder\ascon\pyascon_git\ascon.py
+FILE 86/226: legacy\gcs\drneha\New folder\ascon\pyascon_git\ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\New folder\ascon\pyascon_git\ascon.py
 Size: 19,766 bytes
@@ -16305,7 +16568,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 86/225: legacy\gcs\drneha\New folder\ascon\pyascon_git\genkat.py
+FILE 87/226: legacy\gcs\drneha\New folder\ascon\pyascon_git\genkat.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\New folder\ascon\pyascon_git\genkat.py
 Size: 3,613 bytes
@@ -16420,7 +16683,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 87/225: legacy\gcs\drneha\New folder\ascon\pyascon_git\writer.py
+FILE 88/226: legacy\gcs\drneha\New folder\ascon\pyascon_git\writer.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\New folder\ascon\pyascon_git\writer.py
 Size: 3,081 bytes
@@ -16547,7 +16810,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 88/225: legacy\gcs\drneha\ascon\Working.py
+FILE 89/226: legacy\gcs\drneha\ascon\Working.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\ascon\Working.py
 Size: 1,251 bytes
@@ -16618,7 +16881,7 @@ print("The time of execution of above program is :",(end-start) * 10**3, "ms")
 
 ============================================================
 
-FILE 89/225: legacy\gcs\drneha\ascon\ascon.py
+FILE 90/226: legacy\gcs\drneha\ascon\ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\ascon\ascon.py
 Size: 15,117 bytes
@@ -17021,7 +17284,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 90/225: legacy\gcs\drneha\ascon\check.py
+FILE 91/226: legacy\gcs\drneha\ascon\check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\ascon\check.py
 Size: 541 bytes
@@ -17061,7 +17324,7 @@ print(m1+m2==m3, end='\n')
 
 ============================================================
 
-FILE 91/225: legacy\gcs\drneha\ascon\pyascon_git\ascon.py
+FILE 92/226: legacy\gcs\drneha\ascon\pyascon_git\ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\ascon\pyascon_git\ascon.py
 Size: 19,766 bytes
@@ -17558,7 +17821,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 92/225: legacy\gcs\drneha\ascon\pyascon_git\genkat.py
+FILE 93/226: legacy\gcs\drneha\ascon\pyascon_git\genkat.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\ascon\pyascon_git\genkat.py
 Size: 3,613 bytes
@@ -17673,7 +17936,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 93/225: legacy\gcs\drneha\ascon\pyascon_git\writer.py
+FILE 94/226: legacy\gcs\drneha\ascon\pyascon_git\writer.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\ascon\pyascon_git\writer.py
 Size: 3,081 bytes
@@ -17800,7 +18063,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 94/225: legacy\gcs\drneha\camellia\camellia.py
+FILE 95/226: legacy\gcs\drneha\camellia\camellia.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\camellia\camellia.py
 Size: 10,233 bytes
@@ -18183,7 +18446,7 @@ self_test()
 
 ============================================================
 
-FILE 95/225: legacy\gcs\drneha\camellia\gcs_camellia_test.py
+FILE 96/226: legacy\gcs\drneha\camellia\gcs_camellia_test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\camellia\gcs_camellia_test.py
 Size: 15 bytes
@@ -18193,7 +18456,7 @@ import camellia
 
 ============================================================
 
-FILE 96/225: legacy\gcs\drneha\cryterion\cryterion.py
+FILE 97/226: legacy\gcs\drneha\cryterion\cryterion.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\cryterion\cryterion.py
 Size: 7,630 bytes
@@ -18471,7 +18734,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 97/225: legacy\gcs\drneha\hight\hight.py
+FILE 98/226: legacy\gcs\drneha\hight\hight.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\hight\hight.py
 Size: 3,838 bytes
@@ -18650,7 +18913,7 @@ def hight_decryption(C, MK):
 
 ============================================================
 
-FILE 98/225: legacy\gcs\drneha\hight\hight_CBC.py
+FILE 99/226: legacy\gcs\drneha\hight\hight_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\hight\hight_CBC.py
 Size: 1,921 bytes
@@ -18723,7 +18986,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 99/225: legacy\gcs\drneha\hight\hight_test_CBC.py
+FILE 100/226: legacy\gcs\drneha\hight\hight_test_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\hight\hight_test_CBC.py
 Size: 1,642 bytes
@@ -18792,7 +19055,7 @@ else:
 
 ============================================================
 
-FILE 100/225: legacy\gcs\drneha\hwcounter-master\hwcounter-master\setup.py
+FILE 101/226: legacy\gcs\drneha\hwcounter-master\hwcounter-master\setup.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\hwcounter-master\hwcounter-master\setup.py
 Size: 1,089 bytes
@@ -18830,7 +19093,7 @@ setup(name = 'hwcounter',
 
 ============================================================
 
-FILE 101/225: legacy\gcs\drneha\new_git_repos\HIGHT\hight.py
+FILE 102/226: legacy\gcs\drneha\new_git_repos\HIGHT\hight.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\new_git_repos\HIGHT\hight.py
 Size: 3,807 bytes
@@ -18991,7 +19254,7 @@ def hight_decryption(C, MK):
 
 ============================================================
 
-FILE 102/225: legacy\gcs\drneha\new_git_repos\HIGHT\hight_CBC.py
+FILE 103/226: legacy\gcs\drneha\new_git_repos\HIGHT\hight_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\new_git_repos\HIGHT\hight_CBC.py
 Size: 1,602 bytes
@@ -19043,7 +19306,7 @@ assert D == P
 
 ============================================================
 
-FILE 103/225: legacy\gcs\drneha\new_git_repos\HIGHT\hight_CFB.py
+FILE 104/226: legacy\gcs\drneha\new_git_repos\HIGHT\hight_CFB.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\new_git_repos\HIGHT\hight_CFB.py
 Size: 1,533 bytes
@@ -19093,7 +19356,7 @@ assert D == P
 
 ============================================================
 
-FILE 104/225: legacy\gcs\drneha\new_git_repos\HIGHT\hight_ECB.py
+FILE 105/226: legacy\gcs\drneha\new_git_repos\HIGHT\hight_ECB.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\new_git_repos\HIGHT\hight_ECB.py
 Size: 1,275 bytes
@@ -19142,7 +19405,7 @@ assert D == P
 
 ============================================================
 
-FILE 105/225: legacy\gcs\drneha\new_git_repos\HIGHT\test_CBC.py
+FILE 106/226: legacy\gcs\drneha\new_git_repos\HIGHT\test_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\new_git_repos\HIGHT\test_CBC.py
 Size: 1,195 bytes
@@ -19190,7 +19453,7 @@ assert D == P
 
 ============================================================
 
-FILE 106/225: legacy\gcs\drneha\new_git_repos\HIGHT\test_CFB.py
+FILE 107/226: legacy\gcs\drneha\new_git_repos\HIGHT\test_CFB.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\new_git_repos\HIGHT\test_CFB.py
 Size: 1,043 bytes
@@ -19230,7 +19493,7 @@ assert D == P
 
 ============================================================
 
-FILE 107/225: legacy\gcs\drneha\new_git_repos\HIGHT\test_ECB.py
+FILE 108/226: legacy\gcs\drneha\new_git_repos\HIGHT\test_ECB.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\new_git_repos\HIGHT\test_ECB.py
 Size: 981 bytes
@@ -19269,7 +19532,7 @@ assert D == P
 
 ============================================================
 
-FILE 108/225: legacy\gcs\drneha\new_git_repos\PrintCipher\cipher.py
+FILE 109/226: legacy\gcs\drneha\new_git_repos\PrintCipher\cipher.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\new_git_repos\PrintCipher\cipher.py
 Size: 3,978 bytes
@@ -19428,7 +19691,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 109/225: legacy\gcs\drneha\new_git_repos\Speck\speck.py
+FILE 110/226: legacy\gcs\drneha\new_git_repos\Speck\speck.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\new_git_repos\Speck\speck.py
 Size: 6,876 bytes
@@ -19666,7 +19929,7 @@ if __name__== '__main__':
 
 ============================================================
 
-FILE 110/225: legacy\gcs\drneha\simon\simon.py
+FILE 111/226: legacy\gcs\drneha\simon\simon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\simon\simon.py
 Size: 13,244 bytes
@@ -20060,7 +20323,7 @@ class SimonCipher:
 
 ============================================================
 
-FILE 111/225: legacy\gcs\drneha\simon\simon_test.py
+FILE 112/226: legacy\gcs\drneha\simon\simon_test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\drneha\simon\simon_test.py
 Size: 2,199 bytes
@@ -20155,7 +20418,7 @@ else:
 
 ============================================================
 
-FILE 112/225: legacy\gcs\framework_validation.py
+FILE 113/226: legacy\gcs\framework_validation.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\framework_validation.py
 Size: 4,056 bytes
@@ -20257,7 +20520,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 113/225: legacy\gcs\gcs-endpoint.py
+FILE 114/226: legacy\gcs\gcs-endpoint.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs-endpoint.py
 Size: 2,608 bytes
@@ -20354,7 +20617,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 114/225: legacy\gcs\gcs-test.py
+FILE 115/226: legacy\gcs\gcs-test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs-test.py
 Size: 952 bytes
@@ -20389,7 +20652,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 115/225: legacy\gcs\gcs_aes.py
+FILE 116/226: legacy\gcs\gcs_aes.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_aes.py
 Size: 3,626 bytes
@@ -20495,7 +20758,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 116/225: legacy\gcs\gcs_ascon.py
+FILE 117/226: legacy\gcs\gcs_ascon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_ascon.py
 Size: 3,569 bytes
@@ -20601,7 +20864,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 117/225: legacy\gcs\gcs_camellia.py
+FILE 118/226: legacy\gcs\gcs_camellia.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_camellia.py
 Size: 3,931 bytes
@@ -20718,7 +20981,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 118/225: legacy\gcs\gcs_controller.py
+FILE 119/226: legacy\gcs\gcs_controller.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_controller.py
 Size: 19,866 bytes
@@ -21239,7 +21502,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 119/225: legacy\gcs\gcs_dilithium.py
+FILE 120/226: legacy\gcs\gcs_dilithium.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_dilithium.py
 Size: 7,253 bytes
@@ -21433,7 +21696,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 120/225: legacy\gcs\gcs_dilithium2.py
+FILE 121/226: legacy\gcs\gcs_dilithium2.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_dilithium2.py
 Size: 5,562 bytes
@@ -21587,7 +21850,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 121/225: legacy\gcs\gcs_endpoint.py
+FILE 122/226: legacy\gcs\gcs_endpoint.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_endpoint.py
 Size: 2,648 bytes
@@ -21675,7 +21938,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 122/225: legacy\gcs\gcs_falcon.py
+FILE 123/226: legacy\gcs\gcs_falcon.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_falcon.py
 Size: 6,479 bytes
@@ -21857,7 +22120,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 123/225: legacy\gcs\gcs_hight.py
+FILE 124/226: legacy\gcs\gcs_hight.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_hight.py
 Size: 3,562 bytes
@@ -21959,7 +22222,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 124/225: legacy\gcs\gcs_kyber.py
+FILE 125/226: legacy\gcs\gcs_kyber.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_kyber.py
 Size: 4,174 bytes
@@ -22084,7 +22347,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 125/225: legacy\gcs\gcs_kyber512.py
+FILE 126/226: legacy\gcs\gcs_kyber512.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_kyber512.py
 Size: 5,152 bytes
@@ -22232,7 +22495,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 126/225: legacy\gcs\gcs_kyber768.py
+FILE 127/226: legacy\gcs\gcs_kyber768.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_kyber768.py
 Size: 4,863 bytes
@@ -22375,7 +22638,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 127/225: legacy\gcs\gcs_kyber_hybrid.py
+FILE 128/226: legacy\gcs\gcs_kyber_hybrid.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_kyber_hybrid.py
 Size: 8,278 bytes
@@ -22599,7 +22862,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 128/225: legacy\gcs\gcs_mqtt_scheduler.py
+FILE 129/226: legacy\gcs\gcs_mqtt_scheduler.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_mqtt_scheduler.py
 Size: 54,775 bytes
@@ -23555,7 +23818,7 @@ if __name__ == "__main__": main()
 
 ============================================================
 
-FILE 129/225: legacy\gcs\gcs_ntru_hps_2048_509.py
+FILE 130/226: legacy\gcs\gcs_ntru_hps_2048_509.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_ntru_hps_2048_509.py
 Size: 6,297 bytes
@@ -23722,7 +23985,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 130/225: legacy\gcs\gcs_saber.py
+FILE 131/226: legacy\gcs\gcs_saber.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_saber.py
 Size: 6,080 bytes
@@ -23889,7 +24152,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 131/225: legacy\gcs\gcs_speck.py
+FILE 132/226: legacy\gcs\gcs_speck.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_speck.py
 Size: 3,541 bytes
@@ -23990,7 +24253,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 132/225: legacy\gcs\gcs_sphincs.py
+FILE 133/226: legacy\gcs\gcs_sphincs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_sphincs.py
 Size: 5,610 bytes
@@ -24146,7 +24409,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 133/225: legacy\gcs\gcs_sphincs_128f.py
+FILE 134/226: legacy\gcs\gcs_sphincs_128f.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\gcs_sphincs_128f.py
 Size: 5,945 bytes
@@ -24305,7 +24568,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 134/225: legacy\gcs\hight.py
+FILE 135/226: legacy\gcs\hight.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\hight.py
 Size: 1,834 bytes
@@ -24361,7 +24624,7 @@ def hight_decrypt(ciphertext_block, master_key):
 
 ============================================================
 
-FILE 135/225: legacy\gcs\hight_CBC.py
+FILE 136/226: legacy\gcs\hight_CBC.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\hight_CBC.py
 Size: 743 bytes
@@ -24391,7 +24654,7 @@ def cbc_hight_decryption(ciphertext_bytes, iv, master_key):
 
 ============================================================
 
-FILE 136/225: legacy\gcs\ip_config.py
+FILE 137/226: legacy\gcs\ip_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\ip_config.py
 Size: 3,915 bytes
@@ -24496,7 +24759,7 @@ def update_hosts_persistent(new_gcs: Optional[str]=None, new_drone: Optional[str
 
 ============================================================
 
-FILE 137/225: legacy\gcs\mqtt\client.py
+FILE 138/226: legacy\gcs\mqtt\client.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\mqtt\client.py
 Size: 43,141 bytes
@@ -25487,7 +25750,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 138/225: legacy\gcs\mqtt\controller.py
+FILE 139/226: legacy\gcs\mqtt\controller.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\mqtt\controller.py
 Size: 10,334 bytes
@@ -25761,7 +26024,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 139/225: legacy\gcs\mqtt\simple.py
+FILE 140/226: legacy\gcs\mqtt\simple.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\mqtt\simple.py
 Size: 3,223 bytes
@@ -25867,7 +26130,7 @@ client.loop_start()
 
 ============================================================
 
-FILE 140/225: legacy\gcs\mqtt\test.py
+FILE 141/226: legacy\gcs\mqtt\test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\mqtt\test.py
 Size: 542 bytes
@@ -25895,7 +26158,7 @@ client.loop_forever()
 
 ============================================================
 
-FILE 141/225: legacy\gcs\mqtt_algorithm_listener_test.py
+FILE 142/226: legacy\gcs\mqtt_algorithm_listener_test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\mqtt_algorithm_listener_test.py
 Size: 21,558 bytes
@@ -26491,7 +26754,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 142/225: legacy\gcs\mqtt_algorithm_test_publisher.py
+FILE 143/226: legacy\gcs\mqtt_algorithm_test_publisher.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\mqtt_algorithm_test_publisher.py
 Size: 14,099 bytes
@@ -26931,7 +27194,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 143/225: legacy\gcs\simple_config_check.py
+FILE 144/226: legacy\gcs\simple_config_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\simple_config_check.py
 Size: 5,536 bytes
@@ -27082,7 +27345,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 144/225: legacy\gcs\simple_mqtt_algorithm_listener.py
+FILE 145/226: legacy\gcs\simple_mqtt_algorithm_listener.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\simple_mqtt_algorithm_listener.py
 Size: 16,897 bytes
@@ -27562,7 +27825,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 145/225: legacy\gcs\test-gcs.py
+FILE 146/226: legacy\gcs\test-gcs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\test-gcs.py
 Size: 2,551 bytes
@@ -27652,7 +27915,7 @@ while True:
 
 ============================================================
 
-FILE 146/225: legacy\gcs\test_config.py
+FILE 147/226: legacy\gcs\test_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\test_config.py
 Size: 5,072 bytes
@@ -27786,7 +28049,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 147/225: legacy\gcs\ws_bridge.py
+FILE 148/226: legacy\gcs\ws_bridge.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\legacy\gcs\ws_bridge.py
 Size: 3,144 bytes
@@ -27901,7 +28164,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 148/225: log_project_structure.py
+FILE 149/226: log_project_structure.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\log_project_structure.py
 Size: 8,868 bytes
@@ -28136,7 +28399,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 149/225: log_text_docs.py
+FILE 150/226: log_text_docs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\log_text_docs.py
 Size: 2,112 bytes
@@ -28213,7 +28476,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 150/225: rl\agent_runtime.py
+FILE 151/226: rl\agent_runtime.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\agent_runtime.py
 Size: 117 bytes
@@ -28224,7 +28487,7 @@ if __name__ == "__main__": main()
 
 ============================================================
 
-FILE 151/225: rl\linucb.py
+FILE 152/226: rl\linucb.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\linucb.py
 Size: 107 bytes
@@ -28235,7 +28498,7 @@ class LinUCB:
 
 ============================================================
 
-FILE 152/225: rl\safety.py
+FILE 153/226: rl\safety.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\rl\safety.py
 Size: 105 bytes
@@ -28245,7 +28508,7 @@ def guard(action, mission): raise NotImplementedError("RL safety shield not impl
 
 ============================================================
 
-FILE 153/225: scripts\orchestrate_e2e.py
+FILE 154/226: scripts\orchestrate_e2e.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\scripts\orchestrate_e2e.py
 Size: 19,886 bytes
@@ -28774,7 +29037,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 154/225: strict_mode_demo.py
+FILE 155/226: strict_mode_demo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\strict_mode_demo.py
 Size: 3,479 bytes
@@ -28868,7 +29131,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 155/225: tests\__init__.py
+FILE 156/226: tests\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\__init__.py
 Size: 54 bytes
@@ -28880,7 +29143,7 @@ Test package for PQC Drone-GCS Secure Proxy.
 
 ============================================================
 
-FILE 156/225: tests\test-oqs.py
+FILE 157/226: tests\test-oqs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test-oqs.py
 Size: 2,821 bytes
@@ -28954,7 +29217,7 @@ try_import_all()
 
 ============================================================
 
-FILE 157/225: tests\test_aead_framing.py
+FILE 158/226: tests\test_aead_framing.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_aead_framing.py
 Size: 6,589 bytes
@@ -29198,7 +29461,7 @@ def test_epoch_bump():
 
 ============================================================
 
-FILE 158/225: tests\test_cli_identity.py
+FILE 159/226: tests\test_cli_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_cli_identity.py
 Size: 13,002 bytes
@@ -29522,7 +29785,7 @@ class TestCLIHelpAndUsage:
 
 ============================================================
 
-FILE 159/225: tests\test_control_sm.py
+FILE 160/226: tests\test_control_sm.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_control_sm.py
 Size: 3,095 bytes
@@ -29606,7 +29869,7 @@ def test_drone_prepare_fail_when_guard_blocks():
 
 ============================================================
 
-FILE 160/225: tests\test_counter_utils.py
+FILE 161/226: tests\test_counter_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_counter_utils.py
 Size: 3,143 bytes
@@ -29715,7 +29978,7 @@ def test_missing_proxy_file_raises(tmp_path: Path) -> None:
 
 ============================================================
 
-FILE 161/225: tests\test_end_to_end_proxy.py
+FILE 162/226: tests\test_end_to_end_proxy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_end_to_end_proxy.py
 Size: 12,139 bytes
@@ -30032,7 +30295,7 @@ class TestEndToEndProxy:
 
 ============================================================
 
-FILE 162/225: tests\test_handshake.py
+FILE 163/226: tests\test_handshake.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake.py
 Size: 3,895 bytes
@@ -30152,7 +30415,7 @@ def test_gcs_rejects_bad_drone_auth():
 
 ============================================================
 
-FILE 163/225: tests\test_handshake_downgrade.py
+FILE 164/226: tests\test_handshake_downgrade.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_handshake_downgrade.py
 Size: 1,430 bytes
@@ -30192,7 +30455,7 @@ def test_version_mismatch_signed_transcript_blocks_downgrade():
 
 ============================================================
 
-FILE 164/225: tests\test_hardening_features.py
+FILE 165/226: tests\test_hardening_features.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_hardening_features.py
 Size: 7,879 bytes
@@ -30398,7 +30661,7 @@ class TestEpochGuard:
 
 ============================================================
 
-FILE 165/225: tests\test_kdf_roles.py
+FILE 166/226: tests\test_kdf_roles.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_kdf_roles.py
 Size: 1,630 bytes
@@ -30448,7 +30711,7 @@ def test_empty_kem_sig_name():
 
 ============================================================
 
-FILE 166/225: tests\test_loss_dup_oom.py
+FILE 167/226: tests\test_loss_dup_oom.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_loss_dup_oom.py
 Size: 149 bytes
@@ -30461,7 +30724,7 @@ def test_loss_dup_oom():
 
 ============================================================
 
-FILE 167/225: tests\test_packet_types.py
+FILE 168/226: tests\test_packet_types.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_packet_types.py
 Size: 4,544 bytes
@@ -30599,7 +30862,7 @@ def test_packet_type_disabled():
 
 ============================================================
 
-FILE 168/225: tests\test_rekey_epoch.py
+FILE 169/226: tests\test_rekey_epoch.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_rekey_epoch.py
 Size: 11,882 bytes
@@ -30890,7 +31153,7 @@ class TestRekeyEpoch:
 
 ============================================================
 
-FILE 169/225: tests\test_replay_window.py
+FILE 170/226: tests\test_replay_window.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_replay_window.py
 Size: 3,723 bytes
@@ -31029,7 +31292,7 @@ def test_reject_old_beyond_window():
 
 ============================================================
 
-FILE 170/225: tests\test_security_hardening.py
+FILE 171/226: tests\test_security_hardening.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_security_hardening.py
 Size: 5,207 bytes
@@ -31206,7 +31469,7 @@ def test_proxy_drops_spoofed_udp_source():
 
 ============================================================
 
-FILE 171/225: tests\test_suites_config.py
+FILE 172/226: tests\test_suites_config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tests\test_suites_config.py
 Size: 13,736 bytes
@@ -31549,7 +31812,7 @@ class TestSuites:
 
 ============================================================
 
-FILE 172/225: tools\__init__.py
+FILE 173/226: tools\__init__.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\__init__.py
 Size: 69 bytes
@@ -31559,7 +31822,7 @@ Modified: 2025-09-26 15:16:07
 
 ============================================================
 
-FILE 173/225: tools\aggregate_lan_results.py
+FILE 174/226: tools\aggregate_lan_results.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\aggregate_lan_results.py
 Size: 4,639 bytes
@@ -31714,7 +31977,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 174/225: tools\audit_endpoints.py
+FILE 175/226: tools\audit_endpoints.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\audit_endpoints.py
 Size: 5,511 bytes
@@ -31871,7 +32134,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 175/225: tools\auto\consolidate_json_logs.py
+FILE 176/226: tools\auto\consolidate_json_logs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\consolidate_json_logs.py
 Size: 3,339 bytes
@@ -31986,7 +32249,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 176/225: tools\auto\drone_follower copy.py
+FILE 177/226: tools\auto\drone_follower copy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\drone_follower copy.py
 Size: 12,270 bytes
@@ -32358,7 +32621,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 177/225: tools\auto\drone_follower.py
+FILE 178/226: tools\auto\drone_follower.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\drone_follower.py
 Size: 43,251 bytes
@@ -33531,7 +33794,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 178/225: tools\auto\drone_follower_simple.py
+FILE 179/226: tools\auto\drone_follower_simple.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\drone_follower_simple.py
 Size: 4,865 bytes
@@ -33664,7 +33927,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 179/225: tools\auto\drone_scheduler.py
+FILE 180/226: tools\auto\drone_scheduler.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\drone_scheduler.py
 Size: 42,605 bytes
@@ -34883,7 +35146,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 180/225: tools\auto\gcs_follower.py
+FILE 181/226: tools\auto\gcs_follower.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\gcs_follower.py
 Size: 24,003 bytes
@@ -35569,7 +35832,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 181/225: tools\auto\gcs_scheduler copy.py
+FILE 182/226: tools\auto\gcs_scheduler copy.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler copy.py
 Size: 16,757 bytes
@@ -36065,7 +36328,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 182/225: tools\auto\gcs_scheduler.py
+FILE 183/226: tools\auto\gcs_scheduler.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py
 Size: 42,867 bytes
@@ -37340,7 +37603,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 183/225: tools\auto\gcs_scheduler_quickpass.py
+FILE 184/226: tools\auto\gcs_scheduler_quickpass.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler_quickpass.py
 Size: 7,899 bytes
@@ -37551,7 +37814,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 184/225: tools\auto\gcs_scheduler_simple.py
+FILE 185/226: tools\auto\gcs_scheduler_simple.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler_simple.py
 Size: 9,391 bytes
@@ -37804,7 +38067,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 185/225: tools\auto_test_drone.py
+FILE 186/226: tools\auto_test_drone.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto_test_drone.py
 Size: 3,561 bytes
@@ -37921,7 +38184,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 186/225: tools\auto_test_gcs.py
+FILE 187/226: tools\auto_test_gcs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\auto_test_gcs.py
 Size: 2,549 bytes
@@ -38006,7 +38269,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 187/225: tools\bench_cli.py
+FILE 188/226: tools\bench_cli.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\bench_cli.py
 Size: 841 bytes
@@ -38033,7 +38296,7 @@ if __name__=="__main__": main()
 
 ============================================================
 
-FILE 188/225: tools\check_matrix_keys.py
+FILE 189/226: tools\check_matrix_keys.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_matrix_keys.py
 Size: 1,373 bytes
@@ -38090,7 +38353,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 189/225: tools\check_no_hardcoded_ips.py
+FILE 190/226: tools\check_no_hardcoded_ips.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_no_hardcoded_ips.py
 Size: 2,448 bytes
@@ -38179,7 +38442,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 190/225: tools\check_ports.py
+FILE 191/226: tools\check_ports.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_ports.py
 Size: 3,618 bytes
@@ -38282,7 +38545,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 191/225: tools\check_suites.py
+FILE 192/226: tools\check_suites.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\check_suites.py
 Size: 1,030 bytes
@@ -38321,7 +38584,7 @@ print('total registry suites:', len(available))
 
 ============================================================
 
-FILE 192/225: tools\cleanup_bound_ports.py
+FILE 193/226: tools\cleanup_bound_ports.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\cleanup_bound_ports.py
 Size: 2,136 bytes
@@ -38395,7 +38658,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 193/225: tools\copy_pubs_to_pi.py
+FILE 194/226: tools\copy_pubs_to_pi.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\copy_pubs_to_pi.py
 Size: 5,456 bytes
@@ -38549,7 +38812,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 194/225: tools\counter_utils.py
+FILE 195/226: tools\counter_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\counter_utils.py
 Size: 6,381 bytes
@@ -38770,7 +39033,7 @@ __all__ = [
 
 ============================================================
 
-FILE 195/225: tools\diag_udp.py
+FILE 196/226: tools\diag_udp.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\diag_udp.py
 Size: 8,245 bytes
@@ -38992,7 +39255,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 196/225: tools\encrypted_sniffer.py
+FILE 197/226: tools\encrypted_sniffer.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\encrypted_sniffer.py
 Size: 1,570 bytes
@@ -39048,7 +39311,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 197/225: tools\full_comm_check.py
+FILE 198/226: tools\full_comm_check.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\full_comm_check.py
 Size: 9,657 bytes
@@ -39317,7 +39580,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 198/225: tools\generate_env_report.py
+FILE 199/226: tools\generate_env_report.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\generate_env_report.py
 Size: 5,905 bytes
@@ -39491,7 +39754,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 199/225: tools\generate_identity.py
+FILE 200/226: tools\generate_identity.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\generate_identity.py
 Size: 2,266 bytes
@@ -39564,7 +39827,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 200/225: tools\manual_4term\drone_autopilot_sim.py
+FILE 201/226: tools\manual_4term\drone_autopilot_sim.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_autopilot_sim.py
 Size: 3,933 bytes
@@ -39676,7 +39939,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 201/225: tools\manual_4term\drone_tty.py
+FILE 202/226: tools\manual_4term\drone_tty.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\drone_tty.py
 Size: 4,213 bytes
@@ -39824,7 +40087,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 202/225: tools\manual_4term\encrypted_bridge_logger.py
+FILE 203/226: tools\manual_4term\encrypted_bridge_logger.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\encrypted_bridge_logger.py
 Size: 4,355 bytes
@@ -39952,7 +40215,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 203/225: tools\manual_4term\gcs_ground_station_sim.py
+FILE 204/226: tools\manual_4term\gcs_ground_station_sim.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_ground_station_sim.py
 Size: 3,927 bytes
@@ -40066,7 +40329,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 204/225: tools\manual_4term\gcs_tty.py
+FILE 205/226: tools\manual_4term\gcs_tty.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\gcs_tty.py
 Size: 4,207 bytes
@@ -40214,7 +40477,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 205/225: tools\manual_4term\launch_manual_test.py
+FILE 206/226: tools\manual_4term\launch_manual_test.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\manual_4term\launch_manual_test.py
 Size: 9,824 bytes
@@ -40510,7 +40773,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 206/225: tools\markers.py
+FILE 207/226: tools\markers.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\markers.py
 Size: 3,323 bytes
@@ -40627,7 +40890,7 @@ class UdpMarker:
 
 ============================================================
 
-FILE 207/225: tools\merge_power_csv.py
+FILE 208/226: tools\merge_power_csv.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\merge_power_csv.py
 Size: 5,656 bytes
@@ -40785,7 +41048,7 @@ def parse_args() -> argparse.Namespace:
 
 ============================================================
 
-FILE 208/225: tools\netcapture\drone_capture.py
+FILE 209/226: tools\netcapture\drone_capture.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\netcapture\drone_capture.py
 Size: 3,434 bytes
@@ -40907,7 +41170,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 209/225: tools\netcapture\gcs_capture.py
+FILE 210/226: tools\netcapture\gcs_capture.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\netcapture\gcs_capture.py
 Size: 5,576 bytes
@@ -41092,7 +41355,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 210/225: tools\packet_interceptor.py
+FILE 211/226: tools\packet_interceptor.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\packet_interceptor.py
 Size: 2,494 bytes
@@ -41167,7 +41430,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 211/225: tools\power_hooks.py
+FILE 212/226: tools\power_hooks.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\power_hooks.py
 Size: 208 bytes
@@ -41181,7 +41444,7 @@ class PowerHook:
 
 ============================================================
 
-FILE 212/225: tools\prepare_matrix_keys.py
+FILE 213/226: tools\prepare_matrix_keys.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\prepare_matrix_keys.py
 Size: 3,043 bytes
@@ -41288,7 +41551,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 213/225: tools\print_oqs_info.py
+FILE 214/226: tools\print_oqs_info.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\print_oqs_info.py
 Size: 4,200 bytes
@@ -41408,7 +41671,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 214/225: tools\report_saturation_summary.py
+FILE 215/226: tools\report_saturation_summary.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\report_saturation_summary.py
 Size: 13,139 bytes
@@ -41772,7 +42035,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 215/225: tools\scaffold_repo.py
+FILE 216/226: tools\scaffold_repo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\scaffold_repo.py
 Size: 17,074 bytes
@@ -42132,7 +42395,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 216/225: tools\sim_driver.py
+FILE 217/226: tools\sim_driver.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\sim_driver.py
 Size: 6,250 bytes
@@ -42322,7 +42585,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 217/225: tools\socket_utils.py
+FILE 218/226: tools\socket_utils.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\socket_utils.py
 Size: 2,295 bytes
@@ -42416,7 +42679,7 @@ def close_socket(s: socket.socket) -> None:
 
 ============================================================
 
-FILE 218/225: tools\traffic_common.py
+FILE 219/226: tools\traffic_common.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\traffic_common.py
 Size: 3,551 bytes
@@ -42535,7 +42798,7 @@ def configured_selector(sock: socket.socket) -> selectors.BaseSelector:
 
 ============================================================
 
-FILE 219/225: tools\traffic_drone.py
+FILE 220/226: tools\traffic_drone.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\traffic_drone.py
 Size: 206 bytes
@@ -42554,7 +42817,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 220/225: tools\traffic_gcs.py
+FILE 221/226: tools\traffic_gcs.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\traffic_gcs.py
 Size: 202 bytes
@@ -42573,7 +42836,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 221/225: tools\traffic_runner.py
+FILE 222/226: tools\traffic_runner.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\traffic_runner.py
 Size: 7,778 bytes
@@ -42781,7 +43044,7 @@ def run(role: str, argv: Optional[list[str]] = None) -> int:
 
 ============================================================
 
-FILE 222/225: tools\udp_dual_probe.py
+FILE 223/226: tools\udp_dual_probe.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\udp_dual_probe.py
 Size: 5,048 bytes
@@ -42935,7 +43198,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 223/225: tools\udp_echo.py
+FILE 224/226: tools\udp_echo.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\udp_echo.py
 Size: 2,554 bytes
@@ -43026,7 +43289,7 @@ if __name__ == '__main__':
 
 ============================================================
 
-FILE 224/225: tools\udp_echo_server.py
+FILE 225/226: tools\udp_echo_server.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\udp_echo_server.py
 Size: 2,488 bytes
@@ -43106,7 +43369,7 @@ if __name__ == "__main__":
 
 ============================================================
 
-FILE 225/225: tools\udp_forward_log.py
+FILE 226/226: tools\udp_forward_log.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\tools\udp_forward_log.py
 Size: 2,796 bytes

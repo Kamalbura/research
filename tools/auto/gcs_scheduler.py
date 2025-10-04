@@ -142,6 +142,43 @@ def ctl_send(obj: dict, timeout: float = 2.0, retries: int = 4, backoff: float =
     return {}
 
 
+def request_power_capture(suite: str, duration_s: float, start_ns: Optional[int]) -> dict:
+    payload = {
+        "cmd": "power_capture",
+        "suite": suite,
+        "duration_s": duration_s,
+    }
+    if start_ns is not None:
+        payload["start_ns"] = int(start_ns)
+    try:
+        resp = ctl_send(payload, timeout=1.5, retries=2, backoff=0.4)
+    except Exception as exc:
+        print(f"[WARN] power_capture request failed: {exc}", file=sys.stderr)
+        return {"ok": False, "error": str(exc)}
+    return resp
+
+
+def poll_power_status(max_wait_s: float = 12.0, poll_s: float = 0.6) -> dict:
+    deadline = time.time() + max_wait_s
+    last: dict = {}
+    while time.time() < deadline:
+        try:
+            resp = ctl_send({"cmd": "power_status"}, timeout=1.5, retries=1, backoff=0.3)
+        except Exception as exc:
+            last = {"ok": False, "error": str(exc)}
+            time.sleep(poll_s)
+            continue
+        last = resp
+        if not resp.get("ok"):
+            break
+        if not resp.get("available", True):
+            break
+        if not resp.get("busy", False):
+            break
+        time.sleep(poll_s)
+    return last
+
+
 class Blaster:
     """High-rate UDP blaster with RTT sampling and throughput accounting."""
 
@@ -614,6 +651,13 @@ def run_suite(
     except Exception as exc:
         print(f"[WARN] schedule_mark failed for {suite}: {exc}", file=sys.stderr)
 
+    power_start_ns = time.time_ns() + offset_ns + int(max(pre_gap, 0.0) * 1e9)
+    power_resp = request_power_capture(suite, duration_s, power_start_ns)
+    power_request_ok = bool(power_resp.get("ok"))
+    power_request_error = power_resp.get("error") if not power_request_ok else None
+    if not power_request_ok and power_request_error:
+        print(f"[WARN] power capture not scheduled: {power_request_error}", file=sys.stderr)
+
     print(
         f"[{ts()}] ===== POWER: START in {pre_gap:.1f}s | suite={suite} | duration={duration_s:.1f}s mode={traffic_mode} ====="
     )
@@ -660,6 +704,23 @@ def run_suite(
     snapshot_proxy_artifacts(suite)
     proxy_stats = read_proxy_stats_live() or read_proxy_summary()
 
+    power_status = {}
+    if power_request_ok:
+        power_status = poll_power_status(max_wait_s=max(6.0, duration_s * 0.25))
+        if power_status.get("error"):
+            print(f"[WARN] power status error: {power_status['error']}", file=sys.stderr)
+
+    power_summary = power_status.get("last_summary") if isinstance(power_status, dict) else None
+    power_capture_complete = bool(power_summary)
+    power_error = None
+    if not power_capture_complete:
+        if isinstance(power_status, dict):
+            power_error = power_status.get("error")
+            if not power_error and power_status.get("busy"):
+                power_error = "capture_incomplete"
+        if power_error is None:
+            power_error = power_request_error
+
     elapsed_s = max(1e-9, (end_perf_ns - start_perf_ns) / 1e9)
     pps = sent_packets / elapsed_s
     throughput_mbps = (rcvd_bytes * 8) / (elapsed_s * 1_000_000)
@@ -694,6 +755,18 @@ def run_suite(
         "start_ns": start_wall_ns,
         "end_ns": end_wall_ns,
         "rekey_ms": round(rekey_duration_ms, 3),
+    "power_request_ok": power_request_ok,
+    "power_capture_ok": power_capture_complete,
+    "power_error": power_error,
+        "power_avg_w": round(power_summary.get("avg_power_w", 0.0), 6) if power_summary else 0.0,
+        "power_energy_j": round(power_summary.get("energy_j", 0.0), 6) if power_summary else 0.0,
+        "power_samples": power_summary.get("samples") if power_summary else 0,
+        "power_avg_current_a": round(power_summary.get("avg_current_a", 0.0), 6) if power_summary else 0.0,
+        "power_avg_voltage_v": round(power_summary.get("avg_voltage_v", 0.0), 6) if power_summary else 0.0,
+        "power_sample_rate_hz": round(power_summary.get("sample_rate_hz", 0.0), 3) if power_summary else 0.0,
+        "power_duration_s": round(power_summary.get("duration_s", 0.0), 3) if power_summary else 0.0,
+        "power_csv_path": power_summary.get("csv_path") if power_summary else "",
+        "power_summary_path": power_summary.get("summary_json_path") if power_summary else "",
     }
 
     print(

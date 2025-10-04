@@ -55,6 +55,11 @@ import psutil
 
 from core.config import CONFIG
 from core import suites as suites_mod
+from core.power_monitor import (
+    Ina219PowerMonitor,
+    PowerMonitorUnavailable,
+    PowerSummary,
+)
 
 
 CONTROL_HOST = CONFIG.get("DRONE_CONTROL_HOST", "0.0.0.0")
@@ -191,6 +196,113 @@ class TelemetryPublisher:
             except Exception as exc:
                 print(f"[follower] telemetry send failed: {exc}")
                 self._close_socket()
+
+
+def _summary_to_dict(summary: PowerSummary, *, suite: str, session_id: str) -> dict:
+    return {
+        "timestamp_ns": summary.end_ns,
+        "suite": suite,
+        "label": summary.label,
+        "session_id": session_id,
+        "duration_s": summary.duration_s,
+        "samples": summary.samples,
+        "avg_current_a": summary.avg_current_a,
+        "avg_voltage_v": summary.avg_voltage_v,
+        "avg_power_w": summary.avg_power_w,
+        "energy_j": summary.energy_j,
+        "sample_rate_hz": summary.sample_rate_hz,
+        "csv_path": summary.csv_path,
+        "start_ns": summary.start_ns,
+        "end_ns": summary.end_ns,
+    }
+
+
+class PowerCaptureManager:
+    """Coordinates INA219 captures for control commands."""
+
+    def __init__(
+        self,
+        output_dir: Path,
+        session_id: str,
+        telemetry: Optional[TelemetryPublisher],
+    ) -> None:
+        self.telemetry = telemetry
+        self.session_id = session_id
+        self.lock = threading.Lock()
+        self._thread: Optional[threading.Thread] = None
+        self._last_summary: Optional[dict] = None
+        self._last_error: Optional[str] = None
+        self._pending_suite: Optional[str] = None
+        try:
+            self.monitor = Ina219PowerMonitor(output_dir)
+            self.available = True
+        except PowerMonitorUnavailable as exc:
+            self.monitor = None
+            self.available = False
+            self._last_error = str(exc)
+            print(f"[follower] power monitor disabled: {exc}")
+
+    def start_capture(self, suite: str, duration_s: float, start_ns: Optional[int]) -> tuple[bool, Optional[str]]:
+        if not self.available or self.monitor is None:
+            return False, self._last_error or "power_monitor_unavailable"
+        if duration_s <= 0:
+            return False, "invalid_duration"
+        with self.lock:
+            if self._thread and self._thread.is_alive():
+                return False, "busy"
+            self._last_error = None
+            self._pending_suite = suite
+
+            def worker() -> None:
+                try:
+                    summary = self.monitor.capture(label=suite, duration_s=duration_s, start_ns=start_ns)
+                    summary_dict = _summary_to_dict(summary, suite=suite, session_id=self.session_id)
+                    summary_json_path = Path(summary.csv_path).with_suffix(".json")
+                    try:
+                        summary_json_path.write_text(json.dumps(summary_dict, indent=2), encoding="utf-8")
+                        summary_dict["summary_json_path"] = str(summary_json_path)
+                    except Exception as exc_json:
+                        print(f"[follower] power summary write failed: {exc_json}")
+                    with self.lock:
+                        self._last_summary = summary_dict
+                        self._pending_suite = None
+                    if self.telemetry:
+                        self.telemetry.publish("power_summary", dict(summary_dict))
+                except Exception as exc:  # pragma: no cover - depends on hardware
+                    with self.lock:
+                        self._last_error = str(exc)
+                        self._pending_suite = None
+                    print(f"[follower] power capture failed: {exc}")
+                    if self.telemetry:
+                        self.telemetry.publish(
+                            "power_summary_error",
+                            {
+                                "timestamp_ns": time.time_ns(),
+                                "suite": suite,
+                                "error": str(exc),
+                            },
+                        )
+                finally:
+                    with self.lock:
+                        self._thread = None
+
+            self._thread = threading.Thread(target=worker, daemon=True)
+            self._thread.start()
+        return True, None
+
+    def status(self) -> dict:
+        with self.lock:
+            busy = bool(self._thread and self._thread.is_alive())
+            summary = dict(self._last_summary) if self._last_summary else None
+            error = self._last_error
+            pending_suite = self._pending_suite
+        return {
+            "available": self.available,
+            "busy": busy,
+            "last_summary": summary,
+            "error": error,
+            "pending_suite": pending_suite,
+        }
 
 
 
@@ -1026,6 +1138,57 @@ class ControlServer(threading.Thread):
                         },
                     )
                 return
+            if cmd == "power_capture":
+                manager = self.state.get("power_manager")
+                if not isinstance(manager, PowerCaptureManager):
+                    self._send(conn, {"ok": False, "error": "power_monitor_unavailable"})
+                    return
+                duration_s = request.get("duration_s")
+                suite = request.get("suite") or self.state.get("suite") or "unknown"
+                try:
+                    duration_val = float(duration_s)
+                except (TypeError, ValueError):
+                    self._send(conn, {"ok": False, "error": "invalid_duration"})
+                    return
+                start_ns = request.get("start_ns")
+                try:
+                    start_ns_val = int(start_ns) if start_ns is not None else None
+                except (TypeError, ValueError):
+                    start_ns_val = None
+                ok, error = manager.start_capture(suite, duration_val, start_ns_val)
+                if ok:
+                    self._send(
+                        conn,
+                        {
+                            "ok": True,
+                            "scheduled": True,
+                            "suite": suite,
+                            "duration_s": duration_val,
+                            "start_ns": start_ns_val,
+                        },
+                    )
+                    telemetry = self.state.get("telemetry")
+                    if telemetry:
+                        telemetry.publish(
+                            "power_capture_request",
+                            {
+                                "timestamp_ns": time.time_ns(),
+                                "suite": suite,
+                                "duration_s": duration_val,
+                                "start_ns": start_ns_val,
+                            },
+                        )
+                else:
+                    self._send(conn, {"ok": False, "error": error or "power_capture_failed"})
+                return
+            if cmd == "power_status":
+                manager = self.state.get("power_manager")
+                if not isinstance(manager, PowerCaptureManager):
+                    self._send(conn, {"ok": False, "error": "power_monitor_unavailable"})
+                    return
+                status = manager.status()
+                self._send(conn, {"ok": True, **status})
+                return
             if cmd == "stop":
                 self.state["monitors"].stop()
                 self.state["stop_event"].set()
@@ -1103,6 +1266,9 @@ def main() -> None:
     if not args.no_cpu_optimization:
         optimize_cpu_performance()
 
+    power_dir = session_dir / "power"
+    power_manager = PowerCaptureManager(power_dir, session_id, telemetry)
+
     high_speed_monitor = HighSpeedMonitor(session_dir, session_id, telemetry)
     high_speed_monitor.start()
 
@@ -1136,6 +1302,7 @@ def main() -> None:
         "telemetry": telemetry,
         "prev_suite": None,
         "pending_suite": None,
+        "power_manager": power_manager,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()
