@@ -68,6 +68,94 @@ CONFIG = {
     "SIMPLE_PACKET_DELAY_S": 0.0,
     "SIMPLE_SUITE_DWELL_S": 0.0,
     "SIMPLE_INITIAL_SUITE": "cs-mlkem768-aesgcm-mldsa65",
+
+    # Automation defaults for tools/auto orchestration scripts
+    "AUTO_DRONE": {
+        # Session IDs default to "<prefix>_<unix>" unless DRONE_SESSION_ID env overrides
+        "session_prefix": "run",
+        # Optional explicit initial suite override (None -> discover from secrets/config)
+        "initial_suite": None,
+        # Enable follower monitors (perf/pidstat/psutil) by default
+        "monitors_enabled": True,
+        # Apply CPU governor tweaks unless disabled
+        "cpu_optimize": True,
+        # Enable telemetry publisher back to the scheduler
+        "telemetry_enabled": True,
+        # Optional explicit telemetry host/port (None -> derive from CONFIG)
+        "telemetry_host": CONFIG.get("GCS_HOST"),
+        "telemetry_port": 52080,
+        # Override monitoring output base directory (None -> DEFAULT_MONITOR_BASE)
+        "monitor_output_base": None,
+        # Optional environment exports applied before creating the power monitor
+        "power_env": {
+            # Maintain 1 kHz sampling by default; backend remains auto unless overridden
+            "DRONE_POWER_BACKEND": "ina219",
+            "DRONE_POWER_SAMPLE_HZ": "1000",
+            "INA219_I2C_BUS": "1",
+            "INA219_ADDR": "0x40",
+            "INA219_SHUNT_OHM": "0.1",
+        },
+    },
+
+    "AUTO_GCS": {
+        # Session IDs default to "<prefix>_<unix>" unless GCS_SESSION_ID env overrides
+        "session_prefix": "run",
+        # Traffic profile: "blast", "saturation", or "mavproxy" placeholder
+        "traffic": "blast",
+        # Duration for active traffic window per suite (seconds)
+        "duration_s": 45.0,
+        # Delay after rekey before starting traffic (seconds)
+        "pre_gap_s": 1.0,
+        # Delay between suites (seconds)
+        "inter_gap_s": 15.0,
+        # UDP payload size (bytes) for blaster calculations
+        "payload_bytes": 256,
+        # Sample every Nth send/receive event (0 disables)
+        "event_sample": 100,
+        # Number of full passes across suite list
+        "passes": 1,
+        # Explicit packets-per-second override; 0 means best-effort
+        "rate_pps": 0,
+        # Optional bandwidth target in Mbps (converted to PPS if > 0)
+        "bandwidth_mbps": 0.0,
+        # Max rate explored during saturation sweeps (Mbps)
+        "max_rate_mbps": 200.0,
+        # Optional ordered suite subset (None -> all suites)
+        "suites": [
+            "cs-mlkem512-aesgcm-mldsa44",
+            "cs-mlkem512-aesgcm-mldsa65",
+            "cs-mlkem512-aesgcm-mldsa87",
+            "cs-mlkem512-aesgcm-falcon512",
+            "cs-mlkem512-aesgcm-falcon1024",
+            "cs-mlkem512-aesgcm-sphincs128fsha2",
+            "cs-mlkem512-aesgcm-sphincs256fsha2",
+            "cs-mlkem768-aesgcm-mldsa44",
+            "cs-mlkem768-aesgcm-mldsa65",
+            "cs-mlkem768-aesgcm-mldsa87",
+            "cs-mlkem768-aesgcm-falcon512",
+            "cs-mlkem768-aesgcm-falcon1024",
+            "cs-mlkem768-aesgcm-sphincs128fsha2",
+            "cs-mlkem768-aesgcm-sphincs256fsha2",
+            "cs-mlkem1024-aesgcm-mldsa44",
+            "cs-mlkem1024-aesgcm-mldsa65",
+            "cs-mlkem1024-aesgcm-mldsa87",
+            "cs-mlkem1024-aesgcm-falcon512",
+            "cs-mlkem1024-aesgcm-falcon1024",
+            "cs-mlkem1024-aesgcm-sphincs128fsha2",
+            "cs-mlkem1024-aesgcm-sphincs256fsha2",
+        ],
+        # Launch local GCS proxy under scheduler control
+        "launch_proxy": True,
+        # Enable local proxy monitors (perf/pidstat/psutil)
+        "monitors_enabled": True,
+        # Start telemetry collector on the scheduler side
+        "telemetry_enabled": True,
+        # Bind/port for telemetry collector (defaults to CONFIG values)
+        "telemetry_bind_host": "0.0.0.0",
+        "telemetry_port": 52080,
+        # Emit combined Excel workbook when run completes
+        "export_combined_excel": True,
+    },
 }
 
 

@@ -11,6 +11,9 @@ import numpy as np
 import pandas as pd
 import torch
 
+# Import TSTPlus class definition for model loading
+from tstplus import TSTPlus
+
 from config import (
     SCALER_FILE,
     TST_ATTACK_THRESHOLD,
@@ -33,7 +36,7 @@ def load_model():
         scripted = True
     else:
         ensure_file(TST_MODEL_FILE, "PyTorch TST model")
-        model = torch.load(str(TST_MODEL_FILE), map_location="cpu")
+        model = torch.load(str(TST_MODEL_FILE), map_location="cpu", weights_only=False)
         scripted = False
 
     model.eval()

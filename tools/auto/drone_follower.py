@@ -10,7 +10,6 @@ network parameters are duplicated here.
 
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 # Ensure project root is on sys.path so `import core` works when running this file
@@ -29,6 +28,7 @@ import subprocess
 import threading
 import time
 import queue
+from copy import deepcopy
 from typing import Optional
 def optimize_cpu_performance(target_khz: int = 1800000) -> None:
     governors = list(Path("/sys/devices/system/cpu").glob("cpu[0-9]*/cpufreq"))
@@ -96,6 +96,34 @@ DEFAULT_MONITOR_BASE = Path(
 LOG_INTERVAL_MS = 100
 
 PERF_EVENTS = "task-clock,cycles,instructions,cache-misses,branch-misses,context-switches,branches"
+
+
+def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
+    result = deepcopy(defaults)
+    if isinstance(override, dict):
+        for key, value in override.items():
+            if isinstance(value, dict) and isinstance(result.get(key), dict):
+                merged = result[key].copy()
+                merged.update(value)
+                result[key] = merged
+            else:
+                result[key] = value
+    return result
+
+
+AUTO_DRONE_DEFAULTS = {
+    "session_prefix": "session",
+    "monitors_enabled": True,
+    "cpu_optimize": True,
+    "telemetry_enabled": True,
+    "telemetry_host": None,
+    "telemetry_port": TELEMETRY_DEFAULT_PORT,
+    "monitor_output_base": None,
+    "power_env": {},
+    "initial_suite": None,
+}
+
+AUTO_DRONE_CONFIG = _merge_defaults(AUTO_DRONE_DEFAULTS, CONFIG.get("AUTO_DRONE"))
 
 
 def ts() -> str:
@@ -1282,53 +1310,46 @@ def main() -> None:
     MARK_DIR.mkdir(parents=True, exist_ok=True)
 
     default_suite = discover_initial_suite()
+    auto = AUTO_DRONE_CONFIG
 
-    parser = argparse.ArgumentParser(description="Drone follower driven by core configuration")
-    parser.add_argument(
-        "--initial-suite",
-        default=default_suite,
-        help="Initial suite to launch (default: discover from config/secrets)",
-    )
-    parser.add_argument(
-        "--disable-monitors",
-        action="store_true",
-        help="Disable perf/pidstat monitors",
-    )
-    parser.add_argument(
-        "--session-id",
-        help="Session identifier for monitoring output",
-    )
-    parser.add_argument(
-        "--no-cpu-optimization",
-        action="store_true",
-        help="Skip CPU governor adjustments",
-    )
-    parser.add_argument(
-        "--telemetry-host",
-        default=TELEMETRY_DEFAULT_HOST,
-        help="GCS telemetry collector host (default: config GCS_HOST)",
-    )
-    parser.add_argument(
-        "--telemetry-port",
-        type=int,
-        default=TELEMETRY_DEFAULT_PORT,
-        help="Telemetry collector TCP port (default: 52080)",
-    )
-    args = parser.parse_args()
-
-    initial_suite = args.initial_suite
-    session_id = args.session_id or f"session_{int(time.time())}"
+    session_prefix = str(auto.get("session_prefix") or "session")
+    session_id = os.environ.get("DRONE_SESSION_ID") or f"{session_prefix}_{int(time.time())}"
     stop_event = threading.Event()
 
-    monitor_base = DEFAULT_MONITOR_BASE.expanduser().resolve()
+    monitor_base_cfg = auto.get("monitor_output_base")
+    if monitor_base_cfg:
+        monitor_base = Path(monitor_base_cfg).expanduser()
+    else:
+        monitor_base = DEFAULT_MONITOR_BASE.expanduser()
+    monitor_base = monitor_base.resolve()
     session_dir = monitor_base / session_id
     session_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[follower] session_id={session_id}")
     print(f"[follower] monitor output -> {session_dir}")
 
-    telemetry = TelemetryPublisher(args.telemetry_host, args.telemetry_port, session_id)
-    telemetry.start()
+    for env_key, env_value in auto.get("power_env", {}).items():
+        if env_value is None:
+            continue
+        os.environ.setdefault(env_key, str(env_value))
 
-    if not args.no_cpu_optimization:
+    telemetry: Optional[TelemetryPublisher] = None
+    telemetry_enabled = bool(auto.get("telemetry_enabled", True))
+    telemetry_host_cfg = auto.get("telemetry_host")
+    if telemetry_host_cfg:
+        telemetry_host = telemetry_host_cfg
+    else:
+        telemetry_host = TELEMETRY_DEFAULT_HOST
+    telemetry_port_cfg = auto.get("telemetry_port")
+    telemetry_port = TELEMETRY_DEFAULT_PORT if telemetry_port_cfg in (None, "") else int(telemetry_port_cfg)
+
+    if telemetry_enabled:
+        telemetry = TelemetryPublisher(telemetry_host, telemetry_port, session_id)
+        telemetry.start()
+        print(f"[follower] telemetry -> {telemetry_host}:{telemetry_port}")
+    else:
+        print("[follower] telemetry disabled via AUTO_DRONE configuration")
+
+    if bool(auto.get("cpu_optimize", True)):
         optimize_cpu_performance()
 
     power_dir = session_dir / "power"
@@ -1337,8 +1358,12 @@ def main() -> None:
     high_speed_monitor = HighSpeedMonitor(session_dir, session_id, telemetry)
     high_speed_monitor.start()
 
+    initial_suite = auto.get("initial_suite") or default_suite
     proxy = start_drone_proxy(initial_suite)
-    monitors = Monitors(enabled=not args.disable_monitors, telemetry=telemetry)
+    monitors_enabled = bool(auto.get("monitors_enabled", True))
+    if not monitors_enabled:
+        print("[follower] monitors disabled via AUTO_DRONE configuration")
+    monitors = Monitors(enabled=monitors_enabled, telemetry=telemetry)
     time.sleep(1)
     if proxy.poll() is None:
         monitors.start(proxy.pid, suite_outdir(initial_suite), initial_suite)
@@ -1389,7 +1414,8 @@ def main() -> None:
             proxy.send_signal(signal.SIGTERM)
         except Exception:
             pass
-        telemetry.stop()
+        if telemetry:
+            telemetry.stop()
 
 
 if __name__ == "__main__":

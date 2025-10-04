@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import argparse
 import csv
 import json
 import os
@@ -14,6 +13,7 @@ import subprocess
 import sys
 import threading
 import time
+from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
 
@@ -78,6 +78,44 @@ EVENTS_FILENAME = "blaster_events.jsonl"
 
 def ts() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
+    result = deepcopy(defaults)
+    if isinstance(override, dict):
+        for key, value in override.items():
+            if isinstance(value, dict) and isinstance(result.get(key), dict):
+                merged = result[key].copy()
+                merged.update(value)
+                result[key] = merged
+            else:
+                result[key] = value
+    return result
+
+
+AUTO_GCS_DEFAULTS = {
+    "session_prefix": "session",
+    "traffic": "blast",
+    "duration_s": 45.0,
+    "pre_gap_s": 1.0,
+    "inter_gap_s": 15.0,
+    "payload_bytes": 256,
+    "event_sample": 100,
+    "passes": 1,
+    "rate_pps": 0,
+    "bandwidth_mbps": 0.0,
+    "max_rate_mbps": 200.0,
+    "suites": None,
+    "launch_proxy": True,
+    "monitors_enabled": True,
+    "telemetry_enabled": True,
+    "telemetry_bind_host": TELEMETRY_BIND_HOST,
+    "telemetry_port": TELEMETRY_PORT,
+    "export_combined_excel": True,
+    "power_capture": True,
+}
+
+AUTO_GCS_CONFIG = _merge_defaults(AUTO_GCS_DEFAULTS, CONFIG.get("AUTO_GCS"))
 
 
 def mkdirp(path: Path) -> None:
@@ -641,6 +679,7 @@ def run_suite(
     traffic_mode: str,
     pre_gap: float,
     rate_pps: int,
+    power_capture_enabled: bool,
 ) -> dict:
     rekey_duration_ms = activate_suite(gcs, suite, is_first)
 
@@ -651,16 +690,24 @@ def run_suite(
     except Exception as exc:
         print(f"[WARN] schedule_mark failed for {suite}: {exc}", file=sys.stderr)
 
-    power_start_ns = time.time_ns() + offset_ns + int(max(pre_gap, 0.0) * 1e9)
-    power_resp = request_power_capture(suite, duration_s, power_start_ns)
-    power_request_ok = bool(power_resp.get("ok"))
-    power_request_error = power_resp.get("error") if not power_request_ok else None
-    if not power_request_ok and power_request_error:
-        print(f"[WARN] power capture not scheduled: {power_request_error}", file=sys.stderr)
-
-    print(
-        f"[{ts()}] ===== POWER: START in {pre_gap:.1f}s | suite={suite} | duration={duration_s:.1f}s mode={traffic_mode} ====="
-    )
+    power_request_ok = False
+    power_request_error: Optional[str] = None
+    power_status: dict = {}
+    if power_capture_enabled:
+        power_start_ns = time.time_ns() + offset_ns + int(max(pre_gap, 0.0) * 1e9)
+        power_resp = request_power_capture(suite, duration_s, power_start_ns)
+        power_request_ok = bool(power_resp.get("ok"))
+        power_request_error = power_resp.get("error") if not power_request_ok else None
+        if not power_request_ok and power_request_error:
+            print(f"[WARN] power capture not scheduled: {power_request_error}", file=sys.stderr)
+        banner = f"[{ts()}] ===== POWER: START in {pre_gap:.1f}s | suite={suite} | duration={duration_s:.1f}s mode={traffic_mode} ====="
+    else:
+        power_request_error = "disabled"
+        banner = (
+            f"[{ts()}] ===== TRAFFIC: START in {pre_gap:.1f}s | suite={suite} | duration={duration_s:.1f}s "
+            f"mode={traffic_mode} (power capture disabled) ====="
+        )
+    print(banner)
     if pre_gap > 0:
         time.sleep(pre_gap)
 
@@ -699,13 +746,15 @@ def run_suite(
 
     end_wall_ns = time.time_ns()
     end_perf_ns = time.perf_counter_ns()
-    print(f"[{ts()}] ===== POWER: STOP | suite={suite} =====")
+    if power_capture_enabled:
+        print(f"[{ts()}] ===== POWER: STOP | suite={suite} =====")
+    else:
+        print(f"[{ts()}] ===== TRAFFIC: STOP | suite={suite} =====")
 
     snapshot_proxy_artifacts(suite)
     proxy_stats = read_proxy_stats_live() or read_proxy_summary()
 
-    power_status = {}
-    if power_request_ok:
+    if power_capture_enabled and power_request_ok:
         power_status = poll_power_status(max_wait_s=max(6.0, duration_s * 0.25))
         if power_status.get("error"):
             print(f"[WARN] power status error: {power_status['error']}", file=sys.stderr)
@@ -755,9 +804,9 @@ def run_suite(
         "start_ns": start_wall_ns,
         "end_ns": end_wall_ns,
         "rekey_ms": round(rekey_duration_ms, 3),
-    "power_request_ok": power_request_ok,
-    "power_capture_ok": power_capture_complete,
-    "power_error": power_error,
+        "power_request_ok": power_request_ok,
+        "power_capture_ok": power_capture_complete,
+        "power_error": power_error,
         "power_avg_w": round(power_summary.get("avg_power_w", 0.0), 6) if power_summary else 0.0,
         "power_energy_j": round(power_summary.get("energy_j", 0.0), 6) if power_summary else 0.0,
         "power_samples": power_summary.get("samples") if power_summary else 0,
@@ -1134,81 +1183,65 @@ def export_combined_excel(
 def main() -> None:
     OUTDIR.mkdir(parents=True, exist_ok=True)
 
-    parser = argparse.ArgumentParser(description="GCS automation scheduler (CONFIG-driven)")
-    parser.add_argument(
-        "--traffic",
-        choices=["blast", "mavproxy", "saturation"],
-        default="blast",
-        help="blast = internal UDP blaster; saturation = ramp rates until RTT spike.",
-    )
-    parser.add_argument(
-        "--pre-gap",
-        type=float,
-        default=1.0,
-        help="Seconds to wait after (re)key before sending.",
-    )
-    parser.add_argument(
-        "--inter-gap",
-        type=float,
-        default=15.0,
-        help="Seconds to wait between suites.",
-    )
-    parser.add_argument(
-        "--duration",
-        type=float,
-        default=45.0,
-        help="Active send window per suite.",
-    )
-    parser.add_argument(
-        "--rate",
-        type=int,
-        default=0,
-        help="Packets/sec for blast; 0 = as fast as possible.",
-    )
-    parser.add_argument(
-        "--max-rate",
-        type=int,
-        default=200,
-        help="Upper bound Mbps for saturation testing.",
-    )
-    parser.add_argument(
-        "--payload-bytes",
-        type=int,
-        default=256,
-        help="UDP payload size used for throughput calc.",
-    )
-    parser.add_argument(
-        "--event-sample",
-        type=int,
-        default=100,
-        help="Log every Nth send/recv event (0 = disable).",
-    )
-    parser.add_argument("--passes", type=int, default=1, help="Number of full sweeps across suites")
-    parser.add_argument("--suites", nargs="*", help="Optional subset of suites to exercise")
-    parser.add_argument("--session-id", help="Identifier for output artifacts")
-    args = parser.parse_args()
+    auto = AUTO_GCS_CONFIG
 
-    if args.duration <= 0:
-        raise ValueError("--duration must be positive")
-    if args.pre_gap < 0:
-        raise ValueError("--pre-gap must be >= 0")
-    if args.inter_gap < 0:
-        raise ValueError("--inter-gap must be >= 0")
-    if args.rate < 0:
-        raise ValueError("--rate must be >= 0")
-    if args.passes <= 0:
-        raise ValueError("--passes must be >= 1")
+    traffic_mode = str(auto.get("traffic") or "blast").lower()
+    pre_gap = float(auto.get("pre_gap_s") or 1.0)
+    inter_gap = float(auto.get("inter_gap_s") or 15.0)
+    duration = float(auto.get("duration_s") or 45.0)
+    payload_bytes = int(auto.get("payload_bytes") or 256)
+    event_sample = int(auto.get("event_sample") or 100)
+    passes = int(auto.get("passes") or 1)
+    rate_pps = int(auto.get("rate_pps") or 0)
+    bandwidth_mbps = float(auto.get("bandwidth_mbps") or 0.0)
+    max_rate_mbps = float(auto.get("max_rate_mbps") or 200.0)
+    if bandwidth_mbps > 0:
+        denominator = max(payload_bytes * 8, 1)
+        rate_pps = max(1, int((bandwidth_mbps * 1_000_000) / denominator))
 
-    suites = resolve_suites(args.suites)
+    if duration <= 0:
+        raise ValueError("AUTO_GCS.duration_s must be positive")
+    if pre_gap < 0:
+        raise ValueError("AUTO_GCS.pre_gap_s must be >= 0")
+    if inter_gap < 0:
+        raise ValueError("AUTO_GCS.inter_gap_s must be >= 0")
+    if rate_pps < 0:
+        raise ValueError("AUTO_GCS.rate_pps must be >= 0")
+    if passes <= 0:
+        raise ValueError("AUTO_GCS.passes must be >= 1")
+
+    if traffic_mode not in {"blast", "mavproxy", "saturation"}:
+        raise ValueError(f"Unsupported traffic mode: {traffic_mode}")
+
+    suites_override = auto.get("suites")
+    suites = resolve_suites(suites_override)
     if not suites:
         raise RuntimeError("No suites selected for execution")
 
-    session_id = args.session_id or f"session_{int(time.time())}"
+    session_prefix = str(auto.get("session_prefix") or "session")
+    session_id = os.environ.get("GCS_SESSION_ID") or f"{session_prefix}_{int(time.time())}"
+    print(f"[{ts()}] session_id={session_id}")
 
     initial_suite = preferred_initial_suite(suites)
     if initial_suite and suites[0] != initial_suite:
         suites = [initial_suite] + [s for s in suites if s != initial_suite]
         print(f"[{ts()}] reordered suites to start with {initial_suite} (from CONFIG)")
+
+    power_capture_enabled = bool(auto.get("power_capture", True))
+
+    telemetry_enabled = bool(auto.get("telemetry_enabled", True))
+    telemetry_bind_host = auto.get("telemetry_bind_host") or TELEMETRY_BIND_HOST
+    telemetry_port_cfg = auto.get("telemetry_port")
+    telemetry_port = TELEMETRY_PORT if telemetry_port_cfg in (None, "") else int(telemetry_port_cfg)
+
+    print(
+        f"[{ts()}] traffic={traffic_mode} duration={duration:.1f}s pre_gap={pre_gap:.1f}s "
+        f"inter_gap={inter_gap:.1f}s payload={payload_bytes}B event_sample={event_sample} passes={passes} "
+        f"rate_pps={rate_pps}"
+    )
+    if bandwidth_mbps > 0:
+        print(f"[{ts()}] bandwidth target {bandwidth_mbps:.2f} Mbps -> approx {rate_pps} pps")
+    print(f"[{ts()}] power capture: {'enabled' if power_capture_enabled else 'disabled'}")
 
     reachable = False
     for attempt in range(8):
@@ -1233,9 +1266,19 @@ def main() -> None:
     except Exception as exc:
         print(f"[WARN] timesync failed: {exc}", file=sys.stderr)
 
-    telemetry_collector = TelemetryCollector(TELEMETRY_BIND_HOST, TELEMETRY_PORT)
-    telemetry_collector.start()
+    telemetry_collector: Optional[TelemetryCollector] = None
+    if telemetry_enabled:
+        telemetry_collector = TelemetryCollector(telemetry_bind_host, telemetry_port)
+        telemetry_collector.start()
+        print(f"[{ts()}] telemetry collector -> {telemetry_bind_host}:{telemetry_port}")
+    else:
+        print(f"[{ts()}] telemetry collector disabled via AUTO_GCS configuration")
 
+    if not bool(auto.get("launch_proxy", True)):
+        raise NotImplementedError("AUTO_GCS.launch_proxy=False is not supported")
+
+    gcs_proc: Optional[subprocess.Popen] = None
+    log_handle = None
     gcs_proc, log_handle = start_gcs_proxy(suites[0])
 
     try:
@@ -1247,18 +1290,18 @@ def main() -> None:
         all_rate_samples: List[dict] = []
         telemetry_samples: List[dict] = []
 
-        if args.traffic == "saturation":
+        if traffic_mode == "saturation":
             for idx, suite in enumerate(suites):
                 rekey_ms = activate_suite(gcs_proc, suite, is_first=(idx == 0))
                 outdir = suite_outdir(suite)
                 tester = SaturationTester(
                     suite=suite,
-                    payload_bytes=args.payload_bytes,
-                    duration_s=args.duration,
-                    event_sample=args.event_sample,
+                    payload_bytes=payload_bytes,
+                    duration_s=duration,
+                    event_sample=event_sample,
                     offset_ns=offset_ns,
                     output_dir=outdir,
-                    max_rate_mbps=args.max_rate,
+                    max_rate_mbps=int(max_rate_mbps),
                 )
                 summary = tester.run()
                 summary["rekey_ms"] = rekey_ms
@@ -1267,48 +1310,50 @@ def main() -> None:
                     summary["excel_path"] = str(excel_path)
                 saturation_reports.append(summary)
                 all_rate_samples.extend(dict(record) for record in tester.records)
-                if args.inter_gap > 0 and idx < len(suites) - 1:
-                    time.sleep(args.inter_gap)
+                if inter_gap > 0 and idx < len(suites) - 1:
+                    time.sleep(inter_gap)
             report_path = OUTDIR / f"saturation_summary_{session_id}.json"
             with open(report_path, "w", encoding="utf-8") as handle:
                 json.dump(saturation_reports, handle, indent=2)
             print(f"[{ts()}] saturation summary written to {report_path}")
         else:
-            for pass_index in range(args.passes):
+            for pass_index in range(passes):
                 for idx, suite in enumerate(suites):
                     row = run_suite(
                         gcs_proc,
                         suite,
                         is_first=(pass_index == 0 and idx == 0),
-                        duration_s=args.duration,
-                        payload_bytes=args.payload_bytes,
-                        event_sample=args.event_sample,
+                        duration_s=duration,
+                        payload_bytes=payload_bytes,
+                        event_sample=event_sample,
                         offset_ns=offset_ns,
                         pass_index=pass_index,
-                        traffic_mode=args.traffic,
-                        pre_gap=args.pre_gap,
-                        rate_pps=args.rate,
+                        traffic_mode=traffic_mode,
+                        pre_gap=pre_gap,
+                        rate_pps=rate_pps,
+                        power_capture_enabled=power_capture_enabled,
                     )
                     summary_rows.append(row)
                     is_last_suite = idx == len(suites) - 1
-                    is_last_pass = pass_index == args.passes - 1
-                    if args.inter_gap > 0 and not (is_last_suite and is_last_pass):
-                        time.sleep(args.inter_gap)
+                    is_last_pass = pass_index == passes - 1
+                    if inter_gap > 0 and not (is_last_suite and is_last_pass):
+                        time.sleep(inter_gap)
 
             write_summary(summary_rows)
 
-        if telemetry_collector.enabled:
+        if telemetry_collector and telemetry_collector.enabled:
             telemetry_samples = telemetry_collector.snapshot()
 
-        combined_path = export_combined_excel(
-            session_id=session_id,
-            summary_rows=summary_rows,
-            saturation_overview=saturation_reports,
-            saturation_samples=all_rate_samples,
-            telemetry_samples=telemetry_samples,
-        )
-        if combined_path:
-            print(f"[{ts()}] combined workbook written to {combined_path}")
+        if auto.get("export_combined_excel", True):
+            combined_path = export_combined_excel(
+                session_id=session_id,
+                summary_rows=summary_rows,
+                saturation_overview=saturation_reports,
+                saturation_samples=all_rate_samples,
+                telemetry_samples=telemetry_samples,
+            )
+            if combined_path:
+                print(f"[{ts()}] combined workbook written to {combined_path}")
 
     finally:
         try:
@@ -1316,23 +1361,26 @@ def main() -> None:
         except Exception:
             pass
 
-        if gcs_proc.stdin:
+        if gcs_proc and gcs_proc.stdin:
             try:
                 gcs_proc.stdin.write("quit\n")
                 gcs_proc.stdin.flush()
             except Exception:
                 pass
-        try:
-            gcs_proc.wait(timeout=5)
-        except Exception:
-            gcs_proc.kill()
+        if gcs_proc:
+            try:
+                gcs_proc.wait(timeout=5)
+            except Exception:
+                gcs_proc.kill()
 
-        try:
-            log_handle.close()
-        except Exception:
-            pass
+        if log_handle:
+            try:
+                log_handle.close()
+            except Exception:
+                pass
 
-        telemetry_collector.stop()
+        if telemetry_collector:
+            telemetry_collector.stop()
 
 
 if __name__ == "__main__":

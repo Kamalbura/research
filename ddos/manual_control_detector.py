@@ -93,7 +93,7 @@ def load_tst_model():
         LOGGER.warning(
             "TorchScript TST model not found; falling back to .pth (requires tstplus module)."
         )
-        model = torch.load(str(TST_MODEL_FILE), map_location="cpu")
+        model = torch.load(str(TST_MODEL_FILE), map_location="cpu", weights_only=False)
         scripted = False
 
     model.eval()
