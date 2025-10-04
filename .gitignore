@@ -10,7 +10,7 @@ __pycache__/
 
 # Harness outputs
 artifacts/harness/
-
+legacy/
 # Secrets and generated keys
 secrets/
 secrets/*

@@ -1,0 +1,160 @@
+Legacy vs Current Architecture Comparison
+=======================================
+
+Scope
+-----
+This document compares the legacy drone/GCS scripts under `legacy/` with the modern proxy stack in `core/` and its automation companions `tools/auto/drone_follower.py` and `tools/auto/gcs_scheduler.py`. It focuses on architecture, cryptography, runtime behavior, automation, and operational tooling.
+
+1. Code Organization & Deployment Model
+---------------------------------------
+Legacy:
+- Dozens of standalone scripts (e.g. `legacy/drone/drone_kyber.py`, `legacy/gcs/gcs_kyber.py`, `legacy/drone/drone_ascon.py`) with almost identical boilerplate duplicated per algorithm.
+- Each script launches its own sockets and threads, so selecting a new algorithm means starting a different process.
+- Scheduler side (`legacy/drone/drone_mqtt_scheduler.py`, `legacy/gcs/gcs_controller.py`) spawns scripts through shell commands, usually triggered by MQTT messages.
+- Configuration (`legacy/*/ip_config.py`) is copied into each role directory, creating drift and manual edit risk.
+
+Now:
+- Central modules in `core/` split responsibilities: `handshake.py`, `aead.py`, `async_proxy.py`, `policy_engine.py`, `config.py`, and `suites.py` compose a reusable library.
+- `core/run_proxy.py` wraps the stack in a single CLI for both drone and GCS roles; swapping suites is a runtime negotiation, not a process swap.
+- Automation scripts (`tools/auto/drone_follower.py`, `tools/auto/gcs_scheduler.py`) consume the shared library, so they orchestrate behavior without re-implementing cryptography or networking.
+- Configuration is centralized in `core/config.py` with validation and environment overrides; `project_config.py` re-exports it for compatibility.
+
+Impact: Reduced duplication, consistent behavior across suites, and a stable API for automation tools.
+
+2. Cryptographic Handshake & Key Management
+-------------------------------------------
+Legacy:
+- Handshakes are ad hoc TCP exchanges. Kyber scripts call `oqs.KeyEncapsulation` directly but do not authenticate the peer (`legacy/gcs/gcs_kyber.py` simply accepts the first connection).
+- When liboqs is missing, scripts silently fall back to RSA without policy checks, which undermines the PQC security goal.
+- Session keys are derived by slicing the shared secret (`shared_secret[:32]`) or hashing it, with no HKDF context binding.
+- No signature verification; downgrade attacks are possible by forcing RSA fallback.
+
+Now:
+- `core/handshake.py` enforces a signed ServerHello (`server_gcs_handshake`), using ML-DSA/Falcon/SPHINCS+ signatures to authenticate the suite and session parameters.
+- The drone verifies that the negotiated `kem_name`/`sig_name` matches the configured suite before continuing, aborting on mismatches.
+- HKDF-SHA256 expands the shared secret into directional send/receive keys with a fixed salt and suite-bound info string, ensuring context separation.
+- Rekey handshakes reuse the same mutually authenticated flow via `_perform_handshake` in `async_proxy.py`.
+
+Impact: Modern code resists downgrade or MITM attempts and produces deterministic, context-bound keys for both directions.
+
+3. Packet Framing, Nonces, and Replay Protection
+-----------------------------------------------
+Legacy:
+- Packets are `nonce || ciphertext` with random 96-bit nonces generated via `os.urandom` and no headers. Receivers trust whatever tuple arrives.
+- There is no replay window or sequence tracking; replays simply decrypt again.
+- No differentiation between telemetry, control, or data bytes, so control channels must run out-of-band.
+
+Now:
+- `core/aead.py` fixes a 22-byte header (`!BBBBB8sQB`) that embeds wire version, suite IDs, session ID, sequence, and epoch.
+- Nonces are deterministic `epoch || seq` values derived locally (IV removed from wire), saving bandwidth and preventing nonce-malleation.
+- `Receiver` enforces a bitmap replay window (default 1024 slots), classifies drop reasons, and refuses packets from wrong sessions or epochs.
+- Optional packet-type tagging (`ENABLE_PACKET_TYPE`) multiplexes data/control on the same tunnel.
+
+Impact: Strong replay defense, smaller packets, and structured framing for diagnostics and control-plane integration.
+
+4. Control Plane, Rekeying, and State Management
+-----------------------------------------------
+Legacy:
+- Rekeying means restarting processes with different scripts. MQTT scheduler scripts broadcast commands like `c1..c8` to kill and relaunch proxies.
+- No in-band control messages or two-phase commit; partial failures leave the swarm inconsistent.
+
+Now:
+- `core/policy_engine.py` implements a two-phase commit (prepare → commit → swap) with RID tracking, guard callbacks, and status telemetry.
+- `core/async_proxy.py` exposes `_launch_rekey` to perform background authenticated handshakes while the data plane keeps running; on success it atomically swaps sender/receiver contexts and updates counters.
+- Automation (`gcs_scheduler.py`) drives rekeys by calling the drone follower control API (`mark`, `schedule_mark`, `rekey_complete`) synchronized with the policy engine’s decisions.
+
+Impact: Suite transitions are coordinated, fail-safe, and measurable with precise timestamps.
+
+5. Configuration, Validation, and Environment Overrides
+-------------------------------------------------------
+Legacy:
+- Static constants in `legacy/*/ip_config.py` must be edited manually, and helper functions try to rewrite the file in place.
+- No validation of port ranges, host types, or PSK length.
+
+Now:
+- `core/config.py` defines all runtime knobs (ports, DSCP, flags) once, applies environment overrides, and validates constraints (port ranges, loopback requirements, 32-byte PSK, frozen wire version).
+- Automation scripts read the same `CONFIG`, so lab vs. field changes involve a single update or environment export.
+
+Impact: Configuration drift is eliminated and invalid deployments are caught at startup.
+
+6. Logging, Telemetry, and Diagnostics
+--------------------------------------
+Legacy:
+- Print-based logging with inconsistent prefixes; some schedulers maintain ad hoc log directories.
+- Telemetry is optional and mainly done via MQTT heartbeats and informal log scraping.
+
+Now:
+- `core/logging_utils.py` emits structured JSON logs to stdout and optional file handlers, making ingestion into centralized systems trivial.
+- `tools/auto/drone_follower.py` spawns monitors (perf, pidstat, psutil, thermal) and streams telemetry via the embedded `TelemetryPublisher`.
+- `tools/auto/gcs_scheduler.py` records UDP blaster events, RTT samples, and summary CSV/Excel output. It also snapshots proxy status JSON during tests.
+
+Impact: Operators gain actionable metrics, uniform log formats, and ready-made artifacts for regression tracking.
+
+7. Automation Workflows
+-----------------------
+Legacy:
+- MQTT schedulers (`legacy/drone/drone_mqtt_scheduler.py`, `legacy/gcs/gcs_mqtt_scheduler.py`) rely on GUI/Tkinter, manual certificate placement, and script spawning. Control/telemetry travel over MQTT topics, which introduces external dependencies and UI requirements.
+- Test harnesses focus on launching one algorithm at a time, with little automated performance measurement.
+
+Now:
+- `tools/auto/drone_follower.py` exposes a TCP JSON control API (ping/status/mark/schedule_mark/rekey_complete) and runs the drone proxy plus UDP echo loop headless.
+- `tools/auto/gcs_scheduler.py` synchronizes time with the drone follower, orchestrates rekeys, runs saturation tests via the `Blaster` class, and aggregates metrics per suite.
+- Both automation scripts share secret material under `secrets/matrix/<suite>/`, meaning suite changes are script-agnostic.
+
+Impact: CI/lab automation can run unattended, with reproducible workflows and artifact capture for every suite.
+
+8. Security Hardening & Operational Robustness
+---------------------------------------------
+Legacy:
+- Lacks peer pinning; UDP sockets accept packets from any source.
+- No DSCP tagging, rate limiting, or control-plane separation.
+- Error handling often prints the exception and continues; random failures can leave sockets unclosed.
+
+Now:
+- `core/async_proxy.py` enforces strict peer IP/port matching by default (`STRICT_UDP_PEER_MATCH`) and rate-limits handshake attempts with a token bucket.
+- DSCP values (default EF / 46) are applied to encrypted sockets when configured.
+- Errors classify drop reasons, update counters, and avoid leaking secrets. Replay drops are silent unless strict mode is requested for testing.
+- Automation scripts clean up child processes, gather telemetry even during errors, and gracefully shut down via control commands.
+
+Impact: Production deployments obtain defense-in-depth controls and predictable failure behavior.
+
+9. Suite Registry & Extensibility
+---------------------------------
+Legacy:
+- Adding a new algorithm requires copying a script and hardcoding its parameters, plus updating schedulers with new command codes.
+- No single source of truth for identifiers, KDF properties, or wire encodings.
+
+Now:
+- `core/suites.py` registers all `{KEM × AEAD × SIG}` combinations, maps aliases, exposes header ID bytes, and lists available suites.
+- Automation scripts query the registry (`suites_mod.list_suites()`) to populate workflows dynamically.
+
+Impact: New suites only require updating the registry and adding secret material; proxies and automation pick them up automatically.
+
+10. Testability & Tooling
+-------------------------
+Legacy:
+- Manual testing through MQTT GUIs or ad hoc scripts; no shared test harness.
+- Difficult to emulate replays or downgrade attempts without modifying code.
+
+Now:
+- `tests/` (outside the scope of this comparison) exercise handshake downgrade protection, replay windows, and AEAD framing.
+- Automation scripts record structured artifacts (JSON, CSV, Excel) to support regression analysis and dashboards.
+
+Overall Summary
+---------------
+The legacy tree is a collection of per-algorithm prototypes driven by loosely coupled schedulers. The current `core/` library consolidates handshake, encryption, policy, and configuration into a reusable, validated stack with strong security guarantees. Automation shifted from GUI/MQTT orchestration to headless, scriptable control (`drone_follower.py`, `gcs_scheduler.py`) that leverages the shared stack, enabling deterministic rekeys, telemetry, and saturation testing. The result is a maintainable, auditable system where suites can be swapped dynamically, logs are structured, and runtime safety checks are built-in.
+
+Legacy Script Behavior Details
+------------------------------
+- Each algorithm pair (e.g., `legacy/drone/drone_kyber.py` with `legacy/gcs/gcs_kyber.py`) stands alone: sockets, threads, key exchange, and encryption are reimplemented per file. If both ends run with matching hosts/ports they pass traffic, but there is no orchestrated suite switch—operators kill one pair and launch another.
+- KEM-based pairs do a raw TCP exchange with no authentication. Kyber scripts accept any learner, slice the shared secret for AES-256-GCM, and fall back to RSA when liboqs is missing, enabling silent downgrades. Packets carry random nonces on the wire and lack replay protection.
+- Signature pairs (Dilithium/Falcon/SPHINCS) append a literal delimiter (`b"||"` or `b'|SIGNATURE|'`) between payload and signature. Public keys arrive over unauthenticated UDP/TCP, so a spoofed peer can inject keys. Payloads remain plaintext; only authenticity is attempted.
+- Pure symmetric demos (ASCON, SPECK, CAMELLIA, HIGHT, AES PSK) hard-code keys and often reuse the same nonce for every packet, violating algorithm requirements. They provide confidentiality in name only.
+- The “older” UDP-only Dilithium signer forwards commands through a queue, throttles telemetry to one packet every 0.5 seconds, and still trusts unauthenticated key exchange. ASCON utilities create a new socket per send and reuse a static nonce, which breaks AEAD guarantees outright.
+- No replay window, no suite negotiation, no suite registry: mismatches or replays succeed silently. Error handling prints to stdout and drops packets; sockets are created/destroyed frequently, causing overhead and potential resource leaks.
+
+Operational Reality Check
+--------------------------
+- These prototypes will “work” in a cooperative lab: align `ip_config.py`, start both sides, and MAVLink frames flow. Outside that bubble they are brittle—UDP drops are silent, replays succeed, and a hostile peer can impersonate or downgrade the channel.
+- Automation depended on GUI/MQTT tooling that spawned scripts via shell commands. There is no telemetry confirming a suite transition succeeded, no counters, and no structured logs.
+- Treat them as proof-of-concept demonstrations of individual primitives; they should not be deployed or considered standards-compliant secure channels.

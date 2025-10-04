@@ -1,15 +1,15 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research\ddos
-Output File: C:\Users\burak\Desktop\research\ddos\project_structure_20251003_190726.txt
-Generated: 2025-10-03 19:07:26
+Output File: C:\Users\burak\Desktop\research\ddos\project_structure_20251004_140155.txt
+Generated: 2025-10-04 14:01:55
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research\ddos
-Generated: 2025-10-03 19:07:26
+Generated: 2025-10-04 14:01:55
 
 ├── __pycache__/
 │   ├── hybrid_detector.cpython-313.pyc (18,278 bytes)
@@ -21,7 +21,7 @@ Generated: 2025-10-03 19:07:26
 ├── DDOS_SETUP_REFERENCE.txt (8,147 bytes)
 ├── hybrid_detector.py (12,323 bytes)
 ├── manual_control_detector.py (11,232 bytes)
-├── project_structure_20251003_190726.txt (0 bytes)
+├── project_structure_20251004_140155.txt (0 bytes)
 ├── README.md (5,636 bytes)
 ├── realtime_tst.py (9,188 bytes)
 ├── run_tst.py (2,943 bytes)

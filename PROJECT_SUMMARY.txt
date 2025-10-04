@@ -1,0 +1,81 @@
+PROJECT SUMMARY – QUANTUM-SAFE UAV C2 PLATFORM
+================================================
+
+1. VISION AND SCOPE
+- Deliver a reproducible, quantum-safe command-and-control tunnel between a UAV (Raspberry Pi 4B + Pixhawk 2.4.8) and a Ground Control Station (Windows/Linux PC).
+- Protect against harvest-now/decrypt-later adversaries, spoofed command injection, and replay attacks while remaining lightweight enough for edge hardware.
+- Layer post-quantum cryptography, real-time DDoS detection, and a reinforcement-learning policy engine inside one cohesive proxy stack.
+
+2. CORE ARCHITECTURE
+- `core/handshake.py`: TCP-based ML-KEM + signature handshake. Drone sends ClientHello, GCS replies with signed ServerHello, and HKDF-SHA256 expands the shared secret into direction-specific AES-256-GCM keys and nonce seeds.
+- `core/aead.py`: AES-256-GCM data plane with a fixed 22-byte authenticated header (version, suite IDs, session, seq, epoch). Nonces are 96-bit counters derived from monotonic per-direction seq.
+- `core/async_proxy.py`: Selector-driven UDP bridge connecting plaintext loopback sockets to encrypted peers. Manages DSCP tagging, replay enforcement via `Receiver`, and orchestrates parallel rekey phases.
+- `core/suites.py`: Single registry mapping suite IDs (e.g., `cs-kyber768-aesgcm-dilithium3`) to KEM/signature/AEAD parameters, HKDF metadata, and NIST level guarantees. All code resolves suites here to avoid hard-coded constants.
+- `core/config.py`: Centralized ports, IPs, MQTT topics, feature flags, and mission policy constraints; supports environment overrides while enforcing validation (loopback restrictions unless explicitly allowed, 32-byte PSKs, `WIRE_VERSION=1`).
+
+3. CRYPTOGRAPHIC INVARIANTS
+- Handshake transcripts bind algorithm IDs, randoms, session IDs, and ephemeral keys; signatures are verified against provisioned GCS identities (and drone if mutual auth is enabled).
+- HKDF-SHA256 derives separate send/receive keys; raw KEM outputs are never reused directly.
+- Deterministic nonce construction and 1024-slot sliding replay windows prevent reuse and duplication; replays drop silently while counters increment for metrics.
+- Mission policies reject downgrades below required NIST levels; suites ship in L1/L3/L5 tiers plus optional Falcon and SPHINCS+ variants.
+
+4. DATA-PLANE FRAMING AND FLOW
+- Header fields remain in cleartext but are authenticated as Additional Data; any tampering yields GCM tag failure.
+- Packets carry increment-only seq values (uint64) and 1-byte epochs; epoch increments reset counters after successful rekeys.
+- Plaintext loopback sockets expose MAVLink-compatible ports, while encrypted peers ride UDP across the network with DSCP marking (`ENCRYPTED_DSCP << 2`).
+- Async proxy enforces strict peer matching and optional packet-type tagging when `ENABLE_PACKET_TYPE=1`, enabling future in-band control payloads.
+
+5. REPLAY DEFENSE AND PARALLEL REKEY
+- Receiver bitmaps admit out-of-order packets inside the 1024-window and reject stale or duplicate seqs without raising exceptions to callers.
+- Policy-driven rekeys trigger on schedule, packet counts, RL directives, or anomaly spikes. `_launch_rekey()` coordinates a two-phase commit: RUNNING → NEGOTIATING → SWAPPING → RUNNING, with rollback on timeout.
+- Epoch and session management ensures clean cutover; counters reset and telemetry acknowledges success via JSON logs.
+
+6. DDoS DETECTION AND MITIGATION (ddos/)
+- Stage-1 XGBoost model computes lightweight flow features (pps, burstiness, syn/udp ratios, unique tuples) from pre-decrypt queues at kilohertz cadence.
+- Stage-2 Temporal Signal Transformer (PyTorch) confirms anomalies when Stage-1 score crosses threshold, reducing false positives.
+- Combiner emits `ddos_state` (0 OK, 1 suspect, 2 attack) and publishes structured JSON for policy consumption.
+- Mitigations include ingress token buckets (off/2kpps/1kpps) and telemetry down-sampling (1.0/0.7/0.4) while preserving command channel integrity.
+
+7. RL / POLICY ENGINE (rl/ & core/policy_engine.py)
+- Observations at 1 Hz cover system load (CPU, temperature), link quality (RTT, loss, jitter), crypto performance (AEAD p95 μs, handshake timings), queue health, DDoS scores, and mission directives (priority, minimum security level).
+- Actions span suite selection (L1/L3/L5 variants, compact-sig, conservative), immediate rekey triggers, telemetry rate shaping, and ingress limiting.
+- LinUCB contextual bandit supplies adaptive decisions with built-in guardrails: never drop below mission security, freeze suites during elevated DDoS states, and ensure commands remain unthrottled.
+- Control messages route through the existing secure channel when packet-type tagging is enabled, eliminating the need for external MQTT side channels while retaining structured topics for logging compatibility.
+
+8. TOOLING AND SUPPORTING MODULES
+- `core/logging_utils.py` delivers JSON-structured logs via `get_logger("pqc")`, redacting secrets and embedding hashed session IDs unless `LOG_SESSION_ID=True`.
+- Diagnostics (`diagnose_handshake.py`, `diagnose_aead.py`) replay handshake traces or decrypt captures for troubleshooting.
+- `tools/` hosts benchmarking helpers (`bench_cli.py`, `run_matrix.py`), power measurement mergers, Wireshark dissectors, dual UDP probes, and wrapper generators.
+- Wrapper scripts under `drone/wrappers` and `gcs/wrappers` provide no-argument launches for each suite, delegating to the shared runner.
+
+9. TESTING AND QUALITY GATES
+- Pytest suite (`tests/`) covers handshake downgrade resistance, AEAD framing integrity, replay window enforcement, epoch transitions, and loss/out-of-order tolerance.
+- Lint-style guardrail: `python tools/check_no_hardcoded_ips.py` ensures all network constants route through `core/config.py`.
+- Manual drills documented in `docs/lan-test.txt` and `docs/auto_run_playbook.md` validate real hardware loops, while regression artifacts capture counters, logs, and packet taps.
+- Definition of Done requires full pytest pass, benchmark refresh across suite matrix, README reproduction steps, and absence of TODO/FIXME in production paths.
+
+10. BENCHMARKING AND METRICS
+- KPIs include handshake latency/bytes, per-packet latency percentiles across payload sizes, throughput, CPU %, and joules per packet (derived from synchronized power logs).
+- DDoS evaluation reports ROC/PR curves, false-positive rates at high TPR, and runtime overhead under attack scenarios.
+- RL assessments chart rewards versus heuristics, action timelines, and SLA violations.
+- `benchmarks/run_matrix.py` coordinates suite sweeps with optional Windows Performance Recorder captures and start/stop markers for power-rig alignment; outputs manifests, counters, logs, and merged CSVs under timestamped directories.
+
+11. OPERATIONS PLAYBOOK
+- Key provisioning: `python -m core.run_proxy init-identity --suite <suite_id>` writes signing secrets in `secrets/`.
+- Launch proxies: `python -m core.run_proxy gcs --suite <suite> --stop-seconds <t> --json-out gcs_counters.json` and symmetrical drone command; environment variables override defaults per `core/config.py`.
+- LAN validation uses UDP forward logs and plaintext consoles to confirm ciphertext carriage and decrypted delivery, with sequence counters observed in taps.
+- Rekey drills enable `ENABLE_PACKET_TYPE=1` and `--control-manual`, allowing operators to step through NEGOTIATING/SWAPPING phases via console inputs handled by `core.policy_engine`.
+
+12. RESEARCH CONTRIBUTIONS
+- Demonstrates a fully authenticated, replay-hardened PQC tunnel tailored for UAV command links, backed by constant-time implementations and rigorous downgrade prevention.
+- Integrates on-device ML for layered DDoS defense without sacrificing command availability.
+- Introduces an adaptive policy engine that selects crypto suites and mitigations in real time based on mission and telemetry signals, closing the loop between security strength and resource constraints.
+- Provides reproducible measurement methodology for latency, energy, and robustness, supporting academic dissemination and operational certification.
+
+13. FUTURE EXTENSIONS
+- Expand suite registry with hybrid classical+PQC options and ChaCha20-Poly1305 variants for non-AES hardware.
+- Harden in-band control message schemas (CBOR or protobuf) once packet-type tagging graduates to default.
+- Broaden DDoS models with federated updates sourced from flight logs and integrate anomaly explanations for operator trust.
+- Automate mission-profile ingestion so planners can encode minimum security levels, allowable telemetry degradation, and rekey cadence per sortie.
+
+END OF SUMMARY
