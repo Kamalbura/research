@@ -539,7 +539,12 @@ class Rpi5PowerMonitor:
                 if any(hint in name_value for hint in hints):
                     return entry
             else:
-                if "rpi" in name_value and ("power" in name_value or "pmic" in name_value or "monitor" in name_value):
+                if "rpi" in name_value and (
+                    "power" in name_value
+                    or "pmic" in name_value
+                    or "monitor" in name_value
+                    or "volt" in name_value
+                ):
                     return entry
 
         if strict:
