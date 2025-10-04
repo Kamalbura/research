@@ -56,9 +56,10 @@ import psutil
 from core.config import CONFIG
 from core import suites as suites_mod
 from core.power_monitor import (
-    Ina219PowerMonitor,
+    PowerMonitor,
     PowerMonitorUnavailable,
     PowerSummary,
+    create_power_monitor,
 )
 
 
@@ -218,7 +219,7 @@ def _summary_to_dict(summary: PowerSummary, *, suite: str, session_id: str) -> d
 
 
 class PowerCaptureManager:
-    """Coordinates INA219 captures for control commands."""
+    """Coordinates power captures for control commands."""
 
     def __init__(
         self,
@@ -233,14 +234,78 @@ class PowerCaptureManager:
         self._last_summary: Optional[dict] = None
         self._last_error: Optional[str] = None
         self._pending_suite: Optional[str] = None
+        self.monitor: Optional[PowerMonitor] = None
+
+        def _parse_int_env(name: str, default: int) -> int:
+            raw = os.getenv(name)
+            if not raw:
+                return default
+            try:
+                return int(raw)
+            except ValueError:
+                print(f"[follower] invalid {name}={raw!r}, using {default}")
+                return default
+
+        def _parse_float_env(name: str, default: float) -> float:
+            raw = os.getenv(name)
+            if not raw:
+                return default
+            try:
+                return float(raw)
+            except ValueError:
+                print(f"[follower] invalid {name}={raw!r}, using {default}")
+                return default
+
+        def _parse_float_optional(name: str) -> Optional[float]:
+            raw = os.getenv(name)
+            if raw is None or raw == "":
+                return None
+            try:
+                return float(raw)
+            except ValueError:
+                print(f"[follower] invalid {name}={raw!r}, ignoring")
+                return None
+
+        backend = os.getenv("DRONE_POWER_BACKEND", "auto")
+        sample_hz = _parse_int_env("DRONE_POWER_SAMPLE_HZ", 1000)
+        shunt_ohm = _parse_float_env("DRONE_POWER_SHUNT_OHM", 0.1)
+        sign_mode = os.getenv("DRONE_POWER_SIGN_MODE", "auto")
+        hwmon_path = os.getenv("DRONE_POWER_HWMON_PATH")
+        hwmon_name_hint = os.getenv("DRONE_POWER_HWMON_NAME")
+        voltage_file = os.getenv("DRONE_POWER_VOLTAGE_FILE")
+        current_file = os.getenv("DRONE_POWER_CURRENT_FILE")
+        power_file = os.getenv("DRONE_POWER_POWER_FILE")
+        voltage_scale = _parse_float_optional("DRONE_POWER_VOLTAGE_SCALE")
+        current_scale = _parse_float_optional("DRONE_POWER_CURRENT_SCALE")
+        power_scale = _parse_float_optional("DRONE_POWER_POWER_SCALE")
+
         try:
-            self.monitor = Ina219PowerMonitor(output_dir)
+            self.monitor = create_power_monitor(
+                output_dir,
+                backend=backend,
+                sample_hz=sample_hz,
+                shunt_ohm=shunt_ohm,
+                sign_mode=sign_mode,
+                hwmon_path=hwmon_path,
+                hwmon_name_hint=hwmon_name_hint,
+                voltage_file=voltage_file,
+                current_file=current_file,
+                power_file=power_file,
+                voltage_scale=voltage_scale,
+                current_scale=current_scale,
+                power_scale=power_scale,
+            )
             self.available = True
         except PowerMonitorUnavailable as exc:
             self.monitor = None
             self.available = False
             self._last_error = str(exc)
             print(f"[follower] power monitor disabled: {exc}")
+        except ValueError as exc:
+            self.monitor = None
+            self.available = False
+            self._last_error = str(exc)
+            print(f"[follower] power monitor configuration invalid: {exc}")
 
     def start_capture(self, suite: str, duration_s: float, start_ns: Optional[int]) -> tuple[bool, Optional[str]]:
         if not self.available or self.monitor is None:

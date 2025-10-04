@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live power sampling helper for Raspberry Pi INA219 setups.
+"""Live power sampling helper for Raspberry Pi power telemetry backends.
 
 This script reuses :mod:`core.power_monitor` to capture high-rate samples
 (typically 1 kHz) and provides two operation modes:
@@ -32,9 +32,10 @@ def _ensure_core_on_path() -> None:
 _ensure_core_on_path()
 
 from core.power_monitor import (
-    Ina219PowerMonitor,
+    PowerMonitor,
     PowerMonitorUnavailable,
     PowerSample,
+    create_power_monitor,
 )
 
 
@@ -55,7 +56,7 @@ def _write_sample(writer: Optional[csv.writer], sample: PowerSample, sign_factor
     ])
 
 
-def _stream_mode(monitor: Ina219PowerMonitor, args: argparse.Namespace) -> int:
+def _stream_mode(monitor: PowerMonitor, args: argparse.Namespace) -> int:
     duration = None if args.duration <= 0 else float(args.duration)
     label = _safe_label(args.label)
     output_dir = Path(args.output_dir).expanduser().resolve()
@@ -131,7 +132,7 @@ def _stream_mode(monitor: Ina219PowerMonitor, args: argparse.Namespace) -> int:
     return 0
 
 
-def _capture_mode(monitor: Ina219PowerMonitor, args: argparse.Namespace) -> int:
+def _capture_mode(monitor: PowerMonitor, args: argparse.Namespace) -> int:
     label = _safe_label(args.label)
     start_ns = None
     if args.start_delay > 0:
@@ -144,7 +145,7 @@ def _capture_mode(monitor: Ina219PowerMonitor, args: argparse.Namespace) -> int:
 
 
 def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="INA219 power monitor utility")
+    parser = argparse.ArgumentParser(description="Power monitor utility for Raspberry Pi platforms")
     parser.add_argument("--mode", choices=["stream", "capture"], default="stream")
     parser.add_argument("--duration", type=float, default=10.0, help="Capture duration seconds (<=0 for continuous stream)")
     parser.add_argument("--label", default="live", help="Label used for file naming")
@@ -152,6 +153,15 @@ def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
     parser.add_argument("--sample-hz", type=int, default=1000, help="Sampling frequency in Hz")
     parser.add_argument("--shunt-ohm", type=float, default=0.1, help="Shunt resistor value in ohms")
     parser.add_argument("--sign-mode", default="auto", choices=["auto", "positive", "negative"], help="Sign correction mode")
+    parser.add_argument("--backend", choices=["auto", "ina219", "rpi5"], default="auto", help="Select power monitor backend")
+    parser.add_argument("--hwmon-path", help="Explicit hwmon directory for rpi5 backend")
+    parser.add_argument("--hwmon-name-hint", help="Comma-separated substrings to match hwmon name (auto discovery)")
+    parser.add_argument("--voltage-file", help="Override voltage channel filename (rpi5 backend)")
+    parser.add_argument("--current-file", help="Override current channel filename (rpi5 backend)")
+    parser.add_argument("--power-file", help="Override power channel filename (rpi5 backend)")
+    parser.add_argument("--voltage-scale", type=float, help="Scale factor applied to voltage readings (rpi5 backend)")
+    parser.add_argument("--current-scale", type=float, help="Scale factor applied to current readings (rpi5 backend)")
+    parser.add_argument("--power-scale", type=float, help="Scale factor applied to power readings (rpi5 backend)")
     parser.add_argument("--report-period", type=float, default=1.0, help="Seconds between console reports (stream mode)")
     parser.add_argument("--no-csv", action="store_true", help="Disable CSV logging in stream mode")
     parser.add_argument("--start-delay", type=float, default=0.0, help="Delay before capture start (seconds, capture mode)")
@@ -162,13 +172,22 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     args = parse_args(argv)
     output_dir = Path(args.output_dir).expanduser().resolve()
     try:
-        monitor = Ina219PowerMonitor(
+        monitor = create_power_monitor(
             output_dir,
+            backend=args.backend,
             sample_hz=args.sample_hz,
             shunt_ohm=args.shunt_ohm,
             sign_mode=args.sign_mode,
+            hwmon_path=args.hwmon_path,
+            hwmon_name_hint=args.hwmon_name_hint,
+            voltage_file=args.voltage_file,
+            current_file=args.current_file,
+            power_file=args.power_file,
+            voltage_scale=args.voltage_scale,
+            current_scale=args.current_scale,
+            power_scale=args.power_scale,
         )
-    except PowerMonitorUnavailable as exc:
+    except (PowerMonitorUnavailable, ValueError) as exc:
         print(f"[monitor] power monitor unavailable: {exc}", file=sys.stderr)
         return 2
 
