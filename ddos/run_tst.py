@@ -23,6 +23,21 @@ globals().setdefault("_TSTBackbone", _TSTBackbone)
 globals().setdefault("_TSTEncoder", _TSTEncoder)
 globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
 
+
+def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim == 1:
+        logits = logits.unsqueeze(0)
+    if logits.ndim != 2:
+        raise ValueError(f"TST model must return rank-2 logits; got shape {tuple(logits.shape)}")
+    if logits.shape[1] == 1:
+        attack = torch.sigmoid(logits)
+        probs = torch.cat([1 - attack, attack], dim=1)
+    elif logits.shape[1] >= 2:
+        probs = torch.softmax(logits, dim=1)
+    else:
+        raise ValueError(f"TST model produced invalid class dimension: {tuple(logits.shape)}")
+    return probs
+
 from config import (
     SCALER_FILE,
     TST_ATTACK_THRESHOLD,
@@ -85,7 +100,7 @@ def main() -> int:
 
     with torch.no_grad():
         logits = model(tensor)
-        probs = torch.softmax(logits, dim=1)
+        probs = _logits_to_probs(logits)
         predicted_idx = int(torch.argmax(probs, dim=1))
         attack_prob = float(probs[0, 1])
 

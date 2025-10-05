@@ -89,6 +89,21 @@ def load_xgb_model() -> xgb.XGBClassifier:
     return model
 
 
+def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim == 1:
+        logits = logits.unsqueeze(0)
+    if logits.ndim != 2:
+        raise ValueError(f"TST model must return rank-2 logits; got shape {tuple(logits.shape)}")
+    if logits.shape[1] == 1:
+        attack = torch.sigmoid(logits)
+        probs = torch.cat([1 - attack, attack], dim=1)
+    elif logits.shape[1] >= 2:
+        probs = torch.softmax(logits, dim=1)
+    else:
+        raise ValueError(f"TST model produced invalid class dimension: {tuple(logits.shape)}")
+    return probs
+
+
 def load_tst_model():
     ensure_file(SCALER_FILE, "StandardScaler pickle")
     scaler = joblib.load(SCALER_FILE)
@@ -145,11 +160,7 @@ def load_tst_model():
                 f"TST model rejected input shaped (1, 1, {TST_SEQ_LENGTH}); check seq length and architecture"
             ) from exc
 
-    if logits.ndim != 2 or logits.shape[1] < 2:
-        raise ValueError(
-            "TST model must return a 2D tensor with >=2 classes; got shape "
-            f"{tuple(logits.shape)}"
-        )
+    _ = _logits_to_probs(logits)
 
     LOGGER.info("Validated TST model output shape=%s", tuple(logits.shape))
     return scaler, model, scripted
@@ -344,7 +355,7 @@ def tst_confirmer_thread(
 
         with torch.no_grad():
             logits = model(tensor)
-            probs = torch.softmax(logits, dim=1)
+            probs = _logits_to_probs(logits)
             attack_prob = float(probs[0, 1])
             predicted_idx = int(torch.argmax(probs, dim=1))
 

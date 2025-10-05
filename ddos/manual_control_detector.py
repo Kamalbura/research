@@ -68,6 +68,21 @@ class RateLimiter:
         return False
 
 
+def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim == 1:
+        logits = logits.unsqueeze(0)
+    if logits.ndim != 2:
+        raise ValueError(f"TST model must return rank-2 logits; got shape {tuple(logits.shape)}")
+    if logits.shape[1] == 1:
+        attack = torch.sigmoid(logits)
+        probs = torch.cat([1 - attack, attack], dim=1)
+    elif logits.shape[1] >= 2:
+        probs = torch.softmax(logits, dim=1)
+    else:
+        raise ValueError(f"TST model produced invalid class dimension: {tuple(logits.shape)}")
+    return probs
+
+
 def load_xgb_model() -> xgb.XGBClassifier:
     ensure_file(XGB_MODEL_FILE, "XGBoost model")
     model = xgb.XGBClassifier()
@@ -253,7 +268,7 @@ def detector_thread(
 
             with torch.no_grad():
                 logits = tst_model(tensor)
-                probs = torch.softmax(logits, dim=1)
+                probs = _logits_to_probs(logits)
                 attack_prob = float(probs[0, 1])
                 predicted_idx = int(torch.argmax(probs, dim=1))
 
