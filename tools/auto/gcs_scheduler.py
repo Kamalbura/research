@@ -41,21 +41,21 @@ APP_SEND_PORT = int(CONFIG.get("GCS_PLAINTEXT_TX", 47001))
 APP_RECV_HOST = CONFIG.get("GCS_PLAINTEXT_HOST", "127.0.0.1")
 APP_RECV_PORT = int(CONFIG.get("GCS_PLAINTEXT_RX", 47002))
 
-OUTDIR = Path("logs/auto/gcs")
+OUTDIR = ROOT / "logs/auto/gcs"
 SUITES_OUTDIR = OUTDIR / "suites"
-SECRETS_DIR = Path("secrets/matrix")
+SECRETS_DIR = ROOT / "secrets/matrix"
 
-EXCEL_OUTPUT_DIR = Path(
+EXCEL_OUTPUT_DIR = ROOT / Path(
     CONFIG.get("GCS_EXCEL_OUTPUT")
     or os.getenv("GCS_EXCEL_OUTPUT", "output/gcs")
 )
 
-COMBINED_OUTPUT_DIR = Path(
+COMBINED_OUTPUT_DIR = ROOT / Path(
     CONFIG.get("GCS_COMBINED_OUTPUT_BASE")
     or os.getenv("GCS_COMBINED_OUTPUT_BASE", "output/gcs")
 )
 
-DRONE_MONITOR_BASE = Path(
+DRONE_MONITOR_BASE = ROOT / Path(
     CONFIG.get("DRONE_MONITOR_OUTPUT_BASE")
     or os.getenv("DRONE_MONITOR_OUTPUT_BASE", "output/drone")
 )
@@ -439,10 +439,19 @@ def start_gcs_proxy(initial_suite: str) -> tuple[subprocess.Popen, Path]:
     log_path = OUTDIR / f"gcs_{time.strftime('%Y%m%d-%H%M%S')}.log"
     log_handle = open(log_path, "w", encoding="utf-8", errors="replace")
 
-    os.environ["DRONE_HOST"] = DRONE_HOST
-    os.environ["GCS_HOST"] = GCS_HOST
-    os.environ["ENABLE_PACKET_TYPE"] = "1" if CONFIG.get("ENABLE_PACKET_TYPE", True) else "0"
-    os.environ["STRICT_UDP_PEER_MATCH"] = "1" if CONFIG.get("STRICT_UDP_PEER_MATCH", True) else "0"
+    env = os.environ.copy()
+    env["DRONE_HOST"] = DRONE_HOST
+    env["GCS_HOST"] = GCS_HOST
+    env["ENABLE_PACKET_TYPE"] = "1" if CONFIG.get("ENABLE_PACKET_TYPE", True) else "0"
+    env["STRICT_UDP_PEER_MATCH"] = "1" if CONFIG.get("STRICT_UDP_PEER_MATCH", True) else "0"
+
+    root_str = str(ROOT)
+    existing_py_path = env.get("PYTHONPATH")
+    if existing_py_path:
+        if root_str not in existing_py_path.split(os.pathsep):
+            env["PYTHONPATH"] = root_str + os.pathsep + existing_py_path
+    else:
+        env["PYTHONPATH"] = root_str
 
     proc = subprocess.Popen(
         [
@@ -465,6 +474,8 @@ def start_gcs_proxy(initial_suite: str) -> tuple[subprocess.Popen, Path]:
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
+        env=env,
+        cwd=str(ROOT),
     )
     return proc, log_handle
 
