@@ -28,8 +28,9 @@ import subprocess
 import threading
 import time
 import queue
+from datetime import datetime, timezone
 from copy import deepcopy
-from typing import Optional
+from typing import IO, Optional
 def optimize_cpu_performance(target_khz: int = 1800000) -> None:
     governors = list(Path("/sys/devices/system/cpu").glob("cpu[0-9]*/cpufreq"))
     for governor_dir in governors:
@@ -96,6 +97,15 @@ DEFAULT_MONITOR_BASE = Path(
 LOG_INTERVAL_MS = 100
 
 PERF_EVENTS = "task-clock,cycles,instructions,cache-misses,branch-misses,context-switches,branches"
+
+_VCGENCMD_WARNING_EMITTED = False
+
+
+def _warn_vcgencmd_unavailable() -> None:
+    global _VCGENCMD_WARNING_EMITTED
+    if not _VCGENCMD_WARNING_EMITTED:
+        print("[monitor] vcgencmd not available; thermal metrics disabled")
+        _VCGENCMD_WARNING_EMITTED = True
 
 
 def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
@@ -455,7 +465,7 @@ def write_marker(suite: str) -> None:
         json.dump({"ts": ts(), "suite": suite}, handle)
 
 
-def start_drone_proxy(suite: str) -> subprocess.Popen:
+def start_drone_proxy(suite: str) -> tuple[subprocess.Popen, IO[str]]:
     suite_dir = suite_secrets_dir(suite)
     pub = suite_dir / "gcs_signing.pub"
     if not pub.exists():
@@ -472,7 +482,7 @@ def start_drone_proxy(suite: str) -> subprocess.Popen:
     summary = suite_path / "drone_summary.json"
     OUTDIR.mkdir(parents=True, exist_ok=True)
     log_path = OUTDIR / f"drone_{time.strftime('%Y%m%d-%H%M%S')}.log"
-    log_handle = open(log_path, "w", encoding="utf-8")
+    log_handle: IO[str] = open(log_path, "w", encoding="utf-8")
 
     env = os.environ.copy()
     root_str = str(ROOT)
@@ -484,7 +494,7 @@ def start_drone_proxy(suite: str) -> subprocess.Popen:
         env["PYTHONPATH"] = root_str
 
     print(f"[follower] launching drone proxy on suite {suite}", flush=True)
-    return popen([
+    proc = popen([
         sys.executable,
         "-m",
         "core.run_proxy",
@@ -498,6 +508,7 @@ def start_drone_proxy(suite: str) -> subprocess.Popen:
         "--json-out",
         str(summary),
     ], stdout=log_handle, stderr=subprocess.STDOUT, text=True, env=env, cwd=str(ROOT))
+    return proc, log_handle
 
 
 class HighSpeedMonitor(threading.Thread):
@@ -519,6 +530,7 @@ class HighSpeedMonitor(threading.Thread):
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.csv_path = self.output_dir / f"system_monitoring_{session_id}.csv"
         self.publisher = publisher
+    self._vcgencmd_available = True
 
     def attach_proxy(self, pid: int) -> None:
         self.proxy_pid = pid
@@ -581,7 +593,10 @@ class HighSpeedMonitor(threading.Thread):
 
     def _sample(self) -> None:
         timestamp_ns = time.time_ns()
-        timestamp_iso = time.strftime("%Y-%m-%d %H:%M:%S.%f", time.gmtime(timestamp_ns / 1e9))[:-3]
+        timestamp_iso = datetime.fromtimestamp(
+            timestamp_ns / 1e9,
+            tz=timezone.utc,
+        ).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         cpu_percent = psutil.cpu_percent(interval=None)
         try:
             with open("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "r", encoding="utf-8") as handle:
@@ -590,11 +605,17 @@ class HighSpeedMonitor(threading.Thread):
             cpu_freq_mhz = 0.0
         cpu_temp_c = 0.0
         try:
-            result = subprocess.run(["vcgencmd", "measure_temp"], capture_output=True, text=True)
-            if result.returncode == 0 and "=" in result.stdout:
-                cpu_temp_c = float(result.stdout.split("=")[1].split("'" )[0])
+            if self._vcgencmd_available:
+                result = subprocess.run(["vcgencmd", "measure_temp"], capture_output=True, text=True)
+                if result.returncode == 0 and "=" in result.stdout:
+                    cpu_temp_c = float(result.stdout.split("=")[1].split("'")[0])
+                else:
+                    self._vcgencmd_available = False
+                    _warn_vcgencmd_unavailable()
         except Exception:
-            pass
+            if self._vcgencmd_available:
+                self._vcgencmd_available = False
+                _warn_vcgencmd_unavailable()
         mem = psutil.virtual_memory()
         rekey_ms = ""
         if self.rekey_start_ns is not None:
@@ -668,6 +689,12 @@ class UdpEcho(threading.Thread):
             rcvbuf = int(os.getenv("DRONE_SOCK_RCVBUF", str(16 << 20)))
             self.rx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
             self.tx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, sndbuf)
+            actual_snd = self.tx_sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+            actual_rcv = self.rx_sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+            print(
+                f"[{ts()}] follower UDP socket buffers: snd={actual_snd} rcv={actual_rcv}",
+                flush=True,
+            )
         except Exception:
             pass
         self.rx_sock.bind((self.bind_host, self.recv_port))
@@ -709,6 +736,7 @@ class UdpEcho(threading.Thread):
             self.packet_log_handle.close()
 
     def _annotate_packet(self, data: bytes, recv_ns: int) -> bytes:
+        # Last 8 bytes carry drone receive timestamp for upstream OWD inference.
         if len(data) >= 20:
             return data[:-8] + recv_ns.to_bytes(8, "big")
         return data + recv_ns.to_bytes(8, "big")
@@ -784,12 +812,15 @@ class Monitors:
         self.temp_stop = threading.Event()
         self.temp_csv_handle: Optional[object] = None
         self.temp_writer: Optional[csv.DictWriter] = None
+    self.pidstat_out: Optional[IO[str]] = None
+    self._vcgencmd_available = True
 
     def start(self, pid: int, outdir: Path, suite: str) -> None:
         if not self.enabled:
             return
         outdir.mkdir(parents=True, exist_ok=True)
         self.current_suite = suite
+        self._vcgencmd_available = True
 
         # Structured perf samples
         perf_cmd = [
@@ -828,9 +859,10 @@ class Monitors:
         self.perf_thread.start()
 
         # pidstat baseline dump for parity with legacy tooling
+        self.pidstat_out = open(outdir / f"pidstat_{suite}.txt", "w", encoding="utf-8")
         self.pidstat = popen(
             ["pidstat", "-hlur", "-p", str(pid), "1"],
-            stdout=open(outdir / f"pidstat_{suite}.txt", "w"),
+            stdout=self.pidstat_out,
             stderr=subprocess.STDOUT,
         )
 
@@ -889,10 +921,17 @@ class Monitors:
                 event = parts[3]
                 if event.startswith("#"):
                     continue
-                try:
-                    value = int(parts[1].replace(",", ""))
-                except Exception:
-                    value = ""
+                raw_value = parts[1].replace(",", "")
+                if event == "task-clock":
+                    try:
+                        value = float(raw_value)
+                    except Exception:
+                        value = ""
+                else:
+                    try:
+                        value = int(raw_value)
+                    except Exception:
+                        value = ""
 
                 if current_ms is None or abs(offset_ms - current_ms) >= 0.5:
                     if row:
@@ -971,25 +1010,35 @@ class Monitors:
                 "freq_hz": None,
                 "throttled_hex": "",
             }
-            try:
-                out = subprocess.check_output(["vcgencmd", "measure_temp"]).decode(errors="ignore")
-                payload["temp_c"] = float(out.split("=")[1].split("'")[0])
-            except Exception:
-                pass
-            try:
-                freq_path = Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
-                if freq_path.exists():
+            if self._vcgencmd_available:
+                try:
+                    out = subprocess.check_output(["vcgencmd", "measure_temp"]).decode(errors="ignore")
+                    payload["temp_c"] = float(out.split("=")[1].split("'")[0])
+                except Exception:
+                    self._vcgencmd_available = False
+                    _warn_vcgencmd_unavailable()
+
+            freq_path = Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
+            if freq_path.exists():
+                try:
                     payload["freq_hz"] = int(freq_path.read_text().strip()) * 1000
-                else:
+                except Exception:
+                    pass
+            elif self._vcgencmd_available:
+                try:
                     out = subprocess.check_output(["vcgencmd", "measure_clock", "arm"]).decode(errors="ignore")
                     payload["freq_hz"] = int(out.split("=")[1].strip())
-            except Exception:
-                pass
-            try:
-                out = subprocess.check_output(["vcgencmd", "get_throttled"]).decode(errors="ignore")
-                payload["throttled_hex"] = out.strip().split("=")[1]
-            except Exception:
-                pass
+                except Exception:
+                    self._vcgencmd_available = False
+                    _warn_vcgencmd_unavailable()
+
+            if self._vcgencmd_available:
+                try:
+                    out = subprocess.check_output(["vcgencmd", "get_throttled"]).decode(errors="ignore")
+                    payload["throttled_hex"] = out.strip().split("=")[1]
+                except Exception:
+                    self._vcgencmd_available = False
+                    _warn_vcgencmd_unavailable()
             try:
                 assert self.temp_writer is not None
                 self.temp_writer.writerow(payload)
@@ -1029,6 +1078,12 @@ class Monitors:
 
         killtree(self.pidstat)
         self.pidstat = None
+        if self.pidstat_out:
+            try:
+                self.pidstat_out.close()
+            except Exception:
+                pass
+            self.pidstat_out = None
 
         self.psutil_stop.set()
         if self.psutil_thread:
@@ -1368,7 +1423,7 @@ def main() -> None:
     high_speed_monitor.start()
 
     initial_suite = auto.get("initial_suite") or default_suite
-    proxy = start_drone_proxy(initial_suite)
+    proxy, proxy_log = start_drone_proxy(initial_suite)
     monitors_enabled = bool(auto.get("monitors_enabled", True))
     if not monitors_enabled:
         print("[follower] monitors disabled via AUTO_DRONE configuration")
@@ -1423,6 +1478,11 @@ def main() -> None:
             proxy.send_signal(signal.SIGTERM)
         except Exception:
             pass
+        if proxy_log:
+            try:
+                proxy_log.close()
+            except Exception:
+                pass
         if telemetry:
             telemetry.stop()
 

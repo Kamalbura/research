@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import bisect
 import csv
 import json
+import math
 import os
 import shutil
 import socket
@@ -13,9 +15,10 @@ import subprocess
 import sys
 import threading
 import time
+from collections import deque
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set
+from typing import Dict, IO, Iterable, List, Optional, Set, Tuple
 
 try:
     from openpyxl import Workbook
@@ -67,13 +70,150 @@ TELEMETRY_PORT = int(
     or 52080
 )
 
-SATURATION_TEST_RATES = [5, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200]
-SATURATION_RTT_SPIKE = 1.8
-
 PROXY_STATUS_PATH = OUTDIR / "gcs_status.json"
 PROXY_SUMMARY_PATH = OUTDIR / "gcs_summary.json"
 SUMMARY_CSV = OUTDIR / "summary.csv"
 EVENTS_FILENAME = "blaster_events.jsonl"
+
+SEQ_TS_OVERHEAD_BYTES = 12
+UDP_HEADER_BYTES = 8
+IPV4_HEADER_BYTES = 20
+IPV6_HEADER_BYTES = 40
+MIN_DELAY_SAMPLES = 30
+HYSTERESIS_WINDOW = 3
+MAX_BISECT_STEPS = 3
+WARMUP_FRACTION = 0.1
+MAX_WARMUP_SECONDS = 1.0
+SATURATION_COARSE_RATES = [5, 25, 50, 75, 100, 125, 150, 175, 200]
+SATURATION_LINEAR_RATES = [
+    5,
+    10,
+    15,
+    20,
+    25,
+    30,
+    35,
+    40,
+    45,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100,
+    125,
+    150,
+    175,
+    200,
+]
+SATURATION_SIGNALS = ("owd_p95_spike", "delivery_degraded", "loss_excess")
+
+
+class P2Quantile:
+    def __init__(self, p: float) -> None:
+        if not 0.0 < p < 1.0:
+            raise ValueError("p must be between 0 and 1")
+        self.p = p
+        self._initial: List[float] = []
+        self._q: List[float] = []
+        self._n: List[int] = []
+        self._np: List[float] = []
+        self._dn = [0.0, p / 2.0, p, (1.0 + p) / 2.0, 1.0]
+        self.count = 0
+
+    def add(self, sample: float) -> None:
+        x = float(sample)
+        self.count += 1
+        if self.count <= 5:
+            bisect.insort(self._initial, x)
+            if self.count == 5:
+                self._q = list(self._initial)
+                self._n = [1, 2, 3, 4, 5]
+                self._np = [1.0, 1.0 + 2.0 * self.p, 1.0 + 4.0 * self.p, 3.0 + 2.0 * self.p, 5.0]
+            return
+
+        if not self._q:
+            # Should not happen, but guard for consistency
+            self._q = list(self._initial)
+            self._n = [1, 2, 3, 4, 5]
+            self._np = [1.0, 1.0 + 2.0 * self.p, 1.0 + 4.0 * self.p, 3.0 + 2.0 * self.p, 5.0]
+
+        if x < self._q[0]:
+            self._q[0] = x
+            k = 0
+        elif x >= self._q[4]:
+            self._q[4] = x
+            k = 3
+        else:
+            k = 0
+            for idx in range(4):
+                if self._q[idx] <= x < self._q[idx + 1]:
+                    k = idx
+                    break
+
+        for idx in range(k + 1, 5):
+            self._n[idx] += 1
+
+        for idx in range(5):
+            self._np[idx] += self._dn[idx]
+
+        for idx in range(1, 4):
+            d = self._np[idx] - self._n[idx]
+            if (d >= 1 and self._n[idx + 1] - self._n[idx] > 1) or (d <= -1 and self._n[idx - 1] - self._n[idx] < -1):
+                step = 1 if d > 0 else -1
+                candidate = self._parabolic(idx, step)
+                if self._q[idx - 1] < candidate < self._q[idx + 1]:
+                    self._q[idx] = candidate
+                else:
+                    self._q[idx] = self._linear(idx, step)
+                self._n[idx] += step
+
+    def value(self) -> float:
+        if self.count == 0:
+            return 0.0
+        if self.count <= 5 and self._initial:
+            rank = (self.count - 1) * self.p
+            idx = max(0, min(len(self._initial) - 1, int(round(rank))))
+            return float(self._initial[idx])
+        if not self._q:
+            return 0.0
+        return float(self._q[2])
+
+    def _parabolic(self, idx: int, step: int) -> float:
+        numerator_left = self._n[idx] - self._n[idx - 1] + step
+        numerator_right = self._n[idx + 1] - self._n[idx] - step
+        denominator = self._n[idx + 1] - self._n[idx - 1]
+        if denominator == 0:
+            return self._q[idx]
+        return self._q[idx] + (step / denominator) * (
+            numerator_left * (self._q[idx + 1] - self._q[idx]) / max(self._n[idx + 1] - self._n[idx], 1)
+            + numerator_right * (self._q[idx] - self._q[idx - 1]) / max(self._n[idx] - self._n[idx - 1], 1)
+        )
+
+    def _linear(self, idx: int, step: int) -> float:
+        target = idx + step
+        denominator = self._n[target] - self._n[idx]
+        if denominator == 0:
+            return self._q[idx]
+        return self._q[idx] + step * (self._q[target] - self._q[idx]) / denominator
+
+
+def wilson_interval(successes: int, n: int, z: float = 1.96) -> Tuple[float, float]:
+    if n <= 0:
+        return (0.0, 1.0)
+    proportion = successes / n
+    z2 = z * z
+    denom = 1.0 + z2 / n
+    center = (proportion + z2 / (2.0 * n)) / denom
+    margin = (z * math.sqrt((proportion * (1.0 - proportion) / n) + (z2 / (4.0 * n * n)))) / denom
+    return (max(0.0, center - margin), min(1.0, center + margin))
+
+
+def ip_header_bytes_for_host(host: str) -> int:
+    return IPV6_HEADER_BYTES if ":" in host else IPV4_HEADER_BYTES
+
+
+APP_IP_HEADER_BYTES = ip_header_bytes_for_host(APP_SEND_HOST)
 
 
 def ts() -> str:
@@ -105,6 +245,10 @@ AUTO_GCS_DEFAULTS = {
     "rate_pps": 0,
     "bandwidth_mbps": 0.0,
     "max_rate_mbps": 200.0,
+    "sat_search": "auto",
+    "sat_delivery_threshold": 0.85,
+    "sat_loss_threshold_pct": 5.0,
+    "sat_rtt_spike_factor": 1.6,
     "suites": None,
     "launch_proxy": True,
     "monitors_enabled": True,
@@ -116,6 +260,11 @@ AUTO_GCS_DEFAULTS = {
 }
 
 AUTO_GCS_CONFIG = _merge_defaults(AUTO_GCS_DEFAULTS, CONFIG.get("AUTO_GCS"))
+
+SATURATION_SEARCH_MODE = str(AUTO_GCS_CONFIG.get("sat_search") or "auto").lower()
+SATURATION_RTT_SPIKE = float(AUTO_GCS_CONFIG.get("sat_rtt_spike_factor") or 1.6)
+SATURATION_DELIVERY_THRESHOLD = float(AUTO_GCS_CONFIG.get("sat_delivery_threshold") or 0.85)
+SATURATION_LOSS_THRESHOLD = float(AUTO_GCS_CONFIG.get("sat_loss_threshold_pct") or 5.0)
 
 
 def mkdirp(path: Path) -> None:
@@ -224,9 +373,9 @@ class Blaster:
         self,
         send_host: str,
         send_port: int,
-        recv_host: str,
-        recv_port: int,
-        events_path: Path,
+    recv_host: str,
+    recv_port: int,
+    events_path: Optional[Path],
         payload_bytes: int,
         sample_every: int,
         offset_ns: int,
@@ -248,12 +397,21 @@ class Blaster:
             rcvbuf = int(os.getenv("GCS_SOCK_RCVBUF", str(1 << 20)))
             self.tx.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, sndbuf)
             self.rx.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
+            actual_snd = self.tx.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+            actual_rcv = self.rx.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+            print(
+                f"[{ts()}] blaster UDP socket buffers: snd={actual_snd} rcv={actual_rcv}",
+                flush=True,
+            )
         except Exception:
             # best-effort; continue even if setting buffers fails
             pass
 
-        mkdirp(events_path.parent)
-        self.events = open(events_path, "w", encoding="utf-8")
+        self.events_path = events_path
+        self.events: Optional[IO[str]] = None
+        if events_path is not None:
+            mkdirp(events_path.parent)
+            self.events = open(events_path, "w", encoding="utf-8")
 
         self.sent = 0
         self.rcvd = 0
@@ -264,9 +422,20 @@ class Blaster:
         self.rtt_max_ns = 0
         self.rtt_min_ns: Optional[int] = None
         self.pending: Dict[int, int] = {}
+        self.rtt_p50 = P2Quantile(0.5)
+        self.rtt_p95 = P2Quantile(0.95)
+        self.owd_p50 = P2Quantile(0.5)
+        self.owd_p95 = P2Quantile(0.95)
+        self.owd_samples = 0
+        self.owd_p50_ns = 0.0
+        self.owd_p95_ns = 0.0
+        self.rtt_p50_ns = 0.0
+        self.rtt_p95_ns = 0.0
 
     def _log_event(self, payload: dict) -> None:
         # Buffered write; caller flushes at end of run()
+        if self.events is None:
+            return
         self.events.write(json.dumps(payload) + "\n")
 
     def _now(self) -> int:
@@ -294,6 +463,7 @@ class Blaster:
         seq = 0
         burst = 32 if interval == 0.0 else 1
         while self._now() < stop_at:
+            loop_progress = False
             sends_this_loop = burst
             while sends_this_loop > 0:
                 if self._now() >= stop_at:
@@ -302,10 +472,11 @@ class Blaster:
                 packet = seq.to_bytes(4, "big") + int(t_send).to_bytes(8, "big") + payload_pad
                 try:
                     self.tx.sendto(packet, self.send_addr)
-                    if self.sample_every == 0 or (self.sample_every and seq % self.sample_every == 0):
+                    if self.sample_every and (seq % self.sample_every == 0):
                         self.pending[seq] = int(t_send)
                     self.sent += 1
                     self.sent_bytes += len(packet)
+                    loop_progress = True
                     self._maybe_log("send", seq, int(t_send))
                 except Exception as exc:
                     self._log_event({"event": "send_error", "err": str(exc), "ts": ts()})
@@ -317,6 +488,8 @@ class Blaster:
                 time.sleep(interval)
             elif (seq & 0x3FFF) == 0:
                 time.sleep(0)
+            if not loop_progress:
+                time.sleep(0.0005)
 
         tail_deadline = self._now() + int(0.25 * 1e9)
         while self._now() < tail_deadline:
@@ -324,17 +497,24 @@ class Blaster:
                 time.sleep(0)
         stop_event.set()
         rx_thread.join(timeout=0.2)
+        self.owd_p50_ns = self.owd_p50.value()
+        self.owd_p95_ns = self.owd_p95.value()
+        self.rtt_p50_ns = self.rtt_p50.value()
+        self.rtt_p95_ns = self.rtt_p95.value()
         # Bug #5 fix: Ensure cleanup happens even on exceptions
         try:
-            try:
-                self.events.flush()
-            except Exception:
-                pass
+            if self.events:
+                try:
+                    self.events.flush()
+                except Exception:
+                    pass
         finally:
-            try:
-                self.events.close()
-            except Exception:
-                pass
+            if self.events:
+                try:
+                    self.events.close()
+                except Exception:
+                    pass
+                self.events = None
             try:
                 self.tx.close()
             except Exception:
@@ -352,7 +532,7 @@ class Blaster:
                 else:
                     break
             if not progressed:
-                time.sleep(0)
+                time.sleep(0.0005)
 
     def _rx_once(self) -> bool:
         try:
@@ -367,18 +547,36 @@ class Blaster:
         t_recv = self._now()
         self.rcvd += 1
         self.rcvd_bytes += len(data)
-        if len(data) >= 12:
-            seq = int.from_bytes(data[:4], "big")
-            t_send = self.pending.pop(seq, None)
-            if t_send is not None:
-                rtt = t_recv - t_send
+        if len(data) < 4:
+            return True
+
+        seq = int.from_bytes(data[:4], "big")
+        t_send = self.pending.pop(seq, None)
+        header_t_send = int.from_bytes(data[4:12], "big") if len(data) >= 12 else None
+        if t_send is None:
+            t_send = header_t_send
+
+        drone_recv_ns = int.from_bytes(data[-8:], "big") if len(data) >= 20 else None
+
+        if t_send is not None:
+            rtt = t_recv - t_send
+            if rtt >= 0:
                 self.rtt_sum_ns += rtt
                 self.rtt_samples += 1
                 if rtt > self.rtt_max_ns:
                     self.rtt_max_ns = rtt
                 if self.rtt_min_ns is None or rtt < self.rtt_min_ns:
                     self.rtt_min_ns = rtt
-                self._maybe_log("recv", seq, int(t_recv))
+                self.rtt_p50.add(rtt)
+                self.rtt_p95.add(rtt)
+            self._maybe_log("recv", seq, int(t_recv))
+
+        if t_send is not None and drone_recv_ns is not None:
+            owd_up_ns = drone_recv_ns - t_send
+            if owd_up_ns >= 0:
+                self.owd_samples += 1
+                self.owd_p50.add(owd_up_ns)
+                self.owd_p95.add(owd_up_ns)
         return True
 
 
@@ -430,14 +628,14 @@ def snapshot_proxy_artifacts(suite: str) -> None:
         shutil.copy(PROXY_SUMMARY_PATH, target_dir / "gcs_summary.json")
 
 
-def start_gcs_proxy(initial_suite: str) -> tuple[subprocess.Popen, Path]:
+def start_gcs_proxy(initial_suite: str) -> tuple[subprocess.Popen, IO[str]]:
     key_path = SECRETS_DIR / initial_suite / "gcs_signing.key"
     if not key_path.exists():
         raise FileNotFoundError(f"Missing GCS signing key for suite {initial_suite}: {key_path}")
 
     mkdirp(OUTDIR)
     log_path = OUTDIR / f"gcs_{time.strftime('%Y%m%d-%H%M%S')}.log"
-    log_handle = open(log_path, "w", encoding="utf-8", errors="replace")
+    log_handle: IO[str] = open(log_path, "w", encoding="utf-8", errors="replace")
 
     env = os.environ.copy()
     env["DRONE_HOST"] = DRONE_HOST
@@ -722,6 +920,7 @@ def run_suite(
     if pre_gap > 0:
         time.sleep(pre_gap)
 
+    warmup_s = min(MAX_WARMUP_SECONDS, duration_s * WARMUP_FRACTION)
     start_wall_ns = time.time_ns()
     start_perf_ns = time.perf_counter_ns()
     sent_packets = 0
@@ -733,6 +932,20 @@ def run_suite(
     blaster_sent_bytes = 0
 
     if traffic_mode == "blast":
+        if warmup_s > 0:
+            warmup_blaster = Blaster(
+                APP_SEND_HOST,
+                APP_SEND_PORT,
+                APP_RECV_HOST,
+                APP_RECV_PORT,
+                events_path=None,
+                payload_bytes=payload_bytes,
+                sample_every=0,
+                offset_ns=offset_ns,
+            )
+            warmup_blaster.run(duration_s=warmup_s, rate_pps=rate_pps)
+        start_wall_ns = time.time_ns()
+        start_perf_ns = time.perf_counter_ns()
         blaster = Blaster(
             APP_SEND_HOST,
             APP_SEND_PORT,
@@ -782,16 +995,48 @@ def run_suite(
             power_error = power_request_error
 
     elapsed_s = max(1e-9, (end_perf_ns - start_perf_ns) / 1e9)
-    pps = sent_packets / elapsed_s
-    throughput_mbps = (rcvd_bytes * 8) / (elapsed_s * 1_000_000)
+    pps = sent_packets / elapsed_s if elapsed_s > 0 else 0.0
+    throughput_mbps = (rcvd_bytes * 8) / (elapsed_s * 1_000_000) if elapsed_s > 0 else 0.0
     sent_mbps = (blaster_sent_bytes * 8) / (elapsed_s * 1_000_000) if blaster_sent_bytes else 0.0
     delivered_ratio = throughput_mbps / sent_mbps if sent_mbps > 0 else 0.0
     avg_rtt_ms = avg_rtt_ns / 1_000_000
     max_rtt_ms = max_rtt_ns / 1_000_000
 
+    app_packet_bytes = payload_bytes + SEQ_TS_OVERHEAD_BYTES
+    wire_packet_bytes_est = app_packet_bytes + UDP_HEADER_BYTES + APP_IP_HEADER_BYTES
+    goodput_mbps = (rcvd_packets * payload_bytes * 8) / (elapsed_s * 1_000_000) if elapsed_s > 0 else 0.0
+    wire_throughput_mbps_est = (
+        (rcvd_packets * wire_packet_bytes_est * 8) / (elapsed_s * 1_000_000)
+        if elapsed_s > 0
+        else 0.0
+    )
+    if sent_mbps > 0:
+        goodput_ratio = goodput_mbps / sent_mbps
+        goodput_ratio = max(0.0, min(1.0, goodput_ratio))
+    else:
+        goodput_ratio = 0.0
+
+    owd_p50_ms = 0.0
+    owd_p95_ms = 0.0
+    rtt_p50_ms = 0.0
+    rtt_p95_ms = 0.0
+    sample_quality = "low"
+    owd_samples = 0
+
+    if traffic_mode == "blast":
+        owd_p50_ms = blaster.owd_p50_ns / 1_000_000
+        owd_p95_ms = blaster.owd_p95_ns / 1_000_000
+        rtt_p50_ms = blaster.rtt_p50_ns / 1_000_000
+        rtt_p95_ms = blaster.rtt_p95_ns / 1_000_000
+        owd_samples = blaster.owd_samples
+        if blaster.rtt_samples >= MIN_DELAY_SAMPLES and blaster.owd_samples >= MIN_DELAY_SAMPLES:
+            sample_quality = "ok"
+
     loss_pct = 0.0
     if sent_packets:
         loss_pct = max(0.0, (sent_packets - rcvd_packets) * 100.0 / sent_packets)
+    loss_successes = max(0, sent_packets - rcvd_packets)
+    loss_low, loss_high = wilson_interval(loss_successes, sent_packets)
 
     row = {
         "pass": pass_index,
@@ -803,10 +1048,23 @@ def run_suite(
         "throughput_mbps": round(throughput_mbps, 3),
         "sent_mbps": round(sent_mbps, 3),
         "delivered_ratio": round(delivered_ratio, 3) if sent_mbps > 0 else 0.0,
+        "goodput_mbps": round(goodput_mbps, 3),
+        "wire_throughput_mbps_est": round(wire_throughput_mbps_est, 3),
+        "app_packet_bytes": app_packet_bytes,
+        "wire_packet_bytes_est": wire_packet_bytes_est,
+        "goodput_ratio": round(goodput_ratio, 3),
         "rtt_avg_ms": round(avg_rtt_ms, 3),
         "rtt_max_ms": round(max_rtt_ms, 3),
+        "rtt_p50_ms": round(rtt_p50_ms, 3),
+        "rtt_p95_ms": round(rtt_p95_ms, 3),
+        "owd_p50_ms": round(owd_p50_ms, 3),
+        "owd_p95_ms": round(owd_p95_ms, 3),
         "rtt_samples": rtt_samples,
+        "owd_samples": owd_samples,
+        "sample_quality": sample_quality,
         "loss_pct": round(loss_pct, 3),
+        "loss_pct_wilson_low": round(loss_low * 100.0, 3),
+        "loss_pct_wilson_high": round(loss_high * 100.0, 3),
         "enc_out": proxy_stats.get("enc_out", 0),
         "enc_in": proxy_stats.get("enc_in", 0),
         "drops": proxy_stats.get("drops", 0),
@@ -860,7 +1118,11 @@ class SaturationTester:
         offset_ns: int,
         output_dir: Path,
         max_rate_mbps: int,
-    ):
+        search_mode: str,
+        delivery_threshold: float,
+        loss_threshold: float,
+        spike_factor: float,
+    ) -> None:
         self.suite = suite
         self.payload_bytes = payload_bytes
         self.duration_s = duration_s
@@ -868,40 +1130,181 @@ class SaturationTester:
         self.offset_ns = offset_ns
         self.output_dir = output_dir
         self.max_rate_mbps = max_rate_mbps
+        self.search_mode = search_mode
+        self.delivery_threshold = delivery_threshold
+        self.loss_threshold = loss_threshold
+        self.spike_factor = spike_factor
         self.records: List[Dict[str, float]] = []
+        self._rate_cache: Dict[int, Tuple[Dict[str, float], bool, Optional[str]]] = {}
+        self._baseline: Optional[Dict[str, float]] = None
+        self._signal_history = {key: deque(maxlen=HYSTERESIS_WINDOW) for key in SATURATION_SIGNALS}
+        self._last_ok_rate: Optional[int] = None
+        self._first_bad_rate: Optional[int] = None
+        self._stop_cause: Optional[str] = None
+        self._stop_samples = 0
 
     def run(self) -> Dict[str, Optional[float]]:
-        baseline_rtt = None
-        saturation_point = None
-        for rate in SATURATION_TEST_RATES:
-            if rate > self.max_rate_mbps:
-                break
-            metrics = self._run_rate(rate)
-            metrics["suite"] = self.suite
-            self.records.append(metrics)
-            avg_rtt = metrics["avg_rtt_ms"]
-            achieved = metrics["throughput_mbps"]
-            sent_mbps = metrics.get("sent_mbps", 0.0)
-            ratio = metrics.get("delivered_ratio", 1.0) if sent_mbps > 0 else 1.0
-            samples = metrics.get("rtt_samples", 0)
-            if baseline_rtt is None and samples and avg_rtt > 0:
-                baseline_rtt = avg_rtt
-            if baseline_rtt is not None and samples:
-                delivery_degraded = sent_mbps > 0 and ratio < 0.8
-                if avg_rtt > baseline_rtt * SATURATION_RTT_SPIKE or delivery_degraded:
-                    saturation_point = rate
-                    break
+        self.records = []
+        self._rate_cache.clear()
+        self._baseline = None
+        self._signal_history = {key: deque(maxlen=HYSTERESIS_WINDOW) for key in SATURATION_SIGNALS}
+        self._last_ok_rate = None
+        self._first_bad_rate = None
+        self._stop_cause = None
+        self._stop_samples = 0
+
+        used_mode = self.search_mode
+        if self.search_mode == "linear":
+            self._linear_search()
+        else:
+            self._coarse_search()
+            if self._first_bad_rate is not None and self._last_ok_rate is not None:
+                self._bisect_search()
+            elif self.search_mode == "bisect" and self._first_bad_rate is None:
+                self._linear_search()
+                used_mode = "linear"
+
+        resolution = None
+        if self._first_bad_rate is not None and self._last_ok_rate is not None:
+            resolution = max(0, self._first_bad_rate - self._last_ok_rate)
+        saturation_point = self._last_ok_rate if self._last_ok_rate is not None else self._first_bad_rate
+        confidence = min(1.0, self._stop_samples / 200.0) if self._stop_samples > 0 else 0.0
+
+        baseline = self._baseline or {}
         return {
             "suite": self.suite,
-            "baseline_rtt_ms": baseline_rtt,
+            "baseline_owd_p50_ms": baseline.get("owd_p50_ms"),
+            "baseline_owd_p95_ms": baseline.get("owd_p95_ms"),
+            "baseline_rtt_p50_ms": baseline.get("rtt_p50_ms"),
+            "baseline_rtt_p95_ms": baseline.get("rtt_p95_ms"),
             "saturation_point_mbps": saturation_point,
+            "stop_cause": self._stop_cause,
+            "confidence": round(confidence, 3),
+            "search_mode": used_mode,
+            "resolution_mbps": resolution,
         }
 
+    def _linear_search(self) -> None:
+        for rate in SATURATION_LINEAR_RATES:
+            if rate > self.max_rate_mbps:
+                break
+            _, is_bad, _ = self._evaluate_rate(rate)
+            if is_bad:
+                break
+
+    def _coarse_search(self) -> None:
+        for rate in SATURATION_COARSE_RATES:
+            if rate > self.max_rate_mbps:
+                break
+            _, is_bad, _ = self._evaluate_rate(rate)
+            if is_bad:
+                break
+
+    def _bisect_search(self) -> None:
+        if self._first_bad_rate is None:
+            return
+        lo = self._last_ok_rate if self._last_ok_rate is not None else 0
+        hi = self._first_bad_rate
+        steps = 0
+        while hi - lo > 5 and steps < MAX_BISECT_STEPS:
+            mid = max(1, int(round((hi + lo) / 2)))
+            if mid == hi or mid == lo:
+                break
+            _, is_bad, _ = self._evaluate_rate(mid)
+            steps += 1
+            metrics = self._rate_cache[mid][0]
+            sample_ok = metrics.get("sample_quality") == "ok"
+            if not sample_ok:
+                is_bad = True
+            if is_bad:
+                if mid < hi:
+                    hi = mid
+                if self._first_bad_rate is None or mid < self._first_bad_rate:
+                    self._first_bad_rate = mid
+            else:
+                if mid > lo:
+                    lo = mid
+                if self._last_ok_rate is None or mid > self._last_ok_rate:
+                    self._last_ok_rate = mid
+
+    def _evaluate_rate(self, rate: int) -> Tuple[Dict[str, float], bool, Optional[str]]:
+        cached = self._rate_cache.get(rate)
+        if cached:
+            return cached
+
+        metrics = self._run_rate(rate)
+        metrics["suite"] = self.suite
+        self.records.append(metrics)
+
+        if self._baseline is None and metrics.get("sample_quality") == "ok":
+            self._baseline = {
+                "owd_p50_ms": metrics.get("owd_p50_ms"),
+                "owd_p95_ms": metrics.get("owd_p95_ms"),
+                "rtt_p50_ms": metrics.get("rtt_p50_ms"),
+                "rtt_p95_ms": metrics.get("rtt_p95_ms"),
+            }
+
+        signals = self._classify_signals(metrics)
+        is_bad = any(signals.values())
+        cause = self._update_history(signals, rate, metrics)
+        if is_bad:
+            if self._first_bad_rate is None or rate < self._first_bad_rate:
+                self._first_bad_rate = rate
+        else:
+            if metrics.get("sample_quality") == "ok":
+                if self._last_ok_rate is None or rate > self._last_ok_rate:
+                    self._last_ok_rate = rate
+
+        result = (metrics, is_bad, cause)
+        self._rate_cache[rate] = result
+        return result
+
+    def _classify_signals(self, metrics: Dict[str, float]) -> Dict[str, bool]:
+        signals = {key: False for key in SATURATION_SIGNALS}
+        baseline = self._baseline
+        if baseline and baseline.get("owd_p95_ms"):
+            baseline_p95 = baseline.get("owd_p95_ms", 0.0)
+            if baseline_p95 > 0:
+                signals["owd_p95_spike"] = metrics.get("owd_p95_ms", 0.0) > baseline_p95 * self.spike_factor
+        signals["delivery_degraded"] = metrics.get("goodput_ratio", 0.0) < self.delivery_threshold
+        signals["loss_excess"] = metrics.get("loss_pct", 0.0) > self.loss_threshold
+        return signals
+
+    def _update_history(
+        self,
+        signals: Dict[str, bool],
+        rate: int,
+        metrics: Dict[str, float],
+    ) -> Optional[str]:
+        cause = None
+        for key in SATURATION_SIGNALS:
+            history = self._signal_history[key]
+            history.append(bool(signals.get(key)))
+            if self._stop_cause is None and sum(history) >= 2:
+                self._stop_cause = key
+                self._stop_samples = max(metrics.get("rtt_samples", 0), metrics.get("owd_samples", 0))
+                cause = key
+        return cause
+
     def _run_rate(self, rate_mbps: int) -> Dict[str, float]:
-        rate_pps = int((rate_mbps * 1_000_000) / (self.payload_bytes * 8))
+        denominator = max(self.payload_bytes * 8, 1)
+        rate_pps = int((rate_mbps * 1_000_000) / denominator)
         if rate_pps <= 0:
             rate_pps = 1
         events_path = self.output_dir / f"saturation_{rate_mbps}Mbps.jsonl"
+        warmup_s = min(MAX_WARMUP_SECONDS, self.duration_s * WARMUP_FRACTION)
+        if warmup_s > 0:
+            warmup_blaster = Blaster(
+                APP_SEND_HOST,
+                APP_SEND_PORT,
+                APP_RECV_HOST,
+                APP_RECV_PORT,
+                events_path=None,
+                payload_bytes=self.payload_bytes,
+                sample_every=0,
+                offset_ns=self.offset_ns,
+            )
+            warmup_blaster.run(duration_s=warmup_s, rate_pps=rate_pps)
         blaster = Blaster(
             APP_SEND_HOST,
             APP_SEND_PORT,
@@ -912,31 +1315,76 @@ class SaturationTester:
             sample_every=max(1, self.event_sample),
             offset_ns=self.offset_ns,
         )
+        start = time.perf_counter()
         blaster.run(duration_s=self.duration_s, rate_pps=rate_pps)
-        duration = max(self.duration_s, 1e-3)
-        throughput_mbps = (blaster.rcvd_bytes * 8) / (duration * 1_000_000)
-        sent_mbps = (blaster.sent_bytes * 8) / (duration * 1_000_000)
+        elapsed = max(1e-9, time.perf_counter() - start)
+
+        sent_packets = blaster.sent
+        rcvd_packets = blaster.rcvd
+        sent_bytes = blaster.sent_bytes
+        rcvd_bytes = blaster.rcvd_bytes
+
+        pps_actual = sent_packets / elapsed if elapsed > 0 else 0.0
+        throughput_mbps = (rcvd_bytes * 8) / (elapsed * 1_000_000) if elapsed > 0 else 0.0
+        sent_mbps = (sent_bytes * 8) / (elapsed * 1_000_000) if sent_bytes else 0.0
         delivered_ratio = throughput_mbps / sent_mbps if sent_mbps > 0 else 0.0
-        loss_pct = 0.0
-        if blaster.sent:
-            loss_pct = max(0.0, (blaster.sent - blaster.rcvd) * 100.0 / blaster.sent)
-        if blaster.rtt_samples:
-            avg_rtt_ms = (blaster.rtt_sum_ns / blaster.rtt_samples) / 1_000_000
-        else:
-            avg_rtt_ms = 0.0
+
+        avg_rtt_ms = (blaster.rtt_sum_ns / max(1, blaster.rtt_samples)) / 1_000_000 if blaster.rtt_samples else 0.0
         min_rtt_ms = (blaster.rtt_min_ns or 0) / 1_000_000
         max_rtt_ms = blaster.rtt_max_ns / 1_000_000
+
+        app_packet_bytes = self.payload_bytes + SEQ_TS_OVERHEAD_BYTES
+        wire_packet_bytes_est = app_packet_bytes + UDP_HEADER_BYTES + APP_IP_HEADER_BYTES
+        goodput_mbps = (
+            (rcvd_packets * self.payload_bytes * 8) / (elapsed * 1_000_000)
+            if elapsed > 0
+            else 0.0
+        )
+        wire_throughput_mbps_est = (
+            (rcvd_packets * wire_packet_bytes_est * 8) / (elapsed * 1_000_000)
+            if elapsed > 0
+            else 0.0
+        )
+        if sent_mbps > 0:
+            goodput_ratio = goodput_mbps / sent_mbps
+            goodput_ratio = max(0.0, min(1.0, goodput_ratio))
+        else:
+            goodput_ratio = 0.0
+
+        loss_pct = 0.0
+        if sent_packets:
+            loss_pct = max(0.0, (sent_packets - rcvd_packets) * 100.0 / sent_packets)
+        loss_low, loss_high = wilson_interval(max(0, sent_packets - rcvd_packets), sent_packets)
+
+        sample_quality = "low"
+        if blaster.rtt_samples >= MIN_DELAY_SAMPLES and blaster.owd_samples >= MIN_DELAY_SAMPLES:
+            sample_quality = "ok"
+
         return {
             "rate_mbps": float(rate_mbps),
             "pps": float(rate_pps),
-            "throughput_mbps": round(throughput_mbps, 3),
+            "pps_actual": round(pps_actual, 1),
             "sent_mbps": round(sent_mbps, 3),
+            "throughput_mbps": round(throughput_mbps, 3),
+            "goodput_mbps": round(goodput_mbps, 3),
+            "wire_throughput_mbps_est": round(wire_throughput_mbps_est, 3),
+            "goodput_ratio": round(goodput_ratio, 3),
             "loss_pct": round(loss_pct, 3),
+            "loss_pct_wilson_low": round(loss_low * 100.0, 3),
+            "loss_pct_wilson_high": round(loss_high * 100.0, 3),
             "delivered_ratio": round(delivered_ratio, 3) if sent_mbps > 0 else 0.0,
             "avg_rtt_ms": round(avg_rtt_ms, 3),
             "min_rtt_ms": round(min_rtt_ms, 3),
             "max_rtt_ms": round(max_rtt_ms, 3),
+            "rtt_p50_ms": round(blaster.rtt_p50_ns / 1_000_000, 3),
+            "rtt_p95_ms": round(blaster.rtt_p95_ns / 1_000_000, 3),
+            "owd_p50_ms": round(blaster.owd_p50_ns / 1_000_000, 3),
+            "owd_p95_ms": round(blaster.owd_p95_ns / 1_000_000, 3),
             "rtt_samples": blaster.rtt_samples,
+            "owd_samples": blaster.owd_samples,
+            "sample_quality": sample_quality,
+            "app_packet_bytes": app_packet_bytes,
+            "wire_packet_bytes_est": wire_packet_bytes_est,
         }
 
     def export_excel(self, session_id: str) -> Optional[Path]:
@@ -951,27 +1399,55 @@ class SaturationTester:
         ws.append([
             "rate_mbps",
             "pps",
+            "pps_actual",
             "sent_mbps",
             "throughput_mbps",
+            "goodput_mbps",
+            "wire_throughput_mbps_est",
+            "goodput_ratio",
             "loss_pct",
+            "loss_pct_wilson_low",
+            "loss_pct_wilson_high",
             "delivered_ratio",
             "avg_rtt_ms",
             "min_rtt_ms",
             "max_rtt_ms",
+            "rtt_p50_ms",
+            "rtt_p95_ms",
+            "owd_p50_ms",
+            "owd_p95_ms",
             "rtt_samples",
+            "owd_samples",
+            "sample_quality",
+            "app_packet_bytes",
+            "wire_packet_bytes_est",
         ])
         for record in self.records:
             ws.append([
-                record["rate_mbps"],
-                record["pps"],
-                record.get("sent_mbps", 0),
-                record["throughput_mbps"],
-                record["loss_pct"],
-                record.get("delivered_ratio", 0),
-                record["avg_rtt_ms"],
-                record["min_rtt_ms"],
-                record["max_rtt_ms"],
+                record.get("rate_mbps", 0.0),
+                record.get("pps", 0.0),
+                record.get("pps_actual", 0.0),
+                record.get("sent_mbps", 0.0),
+                record.get("throughput_mbps", 0.0),
+                record.get("goodput_mbps", 0.0),
+                record.get("wire_throughput_mbps_est", 0.0),
+                record.get("goodput_ratio", 0.0),
+                record.get("loss_pct", 0.0),
+                record.get("loss_pct_wilson_low", 0.0),
+                record.get("loss_pct_wilson_high", 0.0),
+                record.get("delivered_ratio", 0.0),
+                record.get("avg_rtt_ms", 0.0),
+                record.get("min_rtt_ms", 0.0),
+                record.get("max_rtt_ms", 0.0),
+                record.get("rtt_p50_ms", 0.0),
+                record.get("rtt_p95_ms", 0.0),
+                record.get("owd_p50_ms", 0.0),
+                record.get("owd_p95_ms", 0.0),
                 record.get("rtt_samples", 0),
+                record.get("owd_samples", 0),
+                record.get("sample_quality", "low"),
+                record.get("app_packet_bytes", 0),
+                record.get("wire_packet_bytes_est", 0),
             ])
         wb.save(path)
         return path
@@ -987,7 +1463,15 @@ class TelemetryCollector:
         self.client_threads: List[threading.Thread] = []
         # Bug #9 fix: Use deque with maxlen to prevent unbounded memory growth
         from collections import deque
-        self.samples: deque = deque(maxlen=100000)  # ~10MB limit for long tests
+
+        env_maxlen = os.getenv("GCS_TELEM_MAXLEN")
+        maxlen = 100000
+        if env_maxlen is not None:
+            try:
+                maxlen = max(1000, int(env_maxlen))
+            except (TypeError, ValueError):
+                maxlen = 100000
+        self.samples: deque = deque(maxlen=maxlen)  # ~10MB limit for long tests
         self.lock = threading.Lock()
         self.enabled = True
 
@@ -1072,7 +1556,8 @@ class TelemetryCollector:
                 thread.join(timeout=1.0)
 
 def resolve_under_root(path: Path) -> Path:
-    return path if path.is_absolute() else ROOT / path
+    expanded = path.expanduser()
+    return expanded if expanded.is_absolute() else ROOT / expanded
 
 
 def safe_sheet_name(name: str) -> str:
@@ -1210,6 +1695,13 @@ def main() -> None:
         denominator = max(payload_bytes * 8, 1)
         rate_pps = max(1, int((bandwidth_mbps * 1_000_000) / denominator))
 
+    sat_search_cfg = str(auto.get("sat_search") or SATURATION_SEARCH_MODE).lower()
+    if sat_search_cfg not in {"auto", "linear", "bisect"}:
+        sat_search_cfg = SATURATION_SEARCH_MODE
+    sat_delivery_threshold = float(auto.get("sat_delivery_threshold") or SATURATION_DELIVERY_THRESHOLD)
+    sat_loss_threshold = float(auto.get("sat_loss_threshold_pct") or SATURATION_LOSS_THRESHOLD)
+    sat_spike_factor = float(auto.get("sat_rtt_spike_factor") or SATURATION_RTT_SPIKE)
+
     if duration <= 0:
         raise ValueError("AUTO_GCS.duration_s must be positive")
     if pre_gap < 0:
@@ -1248,7 +1740,7 @@ def main() -> None:
     print(
         f"[{ts()}] traffic={traffic_mode} duration={duration:.1f}s pre_gap={pre_gap:.1f}s "
         f"inter_gap={inter_gap:.1f}s payload={payload_bytes}B event_sample={event_sample} passes={passes} "
-        f"rate_pps={rate_pps}"
+        f"rate_pps={rate_pps} sat_search={sat_search_cfg}"
     )
     if bandwidth_mbps > 0:
         print(f"[{ts()}] bandwidth target {bandwidth_mbps:.2f} Mbps -> approx {rate_pps} pps")
@@ -1313,6 +1805,10 @@ def main() -> None:
                     offset_ns=offset_ns,
                     output_dir=outdir,
                     max_rate_mbps=int(max_rate_mbps),
+                    search_mode=sat_search_cfg,
+                    delivery_threshold=sat_delivery_threshold,
+                    loss_threshold=sat_loss_threshold,
+                    spike_factor=sat_spike_factor,
                 )
                 summary = tester.run()
                 summary["rekey_ms"] = rekey_ms
