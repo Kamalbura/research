@@ -474,6 +474,15 @@ def start_drone_proxy(suite: str) -> subprocess.Popen:
     log_path = OUTDIR / f"drone_{time.strftime('%Y%m%d-%H%M%S')}.log"
     log_handle = open(log_path, "w", encoding="utf-8")
 
+    env = os.environ.copy()
+    root_str = str(ROOT)
+    existing_py_path = env.get("PYTHONPATH")
+    if existing_py_path:
+        if root_str not in existing_py_path.split(os.pathsep):
+            env["PYTHONPATH"] = root_str + os.pathsep + existing_py_path
+    else:
+        env["PYTHONPATH"] = root_str
+
     print(f"[follower] launching drone proxy on suite {suite}", flush=True)
     return popen([
         sys.executable,
@@ -488,7 +497,7 @@ def start_drone_proxy(suite: str) -> subprocess.Popen:
         str(status),
         "--json-out",
         str(summary),
-    ], stdout=log_handle, stderr=subprocess.STDOUT, text=True)
+    ], stdout=log_handle, stderr=subprocess.STDOUT, text=True, env=env, cwd=str(ROOT))
 
 
 class HighSpeedMonitor(threading.Thread):
