@@ -837,8 +837,8 @@ class Monitors:
         self.temp_stop = threading.Event()
         self.temp_csv_handle: Optional[object] = None
         self.temp_writer: Optional[csv.DictWriter] = None
-    self.pidstat_out: Optional[IO[str]] = None
-    self._vcgencmd_available = True
+        self.pidstat_out: Optional[IO[str]] = None
+        self._vcgencmd_available = True
 
     def start(self, pid: int, outdir: Path, suite: str) -> None:
         if not self.enabled:
