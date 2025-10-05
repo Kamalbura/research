@@ -12,7 +12,16 @@ import pandas as pd
 import torch
 
 # Import TSTPlus class definition for model loading
-from tstplus import TSTPlus
+from tstplus import TSTPlus, _TSTBackbone, _TSTEncoder, _TSTEncoderLayer  # type: ignore
+
+# Torch pickles capture the qualified module path of custom classes. Some of our
+# artifacts were exported from interactive notebooks where these classes lived in
+# `__main__`, so we proactively register them on this module's globals before
+# calling `torch.load`.
+globals().setdefault("TSTPlus", TSTPlus)
+globals().setdefault("_TSTBackbone", _TSTBackbone)
+globals().setdefault("_TSTEncoder", _TSTEncoder)
+globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
 
 from config import (
     SCALER_FILE,

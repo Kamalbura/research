@@ -79,6 +79,22 @@ def load_tst_model():
         LOGGER.warning(
             "TorchScript model not found; falling back to .pth (requires tstplus module)."
         )
+        try:
+            from tstplus import (
+                TSTPlus,
+                _TSTBackbone,
+                _TSTEncoder,
+                _TSTEncoderLayer,
+            )  # noqa: F401  (register classes for torch.load)
+            globals().setdefault("TSTPlus", TSTPlus)
+            globals().setdefault("_TSTBackbone", _TSTBackbone)
+            globals().setdefault("_TSTEncoder", _TSTEncoder)
+            globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
+        except Exception as exc:  # pragma: no cover - import guard
+            raise RuntimeError(
+                "TorchScript model missing and fallback import of tstplus.TSTPlus failed. "
+                "Install the 'tsai' dependency and ensure tstplus.py is accessible."
+            ) from exc
         model = torch.load(str(TST_MODEL_FILE), map_location="cpu", weights_only=False)
         scripted = False
 

@@ -8,7 +8,7 @@ Two-stage DDoS detection stack for a Raspberry Pi 4B flying a MAVLink-over-UDP l
 |-----------|-----------------|-------|
 | Raspberry Pi OS | Bullseye / Debian 11 | 64-bit preferred |
 | Python | 3.9+ | Install via `sudo apt install python3 python3-venv` |
-| Pip packages | `scapy`, `xgboost`, `torch`, `joblib`, `pandas`, `numpy` | Install in a venv |
+| Pip packages | `scapy`, `xgboost`, `torch`, `joblib`, `pandas`, `numpy`, `tsai`* | Install in a venv |
 
 ### Optional but recommended packages
 - `psutil` (telemetry)
@@ -20,7 +20,9 @@ Two-stage DDoS detection stack for a Raspberry Pi 4B flying a MAVLink-over-UDP l
 python3 -m venv ~/ddos-venv
 source ~/ddos-venv/bin/activate
 pip install --upgrade pip
-pip install scapy xgboost torch joblib pandas numpy
+pip install scapy xgboost torch joblib pandas numpy tsai
+
+\* `tsai` is only required when the TorchScript artifact is unavailable and the `.pth` fallback is used. It ships the `TSTPlus` architecture referenced by `tst_model.pth`.
 ```
 
 Add the project directory to your `PYTHONPATH` if you plan to run scripts from other folders:

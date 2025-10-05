@@ -235,7 +235,7 @@ def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
 
 AUTO_GCS_DEFAULTS = {
     "session_prefix": "session",
-    "traffic": "blast",
+    "traffic": "saturation",
     "duration_s": 45.0,
     "pre_gap_s": 1.0,
     "inter_gap_s": 15.0,

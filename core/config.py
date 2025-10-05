@@ -106,7 +106,7 @@ CONFIG = {
         # Session IDs default to "<prefix>_<unix>" unless GCS_SESSION_ID env overrides
         "session_prefix": "run",
         # Traffic profile: "blast", "saturation", or "mavproxy" placeholder
-        "traffic": "blast",
+        "traffic": "saturation",
         # Duration for active traffic window per suite (seconds)
         "duration_s": 45.0,
         # Delay after rekey before starting traffic (seconds)
