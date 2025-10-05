@@ -85,9 +85,9 @@ TELEMETRY_DEFAULT_PORT = int(
     or 52080
 )
 
-OUTDIR = Path("logs/auto/drone")
+OUTDIR = ROOT / "logs/auto/drone"
 MARK_DIR = OUTDIR / "marks"
-SECRETS_DIR = Path("secrets/matrix")
+SECRETS_DIR = ROOT / "secrets/matrix"
 
 DEFAULT_MONITOR_BASE = Path(
     CONFIG.get("DRONE_MONITOR_OUTPUT_BASE")
