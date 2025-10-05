@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import argparse
 import csv
 import json
 import os
@@ -31,6 +32,8 @@ import queue
 from datetime import datetime, timezone
 from copy import deepcopy
 from typing import IO, Optional
+
+
 def optimize_cpu_performance(target_khz: int = 1800000) -> None:
     governors = list(Path("/sys/devices/system/cpu").glob("cpu[0-9]*/cpufreq"))
     for governor_dir in governors:
@@ -90,6 +93,9 @@ OUTDIR = ROOT / "logs/auto/drone"
 MARK_DIR = OUTDIR / "marks"
 SECRETS_DIR = ROOT / "secrets/matrix"
 
+PI4_TARGET_KHZ = 1_800_000
+PI5_TARGET_KHZ = 2_400_000
+
 DEFAULT_MONITOR_BASE = Path(
     CONFIG.get("DRONE_MONITOR_OUTPUT_BASE")
     or os.getenv("DRONE_MONITOR_OUTPUT_BASE", "/home/dev/research/output/drone")
@@ -134,6 +140,25 @@ AUTO_DRONE_DEFAULTS = {
 }
 
 AUTO_DRONE_CONFIG = _merge_defaults(AUTO_DRONE_DEFAULTS, CONFIG.get("AUTO_DRONE"))
+
+
+def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Drone follower controller")
+    parser.add_argument(
+        "--5",
+        "--pi5",
+        dest="pi5",
+        action="store_true",
+        help="Treat hardware as Raspberry Pi 5 (defaults to Pi 4 governor settings)",
+    )
+    parser.add_argument(
+        "--pi4",
+        dest="pi5",
+        action="store_false",
+        help=argparse.SUPPRESS,
+    )
+    parser.set_defaults(pi5=False)
+    return parser.parse_args(argv)
 
 
 def ts() -> str:
@@ -530,7 +555,7 @@ class HighSpeedMonitor(threading.Thread):
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.csv_path = self.output_dir / f"system_monitoring_{session_id}.csv"
         self.publisher = publisher
-    self._vcgencmd_available = True
+        self._vcgencmd_available = True
 
     def attach_proxy(self, pid: int) -> None:
         self.proxy_pid = pid
@@ -1369,7 +1394,11 @@ class ControlServer(threading.Thread):
         conn.sendall((json.dumps(obj) + "\n").encode())
 
 
-def main() -> None:
+def main(argv: Optional[list[str]] = None) -> None:
+    args = _parse_args(argv)
+    device_generation = "pi5" if args.pi5 else "pi4"
+    os.environ.setdefault("DRONE_DEVICE_GENERATION", device_generation)
+
     OUTDIR.mkdir(parents=True, exist_ok=True)
     MARK_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1390,6 +1419,7 @@ def main() -> None:
     session_dir.mkdir(parents=True, exist_ok=True)
     print(f"[follower] session_id={session_id}")
     print(f"[follower] monitor output -> {session_dir}")
+    print(f"[follower] device generation={device_generation}")
 
     for env_key, env_value in auto.get("power_env", {}).items():
         if env_value is None:
@@ -1414,7 +1444,12 @@ def main() -> None:
         print("[follower] telemetry disabled via AUTO_DRONE configuration")
 
     if bool(auto.get("cpu_optimize", True)):
-        optimize_cpu_performance()
+        target_khz = PI5_TARGET_KHZ if args.pi5 else PI4_TARGET_KHZ
+        optimize_cpu_performance(target_khz=target_khz)
+        print(
+            f"[follower] cpu governor target ~{target_khz / 1000:.0f} MHz ({device_generation})",
+            flush=True,
+        )
 
     power_dir = session_dir / "power"
     power_manager = PowerCaptureManager(power_dir, session_id, telemetry)
@@ -1457,6 +1492,7 @@ def main() -> None:
         "prev_suite": None,
         "pending_suite": None,
         "power_manager": power_manager,
+        "device_generation": device_generation,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()
