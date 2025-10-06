@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -37,8 +39,15 @@ class RateSample:
 @dataclass
 class SuiteReport:
     suite: str
-    baseline_rtt_ms: Numeric = None
+    baseline_owd_p50_ms: Numeric = None
+    baseline_owd_p95_ms: Numeric = None
+    baseline_rtt_p50_ms: Numeric = None
+    baseline_rtt_p95_ms: Numeric = None
     saturation_point_mbps: Numeric = None
+    stop_cause: Optional[str] = None
+    confidence: Numeric = None
+    search_mode: Optional[str] = None
+    resolution_mbps: Numeric = None
     rekey_ms: Numeric = None
     excel_path: Optional[str] = None
     rates: List[RateSample] = field(default_factory=list)
@@ -46,8 +55,27 @@ class SuiteReport:
 
     def to_text(self) -> str:
         lines = [f"Suite: {self.suite}"]
-        lines.append(f"  Baseline RTT (ms): {self._fmt_numeric(self.baseline_rtt_ms)}")
+        lines.append(
+            "  Baseline OWD (p50/p95 ms): "
+            f"{self._fmt_numeric(self.baseline_owd_p50_ms)} / "
+            f"{self._fmt_numeric(self.baseline_owd_p95_ms)}"
+        )
+        lines.append(
+            "  Baseline RTT (p50/p95 ms): "
+            f"{self._fmt_numeric(self.baseline_rtt_p50_ms)} / "
+            f"{self._fmt_numeric(self.baseline_rtt_p95_ms)}"
+        )
         lines.append(f"  Saturation point (Mbps): {self._fmt_numeric(self.saturation_point_mbps)}")
+        if self.stop_cause or self.confidence is not None:
+            cause = self.stop_cause or "n/a"
+            lines.append(
+                f"  Stop cause: {cause} | confidence={self._fmt_numeric(self.confidence)}"
+            )
+        if self.search_mode or self.resolution_mbps is not None:
+            mode = self.search_mode or "n/a"
+            lines.append(
+                f"  Search mode: {mode} | resolution={self._fmt_numeric(self.resolution_mbps)} Mbps"
+            )
         lines.append(f"  Rekey duration (ms): {self._fmt_numeric(self.rekey_ms)}")
         if self.excel_path:
             lines.append(f"  Per-suite workbook: {self.excel_path}")
@@ -84,8 +112,15 @@ class SuiteReport:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "suite": self.suite,
-            "baseline_rtt_ms": self.baseline_rtt_ms,
+            "baseline_owd_p50_ms": self.baseline_owd_p50_ms,
+            "baseline_owd_p95_ms": self.baseline_owd_p95_ms,
+            "baseline_rtt_p50_ms": self.baseline_rtt_p50_ms,
+            "baseline_rtt_p95_ms": self.baseline_rtt_p95_ms,
             "saturation_point_mbps": self.saturation_point_mbps,
+            "stop_cause": self.stop_cause,
+            "confidence": self.confidence,
+            "search_mode": self.search_mode,
+            "resolution_mbps": self.resolution_mbps,
             "rekey_ms": self.rekey_ms,
             "excel_path": self.excel_path,
             "rates": [
@@ -108,14 +143,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--summary-json",
         type=Path,
-        default=Path("logs/auto/gcs/saturation_summary_satrun_20250930.json"),
+        default=None,
         help="Path to saturation summary JSON file",
     )
     parser.add_argument(
         "--combined-xlsx",
         type=Path,
-        default=Path("output/gcs/satrun_20250930_combined.xlsx"),
+        default=None,
         help="Path to combined workbook",
+    )
+    parser.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        help="Run identifier (e.g. 1759766131) used to locate artifacts",
+    )
+    parser.add_argument(
+        "--event-log",
+        dest="event_logs",
+        action="append",
+        type=Path,
+        help="Path to a JSON-lines control log (may be passed multiple times)",
     )
     parser.add_argument(
         "--format",
@@ -135,8 +183,15 @@ def load_json_summary(path: Path) -> Dict[str, Dict[str, Any]]:
         if not suite:
             continue
         records[suite] = {
-            "baseline_rtt_ms": _coerce_float(entry.get("baseline_rtt_ms")),
+            "baseline_owd_p50_ms": _coerce_float(entry.get("baseline_owd_p50_ms")),
+            "baseline_owd_p95_ms": _coerce_float(entry.get("baseline_owd_p95_ms")),
+            "baseline_rtt_p50_ms": _coerce_float(entry.get("baseline_rtt_p50_ms")),
+            "baseline_rtt_p95_ms": _coerce_float(entry.get("baseline_rtt_p95_ms")),
             "saturation_point_mbps": _coerce_float(entry.get("saturation_point_mbps")),
+            "stop_cause": entry.get("stop_cause"),
+            "confidence": _coerce_float(entry.get("confidence")),
+            "search_mode": entry.get("search_mode"),
+            "resolution_mbps": _coerce_float(entry.get("resolution_mbps")),
             "rekey_ms": _coerce_float(entry.get("rekey_ms")),
             "excel_path": entry.get("excel_path"),
         }
@@ -198,8 +253,15 @@ def build_suite_reports(
     for suite, payload in json_records.items():
         reports[suite] = SuiteReport(
             suite=suite,
-            baseline_rtt_ms=payload.get("baseline_rtt_ms"),
+            baseline_owd_p50_ms=payload.get("baseline_owd_p50_ms"),
+            baseline_owd_p95_ms=payload.get("baseline_owd_p95_ms"),
+            baseline_rtt_p50_ms=payload.get("baseline_rtt_p50_ms"),
+            baseline_rtt_p95_ms=payload.get("baseline_rtt_p95_ms"),
             saturation_point_mbps=payload.get("saturation_point_mbps"),
+            stop_cause=payload.get("stop_cause"),
+            confidence=payload.get("confidence"),
+            search_mode=payload.get("search_mode"),
+            resolution_mbps=payload.get("resolution_mbps"),
             rekey_ms=payload.get("rekey_ms"),
             excel_path=payload.get("excel_path"),
         )
@@ -242,10 +304,24 @@ def build_suite_reports(
     overview_by_suite = {row.get("suite"): row for row in sheets.get("saturation_overview", []) if row.get("suite")}
     for suite, row in overview_by_suite.items():
         report = reports.setdefault(suite, SuiteReport(suite=suite))
-        if report.baseline_rtt_ms is None:
-            report.baseline_rtt_ms = _coerce_float(row.get("baseline_rtt_ms"))
+        if report.baseline_owd_p50_ms is None:
+            report.baseline_owd_p50_ms = _coerce_float(row.get("baseline_owd_p50_ms"))
+        if report.baseline_owd_p95_ms is None:
+            report.baseline_owd_p95_ms = _coerce_float(row.get("baseline_owd_p95_ms"))
+        if report.baseline_rtt_p50_ms is None:
+            report.baseline_rtt_p50_ms = _coerce_float(row.get("baseline_rtt_p50_ms"))
+        if report.baseline_rtt_p95_ms is None:
+            report.baseline_rtt_p95_ms = _coerce_float(row.get("baseline_rtt_p95_ms"))
         if report.saturation_point_mbps is None:
             report.saturation_point_mbps = _coerce_float(row.get("saturation_point_mbps"))
+        if report.stop_cause is None:
+            report.stop_cause = row.get("stop_cause")
+        if report.confidence is None:
+            report.confidence = _coerce_float(row.get("confidence"))
+        if report.search_mode is None:
+            report.search_mode = row.get("search_mode")
+        if report.resolution_mbps is None:
+            report.resolution_mbps = _coerce_float(row.get("resolution_mbps"))
         if report.rekey_ms is None:
             report.rekey_ms = _coerce_float(row.get("rekey_ms"))
         if not report.excel_path and row.get("excel_path"):
@@ -308,15 +384,56 @@ def _coerce_float(value: Any) -> Numeric:
     return None
 
 
-def emit_text(run_info: Dict[str, Any], reports: Dict[str, SuiteReport]) -> str:
+def emit_text(
+    run_info: Dict[str, Any],
+    reports: Dict[str, SuiteReport],
+    events: Optional[Dict[str, Any]] = None,
+) -> str:
     session_id = run_info.get("session_id", "unknown")
     generated = run_info.get("generated_utc", "unknown")
+    run_id = run_info.get("run_id", "unknown")
     lines = [
         f"Session: {session_id}",
         f"Generated (UTC): {generated}",
+        f"Run ID: {run_id}",
         f"Suites discovered: {len(reports)}",
         "",
     ]
+    if events:
+        lines.append("Event Timeline:")
+        handshakes = events.get("handshakes", [])
+        if handshakes:
+            lines.append("  Handshakes:")
+            for entry in sorted(handshakes, key=lambda item: item.get("ts") or ""):
+                lines.append(
+                    "    - "
+                    f"{entry['ts']} :: suite={entry.get('suite_id', 'n/a')} "
+                    f"source={entry.get('source', 'unknown')}"
+                )
+        rekeys = events.get("rekeys", [])
+        if rekeys:
+            lines.append("  Rekeys:")
+            for entry in sorted(rekeys, key=lambda item: item.get("started_ts", "")):
+                duration = entry.get("duration_ms")
+                if duration is None:
+                    duration_fmt = "n/a"
+                else:
+                    duration_fmt = f"{duration:.1f} ms"
+                lines.append(
+                    "    - "
+                    f"{entry.get('started_ts', 'n/a')} → {entry.get('completed_ts', 'n/a')} | "
+                    f"suite={entry.get('suite_id', 'n/a')} | rid={entry.get('rid', 'n/a')} | "
+                    f"duration={duration_fmt} | source={entry.get('source', 'unknown')}"
+                )
+        warnings = events.get("warnings", [])
+        if warnings:
+            lines.append("  Warnings:")
+            for entry in sorted(warnings, key=lambda item: item.get("ts") or ""):
+                lines.append(
+                    "    - "
+                    f"{entry['ts']} :: {entry.get('msg', 'warning')} (source={entry.get('source', 'unknown')})"
+                )
+        lines.append("")
     for suite in sorted(reports):
         report = reports[suite]
         lines.append(report.to_text())
@@ -324,28 +441,219 @@ def emit_text(run_info: Dict[str, Any], reports: Dict[str, SuiteReport]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def emit_json(run_info: Dict[str, Any], reports: Dict[str, SuiteReport]) -> str:
+def emit_json(
+    run_info: Dict[str, Any],
+    reports: Dict[str, SuiteReport],
+    events: Optional[Dict[str, Any]] = None,
+) -> str:
     payload = {
         "session_id": run_info.get("session_id"),
         "generated_utc": run_info.get("generated_utc"),
+        "run_id": run_info.get("run_id"),
         "suites": [reports[name].to_dict() for name in sorted(reports)],
     }
+    if events is not None:
+        payload["events"] = events
     return json.dumps(payload, indent=2) + "\n"
+
+
+def _discover_artifacts(
+    summary_path: Optional[Path],
+    workbook_path: Optional[Path],
+    run_id: Optional[str],
+) -> Tuple[Path, Path, Optional[str]]:
+    if summary_path and workbook_path:
+        run_id = run_id or _extract_run_id(summary_path) or _extract_run_id(workbook_path)
+        return summary_path, workbook_path, run_id
+
+    if run_id:
+        inferred_summary = Path("logs/auto/gcs") / f"saturation_summary_run_{run_id}.json"
+        inferred_workbook = Path("output/gcs") / f"run_{run_id}" / f"run_{run_id}_combined.xlsx"
+        if not summary_path:
+            summary_path = inferred_summary
+        if not workbook_path:
+            workbook_path = inferred_workbook
+
+    if summary_path and not workbook_path:
+        inferred_run = _extract_run_id(summary_path)
+        if inferred_run:
+            candidate = Path("output/gcs") / f"run_{inferred_run}" / f"run_{inferred_run}_combined.xlsx"
+            if candidate.exists():
+                workbook_path = candidate
+                run_id = run_id or inferred_run
+
+    if workbook_path and not summary_path:
+        inferred_run = _extract_run_id(workbook_path)
+        if inferred_run:
+            candidate = Path("logs/auto/gcs") / f"saturation_summary_run_{inferred_run}.json"
+            if candidate.exists():
+                summary_path = candidate
+                run_id = run_id or inferred_run
+
+    if not summary_path or not workbook_path:
+        summary_path, workbook_path, run_id = _auto_discover_latest(run_id)
+
+    if not summary_path.exists():
+        raise SystemExit(f"Summary JSON not found: {summary_path}")
+    if not workbook_path.exists():
+        raise SystemExit(f"Combined workbook not found: {workbook_path}")
+    return summary_path, workbook_path, run_id or _extract_run_id(summary_path)
+
+
+def _auto_discover_latest(forced_run: Optional[str]) -> Tuple[Path, Path, Optional[str]]:
+    logs_dir = Path("logs/auto/gcs")
+    if forced_run:
+        summary_candidate = logs_dir / f"saturation_summary_run_{forced_run}.json"
+        workbook_candidate = Path("output/gcs") / f"run_{forced_run}" / f"run_{forced_run}_combined.xlsx"
+        return summary_candidate, workbook_candidate, forced_run
+
+    candidates: List[Tuple[str, Path, Path]] = []
+    for summary_path in logs_dir.glob("saturation_summary_run_*.json"):
+        run = _extract_run_id(summary_path)
+        if not run:
+            continue
+        workbook_path = Path("output/gcs") / f"run_{run}" / f"run_{run}_combined.xlsx"
+        candidates.append((run, summary_path, workbook_path))
+
+    if not candidates:
+        raise SystemExit("No saturation summary JSON files found under logs/auto/gcs")
+
+    for run, summary_path, workbook_path in sorted(candidates, key=lambda item: item[0], reverse=True):
+        if workbook_path.exists():
+            return summary_path, workbook_path, run
+
+    run, summary_path, workbook_path = max(candidates, key=lambda item: item[0])
+    return summary_path, workbook_path, run
+
+
+def _extract_run_id(path: Path) -> Optional[str]:
+    match = re.search(r"run_(\d+)", str(path))
+    if match:
+        return match.group(1)
+    return None
+
+
+def summarise_event_logs(paths: Iterable[Path]) -> Dict[str, Any]:
+    handshakes: List[Dict[str, Any]] = []
+    rekeys: List[Dict[str, Any]] = []
+    warnings: List[Dict[str, Any]] = []
+    for path in paths:
+        if not path.exists():
+            continue
+        _parse_event_log(path, handshakes, rekeys, warnings)
+    rekeys.sort(key=lambda item: item.get("started_ts") or "")
+    return {
+        "handshakes": handshakes,
+        "rekeys": rekeys,
+        "warnings": warnings,
+    }
+
+
+def _parse_event_log(
+    path: Path,
+    handshakes: List[Dict[str, Any]],
+    rekeys: List[Dict[str, Any]],
+    warnings: List[Dict[str, Any]],
+) -> None:
+    rid_state: Dict[str, Dict[str, Any]] = {}
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            text = line.strip()
+            if not text or not text.startswith("{"):
+                continue
+            try:
+                record = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+            ts = record.get("ts")
+            msg = record.get("msg", "")
+            level = record.get("level", "INFO")
+            suite_id = record.get("suite_id")
+            rid = record.get("rid")
+            source = str(path)
+            if msg == "PQC handshake completed successfully":
+                handshakes.append({
+                    "ts": ts,
+                    "suite_id": suite_id,
+                    "source": source,
+                })
+                continue
+            if msg == "Control rekey negotiation started" and rid:
+                rid_state[rid] = {
+                    "ts": ts,
+                    "suite_id": suite_id,
+                    "source": source,
+                }
+                continue
+            if msg == "Control rekey successful" and rid:
+                started = rid_state.get(rid)
+                started_ts = started.get("ts") if started else None
+                completed_ts = ts
+                duration_ms = None
+                if started_ts and completed_ts:
+                    duration_ms = _compute_duration_ms(started_ts, completed_ts)
+                rekeys.append(
+                    {
+                        "rid": rid,
+                        "suite_id": suite_id,
+                        "started_ts": started_ts,
+                        "completed_ts": completed_ts,
+                        "duration_ms": duration_ms,
+                        "source": source,
+                    }
+                )
+                continue
+            if level == "WARNING":
+                warnings.append({
+                    "ts": ts,
+                    "msg": msg,
+                    "source": source,
+                })
+
+
+def _compute_duration_ms(start_ts: str, end_ts: str) -> Optional[float]:
+    start = _parse_iso_ts(start_ts)
+    end = _parse_iso_ts(end_ts)
+    if not start or not end:
+        return None
+    delta = end - start
+    return delta.total_seconds() * 1000.0
+
+
+def _parse_iso_ts(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def main() -> None:
     args = parse_args()
-    json_records = load_json_summary(args.summary_json)
-    run_info, sheets = load_workbook_sheets(args.combined_xlsx)
+    summary_path, workbook_path, run_id = _discover_artifacts(
+        args.summary_json, args.combined_xlsx, args.run_id
+    )
+    json_records = load_json_summary(summary_path)
+    run_info, sheets = load_workbook_sheets(workbook_path)
     reports = build_suite_reports(json_records, sheets)
+    if run_id and "run_id" not in run_info:
+        run_info["run_id"] = run_id
+    events = None
+    if args.event_logs:
+        events = summarise_event_logs(args.event_logs)
     if args.format == "json":
-        output = emit_json(run_info, reports)
+        output = emit_json(run_info, reports, events)
     else:
-        output = emit_text(run_info, reports)
+        output = emit_text(run_info, reports, events)
 
     results_dir = Path("results")
     results_dir.mkdir(parents=True, exist_ok=True)
-    report_path = results_dir / "report.txt"
+    suffix = "json" if args.format == "json" else "txt"
+    if run_id:
+        report_path = results_dir / f"report_run_{run_id}.{suffix}"
+    else:
+        report_path = results_dir / f"report.{suffix}"
     report_path.write_text(output, encoding="utf-8")
     print(output, end="")
     print(f"[info] wrote {report_path}")
