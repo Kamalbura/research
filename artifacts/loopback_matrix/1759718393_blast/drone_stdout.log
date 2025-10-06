@@ -1,0 +1,10 @@
+[follower] session_id=run_1759718394
+[follower] monitor output -> C:\home\dev\research\output\drone\run_1759718394
+[follower] device generation=pi4
+[follower] telemetry -> 192.168.0.103:52080
+[follower] cpu governor target ~1800 MHz (pi4)
+[follower] power monitor disabled: smbus module not available on host
+[follower] launching drone proxy on suite cs-mlkem768-aesgcm-mldsa65
+[2025-10-06T02:39:54Z] exec: 'C:\Users\burak\miniconda3\envs\gcs-env\python.exe' -m core.run_proxy drone --suite cs-mlkem768-aesgcm-mldsa65 --peer-pubkey-file 'C:\Users\burak\Desktop\research\secrets\matrix\cs-mlkem768-aesgcm-mldsa65\gcs_signing.pub' --status-file 'C:\Users\burak\Desktop\research\logs\auto\drone\cs-mlkem768-aesgcm-mldsa65\drone_status.json' --json-out 'C:\Users\burak\Desktop\research\logs\auto\drone\cs-mlkem768-aesgcm-mldsa65\drone_summary.json'
+[monitor] vcgencmd not available; thermal metrics disabled
+[2025-10-06T02:39:55Z] exec: perf stat -I 1000 -x , -e task-clock,cycles,instructions,cache-misses,branch-misses,context-switches,branches -p 21340 --log-fd 1

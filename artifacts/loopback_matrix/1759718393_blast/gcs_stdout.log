@@ -1,0 +1,13 @@
+[2025-10-06T02:39:58Z] session_id=run_1759718398
+[2025-10-06T02:39:58Z] reordered suites to start with cs-mlkem768-aesgcm-mldsa65 (from CONFIG)
+[2025-10-06T02:39:58Z] traffic=saturation duration=45.0s pre_gap=1.0s inter_gap=15.0s payload=256B event_sample=100 passes=1 rate_pps=0 sat_search=auto
+[2025-10-06T02:39:58Z] power capture: enabled
+[2025-10-06T02:40:22Z] telemetry collector listening on 0.0.0.0:52080
+[2025-10-06T02:40:22Z] telemetry collector -> 0.0.0.0:52080
+[2025-10-06T02:40:22Z] initial handshake ready? True
+[2025-10-06T02:40:44Z] blaster UDP socket buffers: snd=1048576 rcv=1048576
+[2025-10-06T02:40:45Z] blaster UDP socket buffers: snd=1048576 rcv=1048576
+[2025-10-06T02:41:30Z] blaster UDP socket buffers: snd=1048576 rcv=1048576
+[2025-10-06T02:41:31Z] blaster UDP socket buffers: snd=1048576 rcv=1048576
+[2025-10-06T02:42:17Z] blaster UDP socket buffers: snd=1048576 rcv=1048576
+[2025-10-06T02:42:18Z] blaster UDP socket buffers: snd=1048576 rcv=1048576

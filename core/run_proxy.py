@@ -16,8 +16,9 @@ import os
 import json
 import time
 import logging
+import threading
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Dict, Optional
 
 from core.config import CONFIG
 from core.suites import get_suite, build_suite_id
@@ -58,6 +59,98 @@ def _require_run_proxy():
         raise
 
     return _run_proxy
+
+
+def _build_matrix_secret_loader(
+    *,
+    suite_id: Optional[str],
+    default_secret_path: Optional[Path],
+    initial_secret: Optional[object],
+    signature_cls,
+    matrix_dir: Optional[Path] = None,
+) -> Callable[[Dict[str, object]], object]:
+    """Return loader that fetches per-suite signing secrets from disk.
+
+    The loader prefers a suite-specific directory under `secrets/matrix/` and falls
+    back to the primary secret path when targeting the initial suite. Results are
+    cached per suite and guarded with a lock because rekeys may run in background
+    threads.
+    """
+
+    lock = threading.Lock()
+    cache: Dict[str, object] = {}
+    if suite_id and initial_secret is not None and isinstance(initial_secret, signature_cls):
+        cache[suite_id] = initial_secret
+
+    matrix_secrets_dir = matrix_dir or Path("secrets/matrix")
+
+    def instantiate(secret_bytes: bytes, sig_name: str):
+        errors = []
+        sig_obj = None
+        try:
+            sig_obj = signature_cls(sig_name)
+        except Exception as exc:  # pragma: no cover - depends on oqs build
+            errors.append(f"Signature ctor failed: {exc}")
+            sig_obj = None
+
+        if sig_obj is not None and hasattr(sig_obj, "import_secret_key"):
+            try:
+                sig_obj.import_secret_key(secret_bytes)
+                return sig_obj
+            except Exception as exc:
+                errors.append(f"import_secret_key failed: {exc}")
+
+        try:
+            return signature_cls(sig_name, secret_key=secret_bytes)
+        except TypeError as exc:
+            errors.append(f"ctor secret_key unsupported: {exc}")
+        except Exception as exc:  # pragma: no cover - defensive logging only
+            errors.append(f"ctor secret_key failed: {exc}")
+
+        detail = "; ".join(errors) if errors else "unknown error"
+        raise RuntimeError(f"Unable to load signature secret: {detail}")
+
+    def load_secret_for_suite(target_suite: Dict[str, object]):
+        target_suite_id = target_suite.get("suite_id") if isinstance(target_suite, dict) else None
+        if not target_suite_id:
+            raise RuntimeError("Suite dictionary missing suite_id")
+
+        with lock:
+            cached = cache.get(target_suite_id)
+            if cached is not None:
+                return cached
+
+        candidates = []
+        if default_secret_path and suite_id and target_suite_id == suite_id:
+            candidates.append(default_secret_path)
+        candidates.append(matrix_secrets_dir / target_suite_id / "gcs_signing.key")
+
+        seen: Dict[str, None] = {}
+        for candidate in candidates:
+            candidate_path = candidate.expanduser()
+            key = str(candidate_path.resolve()) if candidate_path.exists() else str(candidate_path)
+            if key in seen:
+                continue
+            seen[key] = None
+            if not candidate_path.exists():
+                continue
+            try:
+                secret_bytes = candidate_path.read_bytes()
+            except Exception as exc:
+                raise RuntimeError(f"Failed to read GCS secret key {candidate_path}: {exc}") from exc
+            try:
+                sig_obj = instantiate(secret_bytes, target_suite["sig_name"])  # type: ignore[index]
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Failed to load GCS secret key {candidate_path} for suite {target_suite_id}: {exc}"
+                ) from exc
+            with lock:
+                cache[target_suite_id] = sig_obj
+            return sig_obj
+
+        raise FileNotFoundError(f"No GCS signing secret key found for suite {target_suite_id}")
+
+    return load_secret_for_suite
 
 
 def signal_handler(signum, frame):
@@ -189,6 +282,7 @@ def gcs_command(args):
     json_out_path = getattr(args, "json_out", None)
     quiet = getattr(args, "quiet", False)
     status_file = getattr(args, "status_file", None)
+    primary_secret_path: Optional[Path] = None
 
     def info(msg: str) -> None:
         if not quiet:
@@ -209,6 +303,7 @@ def gcs_command(args):
             print(f"Public key (hex): {gcs_sig_public.hex()}")
             print("Provide this to the drone via --gcs-pub-hex or --peer-pubkey-file")
             print()
+        primary_secret_path = None
         
     else:
         # Load persistent key
@@ -297,7 +392,14 @@ def gcs_command(args):
             print("Warning: Could not locate public key file for display. Ensure the drone has the matching public key.")
         if not quiet:
             print()
-    
+        primary_secret_path = secret_path
+    load_secret_for_suite = _build_matrix_secret_loader(
+        suite_id=suite_id,
+        default_secret_path=primary_secret_path,
+        initial_secret=gcs_sig_secret,
+        signature_cls=Signature,
+    )
+
     try:
         log_path = configure_file_logger("gcs", logger)
         if not quiet:
@@ -319,6 +421,7 @@ def gcs_command(args):
             manual_control=getattr(args, "control_manual", False),
             quiet=quiet,
             status_file=status_file,
+            load_gcs_secret=load_secret_for_suite,
         )
         
         # Log final counters as JSON

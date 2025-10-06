@@ -11,18 +11,6 @@ import numpy as np
 import pandas as pd
 import torch
 
-# Import TSTPlus class definition for model loading
-from tstplus import TSTPlus, _TSTBackbone, _TSTEncoder, _TSTEncoderLayer  # type: ignore
-
-# Torch pickles capture the qualified module path of custom classes. Some of our
-# artifacts were exported from interactive notebooks where these classes lived in
-# `__main__`, so we proactively register them on this module's globals before
-# calling `torch.load`.
-globals().setdefault("TSTPlus", TSTPlus)
-globals().setdefault("_TSTBackbone", _TSTBackbone)
-globals().setdefault("_TSTEncoder", _TSTEncoder)
-globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
-
 
 def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
     if logits.ndim == 1:
@@ -38,8 +26,16 @@ def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
         raise ValueError(f"TST model produced invalid class dimension: {tuple(logits.shape)}")
     return probs
 
+
+def _safe_torch_load(path: Path):
+    try:
+        return torch.load(str(path), map_location="cpu", weights_only=False)
+    except TypeError:
+        return torch.load(str(path), map_location="cpu")
+
 from config import (
     SCALER_FILE,
+    TORCH_NUM_THREADS,
     TST_ATTACK_THRESHOLD,
     TST_MODEL_FILE,
     TST_SEQ_LENGTH,
@@ -60,11 +56,28 @@ def load_model():
         scripted = True
     else:
         ensure_file(TST_MODEL_FILE, "PyTorch TST model")
-        model = torch.load(str(TST_MODEL_FILE), map_location="cpu", weights_only=False)
+        try:
+            from tstplus import (  # type: ignore
+                TSTPlus,
+                _TSTBackbone,
+                _TSTEncoder,
+                _TSTEncoderLayer,
+            )
+            globals().setdefault("TSTPlus", TSTPlus)
+            globals().setdefault("_TSTBackbone", _TSTBackbone)
+            globals().setdefault("_TSTEncoder", _TSTEncoder)
+            globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
+        except Exception as exc:
+            print(
+                "❌ TorchScript model missing and unable to import tstplus module for .pth loading."
+            )
+            print("   Install the 'tsai' extra or ensure tstplus.py is available.")
+            raise
+        model = _safe_torch_load(TST_MODEL_FILE)
         scripted = False
 
     model.eval()
-    torch.set_num_threads(1)
+    torch.set_num_threads(TORCH_NUM_THREADS)
     return scaler, model, scripted
 
 
@@ -85,6 +98,10 @@ def main() -> int:
     print(f"Seq length   : {TST_SEQ_LENGTH}")
 
     df = pd.read_csv(TEST_DATA_FILE)
+    for col in ("Mavlink_Count", "Status"):
+        if col not in df.columns:
+            print(f"❌ Column '{col}' not found. Available: {list(df.columns)}")
+            return 1
     if len(df) < TST_SEQ_LENGTH:
         print(
             f"❌ Test data has only {len(df)} rows; need at least {TST_SEQ_LENGTH} to form a sequence."

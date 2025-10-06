@@ -70,7 +70,7 @@ TST_SEQ_LENGTH: int = _get_env_int("DDOS_TST_SEQ", 400)
 BUFFER_SIZE: int = _get_env_int("DDOS_BUFFER_SIZE", 900)
 
 # Gatekeeping
-XGB_CONSECUTIVE_POSITIVES: int = _get_env_int("DDOS_XGB_CONSEC", 3)
+XGB_CONSECUTIVE_POSITIVES: int = _get_env_int("DDOS_XGB_CONSEC", 1)
 TST_COOLDOWN_WINDOWS: int = _get_env_int("DDOS_TST_COOLDOWN", 5)
 
 # Queue sizing
@@ -92,6 +92,9 @@ SCALER_FILE: Path = Path(_get_env_str("DDOS_SCALER_FILE", str(BASE_DIR / "scaler
 
 # Probability threshold for attack classification from TST softmax output.
 TST_ATTACK_THRESHOLD: float = _get_env_float("DDOS_TST_THRESHOLD", 0.90)
+TORCH_NUM_THREADS: int = _get_env_int("DDOS_TORCH_THREADS", 1)
+TST_CONFIRM_POSITIVES: int = _get_env_int("DDOS_TST_CONFIRM", 2)
+TST_CLEAR_THRESHOLD: float = _get_env_float("DDOS_TST_CLEAR", 0.80)
 
 # ---------------------------------------------------------------------------
 # Logging configuration
@@ -111,7 +114,7 @@ def configure_logging(program_name: str) -> None:
     """
     level = getattr(logging, LOG_LEVEL_NAME, logging.INFO)
     log_format = (
-        "%(asctime)s %(levelname)s %(name)s "
+        f"{program_name} %(asctime)s %(levelname)s %(name)s "
         "%(threadName)s %(message)s"
     )
 
@@ -139,10 +142,6 @@ def ensure_file(path: Path, description: str) -> None:
 
 def get_udp_bpf() -> str:
     """Return a BPF string filter for Scapy sniffing."""
-    # Filter: UDP packets to the MAVLink port whose first payload byte equals 0xFD.
-    # Some kernels/platforms may not allow the payload byte filter; guard accordingly.
-    try:
-        port = int(PORT)
-    except ValueError:
-        port = 14550
-    return f"udp and port {port} and udp[8] = 0xfd"
+    # Match both MAVLink v2 (0xFD) and v1 (0xFE) start bytes; collector threads
+    # already fall back to a port-only filter if this one raises.
+    return f"udp and port {PORT} and (udp[8] = 0xfd or udp[8] = 0xfe)"

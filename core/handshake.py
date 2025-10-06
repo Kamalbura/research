@@ -122,6 +122,7 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         + b"|"
         + challenge
     )
+    sig = None
     try:
         sig = Signature(sig_name.decode("utf-8"))
         if not sig.verify(transcript, signature, server_sig_pub):
@@ -130,6 +131,12 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         raise
     except Exception:
         raise HandshakeVerifyError("signature verification failed")
+    finally:
+        if sig is not None and hasattr(sig, "free"):
+            try:
+                sig.free()
+            except Exception:
+                pass
     return ServerHello(
         version=version,
         kem_name=kem_name,
@@ -152,19 +159,39 @@ def _drone_psk_bytes() -> bytes:
 
 
 def client_encapsulate(server_hello: ServerHello):
+    kem = None
     try:
         kem = KeyEncapsulation(server_hello.kem_name.decode("utf-8"))
         kem_ct, shared_secret = kem.encap_secret(server_hello.kem_pub)
         return kem_ct, shared_secret
     except Exception:
         raise NotImplementedError("client_encapsulate failed")
+    finally:
+        if kem is not None and hasattr(kem, "free"):
+            try:
+                kem.free()
+            except Exception:
+                pass
+
 
 def server_decapsulate(ephemeral: ServerEphemeral, kem_ct: bytes):
+    kem_obj = getattr(ephemeral, "kem_obj", None)
     try:
-        shared_secret = ephemeral.kem_obj.decap_secret(kem_ct)
+        if kem_obj is None:
+            raise NotImplementedError("server_decapsulate missing kem_obj")
+        shared_secret = kem_obj.decap_secret(kem_ct)
         return shared_secret
     except Exception:
         raise NotImplementedError("server_decapsulate failed")
+    finally:
+        if kem_obj is not None and hasattr(kem_obj, "free"):
+            try:
+                kem_obj.free()
+            except Exception:
+                pass
+        if hasattr(ephemeral, "kem_obj"):
+            ephemeral.kem_obj = None
+
 
 def derive_transport_keys(role: str, session_id: bytes, kem_name: bytes, sig_name: bytes, shared_secret: bytes):
     if role not in {"client", "server"}:
@@ -183,7 +210,7 @@ def derive_transport_keys(role: str, session_id: bytes, kem_name: bytes, sig_nam
         algorithm=hashes.SHA256(),
         length=64,
         salt=b"pq-drone-gcs|hkdf|v1",
-        info=info
+        info=info,
     )
     okm = hkdf.derive(shared_secret)
     key_d2g = okm[:32]

@@ -1,0 +1,46 @@
+[WARN] follower not reachable at 192.168.0.102:48080
+[WARN] timesync failed: timed out
+[WARN] control mark failed for cs-mlkem768-aesgcm-mldsa65: timed out
+Traceback (most recent call last):
+  File "C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py", line 1913, in main
+    summary = tester.run()
+  File "C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py", line 1248, in run
+    self._coarse_search()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py", line 1287, in _coarse_search
+    _, is_bad, _ = self._evaluate_rate(rate)
+                   ~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py", line 1323, in _evaluate_rate
+    metrics = self._run_rate(rate)
+  File "C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py", line 1418, in _run_rate
+    blaster.run(duration_s=self.duration_s, rate_pps=rate_pps)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py", line 541, in run
+    time.sleep(min(wait_ns / 1_000_000_000.0, 0.001))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\burak\miniconda3\envs\gcs-env\Lib\socket.py", line 849, in create_connection
+    sock.connect(sa)
+    ~~~~~~~~~~~~^^^^
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py", line 1994, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py", line 1967, in main
+    ctl_send({"cmd": "stop"})
+    ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\burak\Desktop\research\tools\auto\gcs_scheduler.py", line 339, in ctl_send
+    with socket.create_connection((DRONE_HOST, CONTROL_PORT), timeout=timeout) as sock:
+         ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\burak\miniconda3\envs\gcs-env\Lib\socket.py", line 856, in create_connection
+    exceptions.clear()  # raise only the last error
+    ~~~~~~~~~~~~~~~~^^
+KeyboardInterrupt

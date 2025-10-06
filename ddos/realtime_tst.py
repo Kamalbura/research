@@ -21,7 +21,10 @@ from config import (
     IFACE,
     PORT,
     SCALER_FILE,
+    TORCH_NUM_THREADS,
     TST_ATTACK_THRESHOLD,
+    TST_CLEAR_THRESHOLD,
+    TST_CONFIRM_POSITIVES,
     TST_MODEL_FILE,
     TST_QUEUE_MAX,
     TST_SEQ_LENGTH,
@@ -81,6 +84,13 @@ def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
     return probs
 
 
+def _safe_torch_load(path):
+    try:
+        return torch.load(str(path), map_location="cpu", weights_only=False)
+    except TypeError:
+        return torch.load(str(path), map_location="cpu")
+
+
 def load_tst_model():
     ensure_file(SCALER_FILE, "StandardScaler pickle")
     scaler = joblib.load(SCALER_FILE)
@@ -110,11 +120,11 @@ def load_tst_model():
                 "TorchScript model missing and fallback import of tstplus.TSTPlus failed. "
                 "Install the 'tsai' dependency and ensure tstplus.py is accessible."
             ) from exc
-        model = torch.load(str(TST_MODEL_FILE), map_location="cpu", weights_only=False)
+        model = _safe_torch_load(TST_MODEL_FILE)
         scripted = False
 
     model.eval()
-    torch.set_num_threads(1)
+    torch.set_num_threads(TORCH_NUM_THREADS)
 
     # Validate that scaler and model agree with the configured sequence length and
     # produce a 2-class output tensor. Failing fast here avoids obscure runtime errors
@@ -155,23 +165,38 @@ def collector_thread(
             return
         if scapy.UDP in packet and scapy.Raw in packet:
             payload = packet[scapy.Raw].load
-            if payload and payload[0] == 0xFD:
+            if payload and payload[0] in (0xFD, 0xFE):
                 length = len(payload)
                 with counter_lock:
                     counter["count"] += 1
                     counter["bytes"] += length
-
+    bpf = get_udp_bpf()
     try:
-        scapy.sniff(
+        sniffer = scapy.AsyncSniffer(
             iface=IFACE,
             store=False,
             prn=packet_callback,
-            filter=get_udp_bpf(),
-            stop_filter=lambda _: stop_event.is_set(),
+            filter=bpf,
         )
-    except Exception:  # pragma: no cover - hardware interaction
-        LOGGER.exception("Collector thread encountered an error")
-        stop_event.set()
+        sniffer.start()
+    except Exception:
+        LOGGER.exception("Failed to start sniffer with payload filter; falling back to port-only")
+        sniffer = scapy.AsyncSniffer(
+            iface=IFACE,
+            store=False,
+            prn=packet_callback,
+            filter=f"udp and port {PORT}",
+        )
+        sniffer.start()
+
+    try:
+        while not stop_event.wait(0.5):
+            pass
+    finally:
+        try:
+            sniffer.stop()
+        except Exception:
+            LOGGER.exception("Error stopping sniffer")
 
 
 def window_thread(
@@ -242,6 +267,10 @@ def detector_thread(
         scripted,
     )
 
+    current_alert = False
+    confirm_streak = 0
+    rate_limiter = RateLimiter(15.0)
+
     while not stop_event.is_set():
         try:
             sequence: List[WindowSample] = detect_queue.get(timeout=0.5)
@@ -260,15 +289,57 @@ def detector_thread(
             predicted_idx = int(torch.argmax(probs, dim=1))
         duration_ms = (time.time() - start) * 1000.0
 
-        status = "CONFIRMED ATTACK" if attack_prob >= TST_ATTACK_THRESHOLD else "NORMAL"
-        LOGGER.warning(
-            "TST inference status=%s attack_prob=%.3f predicted=%d duration_ms=%.1f window_end=%.3f",
-            status,
+        LOGGER.debug(
+            "TST inference attack_prob=%.3f predicted=%d duration_ms=%.1f window_end=%.3f",
             attack_prob,
             predicted_idx,
             duration_ms,
             sequence[-1].end_ts,
         )
+
+        if not current_alert:
+            if attack_prob >= TST_ATTACK_THRESHOLD:
+                confirm_streak += 1
+                if confirm_streak >= TST_CONFIRM_POSITIVES:
+                    current_alert = True
+                    confirm_streak = 0
+                    LOGGER.warning(
+                        "TST CONFIRMED ATTACK (consecutive=%d, prob=%.3f, window_end=%.3f)",
+                        TST_CONFIRM_POSITIVES,
+                        attack_prob,
+                        sequence[-1].end_ts,
+                    )
+                elif rate_limiter.should_log():
+                    LOGGER.info(
+                        "TST pending confirmation %d/%d prob=%.3f window_end=%.3f",
+                        confirm_streak,
+                        TST_CONFIRM_POSITIVES,
+                        attack_prob,
+                        sequence[-1].end_ts,
+                    )
+            else:
+                if confirm_streak and rate_limiter.should_log():
+                    LOGGER.info(
+                        "TST reset confirmation streak prob=%.3f window_end=%.3f",
+                        attack_prob,
+                        sequence[-1].end_ts,
+                    )
+                confirm_streak = 0
+        else:
+            if attack_prob <= TST_CLEAR_THRESHOLD:
+                current_alert = False
+                LOGGER.warning(
+                    "TST back to NORMAL (prob=%.3f <= clear=%.2f, window_end=%.3f)",
+                    attack_prob,
+                    TST_CLEAR_THRESHOLD,
+                    sequence[-1].end_ts,
+                )
+            elif rate_limiter.should_log():
+                LOGGER.info(
+                    "TST sustained attack prob=%.3f window_end=%.3f",
+                    attack_prob,
+                    sequence[-1].end_ts,
+                )
 
     LOGGER.info("Detector exiting")
 

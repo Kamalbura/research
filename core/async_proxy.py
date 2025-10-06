@@ -25,7 +25,7 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 from core.config import CONFIG
 from core.suites import SUITES, get_suite, header_ids_for_suite, list_suites
@@ -188,7 +188,7 @@ def _validate_config(cfg: dict) -> None:
 def _perform_handshake(
     role: str,
     suite: dict,
-    gcs_sig_secret: Optional[bytes],
+    gcs_sig_secret: Optional[object],
     gcs_sig_public: Optional[bytes],
     cfg: dict,
     stop_after_seconds: Optional[float] = None,
@@ -507,13 +507,14 @@ def run_proxy(
     role: str,
     suite: dict,
     cfg: dict,
-    gcs_sig_secret: Optional[bytes] = None,
+    gcs_sig_secret: Optional[object] = None,
     gcs_sig_public: Optional[bytes] = None,
     stop_after_seconds: Optional[float] = None,
     manual_control: bool = False,
     quiet: bool = False,
     ready_event: Optional[threading.Event] = None,
     status_file: Optional[str] = None,
+    load_gcs_secret: Optional[Callable[[Dict[str, object]], object]] = None,
 ) -> Dict[str, object]:
     """
     Start a blocking proxy process for `role` in {"drone","gcs"}.
@@ -660,6 +661,46 @@ def run_proxy(
         def worker() -> None:
             try:
                 new_suite = get_suite(target_suite_id)
+                new_secret = None
+                if role == "gcs" and load_gcs_secret is not None:
+                    try:
+                        new_secret = load_gcs_secret(new_suite)
+                    except FileNotFoundError as exc:
+                        with context_lock:
+                            current_suite = active_context["suite"]
+                        with counters_lock:
+                            counters.rekeys_fail += 1
+                        record_rekey_result(control_state, rid, current_suite, success=False)
+                        logger.warning(
+                            "Control rekey rejected: missing signing secret",
+                            extra={
+                                "role": role,
+                                "suite_id": target_suite_id,
+                                "rid": rid,
+                                "error": str(exc),
+                            },
+                        )
+                        with rekey_guard:
+                            active_rekeys.discard(rid)
+                        return
+                    except Exception as exc:
+                        with context_lock:
+                            current_suite = active_context["suite"]
+                        with counters_lock:
+                            counters.rekeys_fail += 1
+                        record_rekey_result(control_state, rid, current_suite, success=False)
+                        logger.warning(
+                            "Control rekey rejected: signing secret load failed",
+                            extra={
+                                "role": role,
+                                "suite_id": target_suite_id,
+                                "rid": rid,
+                                "error": str(exc),
+                            },
+                        )
+                        with rekey_guard:
+                            active_rekeys.discard(rid)
+                        return
             except NotImplementedError as exc:
                 with context_lock:
                     current_suite = active_context["suite"]
@@ -676,7 +717,11 @@ def run_proxy(
 
             try:
                 timeout = cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0)
-                rk_result = _perform_handshake(role, new_suite, gcs_sig_secret, gcs_sig_public, cfg, timeout)
+                if role == "gcs" and new_secret is not None:
+                    base_secret = new_secret
+                else:
+                    base_secret = gcs_sig_secret
+                rk_result = _perform_handshake(role, new_suite, base_secret, gcs_sig_public, cfg, timeout)
                 (
                     new_k_d2g,
                     new_k_g2d,

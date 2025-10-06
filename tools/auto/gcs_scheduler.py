@@ -107,6 +107,29 @@ SATURATION_LINEAR_RATES = [
     200,
 ]
 SATURATION_SIGNALS = ("owd_p95_spike", "delivery_degraded", "loss_excess")
+TELEMETRY_BUFFER_MAXLEN_DEFAULT = 100_000
+
+
+def _close_socket(sock: Optional[socket.socket]) -> None:
+    if sock is None:
+        return
+    try:
+        sock.close()
+    except Exception:
+        pass
+
+
+def _close_file(handle: Optional[IO[str]]) -> None:
+    if handle is None:
+        return
+    try:
+        handle.flush()
+    except Exception:
+        pass
+    try:
+        handle.close()
+    except Exception:
+        pass
 
 
 class P2Quantile:
@@ -373,23 +396,41 @@ class Blaster:
         self,
         send_host: str,
         send_port: int,
-    recv_host: str,
-    recv_port: int,
-    events_path: Optional[Path],
+        recv_host: str,
+        recv_port: int,
+        events_path: Optional[Path],
         payload_bytes: int,
         sample_every: int,
         offset_ns: int,
     ) -> None:
-        self.send_addr = (send_host, send_port)
-        self.recv_addr = (recv_host, recv_port)
         self.payload_bytes = max(12, int(payload_bytes))
         self.sample_every = max(0, int(sample_every))
         self.offset_ns = offset_ns
-        self.tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        send_info = socket.getaddrinfo(send_host, send_port, 0, socket.SOCK_DGRAM)
+        if not send_info:
+            raise OSError(f"Unable to resolve send address {send_host}:{send_port}")
+        send_family, _stype, _proto, _canon, send_sockaddr = send_info[0]
+
+        recv_info = socket.getaddrinfo(recv_host, recv_port, send_family, socket.SOCK_DGRAM)
+        if not recv_info:
+            recv_info = socket.getaddrinfo(recv_host, recv_port, 0, socket.SOCK_DGRAM)
+        if not recv_info:
+            raise OSError(f"Unable to resolve recv address {recv_host}:{recv_port}")
+        recv_family, _rstype, _rproto, _rcanon, recv_sockaddr = recv_info[0]
+
+        self.tx = socket.socket(send_family, socket.SOCK_DGRAM)
+        self.rx = socket.socket(recv_family, socket.SOCK_DGRAM)
+        self.send_addr = send_sockaddr
+        self.recv_addr = recv_sockaddr
         self.rx.bind(self.recv_addr)
         self.rx.settimeout(0.001)
         self.rx_burst = max(1, int(os.getenv("GCS_RX_BURST", "32")))
+        self._lock = threading.Lock()
+        self._run_active = threading.Event()
+        self._rx_thread: Optional[threading.Thread] = None
+        self._stop_event: Optional[threading.Event] = None
+        self._closed = False
         try:
             # Allow overriding socket buffer sizes via environment variables
             # Use GCS_SOCK_SNDBUF and GCS_SOCK_RCVBUF if present, otherwise default to 1 MiB
@@ -407,12 +448,17 @@ class Blaster:
             # best-effort; continue even if setting buffers fails
             pass
 
+        family = self.tx.family if self.tx.family in (socket.AF_INET, socket.AF_INET6) else self.rx.family
+        ip_bytes = IPV6_HEADER_BYTES if family == socket.AF_INET6 else IPV4_HEADER_BYTES
+        self.wire_header_bytes = UDP_HEADER_BYTES + ip_bytes
+
         self.events_path = events_path
         self.events: Optional[IO[str]] = None
         if events_path is not None:
             mkdirp(events_path.parent)
             self.events = open(events_path, "w", encoding="utf-8")
 
+        self.truncated = 0
         self.sent = 0
         self.rcvd = 0
         self.sent_bytes = 0
@@ -448,83 +494,109 @@ class Blaster:
             if seq % self.sample_every:
                 return
         else:
-            if self.rcvd % self.sample_every:
+            with self._lock:
+                rcvd_count = self.rcvd
+            if rcvd_count % self.sample_every:
                 return
         self._log_event({"event": kind, "seq": seq, "t_ns": t_ns})
 
     def run(self, duration_s: float, rate_pps: int, max_packets: Optional[int] = None) -> None:
+        if self._closed:
+            raise RuntimeError("Blaster is closed")
+        if self._run_active.is_set():
+            raise RuntimeError("Blaster.run is already in progress")
+
         stop_at = self._now() + int(max(0.0, duration_s) * 1e9)
         payload_pad = b"\x00" * (self.payload_bytes - 12)
-        interval = 0.0 if rate_pps <= 0 else 1.0 / max(1, rate_pps)
+        interval_ns = 0.0 if rate_pps <= 0 else 1_000_000_000.0 / max(1, rate_pps)
+
         stop_event = threading.Event()
+        self._stop_event = stop_event
+        self._run_active.set()
         rx_thread = threading.Thread(target=self._rx_loop, args=(stop_event,), daemon=True)
+        self._rx_thread = rx_thread
         rx_thread.start()
 
-        seq = 0
-        burst = 32 if interval == 0.0 else 1
-        while self._now() < stop_at:
-            loop_progress = False
-            sends_this_loop = burst
-            while sends_this_loop > 0:
-                if self._now() >= stop_at:
-                    break
-                t_send = self._now()
-                packet = seq.to_bytes(4, "big") + int(t_send).to_bytes(8, "big") + payload_pad
-                try:
-                    self.tx.sendto(packet, self.send_addr)
-                    if self.sample_every and (seq % self.sample_every == 0):
-                        self.pending[seq] = int(t_send)
-                    self.sent += 1
-                    self.sent_bytes += len(packet)
-                    loop_progress = True
-                    self._maybe_log("send", seq, int(t_send))
-                except Exception as exc:
-                    self._log_event({"event": "send_error", "err": str(exc), "ts": ts()})
-                seq += 1
-                sends_this_loop -= 1
-            if max_packets is not None and self.sent >= max_packets:
-                break
-            if interval > 0.0:
-                time.sleep(interval)
-            elif (seq & 0x3FFF) == 0:
-                time.sleep(0)
-            if not loop_progress:
-                time.sleep(0.0005)
+        with self._lock:
+            self.pending.clear()
 
-        tail_deadline = self._now() + int(0.25 * 1e9)
-        while self._now() < tail_deadline:
-            if not self._rx_once():
-                time.sleep(0)
-        stop_event.set()
-        rx_thread.join(timeout=0.2)
-        self.owd_p50_ns = self.owd_p50.value()
-        self.owd_p95_ns = self.owd_p95.value()
-        self.rtt_p50_ns = self.rtt_p50.value()
-        self.rtt_p95_ns = self.rtt_p95.value()
-        # Bug #5 fix: Ensure cleanup happens even on exceptions
+        seq = 0
+        burst = 32 if interval_ns == 0.0 else 1
+        next_send_ns = float(self._now())
         try:
-            if self.events:
-                try:
-                    self.events.flush()
-                except Exception:
-                    pass
+            while self._now() < stop_at:
+                if max_packets is not None:
+                    with self._lock:
+                        if self.sent >= max_packets:
+                            break
+                loop_progress = False
+                sends_this_loop = burst
+                while sends_this_loop > 0:
+                    now_ns = self._now()
+                    if now_ns >= stop_at:
+                        break
+                    if interval_ns > 0.0:
+                        wait_ns = next_send_ns - now_ns
+                        if wait_ns > 0:
+                            time.sleep(min(wait_ns / 1_000_000_000.0, 0.001))
+                            break
+                    t_send = self._now()
+                    packet = seq.to_bytes(4, "big") + int(t_send).to_bytes(8, "big") + payload_pad
+                    try:
+                        self.tx.sendto(packet, self.send_addr)
+                    except Exception as exc:  # pragma: no cover - hard to surface in tests
+                        self._log_event({"event": "send_error", "err": str(exc), "seq": seq, "ts": ts()})
+                        break
+                    t_send_int = int(t_send)
+                    with self._lock:
+                        if self.sample_every and (seq % self.sample_every == 0):
+                            self.pending[seq] = t_send_int
+                        self.sent += 1
+                        self.sent_bytes += len(packet)
+                    loop_progress = True
+                    self._maybe_log("send", seq, t_send_int)
+                    seq += 1
+                    sends_this_loop -= 1
+                    if interval_ns > 0.0:
+                        next_send_ns = max(next_send_ns + interval_ns, float(t_send) + interval_ns)
+                    if max_packets is not None:
+                        with self._lock:
+                            if self.sent >= max_packets:
+                                break
+                if interval_ns == 0.0 and (seq & 0x3FFF) == 0:
+                    time.sleep(0)
+                if not loop_progress:
+                    time.sleep(0.0005)
+
+            tail_deadline = self._now() + int(0.25 * 1e9)
+            while self._now() < tail_deadline:
+                time.sleep(0.0005)
         finally:
-            if self.events:
-                try:
-                    self.events.close()
-                except Exception:
-                    pass
-                self.events = None
-            try:
-                self.tx.close()
-            except Exception:
-                pass
-            try:
-                self.rx.close()
-            except Exception:
-                pass
+            stop_event.set()
+            rx_thread.join(timeout=0.5)
+            self._run_active.clear()
+            self._rx_thread = None
+            self._stop_event = None
+            self.owd_p50_ns = self.owd_p50.value()
+            self.owd_p95_ns = self.owd_p95.value()
+            self.rtt_p50_ns = self.rtt_p50.value()
+            self.rtt_p95_ns = self.rtt_p95.value()
+            self._cleanup()
+
+    def _cleanup(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        if self.events is not None:
+            _close_file(self.events)
+            self.events = None
+        _close_socket(self.tx)
+        _close_socket(self.rx)
+
     def _rx_loop(self, stop_event: threading.Event) -> None:
         while not stop_event.is_set():
+            if not self._run_active.is_set():
+                break
             progressed = False
             for _ in range(self.rx_burst):
                 if self._rx_once():
@@ -540,43 +612,56 @@ class Blaster:
         except socket.timeout:
             return False
         except (socket.error, OSError) as exc:
-            # Bug #4 fix: Catch specific exceptions, log unexpected errors
+            # Only log unexpected socket failures
             if not isinstance(exc, (ConnectionResetError, ConnectionRefusedError)):
                 self._log_event({"event": "rx_error", "err": str(exc), "ts": ts()})
             return False
+
         t_recv = self._now()
-        self.rcvd += 1
-        self.rcvd_bytes += len(data)
-        if len(data) < 4:
+        data_len = len(data)
+        if data_len < 4:
+            with self._lock:
+                self.rcvd += 1
+                self.rcvd_bytes += data_len
+                self.truncated += 1
             return True
 
         seq = int.from_bytes(data[:4], "big")
-        t_send = self.pending.pop(seq, None)
-        header_t_send = int.from_bytes(data[4:12], "big") if len(data) >= 12 else None
-        if t_send is None:
-            t_send = header_t_send
+        header_t_send = int.from_bytes(data[4:12], "big") if data_len >= 12 else None
+        drone_recv_ns = int.from_bytes(data[-8:], "big") if data_len >= 20 else None
 
-        drone_recv_ns = int.from_bytes(data[-8:], "big") if len(data) >= 20 else None
+        log_recv = False
+        with self._lock:
+            self.rcvd += 1
+            self.rcvd_bytes += data_len
+            t_send = self.pending.pop(seq, None)
+            if t_send is None:
+                t_send = header_t_send
 
-        if t_send is not None:
-            rtt = t_recv - t_send
-            if rtt >= 0:
-                self.rtt_sum_ns += rtt
-                self.rtt_samples += 1
-                if rtt > self.rtt_max_ns:
-                    self.rtt_max_ns = rtt
-                if self.rtt_min_ns is None or rtt < self.rtt_min_ns:
-                    self.rtt_min_ns = rtt
-                self.rtt_p50.add(rtt)
-                self.rtt_p95.add(rtt)
+            if t_send is not None:
+                rtt = t_recv - t_send
+                if rtt >= 0:
+                    self.rtt_sum_ns += rtt
+                    self.rtt_samples += 1
+                    if rtt > self.rtt_max_ns:
+                        self.rtt_max_ns = rtt
+                    if self.rtt_min_ns is None or rtt < self.rtt_min_ns:
+                        self.rtt_min_ns = rtt
+                    self.rtt_p50.add(rtt)
+                    self.rtt_p95.add(rtt)
+                    log_recv = True
+
+            if t_send is not None and drone_recv_ns is not None:
+                owd_up_ns = drone_recv_ns - t_send
+                if 0 <= owd_up_ns <= 5_000_000_000:
+                    self.owd_samples += 1
+                    self.owd_p50.add(owd_up_ns)
+                    self.owd_p95.add(owd_up_ns)
+            if data_len < 20:
+                self.truncated += 1
+
+        if log_recv:
             self._maybe_log("recv", seq, int(t_recv))
-
-        if t_send is not None and drone_recv_ns is not None:
-            owd_up_ns = drone_recv_ns - t_send
-            if owd_up_ns >= 0:
-                self.owd_samples += 1
-                self.owd_p50.add(owd_up_ns)
-                self.owd_p95.add(owd_up_ns)
         return True
 
 
@@ -931,6 +1016,8 @@ def run_suite(
     rtt_samples = 0
     blaster_sent_bytes = 0
 
+    wire_header_bytes = UDP_HEADER_BYTES + APP_IP_HEADER_BYTES
+
     if traffic_mode == "blast":
         if warmup_s > 0:
             warmup_blaster = Blaster(
@@ -961,6 +1048,7 @@ def run_suite(
         rcvd_packets = blaster.rcvd
         rcvd_bytes = blaster.rcvd_bytes
         blaster_sent_bytes = blaster.sent_bytes
+        wire_header_bytes = getattr(blaster, "wire_header_bytes", wire_header_bytes)
         sample_count = max(1, blaster.rtt_samples)
         avg_rtt_ns = blaster.rtt_sum_ns // sample_count
         max_rtt_ns = blaster.rtt_max_ns
@@ -1003,7 +1091,7 @@ def run_suite(
     max_rtt_ms = max_rtt_ns / 1_000_000
 
     app_packet_bytes = payload_bytes + SEQ_TS_OVERHEAD_BYTES
-    wire_packet_bytes_est = app_packet_bytes + UDP_HEADER_BYTES + APP_IP_HEADER_BYTES
+    wire_packet_bytes_est = app_packet_bytes + wire_header_bytes
     goodput_mbps = (rcvd_packets * payload_bytes * 8) / (elapsed_s * 1_000_000) if elapsed_s > 0 else 0.0
     wire_throughput_mbps_est = (
         (rcvd_packets * wire_packet_bytes_est * 8) / (elapsed_s * 1_000_000)
@@ -1262,12 +1350,23 @@ class SaturationTester:
     def _classify_signals(self, metrics: Dict[str, float]) -> Dict[str, bool]:
         signals = {key: False for key in SATURATION_SIGNALS}
         baseline = self._baseline
-        if baseline and baseline.get("owd_p95_ms"):
-            baseline_p95 = baseline.get("owd_p95_ms", 0.0)
+        owd_spike = False
+        if baseline:
+            baseline_p95 = baseline.get("owd_p95_ms") or 0.0
             if baseline_p95 > 0:
-                signals["owd_p95_spike"] = metrics.get("owd_p95_ms", 0.0) > baseline_p95 * self.spike_factor
-        signals["delivery_degraded"] = metrics.get("goodput_ratio", 0.0) < self.delivery_threshold
-        signals["loss_excess"] = metrics.get("loss_pct", 0.0) > self.loss_threshold
+                owd_p95 = metrics.get("owd_p95_ms", 0.0)
+                owd_spike = owd_p95 >= baseline_p95 * self.spike_factor
+        signals["owd_p95_spike"] = owd_spike
+
+        goodput_ratio = metrics.get("goodput_ratio", 0.0)
+        ratio_drop = goodput_ratio < self.delivery_threshold
+        delivery_degraded = ratio_drop and owd_spike
+        signals["delivery_degraded"] = delivery_degraded
+
+        loss_flag = metrics.get("loss_pct", 0.0) > self.loss_threshold
+        if metrics.get("sample_quality") != "ok" and loss_flag and not (delivery_degraded or owd_spike):
+            loss_flag = False
+        signals["loss_excess"] = loss_flag
         return signals
 
     def _update_history(
@@ -1334,7 +1433,8 @@ class SaturationTester:
         max_rtt_ms = blaster.rtt_max_ns / 1_000_000
 
         app_packet_bytes = self.payload_bytes + SEQ_TS_OVERHEAD_BYTES
-        wire_packet_bytes_est = app_packet_bytes + UDP_HEADER_BYTES + APP_IP_HEADER_BYTES
+        wire_header_bytes = getattr(blaster, "wire_header_bytes", UDP_HEADER_BYTES + APP_IP_HEADER_BYTES)
+        wire_packet_bytes_est = app_packet_bytes + wire_header_bytes
         goodput_mbps = (
             (rcvd_packets * self.payload_bytes * 8) / (elapsed * 1_000_000)
             if elapsed > 0
@@ -1359,6 +1459,8 @@ class SaturationTester:
         sample_quality = "low"
         if blaster.rtt_samples >= MIN_DELAY_SAMPLES and blaster.owd_samples >= MIN_DELAY_SAMPLES:
             sample_quality = "ok"
+        if getattr(blaster, "truncated", 0) > 0:
+            sample_quality = "low"
 
         return {
             "rate_mbps": float(rate_mbps),
@@ -1462,15 +1564,13 @@ class TelemetryCollector:
         self.accept_thread: Optional[threading.Thread] = None
         self.client_threads: List[threading.Thread] = []
         # Bug #9 fix: Use deque with maxlen to prevent unbounded memory growth
-        from collections import deque
-
         env_maxlen = os.getenv("GCS_TELEM_MAXLEN")
-        maxlen = 100000
+        maxlen = TELEMETRY_BUFFER_MAXLEN_DEFAULT
         if env_maxlen is not None:
             try:
                 maxlen = max(1000, int(env_maxlen))
             except (TypeError, ValueError):
-                maxlen = 100000
+                maxlen = TELEMETRY_BUFFER_MAXLEN_DEFAULT
         self.samples: deque = deque(maxlen=maxlen)  # ~10MB limit for long tests
         self.lock = threading.Lock()
         self.enabled = True

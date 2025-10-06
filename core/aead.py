@@ -32,6 +32,11 @@ class ReplayError(Exception):
     pass
 
 
+class SequenceOverflow(Exception):
+    """Sender sequence space exhausted for current epoch."""
+    pass
+
+
 # Constants
 HEADER_STRUCT = "!BBBBB8sQB"
 HEADER_LEN = 22
@@ -118,7 +123,7 @@ class Sender:
         # Check for sequence overflow - header uses uint64, so check that limit
         # Bug #6 fix: Allow full uint64 range (0 to 2^64-1)
         if self._seq >= 2**64:
-            raise NotImplementedError("packet_seq overflow; rekey/epoch bump required")
+            raise SequenceOverflow("packet_seq overflow; rekey/epoch bump required")
         
         # Pack header with current sequence
         header = self.pack_header(self._seq)

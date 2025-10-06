@@ -1,0 +1,41 @@
+Traceback (most recent call last):
+  File "C:\Users\burak\Desktop\research\tools\auto\drone_follower.py", line 1575, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\burak\Desktop\research\tools\auto\drone_follower.py", line 1515, in main
+    monitors.start(proxy.pid, suite_outdir(initial_suite), initial_suite)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\burak\Desktop\research\tools\auto\drone_follower.py", line 871, in start
+    self.perf = popen(
+                ~~~~~^
+        perf_cmd,
+        ^^^^^^^^^
+    ...<3 lines>...
+        bufsize=1,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\burak\Desktop\research\tools\auto\drone_follower.py", line 443, in popen
+    return subprocess.Popen(cmd, **kw)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\burak\miniconda3\envs\gcs-env\Lib\subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\burak\miniconda3\envs\gcs-env\Lib\subprocess.py", line 1554, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+                             # no special security
+                             ^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+                             cwd,
+                             ^^^^
+                             startupinfo)
+                             ^^^^^^^^^^^^
+FileNotFoundError: [WinError 2] The system cannot find the file specified

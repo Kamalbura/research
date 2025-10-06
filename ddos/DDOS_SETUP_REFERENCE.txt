@@ -8,12 +8,12 @@ pieces fit together, and what to expect when running each component. Use it alon
 
 1. Deployment snapshot
 ----------------------
-- Architecture: multi-threaded collectors ingest MAVLink-over-UDP windows (0xFD header),
-  an XGBoost screener inspects short sequences, and a Time Series Transformer (TST)
-  confirmer validates streaks. Cooldown and queue bounds enforce stability.
-- Runtime footprint: designed for Raspberry Pi 4B class hardware, single-core heavy
-  lifting capped to 1 Torch thread. All binaries load from the project root unless
-  overridden.
+- Architecture: multi-threaded collectors ingest MAVLink-over-UDP windows (0xFD/0xFE
+  headers), an XGBoost screener inspects short sequences, and a Time Series Transformer
+  (TST) confirmer validates streaks. Cooldown and queue bounds enforce stability.
+- Runtime footprint: designed for Raspberry Pi 4B class hardware. Torch workloads obey
+  `DDOS_TORCH_THREADS` (default 1) so CPU pressure can be tuned without code changes.
+  All binaries load from the project root unless overridden.
 - Logging: every script calls `config.configure_logging()` so log destinations and
   levels are uniform via environment variables.
 
@@ -22,11 +22,17 @@ pieces fit together, and what to expect when running each component. Use it alon
 - Centralizes every tunable: capture interface/port, window length, screener/confrimer
   sequence lengths, gating thresholds, queue sizes, and file paths.
 - Environment overrides: set `MAV_IFACE`, `DDOS_WINDOW_SIZE`, `DDOS_XGB_CONSEC`, etc.,
-  before launching to avoid editing code. Empty strings fall back to defaults.
+  before launching to avoid editing code. Empty strings fall back to defaults. Newly
+  added knobs:
+    * `DDOS_TORCH_THREADS` – cap PyTorch inference threads.
+    * `DDOS_TST_CONFIRM` – consecutive confirmations required before the TST latches
+      an alert.
+    * `DDOS_TST_CLEAR` – probability threshold that clears a latched TST alert.
 - Model discovery: `ensure_file()` validates model/scaler presence with friendly error
-  messages. `get_udp_bpf()` returns the exact BPF filter all collectors share.
-- Logging: `configure_logging(program_name)` wires stdout/file handlers with consistent
-  format (`timestamp level logger thread message`).
+  messages. `get_udp_bpf()` returns the exact BPF filter all collectors share, matching
+  both MAVLink v2 (0xFD) and v1 (0xFE) payloads with a port-only fallback when needed.
+- Logging: `configure_logging(program_name)` prefixes lines with the program tag plus
+  timestamp, level, logger, thread, and message.
 
 3. Runtime components (what happens when you run each script)
 ------------------------------------------------------------
@@ -38,17 +44,19 @@ pieces fit together, and what to expect when running each component. Use it alon
     - Inputs needed: `xgboost_model.bin`, `scaler.pkl`, and either
       `tst_model.torchscript` (preferred) or `tst_model.pth`.
     - Execution outcome: logs one entry per window including sample counts, screener
-      verdicts, streak length, and cooldown; on streak satisfaction, emits a WARNING
-      when the TST queue is populated, followed by a TST verdict (NORMAL vs CONFIRMED
-      ATTACK). Cooldown prevents repeated triggers for `TST_COOLDOWN_WINDOWS` windows.
+      verdicts, streak length, and cooldown. When the (now lighter) XGBoost gate trips,
+      the TST confirmation request is queued unless the queue is saturated. The TST
+      requires `DDOS_TST_CONFIRM` consecutive high-probability windows before latching
+      an attack and clears only after dropping below `DDOS_TST_CLEAR`, reducing flapping.
+      Cooldown still prevents repeated triggers for `TST_COOLDOWN_WINDOWS` windows.
 
 3.2 `realtime_tst.py`
     - Role: TST-only live detector useful for latency profiling or fallback deployments.
     - Threads: `collector`, `window`, `detector`.
     - Execution outcome: every full sequence enqueued yields a TST inference log with
       attack probability, predicted class index, inference time in milliseconds, and
-      window end timestamp. No XGBoost gating or cooldown is used; every window sequence
-      is scored once the buffer reaches `TST_SEQ_LENGTH`.
+      window end timestamp. The same consecutive-confirm and hysteresis rules apply as
+      in the hybrid detector so the standalone script mirrors production alert cadence.
 
 3.3 `manual_control_detector.py`
     - Role: lab-mode detector allowing console toggling between the screener and the
@@ -58,8 +66,9 @@ pieces fit together, and what to expect when running each component. Use it alon
     - Console controls: `1` selects XGBoost-only mode, `2` selects TST-only mode,
       `q` quits. The current mode is stored in shared state guarded by a lock.
     - Execution outcome: the active model logs per-window verdicts at WARNING level.
-      When buffers are too short the detector logs informational messages until enough
-      data accumulates.
+      The TST branch observes the same confirm/clear thresholds (INFO-level progress
+      updates are rate-limited). When buffers are too short the detector logs
+      informational messages until enough data accumulates.
 
 3.4 `run_xgboost.py`
     - Role: sanity-check tool that loads the screener model, verifies feature count,
@@ -139,7 +148,9 @@ pieces fit together, and what to expect when running each component. Use it alon
 - Model drift: rerun `run_xgboost.py` and `run_tst.py` after updating any artifacts to
   confirm compatibility.
 - Capture issues: verify interface and port via `MAV_IFACE` / `MAV_UDP_PORT`; the BPF
-  filter (`udp and port 14550 and udp[8] = 0xfd`) assumes MAVLink v2 framing.
+  filter (`udp and port 14550 and (udp[8] = 0xfd or udp[8] = 0xfe)`) matches MAVLink v2
+  and v1 framing and collectors fall back to a port-only filter automatically if the
+  payload filter is rejected.
 
 Keep this reference with the deployment so operators can map behaviors to files quickly.
 If you add new scripts or services, append them here to maintain parity with the codebase.

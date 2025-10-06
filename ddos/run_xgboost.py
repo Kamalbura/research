@@ -35,9 +35,14 @@ def main() -> int:
     print(f"Model path        : {XGB_MODEL_FILE}")
     print(f"Expected features : {expected}")
 
-    samples = {
+    base_samples = {
         "NORMAL": np.array([10, 15, 12, 18, 14], dtype=np.float32),
         "ATTACK": np.array([150, 200, 180, 220, 190], dtype=np.float32),
+    }
+
+    samples = {
+        label: np.resize(arr, expected).astype(np.float32)
+        for label, arr in base_samples.items()
     }
 
     for label, arr in samples.items():
