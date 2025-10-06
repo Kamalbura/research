@@ -1,21 +1,21 @@
 PROJECT STRUCTURE AND PYTHON FILES LOG
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research\core
-Output File: C:\Users\burak\Desktop\research\core\project_structure_20251006_023927.txt
-Generated: 2025-10-06 02:39:27
+Output File: C:\Users\burak\Desktop\research\core\project_structure_20251006_135113.txt
+Generated: 2025-10-06 13:51:13
 ================================================================================
 
 ================================================================================
 DIRECTORY TREE STRUCTURE
 ================================================================================
 Root Directory: C:\Users\burak\Desktop\research\core
-Generated: 2025-10-06 02:39:27
+Generated: 2025-10-06 13:51:13
 
 ├── __pycache__/
 │   ├── __init__.cpython-311.pyc (290 bytes)
 │   ├── __init__.cpython-313.pyc (273 bytes)
 │   ├── aead.cpython-311.pyc (14,355 bytes)
-│   ├── aead.cpython-313.pyc (14,160 bytes)
+│   ├── aead.cpython-313.pyc (14,394 bytes)
 │   ├── async_proxy.cpython-311.pyc (38,513 bytes)
 │   ├── async_proxy.cpython-313.pyc (46,131 bytes)
 │   ├── config.cpython-311.pyc (5,682 bytes)
@@ -33,7 +33,7 @@ Generated: 2025-10-06 02:39:27
 │   ├── suites.cpython-313.pyc (11,653 bytes)
 │   └── temp-file.cpython-313.pyc (20,538 bytes)
 ├── __init__.py (121 bytes)
-├── aead.py (11,344 bytes)
+├── aead.py (11,453 bytes)
 ├── async_proxy.py (44,575 bytes)
 ├── config.py (13,296 bytes)
 ├── handshake.py (13,635 bytes)
@@ -41,7 +41,7 @@ Generated: 2025-10-06 02:39:27
 ├── policy_engine.py (7,034 bytes)
 ├── power_monitor.py (34,456 bytes)
 ├── project_config.py (168 bytes)
-├── project_structure_20251006_023927.txt (0 bytes)
+├── project_structure_20251006_135113.txt (0 bytes)
 ├── run_proxy.py (24,699 bytes)
 ├── suites.py (11,618 bytes)
 └── temp-file.py (18,859 bytes)
@@ -84,8 +84,8 @@ Provides post-quantum cryptography secure communication components.
 FILE 2/12: aead.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\aead.py
-Size: 11,344 bytes
-Modified: 2025-10-03 03:17:13
+Size: 11,453 bytes
+Modified: 2025-10-06 07:55:55
 ------------------------------------------------------------
 """
 AEAD framing for PQC drone-GCS secure proxy.
@@ -118,6 +118,11 @@ class AeadAuthError(Exception):
 
 class ReplayError(Exception):
     """Packet replay detected or outside acceptable window."""
+    pass
+
+
+class SequenceOverflow(Exception):
+    """Sender sequence space exhausted for current epoch."""
     pass
 
 
@@ -207,7 +212,7 @@ class Sender:
         # Check for sequence overflow - header uses uint64, so check that limit
         # Bug #6 fix: Allow full uint64 range (0 to 2^64-1)
         if self._seq >= 2**64:
-            raise NotImplementedError("packet_seq overflow; rekey/epoch bump required")
+            raise SequenceOverflow("packet_seq overflow; rekey/epoch bump required")
         
         # Pack header with current sequence
         header = self.pack_header(self._seq)
@@ -1466,7 +1471,7 @@ FILE 4/12: config.py
 ============================================================
 Full Path: C:\Users\burak\Desktop\research\core\config.py
 Size: 13,296 bytes
-Modified: 2025-10-06 01:02:48
+Modified: 2025-10-06 12:33:08
 ------------------------------------------------------------
 """
 Core configuration constants for PQC drone-GCS secure proxy.
@@ -1481,7 +1486,7 @@ from typing import Dict, Any
 
 # Baseline host defaults reused throughout the configuration payload.
 _DEFAULT_DRONE_HOST = "192.168.0.102"
-_DEFAULT_GCS_HOST = "192.168.0.103"
+_DEFAULT_GCS_HOST = "192.168.0.101"
 
 
 # Default configuration - all required keys with correct types

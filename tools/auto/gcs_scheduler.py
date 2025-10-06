@@ -1787,6 +1787,9 @@ def main() -> None:
     pre_gap = float(auto.get("pre_gap_s") or 1.0)
     inter_gap = float(auto.get("inter_gap_s") or 15.0)
     duration = float(auto.get("duration_s") or 15.0)
+    if duration != 15.0:
+        print(f"[{ts()}] overriding AUTO_GCS.duration_s={duration:.1f}s -> 15.0s for short dwell tests")
+        duration = 15.0
     payload_bytes = int(auto.get("payload_bytes") or 256)
     event_sample = int(auto.get("event_sample") or 100)
     passes = int(auto.get("passes") or 1)
