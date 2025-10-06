@@ -63,10 +63,24 @@ def load_model():
                 _TSTEncoder,
                 _TSTEncoderLayer,
             )
-            globals().setdefault("TSTPlus", TSTPlus)
-            globals().setdefault("_TSTBackbone", _TSTBackbone)
-            globals().setdefault("_TSTEncoder", _TSTEncoder)
-            globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
+
+            for name, obj in (
+                ("TSTPlus", TSTPlus),
+                ("_TSTBackbone", _TSTBackbone),
+                ("_TSTEncoder", _TSTEncoder),
+                ("_TSTEncoderLayer", _TSTEncoderLayer),
+            ):
+                globals().setdefault(name, obj)
+
+            main_mod = sys.modules.get("__main__")
+            if main_mod is not None:
+                for name, obj in (
+                    ("TSTPlus", TSTPlus),
+                    ("_TSTBackbone", _TSTBackbone),
+                    ("_TSTEncoder", _TSTEncoder),
+                    ("_TSTEncoderLayer", _TSTEncoderLayer),
+                ):
+                    setattr(main_mod, name, obj)
         except Exception as exc:
             print(
                 "❌ TorchScript model missing and unable to import tstplus module for .pth loading."
