@@ -12,10 +12,25 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-# Ensure project root is on sys.path so `import core` works when running this file
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+
+
+def _ensure_core_importable() -> Path:
+    """Guarantee the repository root is on sys.path before importing core."""
+
+    root = Path(__file__).resolve().parents[2]
+    root_str = str(root)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
+    try:
+        __import__("core")
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            f"Unable to import 'core'; repo root {root} missing from sys.path."
+        ) from exc
+    return root
+
+
+ROOT = _ensure_core_importable()
 
 import argparse
 import csv
@@ -165,6 +180,15 @@ def ts() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+def log_runtime_environment(component: str) -> None:
+    """Emit interpreter context to help debug sudo/venv mismatches."""
+
+    preview = ";".join(sys.path[:5])
+    print(f"[{ts()}] {component} python_exe={sys.executable}")
+    print(f"[{ts()}] {component} cwd={Path.cwd()}")
+    print(f"[{ts()}] {component} sys.path_prefix={preview}")
+
+
 class TelemetryPublisher:
     """Best-effort telemetry pipe from the drone follower to the GCS scheduler."""
 
@@ -177,6 +201,11 @@ class TelemetryPublisher:
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.sock: Optional[socket.socket] = None
         self.writer = None
+        self._connect_attempts = 0
+        self._max_connect_attempts = 60
+        self._initial_backoff = 1.0
+        self._connect_deadline_s = 60.0
+        self._connect_start_monotonic = time.monotonic()
 
     def start(self) -> None:
         self.thread.start()
@@ -221,8 +250,28 @@ class TelemetryPublisher:
     def _ensure_connection(self) -> bool:
         if self.sock is not None and self.writer is not None:
             return True
+        return self._attempt_connection()
+
+    def _attempt_connection(self) -> bool:
+        self._connect_attempts += 1
+        attempt = self._connect_attempts
         try:
             sock = socket.create_connection((self.host, self.port), timeout=3.0)
+        except OSError as exc:
+            elapsed = time.monotonic() - self._connect_start_monotonic
+            print(
+                f"[follower] telemetry connect attempt {attempt}/{self._max_connect_attempts} to {self.host}:{self.port} failed after {elapsed:.1f}s: {exc}",
+                flush=True,
+            )
+            self._close_socket()
+            if elapsed >= self._connect_deadline_s and attempt >= self._max_connect_attempts:
+                print(
+                    f"[follower] telemetry collector still unavailable at {self.host}:{self.port}; will keep retrying with backoff",
+                    flush=True,
+                )
+                # keep trying but slow down
+            return False
+        else:
             self.sock = sock
             self.writer = sock.makefile("w", encoding="utf-8", buffering=1)
             hello = {
@@ -232,14 +281,16 @@ class TelemetryPublisher:
             }
             self.writer.write(json.dumps(hello) + "\n")
             self.writer.flush()
+            print(
+                f"[follower] telemetry connected to {self.host}:{self.port} on attempt {attempt}",
+                flush=True,
+            )
+            self._connect_attempts = 0
+            self._connect_start_monotonic = time.monotonic()
             return True
-        except Exception as exc:
-            print(f"[follower] telemetry connect failed: {exc}")
-            self._close_socket()
-            return False
 
     def _run(self) -> None:
-        backoff = 1.0
+        backoff = self._initial_backoff
         while not self.stop_event.is_set():
             if not self._ensure_connection():
                 time.sleep(min(backoff, 5.0))
@@ -387,6 +438,7 @@ class PowerCaptureManager:
                     summary_dict = _summary_to_dict(summary, suite=suite, session_id=self.session_id)
                     summary_json_path = Path(summary.csv_path).with_suffix(".json")
                     try:
+                        summary_json_path.parent.mkdir(parents=True, exist_ok=True)
                         summary_json_path.write_text(json.dumps(summary_dict, indent=2), encoding="utf-8")
                         summary_dict["summary_json_path"] = str(summary_json_path)
                     except Exception as exc_json:
@@ -492,8 +544,10 @@ def write_marker(suite: str) -> None:
 
 def start_drone_proxy(suite: str) -> tuple[subprocess.Popen, IO[str]]:
     suite_dir = suite_secrets_dir(suite)
+    if not suite_dir.exists():
+        raise FileNotFoundError(f"Suite directory missing: {suite_dir}")
     pub = suite_dir / "gcs_signing.pub"
-    if not pub.exists():
+    if not pub.exists() or not os.access(pub, os.R_OK):
         print(f"[follower] ERROR: missing {pub}", file=sys.stderr)
         sys.exit(2)
 
@@ -505,8 +559,11 @@ def start_drone_proxy(suite: str) -> tuple[subprocess.Popen, IO[str]]:
     suite_path = suite_outdir(suite)
     status = suite_path / "drone_status.json"
     summary = suite_path / "drone_summary.json"
+    status.parent.mkdir(parents=True, exist_ok=True)
+    summary.parent.mkdir(parents=True, exist_ok=True)
     OUTDIR.mkdir(parents=True, exist_ok=True)
     log_path = OUTDIR / f"drone_{time.strftime('%Y%m%d-%H%M%S')}.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     log_handle: IO[str] = open(log_path, "w", encoding="utf-8")
 
     env = os.environ.copy()
@@ -709,6 +766,11 @@ class UdpEcho(threading.Thread):
         self.publisher = publisher
         self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            self.rx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.tx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        except OSError:
+            pass
         try:
             sndbuf = int(os.getenv("DRONE_SOCK_SNDBUF", str(16 << 20)))
             rcvbuf = int(os.getenv("DRONE_SOCK_RCVBUF", str(16 << 20)))
@@ -1198,11 +1260,15 @@ class ControlServer(threading.Thread):
                     running = bool(proxy and proxy.poll() is None)
                     proxy_pid = proxy.pid if proxy else None
                     telemetry: Optional[TelemetryPublisher] = self.state.get("telemetry")
+                    pending_suite = self.state.get("pending_suite")
+                    last_requested = self.state.get("last_requested_suite")
                 self._send(
                     conn,
                     {
                         "ok": True,
                         "suite": suite,
+                        "pending_suite": pending_suite,
+                        "last_requested_suite": last_requested,
                         "proxy_pid": proxy_pid,
                         "running": running,
                         "control_host": self.host,
@@ -1219,6 +1285,8 @@ class ControlServer(threading.Thread):
                             "timestamp_ns": time.time_ns(),
                             "suite": suite,
                             "running": running,
+                            "pending_suite": pending_suite,
+                            "last_requested_suite": last_requested,
                         },
                     )
                 return
@@ -1255,6 +1323,7 @@ class ControlServer(threading.Thread):
                     self.state["prev_suite"] = old_suite
                     self.state["pending_suite"] = suite
                     self.state["suite"] = suite
+                    self.state["last_requested_suite"] = suite
                     suite_outdir = self.state["suite_outdir"]
                     outdir = suite_outdir(suite)
                     monitors = self.state["monitors"]
@@ -1276,11 +1345,13 @@ class ControlServer(threading.Thread):
                             "timestamp_ns": time.time_ns(),
                             "suite": suite,
                             "prev_suite": monitor_prev_suite,
+                            "requested_suite": suite,
                         },
                     )
                 return
             if cmd == "rekey_complete":
                 status_value = str(request.get("status", "ok"))
+                requested_suite = str(request.get("suite") or "")
                 monitor: Optional[HighSpeedMonitor] = None
                 telemetry: Optional[TelemetryPublisher] = None
                 monitors = None
@@ -1293,6 +1364,8 @@ class ControlServer(threading.Thread):
                     monitors = self.state["monitors"]
                     proxy = self.state.get("proxy")
                     suite_outdir = self.state["suite_outdir"]
+                    if requested_suite:
+                        self.state["last_requested_suite"] = requested_suite
                     if status_value.lower() != "ok":
                         previous = self.state.get("prev_suite")
                         pending = self.state.get("pending_suite")
@@ -1307,12 +1380,25 @@ class ControlServer(threading.Thread):
                             monitor_update_suite = previous
                     else:
                         pending_suite = self.state.get("pending_suite")
+                        if requested_suite and pending_suite and requested_suite != pending_suite:
+                            print(
+                                f"[follower] pending suite {pending_suite} does not match requested {requested_suite}; updating to requested",
+                                flush=True,
+                            )
+                            pending_suite = requested_suite
                         if pending_suite:
                             self.state["suite"] = pending_suite
                             monitor_update_suite = pending_suite
                     self.state.pop("pending_suite", None)
                     self.state.pop("prev_suite", None)
                     current_suite = self.state.get("suite")
+                    if status_value.lower() == "ok" and requested_suite and current_suite != requested_suite:
+                        print(
+                            f"[follower] active suite {current_suite} disagrees with requested {requested_suite}; forcing to requested",
+                            flush=True,
+                        )
+                        self.state["suite"] = requested_suite
+                        current_suite = requested_suite
                 if rotate_args and monitors and proxy and proxy.poll() is None:
                     pid, outdir, suite_name = rotate_args
                     monitors.rotate(pid, outdir, suite_name)
@@ -1328,6 +1414,7 @@ class ControlServer(threading.Thread):
                         {
                             "timestamp_ns": time.time_ns(),
                             "suite": current_suite,
+                            "requested_suite": requested_suite or current_suite,
                             "status": status_value,
                         },
                     )
@@ -1356,6 +1443,7 @@ class ControlServer(threading.Thread):
                         monitors = self.state.get("monitors")
                         suite_outdir_fn = self.state.get("suite_outdir")
                         monitor = self.state.get("high_speed_monitor")
+                        self.state["last_requested_suite"] = suite
                         self.state["suite"] = suite
                     proxy_running = bool(proxy and proxy.poll() is None)
                     if proxy_running and monitors and suite_outdir_fn and proxy:
@@ -1376,6 +1464,7 @@ class ControlServer(threading.Thread):
                             "timestamp_ns": time.time_ns(),
                             "suite": suite,
                             "t0_ns": t0_ns,
+                            "requested_suite": suite,
                         },
                     )
                 return
@@ -1458,6 +1547,17 @@ def main(argv: Optional[list[str]] = None) -> None:
     device_generation = "pi5" if args.pi5 else "pi4"
     os.environ.setdefault("DRONE_DEVICE_GENERATION", device_generation)
 
+    log_runtime_environment("follower")
+    if hasattr(os, "geteuid"):
+        try:
+            if os.geteuid() == 0:
+                print(
+                    f"[{ts()}] follower running as root; ensure venv packages are available",
+                    flush=True,
+                )
+        except Exception:
+            pass
+
     OUTDIR.mkdir(parents=True, exist_ok=True)
     MARK_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1495,10 +1595,17 @@ def main(argv: Optional[list[str]] = None) -> None:
     telemetry_port_cfg = auto.get("telemetry_port")
     telemetry_port = TELEMETRY_DEFAULT_PORT if telemetry_port_cfg in (None, "") else int(telemetry_port_cfg)
 
+    expected_bind = str(CONFIG.get("GCS_TELEMETRY_BIND") or "").strip()
+    if expected_bind and expected_bind not in {"0.0.0.0", "::", ""} and telemetry_host != expected_bind:
+        raise RuntimeError(
+            f"Telemetry target {telemetry_host}:{telemetry_port} differs from GCS bind {expected_bind}; update AUTO_DRONE.telemetry_host"
+        )
+    print(f"[follower] telemetry target {telemetry_host}:{telemetry_port}")
+
     if telemetry_enabled:
         telemetry = TelemetryPublisher(telemetry_host, telemetry_port, session_id)
         telemetry.start()
-        print(f"[follower] telemetry -> {telemetry_host}:{telemetry_port}")
+        print(f"[follower] telemetry publisher started (session={session_id})")
     else:
         print("[follower] telemetry disabled via AUTO_DRONE configuration")
 
@@ -1550,6 +1657,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         "telemetry": telemetry,
         "prev_suite": None,
         "pending_suite": None,
+        "last_requested_suite": initial_suite,
         "power_manager": power_manager,
         "device_generation": device_generation,
         "lock": threading.Lock(),
@@ -1585,4 +1693,9 @@ def main(argv: Optional[list[str]] = None) -> None:
 
 
 if __name__ == "__main__":
+    # Test plan:
+    # 1. Start the follower before the scheduler and confirm telemetry connects after retries.
+    # 2. Run the Windows scheduler to drive a full suite cycle without rekey failures.
+    # 3. Remove the logs/auto/drone/<suite> directory and confirm it is recreated automatically.
+    # 4. Stop the telemetry collector mid-run and verify the follower reconnects without crashing.
     main()

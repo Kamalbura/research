@@ -25,10 +25,21 @@ try:
 except ImportError:  # pragma: no cover
     Workbook = None
 
-# Ensure project root is on sys.path so `import core` works when running this file
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+def _ensure_core_importable() -> Path:
+    root = Path(__file__).resolve().parents[2]
+    root_str = str(root)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
+    try:
+        __import__("core")
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            f"Unable to import 'core'; repo root {root} missing from sys.path."
+        ) from exc
+    return root
+
+
+ROOT = _ensure_core_importable()
 
 from core import suites as suites_mod
 from core.config import CONFIG
@@ -108,6 +119,8 @@ SATURATION_LINEAR_RATES = [
 ]
 SATURATION_SIGNALS = ("owd_p95_spike", "delivery_degraded", "loss_excess")
 TELEMETRY_BUFFER_MAXLEN_DEFAULT = 100_000
+REKEY_SETTLE_SECONDS = 1.5
+CLOCK_OFFSET_THRESHOLD_NS = 50_000_000
 
 
 def _close_socket(sock: Optional[socket.socket]) -> None:
@@ -241,6 +254,13 @@ APP_IP_HEADER_BYTES = ip_header_bytes_for_host(APP_SEND_HOST)
 
 def ts() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def log_runtime_environment(component: str) -> None:
+    preview = ";".join(sys.path[:5])
+    print(f"[{ts()}] {component} python_exe={sys.executable}")
+    print(f"[{ts()}] {component} cwd={Path.cwd()}")
+    print(f"[{ts()}] {component} sys.path_prefix={preview}")
 
 
 def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
@@ -682,15 +702,47 @@ def wait_handshake(timeout: float = 20.0) -> bool:
 
 
 def wait_active_suite(target: str, timeout: float = 10.0) -> bool:
+    return wait_rekey_transition(target, timeout=timeout)
+
+
+def wait_pending_suite(target: str, timeout: float = 5.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
             status = ctl_send({"cmd": "status"}, timeout=0.6, retries=1)
         except Exception:
             status = {}
-        if status.get("suite") == target:
+        if status.get("pending_suite") == target:
             return True
         time.sleep(0.2)
+    return False
+
+
+def wait_rekey_transition(target: str, timeout: float = 10.0) -> bool:
+    deadline = time.time() + timeout
+    last_status: dict = {}
+    while time.time() < deadline:
+        try:
+            status = ctl_send({"cmd": "status"}, timeout=0.6, retries=1)
+        except Exception:
+            status = {}
+        last_status = status
+        suite = status.get("suite")
+        pending = status.get("pending_suite")
+        last_requested = status.get("last_requested_suite")
+        if suite == target and (pending in (None, "", target)):
+            if last_requested and last_requested not in (suite, target):
+                print(
+                    f"[{ts()}] follower reports suite={suite} but last_requested={last_requested}; continuing anyway",
+                    file=sys.stderr,
+                )
+            return True
+        time.sleep(0.2)
+    if last_status:
+        print(
+            f"[{ts()}] follower status before timeout: suite={last_status.get('suite')} pending={last_status.get('pending_suite')}",
+            file=sys.stderr,
+        )
     return False
 
 
@@ -896,9 +948,18 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
 
                 pass
 
+        if not wait_rekey_transition(suite, timeout=12.0):
+            raise RuntimeError(f"Follower did not confirm initial suite {suite}")
+
     else:
 
         assert gcs.stdin is not None
+
+        try:
+            status_snapshot = ctl_send({"cmd": "status"}, timeout=0.6, retries=1)
+        except Exception:
+            status_snapshot = {}
+        previous_suite = status_snapshot.get("suite")
 
         print(f"[{ts()}] rekey -> {suite}")
 
@@ -912,11 +973,11 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
         except Exception as exc:
             print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
         try:
-            follower_ready = wait_active_suite(suite, timeout=5.0)
-            if not follower_ready:
-                print(f"[WARN] follower did not report suite {suite} active before timeout", file=sys.stderr)
-        except Exception:
-            print(f"[WARN] follower status check failed for suite {suite}", file=sys.stderr)
+            pending_ack = wait_pending_suite(suite, timeout=5.0)
+            if not pending_ack:
+                print(f"[WARN] follower did not acknowledge pending suite {suite} before timeout", file=sys.stderr)
+        except Exception as exc:
+            print(f"[WARN] follower pending status check failed for suite {suite}: {exc}", file=sys.stderr)
 
         rekey_status = "timeout"
 
@@ -956,6 +1017,24 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
 
                 print(f"[WARN] rekey_complete failed for {suite}: {exc}", file=sys.stderr)
 
+        if rekey_status != "ok":
+            if not previous_suite:
+                raise RuntimeError(f"Proxy rekey to {suite} reported {rekey_status}; previous suite unknown")
+            expected_suite = previous_suite
+        else:
+            expected_suite = suite
+
+        if not wait_rekey_transition(expected_suite, timeout=12.0):
+            raise RuntimeError(
+                f"Follower did not confirm suite {expected_suite} after rekey status {rekey_status}"
+            )
+
+        if rekey_status != "ok":
+            raise RuntimeError(f"Proxy reported rekey status {rekey_status} for suite {suite}")
+
+    if REKEY_SETTLE_SECONDS > 0:
+        time.sleep(REKEY_SETTLE_SECONDS)
+
     return (time.time_ns() - start_ns) / 1_000_000
 
 
@@ -974,6 +1053,7 @@ def run_suite(
     pre_gap: float,
     rate_pps: int,
     power_capture_enabled: bool,
+    clock_offset_warmup_s: float,
 ) -> dict:
     rekey_duration_ms = activate_suite(gcs, suite, is_first)
 
@@ -1005,7 +1085,7 @@ def run_suite(
     if pre_gap > 0:
         time.sleep(pre_gap)
 
-    warmup_s = min(MAX_WARMUP_SECONDS, duration_s * WARMUP_FRACTION)
+    warmup_s = max(clock_offset_warmup_s, min(MAX_WARMUP_SECONDS, duration_s * WARMUP_FRACTION))
     start_wall_ns = time.time_ns()
     start_perf_ns = time.perf_counter_ns()
     sent_packets = 0
@@ -1779,7 +1859,11 @@ def export_combined_excel(
 
 
 def main() -> None:
+    log_runtime_environment("gcs_scheduler")
     OUTDIR.mkdir(parents=True, exist_ok=True)
+    SUITES_OUTDIR.mkdir(parents=True, exist_ok=True)
+    PROXY_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    PROXY_SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     auto = AUTO_GCS_CONFIG
 
@@ -1892,10 +1976,17 @@ def main() -> None:
     session_excel_dir = resolve_under_root(EXCEL_OUTPUT_DIR) / session_id
 
     offset_ns = 0
+    offset_warmup_s = 0.0
     try:
         sync = timesync()
         offset_ns = sync["offset_ns"]
         print(f"[{ts()}] clocks synced: offset_ns={offset_ns} ns, link_rtt~{sync['rtt_ns']} ns")
+        if abs(offset_ns) > CLOCK_OFFSET_THRESHOLD_NS:
+            offset_warmup_s = 1.0
+            print(
+                f"[WARN] clock offset {offset_ns / 1_000_000:.1f} ms exceeds {CLOCK_OFFSET_THRESHOLD_NS / 1_000_000:.1f} ms; extending warmup",
+                file=sys.stderr,
+            )
     except Exception as exc:
         print(f"[WARN] timesync failed: {exc}", file=sys.stderr)
 
@@ -1969,6 +2060,7 @@ def main() -> None:
                         pre_gap=pre_gap,
                         rate_pps=rate_pps,
                         power_capture_enabled=power_capture_enabled,
+                        clock_offset_warmup_s=offset_warmup_s,
                     )
                     summary_rows.append(row)
                     is_last_suite = idx == len(suites) - 1
@@ -2021,4 +2113,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Test plan:
+    # 1. Launch the scheduler with the follower running; verify telemetry collector binds and follower connects.
+    # 2. Exercise multiple suites to confirm rekey waits for follower confirmation and no failed rekeys occur.
+    # 3. Delete output directories before a run to ensure the scheduler recreates all paths automatically.
+    # 4. Stop the telemetry collector briefly and confirm the follower reconnects without aborting the run.
     main()
