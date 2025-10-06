@@ -1,0 +1,3 @@
+{"ts": "2025-10-06T09:09:37Z", "level": "INFO", "name": "pqc", "msg": "PQC handshake completed successfully", "taskName": null, "suite_id": "cs-mlkem768-aesgcm-mldsa65", "peer_role": "drone", "session_id": "7abb3d51..."}
+{"ts": "2025-10-06T09:12:39Z", "level": "INFO", "name": "pqc", "msg": "Control rekey negotiation started", "taskName": null, "role": "gcs", "suite_id": "cs-mlkem512-aesgcm-mldsa44", "rid": "2942dc66327f90eb"}
+{"ts": "2025-10-06T09:12:39Z", "level": "WARNING", "name": "pqc", "msg": "Control rekey failed", "taskName": null, "role": "gcs", "suite_id": "cs-mlkem512-aesgcm-mldsa44", "rid": "2942dc66327f90eb", "error": "cannot access local variable 'gcs_sig_public' where it is not associated with a value"}

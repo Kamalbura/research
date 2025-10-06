@@ -654,7 +654,6 @@ def run_proxy(
         manual_stop, manual_threads = _launch_manual_console(control_state, quiet=quiet)
 
     def _launch_rekey(target_suite_id: str, rid: str) -> None:
-        nonlocal gcs_sig_public
         with rekey_guard:
             if rid in active_rekeys:
                 return
@@ -666,6 +665,7 @@ def run_proxy(
         )
 
         def worker() -> None:
+            nonlocal gcs_sig_public
             try:
                 new_suite = get_suite(target_suite_id)
                 new_secret = None
