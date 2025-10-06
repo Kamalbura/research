@@ -1489,12 +1489,12 @@ class SaturationTester:
             "wire_packet_bytes_est": wire_packet_bytes_est,
         }
 
-    def export_excel(self, session_id: str) -> Optional[Path]:
+    def export_excel(self, session_id: str, output_base: Path) -> Optional[Path]:
         if Workbook is None:
             print("[WARN] openpyxl not available; skipping Excel export")
             return None
-        EXCEL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        path = EXCEL_OUTPUT_DIR / f"saturation_{self.suite}_{session_id}.xlsx"
+        output_base.mkdir(parents=True, exist_ok=True)
+        path = output_base / f"saturation_{self.suite}_{session_id}.xlsx"
         wb = Workbook()
         ws = wb.active
         ws.title = "Saturation"
@@ -1769,8 +1769,10 @@ def export_combined_excel(
     else:
         info_sheet.append(["drone_session_dir", "not_found"])
 
-    combined_dir = resolve_under_root(COMBINED_OUTPUT_DIR)
+    combined_root = resolve_under_root(COMBINED_OUTPUT_DIR)
+    combined_dir = combined_root / session_id
     combined_dir.mkdir(parents=True, exist_ok=True)
+    info_sheet.append(["gcs_session_dir", str(combined_dir)])
     target_path = combined_dir / f"{session_id}_combined.xlsx"
     workbook.save(target_path)
     return target_path
@@ -1784,7 +1786,7 @@ def main() -> None:
     traffic_mode = str(auto.get("traffic") or "blast").lower()
     pre_gap = float(auto.get("pre_gap_s") or 1.0)
     inter_gap = float(auto.get("inter_gap_s") or 15.0)
-    duration = float(auto.get("duration_s") or 45.0)
+    duration = float(auto.get("duration_s") or 15.0)
     payload_bytes = int(auto.get("payload_bytes") or 256)
     event_sample = int(auto.get("event_sample") or 100)
     passes = int(auto.get("passes") or 1)
@@ -1822,8 +1824,9 @@ def main() -> None:
         raise RuntimeError("No suites selected for execution")
 
     session_prefix = str(auto.get("session_prefix") or "session")
-    session_id = os.environ.get("GCS_SESSION_ID") or f"{session_prefix}_{int(time.time())}"
-    print(f"[{ts()}] session_id={session_id}")
+    env_session_id = os.environ.get("GCS_SESSION_ID")
+    session_id = env_session_id or f"{session_prefix}_{int(time.time())}"
+    session_source = "env" if env_session_id else "generated"
 
     initial_suite = preferred_initial_suite(suites)
     if initial_suite and suites[0] != initial_suite:
@@ -1856,10 +1859,34 @@ def main() -> None:
         except Exception:
             pass
         time.sleep(0.5)
+    follower_session_id: Optional[str] = None
     if reachable:
         print(f"[{ts()}] follower reachable at {DRONE_HOST}:{CONTROL_PORT}")
+        try:
+            session_resp = ctl_send({"cmd": "session_info"}, timeout=1.2, retries=2, backoff=0.3)
+            if session_resp.get("ok"):
+                candidate = str(session_resp.get("session_id") or "").strip()
+                if candidate:
+                    follower_session_id = candidate
+        except Exception as exc:
+            print(f"[WARN] session_info fetch failed: {exc}", file=sys.stderr)
     else:
         print(f"[WARN] follower not reachable at {DRONE_HOST}:{CONTROL_PORT}", file=sys.stderr)
+
+    if follower_session_id:
+        if env_session_id and follower_session_id != env_session_id:
+            print(
+                f"[WARN] follower session_id={follower_session_id} disagrees with GCS_SESSION_ID={env_session_id}; using env override",
+                file=sys.stderr,
+            )
+        else:
+            session_id = follower_session_id
+            session_source = "drone"
+
+    print(f"[{ts()}] session_id={session_id} (source={session_source})")
+    os.environ["GCS_SESSION_ID"] = session_id
+
+    session_excel_dir = resolve_under_root(EXCEL_OUTPUT_DIR) / session_id
 
     offset_ns = 0
     try:
@@ -1912,7 +1939,7 @@ def main() -> None:
                 )
                 summary = tester.run()
                 summary["rekey_ms"] = rekey_ms
-                excel_path = tester.export_excel(session_id)
+                excel_path = tester.export_excel(session_id, session_excel_dir)
                 if excel_path:
                     summary["excel_path"] = str(excel_path)
                 saturation_reports.append(summary)

@@ -60,7 +60,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 def find_latest_workbook(base_dir: Path) -> Optional[Path]:
     if not base_dir.exists():
         return None
-    candidates = sorted(base_dir.glob("*_combined.xlsx"), key=lambda p: p.stat().st_mtime, reverse=True)
+    candidates = sorted(base_dir.rglob("*_combined.xlsx"), key=lambda p: p.stat().st_mtime, reverse=True)
     return candidates[0] if candidates else None
 
 

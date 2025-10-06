@@ -1222,6 +1222,18 @@ class ControlServer(threading.Thread):
                         },
                     )
                 return
+            if cmd == "session_info":
+                with state_lock:
+                    session_id = self.state.get("session_id")
+                session_value = str(session_id) if session_id is not None else ""
+                self._send(
+                    conn,
+                    {
+                        "ok": True,
+                        "session_id": session_value,
+                    },
+                )
+                return
             if cmd == "mark":
                 suite = request.get("suite")
                 telemetry: Optional[TelemetryPublisher] = None
@@ -1541,6 +1553,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         "power_manager": power_manager,
         "device_generation": device_generation,
         "lock": threading.Lock(),
+        "session_id": session_id,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()
