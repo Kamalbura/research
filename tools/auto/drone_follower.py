@@ -1240,10 +1240,46 @@ class ControlServer(threading.Thread):
         self.host = host
         self.port = port
         self.state = state
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind((self.host, self.port))
-        self.sock.listen(5)
+        try:
+            addrinfo = socket.getaddrinfo(
+                self.host,
+                self.port,
+                0,
+                socket.SOCK_STREAM,
+                proto=0,
+                flags=socket.AI_PASSIVE if not self.host else 0,
+            )
+        except socket.gaierror as exc:
+            raise OSError(f"control server bind failed for {self.host}:{self.port}: {exc}") from exc
+
+        last_exc: Optional[Exception] = None
+        bound_sock: Optional[socket.socket] = None
+        for family, socktype, proto, _canon, sockaddr in addrinfo:
+            try:
+                candidate = socket.socket(family, socktype, proto)
+                try:
+                    candidate.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    if family == socket.AF_INET6:
+                        try:
+                            candidate.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+                        except OSError:
+                            pass
+                    candidate.bind(sockaddr)
+                    candidate.listen(5)
+                except Exception:
+                    candidate.close()
+                    raise
+            except Exception as exc:
+                last_exc = exc
+                continue
+            bound_sock = candidate
+            break
+
+        if bound_sock is None:
+            message = last_exc or RuntimeError("no suitable address family")
+            raise OSError(f"control server bind failed for {self.host}:{self.port}: {message}")
+
+        self.sock = bound_sock
 
     def run(self) -> None:
         print(f"[follower] control listening on {self.host}:{self.port}", flush=True)
@@ -1461,19 +1497,14 @@ class ControlServer(threading.Thread):
                     monitors = None
                     monitor: Optional[HighSpeedMonitor] = None
                     suite_outdir_fn = None
-                    prev_suite: Optional[str] = None
                     with state_lock:
-                        prev_suite = self.state.get("suite")
-                        self.state["prev_suite"] = prev_suite
-                        self.state["pending_suite"] = suite
                         proxy = self.state.get("proxy")
                         monitors = self.state.get("monitors")
                         suite_outdir_fn = self.state.get("suite_outdir")
                         monitor = self.state.get("high_speed_monitor")
-                        self.state["last_requested_suite"] = suite
                     proxy_running = bool(proxy and proxy.poll() is None)
-                    if monitor and prev_suite != suite:
-                        monitor.start_rekey(prev_suite or "unknown", suite)
+                    if monitor and suite and monitor.current_suite != suite:
+                        monitor.current_suite = suite
                     if proxy_running and monitors and suite_outdir_fn and proxy:
                         outdir = suite_outdir_fn(suite)
                         monitors.rotate(proxy.pid, outdir, suite)

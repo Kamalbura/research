@@ -126,7 +126,7 @@ CLOCK_OFFSET_THRESHOLD_NS = 50_000_000
 
 def _compute_sampling_params(duration_s: float, event_sample: int, min_delay_samples: int) -> Tuple[int, int]:
     if event_sample <= 0:
-        return 0, max(0, min_delay_samples)
+        return 0, 0
     effective_sample = event_sample
     effective_min = max(0, min_delay_samples)
     if duration_s < 20.0:
@@ -1251,7 +1251,7 @@ def run_suite(
             APP_RECV_PORT,
             events_path,
             payload_bytes=payload_bytes,
-            sample_every=effective_sample_every,
+            sample_every=effective_sample_every if effective_sample_every > 0 else 0,
             offset_ns=offset_ns,
         )
         blaster.run(duration_s=duration_s, rate_pps=rate_pps)
@@ -1319,7 +1319,7 @@ def run_suite(
     owd_p95_ms = 0.0
     rtt_p50_ms = 0.0
     rtt_p95_ms = 0.0
-    sample_quality = "low"
+    sample_quality = "disabled" if effective_sample_every == 0 else "low"
     owd_samples = 0
 
     if traffic_mode == "blast":
@@ -1328,11 +1328,12 @@ def run_suite(
         rtt_p50_ms = blaster.rtt_p50_ns / 1_000_000
         rtt_p95_ms = blaster.rtt_p95_ns / 1_000_000
         owd_samples = blaster.owd_samples
-        if (
-            effective_min_delay == 0
-            or (blaster.rtt_samples >= effective_min_delay and blaster.owd_samples >= effective_min_delay)
-        ):
-            sample_quality = "ok"
+        if effective_sample_every > 0:
+            if (
+                effective_min_delay == 0
+                or (blaster.rtt_samples >= effective_min_delay and blaster.owd_samples >= effective_min_delay)
+            ):
+                sample_quality = "ok"
 
     loss_pct = 0.0
     if sent_packets:
@@ -1643,7 +1644,7 @@ class SaturationTester:
             APP_RECV_PORT,
             events_path,
             payload_bytes=self.payload_bytes,
-            sample_every=max(1, effective_sample_every),
+            sample_every=effective_sample_every if effective_sample_every > 0 else 0,
             offset_ns=self.offset_ns,
         )
         start = time.perf_counter()
@@ -1688,14 +1689,15 @@ class SaturationTester:
             loss_pct = max(0.0, (sent_packets - rcvd_packets) * 100.0 / sent_packets)
         loss_low, loss_high = wilson_interval(max(0, sent_packets - rcvd_packets), sent_packets)
 
-        sample_quality = "low"
-        if (
-            effective_min_delay == 0
-            or (blaster.rtt_samples >= effective_min_delay and blaster.owd_samples >= effective_min_delay)
-        ):
-            sample_quality = "ok"
-        if getattr(blaster, "truncated", 0) > 0:
-            sample_quality = "low"
+        sample_quality = "disabled" if effective_sample_every == 0 else "low"
+        if effective_sample_every > 0:
+            if (
+                effective_min_delay == 0
+                or (blaster.rtt_samples >= effective_min_delay and blaster.owd_samples >= effective_min_delay)
+            ):
+                sample_quality = "ok"
+            if getattr(blaster, "truncated", 0) > 0:
+                sample_quality = "low"
 
         return {
             "rate_mbps": float(rate_mbps),
@@ -1719,7 +1721,7 @@ class SaturationTester:
             "owd_p95_ms": round(blaster.owd_p95_ns / 1_000_000, 3),
             "rtt_samples": blaster.rtt_samples,
             "owd_samples": blaster.owd_samples,
-            "sample_every": max(1, effective_sample_every),
+            "sample_every": effective_sample_every,
             "min_delay_samples": effective_min_delay,
             "sample_quality": sample_quality,
             "app_packet_bytes": app_packet_bytes,
@@ -2099,7 +2101,7 @@ def main() -> None:
     duration = float(auto.get("duration_s") or 15.0)
     payload_bytes = int(auto.get("payload_bytes") or 256)
     configured_event_sample = int(auto.get("event_sample") or 100)
-    event_sample = max(1, configured_event_sample)
+    event_sample = max(0, configured_event_sample)
     passes = int(auto.get("passes") or 1)
     rate_pps = int(auto.get("rate_pps") or 0)
     bandwidth_mbps = float(auto.get("bandwidth_mbps") or 0.0)
