@@ -141,7 +141,6 @@ def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
                 result[key] = value
     return result
 
-
 AUTO_DRONE_DEFAULTS = {
     "session_prefix": "session",
     "monitors_enabled": True,
@@ -206,6 +205,10 @@ class TelemetryPublisher:
         self._initial_backoff = 1.0
         self._connect_deadline_s = 60.0
         self._connect_start_monotonic = time.monotonic()
+        self._failure_first_monotonic: Optional[float] = None
+        self._last_failure_log = 0.0
+        self._throttle_after_s = 60.0
+        self._throttle_interval_s = 60.0
 
     def start(self) -> None:
         self.thread.start()
@@ -259,17 +262,8 @@ class TelemetryPublisher:
             sock = socket.create_connection((self.host, self.port), timeout=3.0)
         except OSError as exc:
             elapsed = time.monotonic() - self._connect_start_monotonic
-            print(
-                f"[follower] telemetry connect attempt {attempt}/{self._max_connect_attempts} to {self.host}:{self.port} failed after {elapsed:.1f}s: {exc}",
-                flush=True,
-            )
+            self._log_connect_failure(attempt, exc, elapsed)
             self._close_socket()
-            if elapsed >= self._connect_deadline_s and attempt >= self._max_connect_attempts:
-                print(
-                    f"[follower] telemetry collector still unavailable at {self.host}:{self.port}; will keep retrying with backoff",
-                    flush=True,
-                )
-                # keep trying but slow down
             return False
         else:
             self.sock = sock
@@ -287,7 +281,30 @@ class TelemetryPublisher:
             )
             self._connect_attempts = 0
             self._connect_start_monotonic = time.monotonic()
+            self._failure_first_monotonic = None
+            self._last_failure_log = 0.0
             return True
+
+    def _log_connect_failure(self, attempt: int, exc: Exception, elapsed_since_start: float) -> None:
+        now = time.monotonic()
+        if self._failure_first_monotonic is None:
+            self._failure_first_monotonic = now
+        elapsed_total = now - self._failure_first_monotonic
+        should_log = True
+        if elapsed_total >= self._throttle_after_s:
+            if now - self._last_failure_log < self._throttle_interval_s:
+                should_log = False
+        if should_log:
+            print(
+                f"[follower] telemetry connect attempt {attempt}/{self._max_connect_attempts} to {self.host}:{self.port} failed after {elapsed_since_start:.1f}s: {exc}",
+                flush=True,
+            )
+            self._last_failure_log = now
+            if elapsed_total >= self._throttle_after_s and attempt >= self._max_connect_attempts:
+                print(
+                    f"[follower] telemetry collector still unavailable at {self.host}:{self.port}; throttling failure logs but continuing retries",
+                    flush=True,
+                )
 
     def _run(self) -> None:
         backoff = self._initial_backoff
@@ -296,7 +313,7 @@ class TelemetryPublisher:
                 time.sleep(min(backoff, 5.0))
                 backoff = min(backoff * 1.5, 5.0)
                 continue
-            backoff = 1.0
+            backoff = self._initial_backoff
             try:
                 item = self.queue.get(timeout=0.5)
             except queue.Empty:
@@ -605,6 +622,7 @@ class HighSpeedMonitor(threading.Thread):
         self.session_id = session_id
         self.stop_event = threading.Event()
         self.current_suite = "unknown"
+        self.pending_suite: Optional[str] = None
         self.proxy_pid: Optional[int] = None
         self.rekey_start_ns: Optional[int] = None
         self.csv_handle: Optional[object] = None
@@ -618,7 +636,7 @@ class HighSpeedMonitor(threading.Thread):
         self.proxy_pid = pid
 
     def start_rekey(self, old_suite: str, new_suite: str) -> None:
-        self.current_suite = new_suite
+        self.pending_suite = new_suite
         self.rekey_start_ns = time.time_ns()
         print(f"[monitor] rekey transition {old_suite} -> {new_suite}")
         if self.publisher:
@@ -628,24 +646,34 @@ class HighSpeedMonitor(threading.Thread):
                     "timestamp_ns": self.rekey_start_ns,
                     "old_suite": old_suite,
                     "new_suite": new_suite,
+                    "pending_suite": new_suite,
                 },
             )
 
-    def end_rekey(self) -> None:
+    def end_rekey(self, *, success: bool, new_suite: Optional[str]) -> None:
         if self.rekey_start_ns is None:
+            self.pending_suite = None
             return
         duration_ms = (time.time_ns() - self.rekey_start_ns) / 1_000_000
-        print(f"[monitor] rekey completed in {duration_ms:.2f} ms")
+        target_suite = new_suite or self.pending_suite or self.current_suite
+        if success and new_suite:
+            self.current_suite = new_suite
+        status_text = "completed" if success else "failed"
+        print(f"[monitor] rekey {status_text} in {duration_ms:.2f} ms (target={target_suite})")
         if self.publisher:
-            self.publisher.publish(
-                "rekey_transition_end",
-                {
-                    "timestamp_ns": time.time_ns(),
-                    "suite": self.current_suite,
-                    "duration_ms": duration_ms,
-                },
-            )
+            payload = {
+                "timestamp_ns": time.time_ns(),
+                "suite": self.current_suite,
+                "duration_ms": duration_ms,
+                "success": success,
+            }
+            if target_suite:
+                payload["requested_suite"] = target_suite
+            if self.pending_suite:
+                payload["pending_suite"] = self.pending_suite
+            self.publisher.publish("rekey_transition_end", payload)
         self.rekey_start_ns = None
+        self.pending_suite = None
 
     def run(self) -> None:
         self.csv_handle = open(self.csv_path, "w", newline="", encoding="utf-8")
@@ -1262,10 +1290,7 @@ class ControlServer(threading.Thread):
                     telemetry: Optional[TelemetryPublisher] = self.state.get("telemetry")
                     pending_suite = self.state.get("pending_suite")
                     last_requested = self.state.get("last_requested_suite")
-                self._send(
-                    conn,
-                    {
-                        "ok": True,
+                    status_payload = {
                         "suite": suite,
                         "pending_suite": pending_suite,
                         "last_requested_suite": last_requested,
@@ -1276,17 +1301,17 @@ class ControlServer(threading.Thread):
                         "udp_recv_port": APP_RECV_PORT,
                         "udp_send_port": APP_SEND_PORT,
                         "monitors_enabled": monitors_enabled,
-                    },
-                )
+                    }
+                self._send(conn, {"ok": True, **status_payload})
                 if telemetry:
                     telemetry.publish(
                         "status_reply",
                         {
                             "timestamp_ns": time.time_ns(),
-                            "suite": suite,
-                            "running": running,
-                            "pending_suite": pending_suite,
-                            "last_requested_suite": last_requested,
+                            "suite": status_payload["suite"],
+                            "running": status_payload["running"],
+                            "pending_suite": status_payload["pending_suite"],
+                            "last_requested_suite": status_payload["last_requested_suite"],
                         },
                     )
                 return
@@ -1322,7 +1347,6 @@ class ControlServer(threading.Thread):
                     old_suite = self.state.get("suite")
                     self.state["prev_suite"] = old_suite
                     self.state["pending_suite"] = suite
-                    self.state["suite"] = suite
                     self.state["last_requested_suite"] = suite
                     suite_outdir = self.state["suite_outdir"]
                     outdir = suite_outdir(suite)
@@ -1332,11 +1356,11 @@ class ControlServer(threading.Thread):
                     monitor_prev_suite = old_suite
                     if proxy:
                         rotate_args = (proxy.pid, outdir, suite)
+                if monitor and monitor_prev_suite != suite:
+                    monitor.start_rekey(monitor_prev_suite or "unknown", suite)
                 if monitors and rotate_args:
                     pid, outdir, new_suite = rotate_args
                     monitors.rotate(pid, outdir, new_suite)
-                if monitor and monitor_prev_suite != suite:
-                    monitor.start_rekey(monitor_prev_suite or "unknown", suite)
                 self._send(conn, {"ok": True, "marked": suite})
                 if telemetry:
                     telemetry.publish(
@@ -1351,6 +1375,7 @@ class ControlServer(threading.Thread):
                 return
             if cmd == "rekey_complete":
                 status_value = str(request.get("status", "ok"))
+                success = status_value.lower() == "ok"
                 requested_suite = str(request.get("suite") or "")
                 monitor: Optional[HighSpeedMonitor] = None
                 telemetry: Optional[TelemetryPublisher] = None
@@ -1366,20 +1391,9 @@ class ControlServer(threading.Thread):
                     suite_outdir = self.state["suite_outdir"]
                     if requested_suite:
                         self.state["last_requested_suite"] = requested_suite
-                    if status_value.lower() != "ok":
-                        previous = self.state.get("prev_suite")
-                        pending = self.state.get("pending_suite")
-                        if previous is not None and pending and previous != pending:
-                            print(f"[follower] rekey to {pending} reported {status_value}; reverting to {previous}", flush=True)
-                        if previous is not None and previous != self.state.get("suite"):
-                            self.state["suite"] = previous
-                            if proxy and proxy.poll() is None:
-                                outdir = suite_outdir(previous)
-                                rotate_args = (proxy.pid, outdir, previous)
-                        if previous:
-                            monitor_update_suite = previous
-                    else:
-                        pending_suite = self.state.get("pending_suite")
+                    previous_suite = self.state.get("prev_suite")
+                    pending_suite = self.state.get("pending_suite")
+                    if success:
                         if requested_suite and pending_suite and requested_suite != pending_suite:
                             print(
                                 f"[follower] pending suite {pending_suite} does not match requested {requested_suite}; updating to requested",
@@ -1389,24 +1403,37 @@ class ControlServer(threading.Thread):
                         if pending_suite:
                             self.state["suite"] = pending_suite
                             monitor_update_suite = pending_suite
+                        elif requested_suite:
+                            self.state["suite"] = requested_suite
+                            monitor_update_suite = requested_suite
+                    else:
+                        if previous_suite is not None:
+                            self.state["suite"] = previous_suite
+                            monitor_update_suite = previous_suite
+                            if proxy and proxy.poll() is None:
+                                outdir = suite_outdir(previous_suite)
+                                rotate_args = (proxy.pid, outdir, previous_suite)
+                        elif pending_suite:
+                            monitor_update_suite = pending_suite
                     self.state.pop("pending_suite", None)
                     self.state.pop("prev_suite", None)
                     current_suite = self.state.get("suite")
-                    if status_value.lower() == "ok" and requested_suite and current_suite != requested_suite:
+                    if success and requested_suite and current_suite != requested_suite:
                         print(
                             f"[follower] active suite {current_suite} disagrees with requested {requested_suite}; forcing to requested",
                             flush=True,
                         )
                         self.state["suite"] = requested_suite
                         current_suite = requested_suite
+                        monitor_update_suite = requested_suite
                 if rotate_args and monitors and proxy and proxy.poll() is None:
                     pid, outdir, suite_name = rotate_args
                     monitors.rotate(pid, outdir, suite_name)
-                if monitor_update_suite and monitor:
+                if monitor and monitor_update_suite:
                     monitor.current_suite = monitor_update_suite
-                    monitor.end_rekey()
+                    monitor.end_rekey(success=success, new_suite=monitor_update_suite)
                 elif monitor:
-                    monitor.end_rekey()
+                    monitor.end_rekey(success=success, new_suite=current_suite)
                 self._send(conn, {"ok": True})
                 if telemetry:
                     telemetry.publish(
@@ -1444,15 +1471,14 @@ class ControlServer(threading.Thread):
                         suite_outdir_fn = self.state.get("suite_outdir")
                         monitor = self.state.get("high_speed_monitor")
                         self.state["last_requested_suite"] = suite
-                        self.state["suite"] = suite
                     proxy_running = bool(proxy and proxy.poll() is None)
+                    if monitor and prev_suite != suite:
+                        monitor.start_rekey(prev_suite or "unknown", suite)
                     if proxy_running and monitors and suite_outdir_fn and proxy:
                         outdir = suite_outdir_fn(suite)
                         monitors.rotate(proxy.pid, outdir, suite)
                     else:
                         write_marker(suite)
-                    if monitor and prev_suite != suite:
-                        monitor.start_rekey(prev_suite or "unknown", suite)
 
                 threading.Thread(target=_do_mark, daemon=True).start()
                 self._send(conn, {"ok": True, "scheduled": suite, "t0_ns": t0_ns})
@@ -1678,11 +1704,12 @@ def main(argv: Optional[list[str]] = None) -> None:
     finally:
         monitors.stop()
         high_speed_monitor.stop()
-        killtree(proxy)
-        try:
-            proxy.send_signal(signal.SIGTERM)
-        except Exception:
-            pass
+        if proxy:
+            try:
+                proxy.send_signal(signal.SIGTERM)
+            except Exception:
+                pass
+            killtree(proxy)
         if proxy_log:
             try:
                 proxy_log.close()

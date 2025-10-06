@@ -5,10 +5,11 @@ from __future__ import annotations
 
 import bisect
 import csv
+import errno
+import io
 import json
 import math
 import os
-import shutil
 import socket
 import struct
 import subprocess
@@ -121,6 +122,18 @@ SATURATION_SIGNALS = ("owd_p95_spike", "delivery_degraded", "loss_excess")
 TELEMETRY_BUFFER_MAXLEN_DEFAULT = 100_000
 REKEY_SETTLE_SECONDS = 1.5
 CLOCK_OFFSET_THRESHOLD_NS = 50_000_000
+
+
+def _compute_sampling_params(duration_s: float, event_sample: int, min_delay_samples: int) -> Tuple[int, int]:
+    if event_sample <= 0:
+        return 0, max(0, min_delay_samples)
+    effective_sample = event_sample
+    effective_min = max(0, min_delay_samples)
+    if duration_s < 20.0:
+        effective_sample = max(1, min(event_sample, 20))
+        scale = max(duration_s, 5.0) / 20.0
+        effective_min = max(10, int(math.ceil(effective_min * scale))) if effective_min else 0
+    return effective_sample, effective_min
 
 
 def _close_socket(sock: Optional[socket.socket]) -> None:
@@ -314,6 +327,97 @@ def mkdirp(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
+def _atomic_write_bytes(path: Path, data: bytes, *, tmp_suffix: str = ".tmp", retries: int = 6, backoff: float = 0.05) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_name(path.name + tmp_suffix)
+    fd = os.open(str(tmp_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    try:
+        with os.fdopen(fd, "wb", closefd=True) as handle:
+            handle.write(data)
+            try:
+                handle.flush()
+                os.fsync(handle.fileno())
+            except Exception:
+                pass
+    except Exception:
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+        raise
+
+    delay = backoff
+    last_exc: Optional[Exception] = None
+    for attempt in range(retries):
+        try:
+            os.replace(tmp_path, path)
+            return
+        except PermissionError as exc:  # pragma: no cover - platform specific
+            last_exc = exc
+            if attempt == retries - 1:
+                try:
+                    os.remove(path)
+                except FileNotFoundError:
+                    pass
+                except Exception:
+                    pass
+                try:
+                    os.replace(tmp_path, path)
+                    return
+                except Exception as final_exc:
+                    last_exc = final_exc
+                    break
+        except OSError as exc:  # pragma: no cover - platform specific
+            if exc.errno not in (errno.EACCES, errno.EPERM):
+                raise
+            last_exc = exc
+            if attempt == retries - 1:
+                try:
+                    os.remove(path)
+                except FileNotFoundError:
+                    pass
+                except Exception:
+                    pass
+                try:
+                    os.replace(tmp_path, path)
+                    return
+                except Exception as final_exc:
+                    last_exc = final_exc
+                    break
+        time.sleep(delay)
+        delay = min(delay * 2, 0.5)
+
+    try:
+        os.remove(tmp_path)
+    except Exception:
+        pass
+    if last_exc is not None:
+        raise last_exc
+
+
+def _robust_copy(src: Path, dst: Path, attempts: int = 3, delay: float = 0.05) -> bool:
+    for attempt in range(1, attempts + 1):
+        try:
+            data = src.read_bytes()
+        except FileNotFoundError:
+            return False
+        except OSError as exc:
+            print(f"[WARN] failed to read {src}: {exc}", file=sys.stderr)
+            if attempt == attempts:
+                return False
+            time.sleep(delay)
+            continue
+        try:
+            _atomic_write_bytes(dst, data)
+            return True
+        except Exception as exc:  # pragma: no cover - platform specific
+            print(f"[WARN] failed to update {dst}: {exc}", file=sys.stderr)
+            if attempt == attempts:
+                return False
+            time.sleep(delay)
+    return False
+
+
 def suite_outdir(suite: str) -> Path:
     target = SUITES_OUTDIR / suite
     mkdirp(target)
@@ -321,7 +425,11 @@ def suite_outdir(suite: str) -> Path:
 
 
 def resolve_suites(requested: Optional[Iterable[str]]) -> List[str]:
-    available = list(suites_mod.list_suites())
+    suite_listing = suites_mod.list_suites()
+    if isinstance(suite_listing, dict):
+        available = list(suite_listing.keys())
+    else:
+        available = list(suite_listing)
     if not available:
         raise RuntimeError("No suites registered in core.suites; cannot proceed")
 
@@ -602,14 +710,6 @@ class Blaster:
             self.rtt_p50_ns = self.rtt_p50.value()
             self.rtt_p95_ns = self.rtt_p95.value()
             self._cleanup()
-
-    def _cleanup(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        if self.events is not None:
-            _close_file(self.events)
-            self.events = None
         _close_socket(self.tx)
         _close_socket(self.rx)
 
@@ -684,6 +784,15 @@ class Blaster:
             self._maybe_log("recv", seq, int(t_recv))
         return True
 
+    def _cleanup(self) -> None:
+        if self.events:
+            try:
+                self.events.flush()
+                self.events.close()
+            except Exception:
+                pass
+            self.events = None
+
 
 def wait_handshake(timeout: float = 20.0) -> bool:
     deadline = time.time() + timeout
@@ -705,22 +814,33 @@ def wait_active_suite(target: str, timeout: float = 10.0) -> bool:
     return wait_rekey_transition(target, timeout=timeout)
 
 
-def wait_pending_suite(target: str, timeout: float = 5.0) -> bool:
+def wait_pending_suite(target: str, timeout: float = 18.0, stable_checks: int = 2) -> bool:
     deadline = time.time() + timeout
+    stable = 0
     while time.time() < deadline:
         try:
             status = ctl_send({"cmd": "status"}, timeout=0.6, retries=1)
         except Exception:
             status = {}
-        if status.get("pending_suite") == target:
+        pending = status.get("pending_suite")
+        suite = status.get("suite")
+        if pending == target:
+            stable += 1
+            if stable >= stable_checks:
+                return True
+        elif suite == target and pending in (None, "", target):
+            # Rekey may have already completed; treat as success.
             return True
+        else:
+            stable = 0
         time.sleep(0.2)
     return False
 
 
-def wait_rekey_transition(target: str, timeout: float = 10.0) -> bool:
+def wait_rekey_transition(target: str, timeout: float = 20.0, stable_checks: int = 3) -> bool:
     deadline = time.time() + timeout
     last_status: dict = {}
+    stable = 0
     while time.time() < deadline:
         try:
             status = ctl_send({"cmd": "status"}, timeout=0.6, retries=1)
@@ -731,12 +851,16 @@ def wait_rekey_transition(target: str, timeout: float = 10.0) -> bool:
         pending = status.get("pending_suite")
         last_requested = status.get("last_requested_suite")
         if suite == target and (pending in (None, "", target)):
-            if last_requested and last_requested not in (suite, target):
-                print(
-                    f"[{ts()}] follower reports suite={suite} but last_requested={last_requested}; continuing anyway",
-                    file=sys.stderr,
-                )
-            return True
+            stable += 1
+            if stable >= stable_checks:
+                if last_requested and last_requested not in (suite, target):
+                    print(
+                        f"[{ts()}] follower reports suite={suite} but last_requested={last_requested}; continuing anyway",
+                        file=sys.stderr,
+                    )
+                return True
+        else:
+            stable = 0
         time.sleep(0.2)
     if last_status:
         print(
@@ -760,9 +884,9 @@ def timesync() -> dict:
 def snapshot_proxy_artifacts(suite: str) -> None:
     target_dir = suite_outdir(suite)
     if PROXY_STATUS_PATH.exists():
-        shutil.copy(PROXY_STATUS_PATH, target_dir / "gcs_status.json")
+        _robust_copy(PROXY_STATUS_PATH, target_dir / "gcs_status.json")
     if PROXY_SUMMARY_PATH.exists():
-        shutil.copy(PROXY_SUMMARY_PATH, target_dir / "gcs_summary.json")
+        _robust_copy(PROXY_SUMMARY_PATH, target_dir / "gcs_summary.json")
 
 
 def start_gcs_proxy(initial_suite: str) -> tuple[subprocess.Popen, IO[str]]:
@@ -972,18 +1096,18 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
             ctl_send({"cmd": "mark", "suite": suite})
         except Exception as exc:
             print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
+        pending_ack = False
+        pending_ack_error: Optional[str] = None
         try:
-            pending_ack = wait_pending_suite(suite, timeout=5.0)
-            if not pending_ack:
-                print(f"[WARN] follower did not acknowledge pending suite {suite} before timeout", file=sys.stderr)
+            pending_ack = wait_pending_suite(suite, timeout=12.0)
         except Exception as exc:
-            print(f"[WARN] follower pending status check failed for suite {suite}: {exc}", file=sys.stderr)
+            pending_ack_error = str(exc)
 
         rekey_status = "timeout"
 
         try:
 
-            result = wait_proxy_rekey(suite, baseline, timeout=15.0, proc=gcs)
+            result = wait_proxy_rekey(suite, baseline, timeout=24.0, proc=gcs)
 
             rekey_status = result
 
@@ -996,35 +1120,35 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
                 print(f"[WARN] proxy reported failed rekey for suite {suite}", file=sys.stderr)
 
         except RuntimeError as exc:
-
             rekey_status = "error"
-
             raise
-
         except Exception as exc:
-
             rekey_status = "error"
-
             print(f"[WARN] error while waiting for proxy rekey {suite}: {exc}", file=sys.stderr)
-
         finally:
-
             try:
-
                 ctl_send({"cmd": "rekey_complete", "suite": suite, "status": rekey_status})
-
             except Exception as exc:
-
                 print(f"[WARN] rekey_complete failed for {suite}: {exc}", file=sys.stderr)
 
         if rekey_status != "ok":
+            if not pending_ack and pending_ack_error:
+                print(
+                    f"[WARN] follower pending status check failed for suite {suite}: {pending_ack_error}",
+                    file=sys.stderr,
+                )
+            elif not pending_ack:
+                print(
+                    f"[WARN] follower did not acknowledge pending suite {suite} before proxy reported {rekey_status}",
+                    file=sys.stderr,
+                )
             if not previous_suite:
                 raise RuntimeError(f"Proxy rekey to {suite} reported {rekey_status}; previous suite unknown")
             expected_suite = previous_suite
         else:
             expected_suite = suite
 
-        if not wait_rekey_transition(expected_suite, timeout=12.0):
+        if not wait_rekey_transition(expected_suite, timeout=24.0):
             raise RuntimeError(
                 f"Follower did not confirm suite {expected_suite} after rekey status {rekey_status}"
             )
@@ -1054,8 +1178,15 @@ def run_suite(
     rate_pps: int,
     power_capture_enabled: bool,
     clock_offset_warmup_s: float,
+    min_delay_samples: int,
 ) -> dict:
     rekey_duration_ms = activate_suite(gcs, suite, is_first)
+
+    effective_sample_every, effective_min_delay = _compute_sampling_params(
+        duration_s,
+        event_sample,
+        min_delay_samples,
+    )
 
     events_path = suite_outdir(suite) / EVENTS_FILENAME
     start_mark_ns = time.time_ns() + offset_ns + int(0.150 * 1e9) + int(max(pre_gap, 0.0) * 1e9)
@@ -1120,7 +1251,7 @@ def run_suite(
             APP_RECV_PORT,
             events_path,
             payload_bytes=payload_bytes,
-            sample_every=event_sample,
+            sample_every=effective_sample_every,
             offset_ns=offset_ns,
         )
         blaster.run(duration_s=duration_s, rate_pps=rate_pps)
@@ -1197,7 +1328,10 @@ def run_suite(
         rtt_p50_ms = blaster.rtt_p50_ns / 1_000_000
         rtt_p95_ms = blaster.rtt_p95_ns / 1_000_000
         owd_samples = blaster.owd_samples
-        if blaster.rtt_samples >= MIN_DELAY_SAMPLES and blaster.owd_samples >= MIN_DELAY_SAMPLES:
+        if (
+            effective_min_delay == 0
+            or (blaster.rtt_samples >= effective_min_delay and blaster.owd_samples >= effective_min_delay)
+        ):
             sample_quality = "ok"
 
     loss_pct = 0.0
@@ -1229,6 +1363,8 @@ def run_suite(
         "owd_p95_ms": round(owd_p95_ms, 3),
         "rtt_samples": rtt_samples,
         "owd_samples": owd_samples,
+        "sample_every": effective_sample_every,
+        "min_delay_samples": effective_min_delay,
         "sample_quality": sample_quality,
         "loss_pct": round(loss_pct, 3),
         "loss_pct_wilson_low": round(loss_low * 100.0, 3),
@@ -1269,11 +1405,20 @@ def write_summary(rows: List[dict]) -> None:
     if not rows:
         return
     mkdirp(OUTDIR)
-    with open(SUMMARY_CSV, "w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
-        writer.writeheader()
-        writer.writerows(rows)
-    print(f"[{ts()}] wrote {SUMMARY_CSV}")
+    headers = list(rows[0].keys())
+    for attempt in range(3):
+        try:
+            buffer = io.StringIO()
+            writer = csv.DictWriter(buffer, fieldnames=headers)
+            writer.writeheader()
+            writer.writerows(rows)
+            _atomic_write_bytes(SUMMARY_CSV, buffer.getvalue().encode("utf-8"))
+            print(f"[{ts()}] wrote {SUMMARY_CSV}")
+            return
+        except Exception as exc:
+            if attempt == 2:
+                print(f"[WARN] failed to write {SUMMARY_CSV}: {exc}", file=sys.stderr)
+            time.sleep(0.1)
 
 
 class SaturationTester:
@@ -1290,11 +1435,12 @@ class SaturationTester:
         delivery_threshold: float,
         loss_threshold: float,
         spike_factor: float,
+        min_delay_samples: int,
     ) -> None:
         self.suite = suite
         self.payload_bytes = payload_bytes
         self.duration_s = duration_s
-        self.event_sample = event_sample
+        self.event_sample = max(0, int(event_sample))
         self.offset_ns = offset_ns
         self.output_dir = output_dir
         self.max_rate_mbps = max_rate_mbps
@@ -1302,6 +1448,7 @@ class SaturationTester:
         self.delivery_threshold = delivery_threshold
         self.loss_threshold = loss_threshold
         self.spike_factor = spike_factor
+        self.min_delay_samples = max(0, int(min_delay_samples))
         self.records: List[Dict[str, float]] = []
         self._rate_cache: Dict[int, Tuple[Dict[str, float], bool, Optional[str]]] = {}
         self._baseline: Optional[Dict[str, float]] = None
@@ -1472,6 +1619,11 @@ class SaturationTester:
             rate_pps = 1
         events_path = self.output_dir / f"saturation_{rate_mbps}Mbps.jsonl"
         warmup_s = min(MAX_WARMUP_SECONDS, self.duration_s * WARMUP_FRACTION)
+        effective_sample_every, effective_min_delay = _compute_sampling_params(
+            self.duration_s,
+            self.event_sample,
+            self.min_delay_samples,
+        )
         if warmup_s > 0:
             warmup_blaster = Blaster(
                 APP_SEND_HOST,
@@ -1491,7 +1643,7 @@ class SaturationTester:
             APP_RECV_PORT,
             events_path,
             payload_bytes=self.payload_bytes,
-            sample_every=max(1, self.event_sample),
+            sample_every=max(1, effective_sample_every),
             offset_ns=self.offset_ns,
         )
         start = time.perf_counter()
@@ -1537,7 +1689,10 @@ class SaturationTester:
         loss_low, loss_high = wilson_interval(max(0, sent_packets - rcvd_packets), sent_packets)
 
         sample_quality = "low"
-        if blaster.rtt_samples >= MIN_DELAY_SAMPLES and blaster.owd_samples >= MIN_DELAY_SAMPLES:
+        if (
+            effective_min_delay == 0
+            or (blaster.rtt_samples >= effective_min_delay and blaster.owd_samples >= effective_min_delay)
+        ):
             sample_quality = "ok"
         if getattr(blaster, "truncated", 0) > 0:
             sample_quality = "low"
@@ -1564,6 +1719,8 @@ class SaturationTester:
             "owd_p95_ms": round(blaster.owd_p95_ns / 1_000_000, 3),
             "rtt_samples": blaster.rtt_samples,
             "owd_samples": blaster.owd_samples,
+            "sample_every": max(1, effective_sample_every),
+            "min_delay_samples": effective_min_delay,
             "sample_quality": sample_quality,
             "app_packet_bytes": app_packet_bytes,
             "wire_packet_bytes_est": wire_packet_bytes_est,
@@ -1631,8 +1788,20 @@ class SaturationTester:
                 record.get("app_packet_bytes", 0),
                 record.get("wire_packet_bytes_est", 0),
             ])
-        wb.save(path)
-        return path
+        for attempt in range(3):
+            try:
+                buffer = io.BytesIO()
+                wb.save(buffer)
+                _atomic_write_bytes(path, buffer.getvalue())
+                return path
+            except OSError as exc:  # pragma: no cover - platform specific
+                if attempt == 2:
+                    print(f"[WARN] failed to save {path}: {exc}", file=sys.stderr)
+            except Exception as exc:  # pragma: no cover - platform specific
+                if attempt == 2:
+                    print(f"[WARN] failed to write saturation workbook {path}: {exc}", file=sys.stderr)
+            time.sleep(0.1)
+        return None
 
 
 class TelemetryCollector:
@@ -1646,10 +1815,23 @@ class TelemetryCollector:
         # Bug #9 fix: Use deque with maxlen to prevent unbounded memory growth
         env_maxlen = os.getenv("GCS_TELEM_MAXLEN")
         maxlen = TELEMETRY_BUFFER_MAXLEN_DEFAULT
-        if env_maxlen is not None:
+        if env_maxlen:
             try:
-                maxlen = max(1000, int(env_maxlen))
-            except (TypeError, ValueError):
+                candidate = int(env_maxlen)
+                if candidate <= 0:
+                    raise ValueError
+                if candidate < 1000:
+                    candidate = 1000
+                if candidate > 1_000_000:
+                    print(
+                        f"[WARN] GCS_TELEM_MAXLEN={candidate} capped at 1000000", file=sys.stderr
+                    )
+                maxlen = min(candidate, 1_000_000)
+            except ValueError:
+                print(
+                    f"[WARN] invalid GCS_TELEM_MAXLEN={env_maxlen!r}; using default {TELEMETRY_BUFFER_MAXLEN_DEFAULT}",
+                    file=sys.stderr,
+                )
                 maxlen = TELEMETRY_BUFFER_MAXLEN_DEFAULT
         self.samples: deque = deque(maxlen=maxlen)  # ~10MB limit for long tests
         self.lock = threading.Lock()
@@ -1657,23 +1839,51 @@ class TelemetryCollector:
 
     def start(self) -> None:
         try:
-            srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            srv.bind((self.host, self.port))
-            srv.listen(8)
-            srv.settimeout(0.5)
+            addrinfo = socket.getaddrinfo(
+                self.host,
+                self.port,
+                0,
+                socket.SOCK_STREAM,
+                proto=0,
+                flags=socket.AI_PASSIVE if not self.host else 0,
+            )
+        except socket.gaierror as exc:
+            print(f"[WARN] telemetry collector disabled: {exc}", file=sys.stderr)
+            self.enabled = False
+            return
+
+        last_exc: Optional[Exception] = None
+        for family, socktype, proto, _canon, sockaddr in addrinfo:
+            try:
+                srv = socket.socket(family, socktype, proto)
+                try:
+                    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    if family == socket.AF_INET6:
+                        srv.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+                    srv.bind(sockaddr)
+                    srv.listen(8)
+                    srv.settimeout(0.5)
+                except Exception:
+                    srv.close()
+                    raise
+            except Exception as exc:
+                last_exc = exc
+                continue
+
             self.server = srv
             self.accept_thread = threading.Thread(target=self._accept_loop, daemon=True)
             self.accept_thread.start()
             print(f"[{ts()}] telemetry collector listening on {self.host}:{self.port}")
-        except Exception as exc:
-            print(f"[WARN] telemetry collector disabled: {exc}", file=sys.stderr)
-            self.enabled = False
-            if self.server:
-                try:
-                    self.server.close()
-                except Exception:
-                    pass
+            return
+
+        self.enabled = False
+        message = last_exc or RuntimeError("no suitable address family")
+        print(f"[WARN] telemetry collector disabled: {message}", file=sys.stderr)
+        if self.server:
+            try:
+                self.server.close()
+            except Exception:
+                pass
             self.server = None
 
     def _accept_loop(self) -> None:
@@ -1778,13 +1988,20 @@ def append_dict_sheet(workbook, title: str, rows: List[dict]) -> None:
 def append_csv_sheet(workbook, path: Path, title: str) -> None:
     if not path.exists():
         return
-    try:
-        with open(path, newline="", encoding="utf-8") as handle:
-            reader = csv.reader(handle)
-            rows = list(reader)
-    except Exception as exc:
-        print(f"[WARN] failed to read CSV {path}: {exc}", file=sys.stderr)
-        return
+    rows = None
+    for attempt in range(3):
+        try:
+            with open(path, newline="", encoding="utf-8") as handle:
+                reader = csv.reader(handle)
+                rows = list(reader)
+            break
+        except OSError as exc:
+            if attempt == 2:
+                print(f"[WARN] failed to read CSV {path}: {exc}", file=sys.stderr)
+            time.sleep(0.1)
+        except Exception as exc:
+            print(f"[WARN] failed to parse CSV {path}: {exc}", file=sys.stderr)
+            return
     if not rows:
         return
     sheet_name = unique_sheet_name(workbook, title)
@@ -1854,8 +2071,17 @@ def export_combined_excel(
     combined_dir.mkdir(parents=True, exist_ok=True)
     info_sheet.append(["gcs_session_dir", str(combined_dir)])
     target_path = combined_dir / f"{session_id}_combined.xlsx"
-    workbook.save(target_path)
-    return target_path
+    for attempt in range(3):
+        try:
+            buffer = io.BytesIO()
+            workbook.save(buffer)
+            _atomic_write_bytes(target_path, buffer.getvalue())
+            return target_path
+        except Exception as exc:  # pragma: no cover - platform specific
+            if attempt == 2:
+                print(f"[WARN] failed to write combined workbook {target_path}: {exc}", file=sys.stderr)
+            time.sleep(0.1)
+    return None
 
 
 def main() -> None:
@@ -1871,11 +2097,9 @@ def main() -> None:
     pre_gap = float(auto.get("pre_gap_s") or 1.0)
     inter_gap = float(auto.get("inter_gap_s") or 15.0)
     duration = float(auto.get("duration_s") or 15.0)
-    if duration != 15.0:
-        print(f"[{ts()}] overriding AUTO_GCS.duration_s={duration:.1f}s -> 15.0s for short dwell tests")
-        duration = 15.0
     payload_bytes = int(auto.get("payload_bytes") or 256)
-    event_sample = int(auto.get("event_sample") or 100)
+    configured_event_sample = int(auto.get("event_sample") or 100)
+    event_sample = max(1, configured_event_sample)
     passes = int(auto.get("passes") or 1)
     rate_pps = int(auto.get("rate_pps") or 0)
     bandwidth_mbps = float(auto.get("bandwidth_mbps") or 0.0)
@@ -1890,6 +2114,8 @@ def main() -> None:
     sat_delivery_threshold = float(auto.get("sat_delivery_threshold") or SATURATION_DELIVERY_THRESHOLD)
     sat_loss_threshold = float(auto.get("sat_loss_threshold_pct") or SATURATION_LOSS_THRESHOLD)
     sat_spike_factor = float(auto.get("sat_rtt_spike_factor") or SATURATION_RTT_SPIKE)
+
+    min_delay_samples = MIN_DELAY_SAMPLES
 
     if duration <= 0:
         raise ValueError("AUTO_GCS.duration_s must be positive")
@@ -1987,6 +2213,10 @@ def main() -> None:
                 f"[WARN] clock offset {offset_ns / 1_000_000:.1f} ms exceeds {CLOCK_OFFSET_THRESHOLD_NS / 1_000_000:.1f} ms; extending warmup",
                 file=sys.stderr,
             )
+            print(
+                f"[{ts()}] clock skew banner: |offset|={offset_ns / 1_000_000:.1f} ms -> first measurement pass may be noisy",
+                flush=True,
+            )
     except Exception as exc:
         print(f"[WARN] timesync failed: {exc}", file=sys.stderr)
 
@@ -2030,6 +2260,7 @@ def main() -> None:
                     delivery_threshold=sat_delivery_threshold,
                     loss_threshold=sat_loss_threshold,
                     spike_factor=sat_spike_factor,
+                    min_delay_samples=min_delay_samples,
                 )
                 summary = tester.run()
                 summary["rekey_ms"] = rekey_ms
@@ -2041,9 +2272,12 @@ def main() -> None:
                 if inter_gap > 0 and idx < len(suites) - 1:
                     time.sleep(inter_gap)
             report_path = OUTDIR / f"saturation_summary_{session_id}.json"
-            with open(report_path, "w", encoding="utf-8") as handle:
-                json.dump(saturation_reports, handle, indent=2)
-            print(f"[{ts()}] saturation summary written to {report_path}")
+            summary_bytes = json.dumps(saturation_reports, indent=2).encode("utf-8")
+            try:
+                _atomic_write_bytes(report_path, summary_bytes)
+                print(f"[{ts()}] saturation summary written to {report_path}")
+            except Exception as exc:
+                print(f"[WARN] failed to update {report_path}: {exc}", file=sys.stderr)
         else:
             for pass_index in range(passes):
                 for idx, suite in enumerate(suites):
@@ -2061,6 +2295,7 @@ def main() -> None:
                         rate_pps=rate_pps,
                         power_capture_enabled=power_capture_enabled,
                         clock_offset_warmup_s=offset_warmup_s,
+                        min_delay_samples=min_delay_samples,
                     )
                     summary_rows.append(row)
                     is_last_suite = idx == len(suites) - 1
