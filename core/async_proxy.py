@@ -770,7 +770,7 @@ def run_proxy(
                 else:
                     base_secret = gcs_sig_secret
                 public_key = new_public if new_public is not None else gcs_sig_public
-                if public_key is None:
+                if role == "drone" and public_key is None:
                     raise NotImplementedError("GCS public key not available for rekey")
                 rk_result = _perform_handshake(role, new_suite, base_secret, public_key, cfg, timeout)
                 (
