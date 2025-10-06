@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Iterator, Optional, Protocol
 
 try:  # Best-effort hardware import; unavailable on dev hosts.
-    import smbus  # type: ignore
+    import smbus2 as smbus  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover - exercised on non-Pi hosts
     try:
         import smbus2 as smbus  # type: ignore
