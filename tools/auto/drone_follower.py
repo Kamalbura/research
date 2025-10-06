@@ -792,13 +792,77 @@ class UdpEcho(threading.Thread):
         self.monitor = monitor
         self.session_dir = session_dir
         self.publisher = publisher
-        self.rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.tx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            self.rx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.tx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        except OSError:
-            pass
+        def _bind_socket(host: str, port: int) -> socket.socket:
+            flags = socket.AI_PASSIVE if not host else 0
+            try:
+                addrinfo = socket.getaddrinfo(host, port, 0, socket.SOCK_DGRAM, 0, flags)
+            except socket.gaierror as exc:
+                raise OSError(f"UDP echo bind failed for {host}:{port}: {exc}") from exc
+
+            last_exc: Optional[Exception] = None
+            for family, socktype, proto, _canon, sockaddr in addrinfo:
+                sock: Optional[socket.socket] = None
+                try:
+                    sock = socket.socket(family, socktype, proto)
+                    try:
+                        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    except OSError:
+                        pass
+                    if family == socket.AF_INET6:
+                        try:
+                            sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+                        except OSError:
+                            pass
+                    sock.bind(sockaddr)
+                    return sock
+                except Exception as exc:
+                    last_exc = exc
+                    if sock is not None:
+                        try:
+                            sock.close()
+                        except Exception:
+                            pass
+                    continue
+
+            message = last_exc or RuntimeError("no suitable address family")
+            raise OSError(f"UDP echo bind failed for {host}:{port}: {message}")
+
+        def _connect_tuple(host: str, port: int, preferred_family: int) -> tuple[socket.socket, tuple]:
+            addrinfo: list[tuple] = []
+            try:
+                addrinfo = socket.getaddrinfo(host, port, preferred_family, socket.SOCK_DGRAM)
+            except socket.gaierror:
+                pass
+            if not addrinfo:
+                try:
+                    addrinfo = socket.getaddrinfo(host, port, 0, socket.SOCK_DGRAM)
+                except socket.gaierror as exc:
+                    raise OSError(f"UDP echo resolve failed for {host}:{port}: {exc}") from exc
+
+            last_exc: Optional[Exception] = None
+            for family, socktype, proto, _canon, sockaddr in addrinfo:
+                sock: Optional[socket.socket] = None
+                try:
+                    sock = socket.socket(family, socktype, proto)
+                    try:
+                        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    except OSError:
+                        pass
+                    return sock, sockaddr
+                except Exception as exc:
+                    last_exc = exc
+                    if sock is not None:
+                        try:
+                            sock.close()
+                        except Exception:
+                            pass
+                    continue
+
+            message = last_exc or RuntimeError("no suitable address family")
+            raise OSError(f"UDP echo socket creation failed for {host}:{port}: {message}")
+
+        self.rx_sock = _bind_socket(self.bind_host, self.recv_port)
+        self.tx_sock, self.send_addr = _connect_tuple(self.send_host, self.send_port, self.rx_sock.family)
         try:
             sndbuf = int(os.getenv("DRONE_SOCK_SNDBUF", str(16 << 20)))
             rcvbuf = int(os.getenv("DRONE_SOCK_RCVBUF", str(16 << 20)))
@@ -812,7 +876,6 @@ class UdpEcho(threading.Thread):
             )
         except Exception:
             pass
-        self.rx_sock.bind((self.bind_host, self.recv_port))
         self.packet_log_path = self.session_dir / "packet_timing.csv"
         self.packet_log_handle: Optional[object] = None
         self.packet_writer: Optional[csv.writer] = None
@@ -839,7 +902,7 @@ class UdpEcho(threading.Thread):
                 recv_ns = time.time_ns()
                 enhanced = self._annotate_packet(data, recv_ns)
                 send_ns = time.time_ns()
-                self.tx_sock.sendto(enhanced, (self.send_host, self.send_port))
+                self.tx_sock.sendto(enhanced, self.send_addr)
                 self._record_packet(data, recv_ns, send_ns)
             except socket.timeout:
                 continue
