@@ -153,6 +153,59 @@ def _build_matrix_secret_loader(
     return load_secret_for_suite
 
 
+def _build_matrix_public_loader(
+    *,
+    suite_id: Optional[str],
+    default_public_path: Optional[Path],
+    initial_public: Optional[bytes],
+    matrix_dir: Optional[Path] = None,
+) -> Callable[[Dict[str, object]], bytes]:
+    """Return loader that fetches per-suite GCS signing public keys from disk."""
+
+    lock = threading.Lock()
+    cache: Dict[str, bytes] = {}
+    if suite_id and initial_public is not None:
+        cache[suite_id] = initial_public
+
+    matrix_public_dir = matrix_dir or Path("secrets/matrix")
+
+    def load_public_for_suite(target_suite: Dict[str, object]) -> bytes:
+        target_suite_id = target_suite.get("suite_id") if isinstance(target_suite, dict) else None
+        if not target_suite_id:
+            raise RuntimeError("Suite dictionary missing suite_id")
+
+        with lock:
+            cached = cache.get(target_suite_id)
+            if cached is not None:
+                return cached
+
+        candidates = []
+        if default_public_path and suite_id and target_suite_id == suite_id:
+            candidates.append(default_public_path)
+        candidates.append(matrix_public_dir / target_suite_id / "gcs_signing.pub")
+
+        seen: Dict[str, None] = {}
+        for candidate in candidates:
+            candidate_path = candidate.expanduser()
+            key = str(candidate_path.resolve()) if candidate_path.exists() else str(candidate_path)
+            if key in seen:
+                continue
+            seen[key] = None
+            if not candidate_path.exists():
+                continue
+            try:
+                public_bytes = candidate_path.read_bytes()
+            except Exception as exc:
+                raise RuntimeError(f"Failed to read GCS public key {candidate_path}: {exc}") from exc
+            with lock:
+                cache[target_suite_id] = public_bytes
+            return public_bytes
+
+        raise FileNotFoundError(f"No GCS signing public key found for suite {target_suite_id}")
+
+    return load_public_for_suite
+
+
 def signal_handler(signum, frame):
     """Handle interrupt signals gracefully."""
     print("\nReceived interrupt signal. Shutting down...")
@@ -460,6 +513,7 @@ def drone_command(args):
     json_out_path = getattr(args, "json_out", None)
     quiet = getattr(args, "quiet", False)
     status_file = getattr(args, "status_file", None)
+    primary_public_path: Optional[Path] = None
 
     def info(msg: str) -> None:
         if not quiet:
@@ -471,6 +525,7 @@ def drone_command(args):
             if not pub_path.exists():
                 raise FileNotFoundError(f"Public key file not found: {pub_path}")
             gcs_sig_public = pub_path.read_bytes()
+            primary_public_path = pub_path
         elif args.gcs_pub_hex:
             gcs_sig_public = bytes.fromhex(args.gcs_pub_hex)
         else:
@@ -479,6 +534,7 @@ def drone_command(args):
             if default_pub.exists():
                 gcs_sig_public = default_pub.read_bytes()
                 info(f"Using GCS public key from: {default_pub}")
+                primary_public_path = default_pub
             else:
                 raise ValueError("No GCS public key provided. Use --peer-pubkey-file, --gcs-pub-hex, or ensure secrets/gcs_signing.pub exists.")
                 
@@ -496,6 +552,12 @@ def drone_command(args):
             info(f"Will auto-stop after {args.stop_seconds} seconds")
         if not quiet:
             print()
+
+        load_public_for_suite = _build_matrix_public_loader(
+            suite_id=suite_id,
+            default_public_path=primary_public_path,
+            initial_public=gcs_sig_public,
+        )
         
         counters = proxy_runner(
             role="drone",
@@ -507,6 +569,7 @@ def drone_command(args):
             manual_control=False,
             quiet=quiet,
             status_file=status_file,
+            load_gcs_public=load_public_for_suite,
         )
         
         # Log final counters as JSON

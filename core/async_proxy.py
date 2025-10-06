@@ -515,6 +515,7 @@ def run_proxy(
     ready_event: Optional[threading.Event] = None,
     status_file: Optional[str] = None,
     load_gcs_secret: Optional[Callable[[Dict[str, object]], object]] = None,
+    load_gcs_public: Optional[Callable[[Dict[str, object]], bytes]] = None,
 ) -> Dict[str, object]:
     """
     Start a blocking proxy process for `role` in {"drone","gcs"}.
@@ -548,6 +549,11 @@ def run_proxy(
                 "Failed to write status file",
                 extra={"role": role, "error": str(exc), "path": str(status_path)},
             )
+
+    if role == "drone" and gcs_sig_public is None:
+        if load_gcs_public is None:
+            raise NotImplementedError("Drone proxy requires GCS public key or loader")
+        gcs_sig_public = load_gcs_public(suite)
 
     handshake_result = _perform_handshake(
         role, suite, gcs_sig_secret, gcs_sig_public, cfg, stop_after_seconds, ready_event
@@ -648,6 +654,7 @@ def run_proxy(
         manual_stop, manual_threads = _launch_manual_console(control_state, quiet=quiet)
 
     def _launch_rekey(target_suite_id: str, rid: str) -> None:
+        nonlocal gcs_sig_public
         with rekey_guard:
             if rid in active_rekeys:
                 return
@@ -662,6 +669,7 @@ def run_proxy(
             try:
                 new_suite = get_suite(target_suite_id)
                 new_secret = None
+                new_public: Optional[bytes] = None
                 if role == "gcs" and load_gcs_secret is not None:
                     try:
                         new_secret = load_gcs_secret(new_suite)
@@ -715,13 +723,56 @@ def run_proxy(
                     active_rekeys.discard(rid)
                 return
 
-            try:
+                if role == "drone" and load_gcs_public is not None:
+                    try:
+                        new_public = load_gcs_public(new_suite)
+                    except FileNotFoundError as exc:
+                        with context_lock:
+                            current_suite = active_context["suite"]
+                        with counters_lock:
+                            counters.rekeys_fail += 1
+                        record_rekey_result(control_state, rid, current_suite, success=False)
+                        logger.warning(
+                            "Control rekey rejected: missing signing public key",
+                            extra={
+                                "role": role,
+                                "suite_id": target_suite_id,
+                                "rid": rid,
+                                "error": str(exc),
+                            },
+                        )
+                        with rekey_guard:
+                            active_rekeys.discard(rid)
+                        return
+                    except Exception as exc:
+                        with context_lock:
+                            current_suite = active_context["suite"]
+                        with counters_lock:
+                            counters.rekeys_fail += 1
+                        record_rekey_result(control_state, rid, current_suite, success=False)
+                        logger.warning(
+                            "Control rekey rejected: signing public key load failed",
+                            extra={
+                                "role": role,
+                                "suite_id": target_suite_id,
+                                "rid": rid,
+                                "error": str(exc),
+                            },
+                        )
+                        with rekey_guard:
+                            active_rekeys.discard(rid)
+                        return
+
+                try:
                 timeout = cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0)
                 if role == "gcs" and new_secret is not None:
                     base_secret = new_secret
                 else:
                     base_secret = gcs_sig_secret
-                rk_result = _perform_handshake(role, new_suite, base_secret, gcs_sig_public, cfg, timeout)
+                public_key = new_public if new_public is not None else gcs_sig_public
+                if public_key is None:
+                    raise NotImplementedError("GCS public key not available for rekey")
+                rk_result = _perform_handshake(role, new_suite, base_secret, public_key, cfg, timeout)
                 (
                     new_k_d2g,
                     new_k_g2d,
@@ -756,6 +807,8 @@ def run_proxy(
                     counters.rekeys_ok += 1
                     counters.last_rekey_ms = int(time.time() * 1000)
                     counters.last_rekey_suite = new_suite["suite_id"]
+                if role == "drone" and new_public is not None:
+                    gcs_sig_public = new_public
                 record_rekey_result(control_state, rid, new_suite["suite_id"], success=True)
                 write_status(
                     {
