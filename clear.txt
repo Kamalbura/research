@@ -1,0 +1,16 @@
+# wipe run artifacts on the GCS host
+$repo = "C:\Users\burak\Desktop\research"
+
+# kill old proxy/scheduler logs
+Get-Item "$repo\logs\*" -ErrorAction SilentlyContinue |
+  Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+# clear analyzer exports
+Get-Item "$repo\output\gcs\*" -ErrorAction SilentlyContinue |
+  Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Get-Item "$repo\output\drone\*" -ErrorAction SilentlyContinue |
+  Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+# optional: drop scheduler JSON summaries
+Get-Item "$repo\logs\auto\*" -ErrorAction SilentlyContinue |
+  Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
