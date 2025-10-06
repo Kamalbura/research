@@ -1,0 +1,19 @@
+{
+  "duration_s": 6.0,
+  "event_sample": 25,
+  "inter_gap_s": 1.0,
+  "launch_proxy": true,
+  "monitors_enabled": true,
+  "passes": 1,
+  "payload_bytes": 256,
+  "power_capture": false,
+  "pre_gap_s": 0.5,
+  "rate_pps": 2000,
+  "session_prefix": "1759718393_blast",
+  "suites": [
+    "cs-mlkem768-aesgcm-mldsa65",
+    "cs-mlkem512-aesgcm-mldsa44"
+  ],
+  "telemetry_enabled": true,
+  "traffic": "blast"
+}
