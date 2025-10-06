@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\burak\Desktop\research\core\run_proxy.py", line 698, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\burak\Desktop\research\core\run_proxy.py", line 690, in main
+    gcs_command(args)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\burak\Desktop\research\core\run_proxy.py", line 331, in gcs_command
+    proxy_runner = _require_run_proxy()
+  File "C:\Users\burak\Desktop\research\core\run_proxy.py", line 51, in _require_run_proxy
+    from core.async_proxy import run_proxy as _run_proxy  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\burak\Desktop\research\core\async_proxy.py", line 767
+    timeout = cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0)
+    ^^^^^^^
+IndentationError: expected an indented block after 'try' statement on line 766

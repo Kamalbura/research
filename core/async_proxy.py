@@ -723,47 +723,47 @@ def run_proxy(
                     active_rekeys.discard(rid)
                 return
 
-                if role == "drone" and load_gcs_public is not None:
-                    try:
-                        new_public = load_gcs_public(new_suite)
-                    except FileNotFoundError as exc:
-                        with context_lock:
-                            current_suite = active_context["suite"]
-                        with counters_lock:
-                            counters.rekeys_fail += 1
-                        record_rekey_result(control_state, rid, current_suite, success=False)
-                        logger.warning(
-                            "Control rekey rejected: missing signing public key",
-                            extra={
-                                "role": role,
-                                "suite_id": target_suite_id,
-                                "rid": rid,
-                                "error": str(exc),
-                            },
-                        )
-                        with rekey_guard:
-                            active_rekeys.discard(rid)
-                        return
-                    except Exception as exc:
-                        with context_lock:
-                            current_suite = active_context["suite"]
-                        with counters_lock:
-                            counters.rekeys_fail += 1
-                        record_rekey_result(control_state, rid, current_suite, success=False)
-                        logger.warning(
-                            "Control rekey rejected: signing public key load failed",
-                            extra={
-                                "role": role,
-                                "suite_id": target_suite_id,
-                                "rid": rid,
-                                "error": str(exc),
-                            },
-                        )
-                        with rekey_guard:
-                            active_rekeys.discard(rid)
-                        return
-
+            if role == "drone" and load_gcs_public is not None:
                 try:
+                    new_public = load_gcs_public(new_suite)
+                except FileNotFoundError as exc:
+                    with context_lock:
+                        current_suite = active_context["suite"]
+                    with counters_lock:
+                        counters.rekeys_fail += 1
+                    record_rekey_result(control_state, rid, current_suite, success=False)
+                    logger.warning(
+                        "Control rekey rejected: missing signing public key",
+                        extra={
+                            "role": role,
+                            "suite_id": target_suite_id,
+                            "rid": rid,
+                            "error": str(exc),
+                        },
+                    )
+                    with rekey_guard:
+                        active_rekeys.discard(rid)
+                    return
+                except Exception as exc:
+                    with context_lock:
+                        current_suite = active_context["suite"]
+                    with counters_lock:
+                        counters.rekeys_fail += 1
+                    record_rekey_result(control_state, rid, current_suite, success=False)
+                    logger.warning(
+                        "Control rekey rejected: signing public key load failed",
+                        extra={
+                            "role": role,
+                            "suite_id": target_suite_id,
+                            "rid": rid,
+                            "error": str(exc),
+                        },
+                    )
+                    with rekey_guard:
+                        active_rekeys.discard(rid)
+                    return
+
+            try:
                 timeout = cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0)
                 if role == "gcs" and new_secret is not None:
                     base_secret = new_secret
