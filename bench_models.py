@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import sys
 import threading
 import time
 from pathlib import Path
@@ -15,6 +14,13 @@ try:
 except Exception:  # pragma: no cover - import guard
     print("❌ psutil is required. Install: pip install psutil")
     raise
+
+import sys
+
+ROOT = Path(__file__).resolve().parent
+DDOS_DIR = ROOT / "ddos"
+if str(DDOS_DIR) not in sys.path:
+    sys.path.insert(0, str(DDOS_DIR))
 
 try:
     import xgboost as xgb
