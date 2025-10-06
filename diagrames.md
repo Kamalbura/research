@@ -159,10 +159,10 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    APP_TX[GCS plaintext app (UDP producer)] --> PT[GCS plaintext socket]
+    APP_TX[GCS plaintext app] --> PT[GCS plaintext socket]
     PT --> TB{Token bucket OK?}
     TB -- No --> DROP[Drop & increment rate-limit counter]
-    TB -- Yes --> AEAD[AES-256-GCM sender adds 22-byte header]
+    TB -- Yes --> AEAD[AES-256-GCM sender]
     AEAD --> DSCP[Tag DSCP + pin peer]
     DSCP --> NET[Encrypted UDP packet]
     NET --> RX[Drone proxy receiver]

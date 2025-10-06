@@ -1,6 +1,13 @@
 import time
-import board
-import busio
+
+try:
+    import board
+    import busio
+except ModuleNotFoundError as exc:
+    raise SystemExit(
+        "Missing CircuitPython dependencies; install 'adafruit-blinka' before running this script."
+    ) from exc
+
 from adafruit_ina219 import INA219, ADCResolution, BusVoltageRange
 
 # --- CONFIGURATION ---
@@ -15,8 +22,8 @@ def main():
     actual frequency achieved.
     """
     try:
-        i2c_bus = busio.I2C(board.SCL, board.SDA)
-        ina219 = INA219(i2c_bus, shunt_resistor=SHUNT_OHMS)
+    i2c_bus = busio.I2C(board.SCL, board.SDA)
+    ina219 = INA219(i2c_bus, shunt_resistance=SHUNT_OHMS)
 
         print("INA219 High-Frequency Benchmark")
         
