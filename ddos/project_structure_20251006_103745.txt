@@ -1,0 +1,2279 @@
+PROJECT STRUCTURE AND PYTHON FILES LOG
+================================================================================
+Root Directory: C:\Users\burak\Desktop\research\ddos
+Output File: C:\Users\burak\Desktop\research\ddos\project_structure_20251006_103745.txt
+Generated: 2025-10-06 10:37:45
+================================================================================
+
+================================================================================
+DIRECTORY TREE STRUCTURE
+================================================================================
+Root Directory: C:\Users\burak\Desktop\research\ddos
+Generated: 2025-10-06 10:37:45
+
+├── __pycache__/
+│   ├── config.cpython-313.pyc (6,511 bytes)
+│   ├── generate_scaler.cpython-313.pyc (2,913 bytes)
+│   ├── hybrid_detector.cpython-313.pyc (21,372 bytes)
+│   ├── manual_control_detector.cpython-313.pyc (22,315 bytes)
+│   ├── realtime_tst.cpython-313.pyc (18,433 bytes)
+│   ├── run_tst.cpython-313.pyc (7,362 bytes)
+│   ├── run_xgboost.cpython-313.pyc (3,345 bytes)
+│   └── tstplus.cpython-313.pyc (19,725 bytes)
+├── config.py (5,606 bytes)
+├── ddos-hybrid.service (585 bytes)
+├── ddos-tst-realtime.service (490 bytes)
+├── DDOS_ML_REVIEW.md (3,277 bytes)
+├── DDOS_SETUP_REFERENCE.txt (9,016 bytes)
+├── generate_scaler.py (2,134 bytes)
+├── hybrid_detector.py (15,048 bytes)
+├── manual_control_detector.py (15,861 bytes)
+├── project_structure_20251006_103745.txt (0 bytes)
+├── pst1.txt (66,461 bytes)
+├── README.md (5,825 bytes)
+├── realtime_tst.py (12,788 bytes)
+├── run_tst.py (4,622 bytes)
+├── run_xgboost.py (2,123 bytes)
+├── scaler.pkl (895 bytes)
+├── tcp_test_ddos_data_0.1.csv (112,209 bytes)
+├── train_ddos_data_0.1.csv (238,332 bytes)
+├── tst_model.pth (326,850 bytes)
+├── tstplus.py (17,194 bytes)
+└── xgboost_model.bin (106,667 bytes)
+
+
+================================================================================
+PYTHON FILE CONTENTS
+================================================================================
+
+Found 8 Python files:
+   1. config.py
+   2. generate_scaler.py
+   3. hybrid_detector.py
+   4. manual_control_detector.py
+   5. realtime_tst.py
+   6. run_tst.py
+   7. run_xgboost.py
+   8. tstplus.py
+
+--------------------------------------------------------------------------------
+
+FILE 1/8: config.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\config.py
+Size: 5,606 bytes
+Modified: 2025-10-06 07:56:12
+------------------------------------------------------------
+"""Centralized configuration for the DDoS detection pipelines.
+
+All user-facing scripts import values from this module. The defaults are
+suitable for a Raspberry Pi 4B monitoring MAVLink traffic over UDP. Each
+setting can be overridden via environment variables as documented below.
+"""
+from __future__ import annotations
+
+import logging
+import os
+from pathlib import Path
+from typing import Optional
+
+# ---------------------------------------------------------------------------
+# Environment helpers
+# ---------------------------------------------------------------------------
+
+def _get_env_str(name: str, default: str) -> str:
+    value = os.getenv(name)
+    if value is None or value.strip() == "":
+        return default
+    return value.strip()
+
+def _get_env_float(name: str, default: float) -> float:
+    value = os.getenv(name)
+    if not value:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        logging.warning("Invalid float for %s=%s; using default %s", name, value, default)
+        return default
+
+def _get_env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        logging.warning("Invalid int for %s=%s; using default %s", name, value, default)
+        return default
+
+def _get_env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    value_lower = value.strip().lower()
+    if value_lower in {"1", "true", "yes", "on"}:
+        return True
+    if value_lower in {"0", "false", "no", "off"}:
+        return False
+    logging.warning("Invalid bool for %s=%s; using default %s", name, value, default)
+    return default
+
+# ---------------------------------------------------------------------------
+# Network configuration
+# ---------------------------------------------------------------------------
+
+IFACE: str = _get_env_str("MAV_IFACE", "wlan0")
+PORT: int = _get_env_int("MAV_UDP_PORT", 14550)
+
+# ---------------------------------------------------------------------------
+# Windowing / buffer sizes
+# ---------------------------------------------------------------------------
+
+WINDOW_SIZE: float = _get_env_float("DDOS_WINDOW_SIZE", 0.60)
+XGB_SEQ_LENGTH: int = _get_env_int("DDOS_XGB_SEQ", 5)
+TST_SEQ_LENGTH: int = _get_env_int("DDOS_TST_SEQ", 400)
+BUFFER_SIZE: int = _get_env_int("DDOS_BUFFER_SIZE", 900)
+
+# Gatekeeping
+XGB_CONSECUTIVE_POSITIVES: int = _get_env_int("DDOS_XGB_CONSEC", 1)
+TST_COOLDOWN_WINDOWS: int = _get_env_int("DDOS_TST_COOLDOWN", 5)
+
+# Queue sizing
+XGB_QUEUE_MAX: int = _get_env_int("DDOS_XGB_QUEUE_MAX", 64)
+TST_QUEUE_MAX: int = _get_env_int("DDOS_TST_QUEUE_MAX", 8)
+
+# ---------------------------------------------------------------------------
+# Model paths
+# ---------------------------------------------------------------------------
+
+BASE_DIR = Path(__file__).resolve().parent
+
+XGB_MODEL_FILE: Path = Path(_get_env_str("DDOS_XGB_MODEL", str(BASE_DIR / "xgboost_model.bin")))
+TST_TORCHSCRIPT_FILE: Path = Path(
+    _get_env_str("DDOS_TST_TORCHSCRIPT", str(BASE_DIR / "tst_model.torchscript"))
+)
+TST_MODEL_FILE: Path = Path(_get_env_str("DDOS_TST_MODEL", str(BASE_DIR / "tst_model.pth")))
+SCALER_FILE: Path = Path(_get_env_str("DDOS_SCALER_FILE", str(BASE_DIR / "scaler.pkl")))
+
+# Probability threshold for attack classification from TST softmax output.
+TST_ATTACK_THRESHOLD: float = _get_env_float("DDOS_TST_THRESHOLD", 0.90)
+TORCH_NUM_THREADS: int = _get_env_int("DDOS_TORCH_THREADS", 1)
+TST_CONFIRM_POSITIVES: int = _get_env_int("DDOS_TST_CONFIRM", 2)
+TST_CLEAR_THRESHOLD: float = _get_env_float("DDOS_TST_CLEAR", 0.80)
+
+# ---------------------------------------------------------------------------
+# Logging configuration
+# ---------------------------------------------------------------------------
+
+LOG_LEVEL_NAME: str = _get_env_str("DDOS_LOG_LEVEL", "INFO").upper()
+LOG_FILE: Optional[str] = os.getenv("DDOS_LOG_FILE")
+
+
+def configure_logging(program_name: str) -> None:
+    """Configure the root logger.
+
+    Parameters
+    ----------
+    program_name: str
+        Used to differentiate loggers per script.
+    """
+    level = getattr(logging, LOG_LEVEL_NAME, logging.INFO)
+    log_format = (
+        f"{program_name} %(asctime)s %(levelname)s %(name)s "
+        "%(threadName)s %(message)s"
+    )
+
+    handlers = []
+    if LOG_FILE:
+        log_path = Path(LOG_FILE)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_path, encoding="utf-8"))
+    else:
+        handlers.append(logging.StreamHandler())
+
+    logging.basicConfig(level=level, format=log_format, handlers=handlers)
+    logging.getLogger().name = program_name
+
+
+# ---------------------------------------------------------------------------
+# Utility helpers
+# ---------------------------------------------------------------------------
+
+def ensure_file(path: Path, description: str) -> None:
+    """Raise FileNotFoundError with a friendly message if path is missing."""
+    if not path.exists():
+        raise FileNotFoundError(f"Missing {description}: {path}")
+
+
+def get_udp_bpf() -> str:
+    """Return a BPF string filter for Scapy sniffing."""
+    # Match both MAVLink v2 (0xFD) and v1 (0xFE) start bytes; collector threads
+    # already fall back to a port-only filter if this one raises.
+    return f"udp and port {PORT} and (udp[8] = 0xfd or udp[8] = 0xfe)"
+
+============================================================
+
+FILE 2/8: generate_scaler.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\generate_scaler.py
+Size: 2,134 bytes
+Modified: 2025-10-05 05:14:29
+------------------------------------------------------------
+#!/usr/bin/env python3
+"""Generate the missing scaler.pkl file required for DDoS detection system."""
+
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+import joblib
+from pathlib import Path
+
+def main():
+    """Generate scaler.pkl from training data."""
+    
+    # Check if training data exists
+    train_file = Path("train_ddos_data_0.1.csv")
+    if not train_file.exists():
+        print(f"❌ Training data not found: {train_file}")
+        print("Please ensure train_ddos_data_0.1.csv exists in the ddos/ directory")
+        return 1
+    
+    try:
+        # Load training data
+        print(f"📊 Loading training data from {train_file}")
+        train_df = pd.read_csv(train_file)
+        
+        # Check if required column exists
+        if "Mavlink_Count" not in train_df.columns:
+            print("❌ Column 'Mavlink_Count' not found in training data")
+            print(f"Available columns: {list(train_df.columns)}")
+            return 1
+        
+        print(f"✅ Found {len(train_df)} training samples")
+        print(f"📈 Mavlink_Count range: {train_df['Mavlink_Count'].min()} - {train_df['Mavlink_Count'].max()}")
+        
+        # Create and fit scaler
+        print("🔧 Creating StandardScaler...")
+        scaler = StandardScaler()
+        scaler.fit(train_df[["Mavlink_Count"]])
+        
+        # Save scaler
+        scaler_file = Path("scaler.pkl")
+        joblib.dump(scaler, scaler_file)
+        
+        print(f"✅ Successfully generated {scaler_file}")
+        print(f"📊 Scaler parameters:")
+        print(f"   - Mean: {scaler.mean_[0]:.3f}")
+        print(f"   - Std:  {scaler.scale_[0]:.3f}")
+        
+        # Test the scaler
+        print("🧪 Testing scaler...")
+        test_data = [[10.0], [50.0], [100.0]]
+        scaled = scaler.transform(test_data)
+        print(f"   - Sample transformations: {[f'{x[0]:.3f}' for x in scaled]}")
+        
+        return 0
+        
+    except Exception as e:
+        print(f"❌ Error generating scaler: {e}")
+        return 1
+
+if __name__ == "__main__":
+    exit(main())
+
+============================================================
+
+FILE 3/8: hybrid_detector.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\hybrid_detector.py
+Size: 15,048 bytes
+Modified: 2025-10-06 07:56:06
+------------------------------------------------------------
+"""Hybrid two-stage DDoS detector for MAVLink-over-UDP."""
+
+from __future__ import annotations
+
+import logging
+import signal
+import sys
+import threading
+import time
+from collections import deque
+from dataclasses import dataclass
+from queue import Empty, Full, Queue
+from typing import Deque, Dict, List, Optional
+
+import joblib
+import numpy as np
+import torch
+import xgboost as xgb
+
+from config import (
+    BUFFER_SIZE,
+    IFACE,
+    PORT,
+    SCALER_FILE,
+    TORCH_NUM_THREADS,
+    TST_ATTACK_THRESHOLD,
+    TST_COOLDOWN_WINDOWS,
+    TST_CLEAR_THRESHOLD,
+    TST_MODEL_FILE,
+    TST_QUEUE_MAX,
+    TST_SEQ_LENGTH,
+    TST_TORCHSCRIPT_FILE,
+    TST_CONFIRM_POSITIVES,
+    WINDOW_SIZE,
+    XGB_CONSECUTIVE_POSITIVES,
+    XGB_MODEL_FILE,
+    XGB_QUEUE_MAX,
+    XGB_SEQ_LENGTH,
+    configure_logging,
+    ensure_file,
+    get_udp_bpf,
+)
+
+try:
+    import scapy.all as scapy
+except ImportError as exc:  # pragma: no cover - runtime guard
+    raise SystemExit(
+        "Scapy is required for packet capture. Install via `pip install scapy`."
+    ) from exc
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class WindowSample:
+    """Aggregated statistics for a single window."""
+
+    start_ts: float
+    end_ts: float
+    count: int
+    total_length: int
+
+
+class RateLimiter:
+    """Allow logging a message at most once per interval."""
+
+    def __init__(self, interval_sec: float) -> None:
+        self.interval = interval_sec
+        self._lock = threading.Lock()
+        self._next_allowed = 0.0
+
+    def should_log(self) -> bool:
+        now = time.time()
+        with self._lock:
+            if now >= self._next_allowed:
+                self._next_allowed = now + self.interval
+                return True
+        return False
+
+
+def load_xgb_model() -> xgb.XGBClassifier:
+    ensure_file(XGB_MODEL_FILE, "XGBoost model")
+    model = xgb.XGBClassifier()
+    model.load_model(str(XGB_MODEL_FILE))
+    if getattr(model, "n_features_in_", None) not in (None, XGB_SEQ_LENGTH):
+        raise ValueError(
+            f"XGBoost model expects {model.n_features_in_} features, "
+            f"but config specifies {XGB_SEQ_LENGTH}"
+        )
+    LOGGER.info("Loaded XGBoost model from %s", XGB_MODEL_FILE)
+    return model
+
+
+def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim == 1:
+        logits = logits.unsqueeze(0)
+    if logits.ndim != 2:
+        raise ValueError(f"TST model must return rank-2 logits; got shape {tuple(logits.shape)}")
+    if logits.shape[1] == 1:
+        attack = torch.sigmoid(logits)
+        probs = torch.cat([1 - attack, attack], dim=1)
+    elif logits.shape[1] >= 2:
+        probs = torch.softmax(logits, dim=1)
+    else:
+        raise ValueError(f"TST model produced invalid class dimension: {tuple(logits.shape)}")
+    return probs
+
+
+def _safe_torch_load(path):
+    try:
+        return torch.load(str(path), map_location="cpu", weights_only=False)
+    except TypeError:
+        return torch.load(str(path), map_location="cpu")
+
+
+def load_tst_model():
+    ensure_file(SCALER_FILE, "StandardScaler pickle")
+    scaler = joblib.load(SCALER_FILE)
+    model: Optional[torch.nn.Module]
+    scripted = False
+
+    if TST_TORCHSCRIPT_FILE.exists():
+        model = torch.jit.load(str(TST_TORCHSCRIPT_FILE), map_location="cpu")
+        scripted = True
+        LOGGER.info("Loaded TorchScript TST model from %s", TST_TORCHSCRIPT_FILE)
+    else:
+        ensure_file(TST_MODEL_FILE, "PyTorch TST model")
+        LOGGER.warning(
+            "TorchScript model not found; falling back to .pth (requires tstplus module)."
+        )
+        try:
+            from tstplus import (
+                TSTPlus,
+                _TSTBackbone,
+                _TSTEncoder,
+                _TSTEncoderLayer,
+            )  # noqa: F401  (register classes for torch.load)
+            globals().setdefault("TSTPlus", TSTPlus)
+            globals().setdefault("_TSTBackbone", _TSTBackbone)
+            globals().setdefault("_TSTEncoder", _TSTEncoder)
+            globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
+        except Exception as exc:  # pragma: no cover - import guard
+            raise RuntimeError(
+                "TorchScript model missing and fallback import of tstplus.TSTPlus failed. "
+                "Install the 'tsai' dependency and ensure tstplus.py is accessible."
+            ) from exc
+        model = _safe_torch_load(TST_MODEL_FILE)
+
+    model.eval()
+    torch.set_num_threads(TORCH_NUM_THREADS)
+
+    # Verify that the scaler + model pair accepts the configured sequence length and
+    # produces a 2-class output. This catches mismatched artifacts early instead of
+    # failing inside the inference threads.
+    try:
+        zero_counts = np.zeros((TST_SEQ_LENGTH, 1), dtype=np.float32)
+        scaled = scaler.transform(zero_counts).astype(np.float32)
+    except Exception as exc:
+        raise ValueError(
+            "Scaler failed to transform a zero vector; verify scaler.pkl matches training pipeline"
+        ) from exc
+
+    tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+    with torch.no_grad():
+        try:
+            logits = model(tensor)
+        except Exception as exc:
+            raise ValueError(
+                f"TST model rejected input shaped (1, 1, {TST_SEQ_LENGTH}); check seq length and architecture"
+            ) from exc
+
+    _ = _logits_to_probs(logits)
+
+    LOGGER.info("Validated TST model output shape=%s", tuple(logits.shape))
+    return scaler, model, scripted
+
+
+def collector_thread(
+    stop_event: threading.Event,
+    counter: Dict[str, int],
+    counter_lock: threading.Lock,
+) -> None:
+    LOGGER.info("Collector running on iface=%s port=%s", IFACE, PORT)
+
+    def packet_callback(packet) -> None:
+        if stop_event.is_set():
+            return
+        if scapy.UDP in packet and scapy.Raw in packet:
+            payload = packet[scapy.Raw].load
+            if payload and payload[0] in (0xFD, 0xFE):
+                length = len(payload)
+                with counter_lock:
+                    counter["count"] += 1
+                    counter["bytes"] += length
+    bpf = get_udp_bpf()
+    try:
+        sniffer = scapy.AsyncSniffer(
+            iface=IFACE,
+            store=False,
+            prn=packet_callback,
+            filter=bpf,
+        )
+        sniffer.start()
+    except Exception:
+        LOGGER.exception("Failed to start sniffer with payload filter; falling back to port-only")
+        sniffer = scapy.AsyncSniffer(
+            iface=IFACE,
+            store=False,
+            prn=packet_callback,
+            filter=f"udp and port {PORT}",
+        )
+        sniffer.start()
+
+    try:
+        while not stop_event.wait(0.5):
+            pass
+    finally:
+        try:
+            sniffer.stop()
+        except Exception:
+            LOGGER.exception("Error stopping sniffer")
+
+
+def window_aggregator_thread(
+    stop_event: threading.Event,
+    counter: Dict[str, int],
+    counter_lock: threading.Lock,
+    buffer: Deque[WindowSample],
+    buffer_lock: threading.Lock,
+    xgb_queue: Queue,
+) -> None:
+    LOGGER.info("Window aggregator started (window=%.2fs)", WINDOW_SIZE)
+    drop_limiter = RateLimiter(30.0)
+    window_start = time.time()
+
+    while not stop_event.is_set():
+        deadline = window_start + WINDOW_SIZE
+        remaining = deadline - time.time()
+        if remaining > 0:
+            stop_event.wait(remaining)
+            if stop_event.is_set():
+                break
+
+        with counter_lock:
+            count = counter["count"]
+            total_len = counter["bytes"]
+            counter["count"] = 0
+            counter["bytes"] = 0
+
+        sample = WindowSample(window_start, deadline, count, total_len)
+
+        with buffer_lock:
+            buffer.append(sample)
+            if len(buffer) >= XGB_SEQ_LENGTH:
+                xgb_input = [s.count for s in list(buffer)[-XGB_SEQ_LENGTH:]]
+                payload = (xgb_input, sample)
+            else:
+                payload = None
+
+        if payload:
+            try:
+                xgb_queue.put_nowait(payload)
+            except Full:
+                if drop_limiter.should_log():
+                    LOGGER.warning("XGBoost queue full; dropping window sample")
+
+        window_start = deadline
+
+    LOGGER.info("Window aggregator exiting")
+
+
+def xgboost_screener_thread(
+    stop_event: threading.Event,
+    model: xgb.XGBClassifier,
+    buffer: Deque[WindowSample],
+    buffer_lock: threading.Lock,
+    xgb_queue: Queue,
+    tst_queue: Queue,
+) -> None:
+    LOGGER.info(
+        "XGBoost screener running (seq=%d, threshold=%d)",
+        XGB_SEQ_LENGTH,
+        XGB_CONSECUTIVE_POSITIVES,
+    )
+    consecutive = 0
+    cooldown = 0
+    drop_limiter = RateLimiter(30.0)
+
+    while not stop_event.is_set():
+        try:
+            xgb_input, sample = xgb_queue.get(timeout=0.5)
+        except Empty:
+            continue
+
+        if stop_event.is_set():
+            break
+
+        if cooldown > 0:
+            cooldown -= 1
+
+        features = np.array(xgb_input, dtype=np.float32).reshape(1, -1)
+        pred = int(model.predict(features)[0])
+        proba = float(model.predict_proba(features)[0][1])
+
+        if pred == 1:
+            consecutive += 1
+        else:
+            consecutive = 0
+
+        LOGGER.info(
+            "window_end=%.3f count=%d bytes=%d xgb_pred=%d proba=%.3f streak=%d cooldown=%d",
+            sample.end_ts,
+            sample.count,
+            sample.total_length,
+            pred,
+            proba,
+            consecutive,
+            cooldown,
+        )
+
+        if (
+            pred == 1
+            and consecutive >= XGB_CONSECUTIVE_POSITIVES
+            and cooldown == 0
+        ):
+            with buffer_lock:
+                if len(buffer) >= TST_SEQ_LENGTH:
+                    sequence = list(buffer)[-TST_SEQ_LENGTH:]
+                else:
+                    sequence = []
+
+            if not sequence:
+                LOGGER.warning(
+                    "TST trigger skipped: only %d/%d windows available",
+                    len(buffer),
+                    TST_SEQ_LENGTH,
+                )
+                continue
+
+            try:
+                tst_queue.put_nowait(sequence)
+            except Full:
+                if drop_limiter.should_log():
+                    LOGGER.warning("TST queue full; dropping trigger")
+            else:
+                LOGGER.warning(
+                    "XGBoost trigger: queued TST confirmation after %d consecutive positives",
+                    consecutive,
+                )
+                consecutive = 0
+                cooldown = TST_COOLDOWN_WINDOWS
+
+    LOGGER.info("XGBoost screener exiting")
+
+
+def tst_confirmer_thread(
+    stop_event: threading.Event,
+    scaler,
+    model,
+    scripted: bool,
+    tst_queue: Queue,
+) -> None:
+    LOGGER.info(
+        "TST confirmer running (seq=%d, threshold=%.2f, scripted=%s)",
+        TST_SEQ_LENGTH,
+        TST_ATTACK_THRESHOLD,
+        scripted,
+    )
+
+    current_alert = False
+    confirm_streak = 0
+
+    while not stop_event.is_set():
+        try:
+            samples: List[WindowSample] = tst_queue.get(timeout=0.5)
+        except Empty:
+            continue
+
+        counts = np.array([s.count for s in samples], dtype=np.float32)
+        scaled = scaler.transform(counts.reshape(-1, 1)).astype(np.float32)
+        tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+
+        with torch.no_grad():
+            logits = model(tensor)
+            probs = _logits_to_probs(logits)
+            attack_prob = float(probs[0, 1])
+            predicted_idx = int(torch.argmax(probs, dim=1))
+
+        LOGGER.debug(
+            "TST evaluation attack_prob=%.3f predicted=%d window_end=%.3f",
+            attack_prob,
+            predicted_idx,
+            samples[-1].end_ts,
+        )
+
+        if not current_alert:
+            if attack_prob >= TST_ATTACK_THRESHOLD:
+                confirm_streak += 1
+                if confirm_streak >= TST_CONFIRM_POSITIVES:
+                    current_alert = True
+                    confirm_streak = 0
+                    LOGGER.warning(
+                        "TST CONFIRMED ATTACK (consecutive=%d, prob=%.3f, window_end=%.3f)",
+                        TST_CONFIRM_POSITIVES,
+                        attack_prob,
+                        samples[-1].end_ts,
+                    )
+            else:
+                confirm_streak = 0
+        else:
+            if attack_prob <= TST_CLEAR_THRESHOLD:
+                current_alert = False
+                LOGGER.warning(
+                    "TST back to NORMAL (prob=%.3f <= clear=%.2f, window_end=%.3f)",
+                    attack_prob,
+                    TST_CLEAR_THRESHOLD,
+                    samples[-1].end_ts,
+                )
+
+    LOGGER.info("TST confirmer exiting")
+
+
+def install_signal_handlers(stop_event: threading.Event) -> None:
+    def _handle_signal(signum, _frame):
+        LOGGER.info("Received signal %s; shutting down", signum)
+        stop_event.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, _handle_signal)
+
+
+def main() -> int:
+    configure_logging("hybrid-detector")
+    LOGGER.info("Starting hybrid detector")
+
+    try:
+        xgb_model = load_xgb_model()
+        scaler, tst_model, scripted = load_tst_model()
+    except FileNotFoundError as exc:
+        LOGGER.error(str(exc))
+        return 1
+    except Exception:
+        LOGGER.exception("Failed to initialize models")
+        return 1
+
+    stop_event = threading.Event()
+    install_signal_handlers(stop_event)
+
+    counter = {"count": 0, "bytes": 0}
+    counter_lock = threading.Lock()
+    buffer: Deque[WindowSample] = deque(maxlen=BUFFER_SIZE)
+    buffer_lock = threading.Lock()
+
+    xgb_queue: Queue = Queue(maxsize=XGB_QUEUE_MAX)
+    tst_queue: Queue = Queue(maxsize=TST_QUEUE_MAX)
+
+    threads = [
+        threading.Thread(
+            target=collector_thread,
+            name="collector",
+            args=(stop_event, counter, counter_lock),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=window_aggregator_thread,
+            name="window",
+            args=(stop_event, counter, counter_lock, buffer, buffer_lock, xgb_queue),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=xgboost_screener_thread,
+            name="xgb",
+            args=(stop_event, xgb_model, buffer, buffer_lock, xgb_queue, tst_queue),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=tst_confirmer_thread,
+            name="tst",
+            args=(stop_event, scaler, tst_model, scripted, tst_queue),
+            daemon=True,
+        ),
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    try:
+        while not stop_event.is_set():
+            time.sleep(1.0)
+    except KeyboardInterrupt:
+        LOGGER.info("Keyboard interrupt received; stopping")
+    finally:
+        stop_event.set()
+        for thread in threads:
+            thread.join(timeout=2.0)
+        LOGGER.info("Hybrid detector stopped")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+============================================================
+
+FILE 4/8: manual_control_detector.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\manual_control_detector.py
+Size: 15,861 bytes
+Modified: 2025-10-06 07:56:09
+------------------------------------------------------------
+"""Manual-control DDoS detector for Raspberry Pi experiments."""
+
+from __future__ import annotations
+
+import logging
+import signal
+import sys
+import threading
+import time
+from collections import deque
+from dataclasses import dataclass
+from typing import Deque, Dict, List
+
+import joblib
+import numpy as np
+import torch
+import xgboost as xgb
+
+from config import (
+    BUFFER_SIZE,
+    IFACE,
+    PORT,
+    SCALER_FILE,
+    TORCH_NUM_THREADS,
+    TST_ATTACK_THRESHOLD,
+    TST_CLEAR_THRESHOLD,
+    TST_CONFIRM_POSITIVES,
+    TST_MODEL_FILE,
+    TST_SEQ_LENGTH,
+    TST_TORCHSCRIPT_FILE,
+    WINDOW_SIZE,
+    XGB_MODEL_FILE,
+    XGB_SEQ_LENGTH,
+    configure_logging,
+    ensure_file,
+    get_udp_bpf,
+)
+
+try:
+    import scapy.all as scapy
+except ImportError as exc:  # pragma: no cover - runtime guard
+    raise SystemExit(
+        "Scapy is required for packet capture. Install via `pip install scapy`."
+    ) from exc
+
+
+LOGGER = logging.getLogger(__name__)
+DEFAULT_MODEL = "XGBOOST"
+
+
+@dataclass
+class WindowSample:
+    start_ts: float
+    end_ts: float
+    count: int
+    total_length: int
+
+
+class RateLimiter:
+    def __init__(self, interval_sec: float) -> None:
+        self.interval = interval_sec
+        self._lock = threading.Lock()
+        self._next_allowed = 0.0
+
+    def should_log(self) -> bool:
+        now = time.time()
+        with self._lock:
+            if now >= self._next_allowed:
+                self._next_allowed = now + self.interval
+                return True
+        return False
+
+
+def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim == 1:
+        logits = logits.unsqueeze(0)
+    if logits.ndim != 2:
+        raise ValueError(f"TST model must return rank-2 logits; got shape {tuple(logits.shape)}")
+    if logits.shape[1] == 1:
+        attack = torch.sigmoid(logits)
+        probs = torch.cat([1 - attack, attack], dim=1)
+    elif logits.shape[1] >= 2:
+        probs = torch.softmax(logits, dim=1)
+    else:
+        raise ValueError(f"TST model produced invalid class dimension: {tuple(logits.shape)}")
+    return probs
+
+
+def _safe_torch_load(path):
+    try:
+        return torch.load(str(path), map_location="cpu", weights_only=False)
+    except TypeError:
+        return torch.load(str(path), map_location="cpu")
+
+
+def load_xgb_model() -> xgb.XGBClassifier:
+    ensure_file(XGB_MODEL_FILE, "XGBoost model")
+    model = xgb.XGBClassifier()
+    model.load_model(str(XGB_MODEL_FILE))
+    if getattr(model, "n_features_in_", None) not in (None, XGB_SEQ_LENGTH):
+        raise ValueError(
+            f"XGBoost model expects {model.n_features_in_} features yet config specifies {XGB_SEQ_LENGTH}."
+        )
+    LOGGER.info("Loaded XGBoost model from %s", XGB_MODEL_FILE)
+    return model
+
+
+def load_tst_model():
+    ensure_file(SCALER_FILE, "StandardScaler pickle")
+    scaler = joblib.load(SCALER_FILE)
+
+    if TST_TORCHSCRIPT_FILE.exists():
+        model = torch.jit.load(str(TST_TORCHSCRIPT_FILE), map_location="cpu")
+        scripted = True
+        LOGGER.info("Loaded TorchScript TST model from %s", TST_TORCHSCRIPT_FILE)
+    else:
+        ensure_file(TST_MODEL_FILE, "PyTorch TST model")
+        LOGGER.warning(
+            "TorchScript TST model not found; falling back to .pth (requires tstplus module)."
+        )
+        try:
+            from tstplus import (
+                TSTPlus,
+                _TSTBackbone,
+                _TSTEncoder,
+                _TSTEncoderLayer,
+            )  # noqa: F401  (register classes for torch.load)
+            globals().setdefault("TSTPlus", TSTPlus)
+            globals().setdefault("_TSTBackbone", _TSTBackbone)
+            globals().setdefault("_TSTEncoder", _TSTEncoder)
+            globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
+        except Exception as exc:  # pragma: no cover - import guard
+            raise RuntimeError(
+                "TorchScript model missing and fallback import of tstplus.TSTPlus failed. "
+                "Install the 'tsai' dependency and ensure tstplus.py is accessible."
+            ) from exc
+        model = _safe_torch_load(TST_MODEL_FILE)
+        scripted = False
+
+    model.eval()
+    torch.set_num_threads(TORCH_NUM_THREADS)
+
+    try:
+        zero_counts = np.zeros((TST_SEQ_LENGTH, 1), dtype=np.float32)
+        scaled = scaler.transform(zero_counts).astype(np.float32)
+    except Exception as exc:
+        raise ValueError(
+            "Scaler failed to transform a zero vector; verify scaler.pkl matches training pipeline"
+        ) from exc
+
+    tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+    with torch.no_grad():
+        try:
+            logits = model(tensor)
+        except Exception as exc:
+            raise ValueError(
+                f"TST model rejected input shaped (1, 1, {TST_SEQ_LENGTH}); check seq length and architecture"
+            ) from exc
+
+    _ = _logits_to_probs(logits)
+    LOGGER.info("Validated TST model output shape=%s", tuple(logits.shape))
+
+    return scaler, model, scripted
+
+
+def collector_thread(
+    stop_event: threading.Event,
+    counter: Dict[str, int],
+    counter_lock: threading.Lock,
+) -> None:
+    LOGGER.info("Collector running on iface=%s port=%s", IFACE, PORT)
+
+    def packet_callback(packet) -> None:
+        if stop_event.is_set():
+            return
+        if scapy.UDP in packet and scapy.Raw in packet:
+            payload = packet[scapy.Raw].load
+            if payload and payload[0] in (0xFD, 0xFE):
+                length = len(payload)
+                with counter_lock:
+                    counter["count"] += 1
+                    counter["bytes"] += length
+
+    bpf = get_udp_bpf()
+    try:
+        sniffer = scapy.AsyncSniffer(
+            iface=IFACE,
+            store=False,
+            prn=packet_callback,
+            filter=bpf,
+        )
+        sniffer.start()
+    except Exception:
+        LOGGER.exception("Failed to start sniffer with payload filter; falling back to port-only")
+        sniffer = scapy.AsyncSniffer(
+            iface=IFACE,
+            store=False,
+            prn=packet_callback,
+            filter=f"udp and port {PORT}",
+        )
+        sniffer.start()
+
+    try:
+        while not stop_event.wait(0.5):
+            pass
+    finally:
+        try:
+            sniffer.stop()
+        except Exception:
+            LOGGER.exception("Error stopping sniffer")
+
+
+def window_thread(
+    stop_event: threading.Event,
+    counter: Dict[str, int],
+    counter_lock: threading.Lock,
+    buffer: Deque[WindowSample],
+    buffer_lock: threading.Lock,
+    new_window_event: threading.Event,
+) -> None:
+    LOGGER.info("Window aggregator started (window=%.2fs)", WINDOW_SIZE)
+    window_start = time.time()
+
+    while not stop_event.is_set():
+        deadline = window_start + WINDOW_SIZE
+        remaining = deadline - time.time()
+        if remaining > 0:
+            stop_event.wait(remaining)
+            if stop_event.is_set():
+                break
+
+        with counter_lock:
+            count = counter["count"]
+            total_len = counter["bytes"]
+            counter["count"] = 0
+            counter["bytes"] = 0
+
+        sample = WindowSample(window_start, deadline, count, total_len)
+
+        with buffer_lock:
+            buffer.append(sample)
+
+        LOGGER.info(
+            "window_end=%.3f count=%d bytes=%d buffered=%d",
+            sample.end_ts,
+            sample.count,
+            sample.total_length,
+            len(buffer),
+        )
+
+        new_window_event.set()
+        window_start = deadline
+
+    LOGGER.info("Window aggregator exiting")
+
+
+def detector_thread(
+    stop_event: threading.Event,
+    state: Dict[str, str],
+    state_lock: threading.Lock,
+    buffer: Deque[WindowSample],
+    buffer_lock: threading.Lock,
+    new_window_event: threading.Event,
+    xgb_model: xgb.XGBClassifier,
+    scaler,
+    tst_model,
+) -> None:
+    LOGGER.info("Detector running (manual switch between XGB and TST)")
+    rate_limiter = RateLimiter(15.0)
+    tst_alert = False
+    tst_confirm = 0
+
+    while not stop_event.is_set():
+        new_window_event.wait(timeout=1.0)
+        new_window_event.clear()
+        if stop_event.is_set():
+            break
+
+        with state_lock:
+            active_model = state["current_model"]
+
+        if active_model == "XGBOOST":
+            with buffer_lock:
+                if len(buffer) < XGB_SEQ_LENGTH:
+                    if rate_limiter.should_log():
+                        LOGGER.info(
+                            "XGB collecting windows: have %d need %d",
+                            len(buffer),
+                            XGB_SEQ_LENGTH,
+                        )
+                    continue
+                sequence = list(buffer)[-XGB_SEQ_LENGTH:]
+
+            features = np.array([s.count for s in sequence], dtype=np.float32).reshape(1, -1)
+            pred = int(xgb_model.predict(features)[0])
+            proba = float(xgb_model.predict_proba(features)[0][1])
+            status = "ATTACK" if pred == 1 else "NORMAL"
+            LOGGER.warning(
+                "[XGB] status=%s prob=%.3f window_end=%.3f", status, proba, sequence[-1].end_ts
+            )
+
+        elif active_model == "TST":
+            with buffer_lock:
+                if len(buffer) < TST_SEQ_LENGTH:
+                    if rate_limiter.should_log():
+                        LOGGER.info(
+                            "TST collecting windows: have %d need %d",
+                            len(buffer),
+                            TST_SEQ_LENGTH,
+                        )
+                    continue
+                sequence = list(buffer)[-TST_SEQ_LENGTH:]
+
+            counts = np.array([s.count for s in sequence], dtype=np.float32)
+            scaled = scaler.transform(counts.reshape(-1, 1)).astype(np.float32)
+            tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+
+            with torch.no_grad():
+                logits = tst_model(tensor)
+                probs = _logits_to_probs(logits)
+                attack_prob = float(probs[0, 1])
+                predicted_idx = int(torch.argmax(probs, dim=1))
+
+            LOGGER.debug(
+                "[TST] eval attack_prob=%.3f predicted=%d window_end=%.3f",
+                attack_prob,
+                predicted_idx,
+                sequence[-1].end_ts,
+            )
+
+            if not tst_alert:
+                if attack_prob >= TST_ATTACK_THRESHOLD:
+                    tst_confirm += 1
+                    if tst_confirm >= TST_CONFIRM_POSITIVES:
+                        tst_alert = True
+                        tst_confirm = 0
+                        LOGGER.warning(
+                            "[TST] CONFIRMED ATTACK (consecutive=%d, prob=%.3f, window_end=%.3f)",
+                            TST_CONFIRM_POSITIVES,
+                            attack_prob,
+                            sequence[-1].end_ts,
+                        )
+                    elif rate_limiter.should_log():
+                        LOGGER.info(
+                            "[TST] pending confirmation %d/%d prob=%.3f window_end=%.3f",
+                            tst_confirm,
+                            TST_CONFIRM_POSITIVES,
+                            attack_prob,
+                            sequence[-1].end_ts,
+                        )
+                else:
+                    if tst_confirm and rate_limiter.should_log():
+                        LOGGER.info(
+                            "[TST] reset confirmation streak prob=%.3f window_end=%.3f",
+                            attack_prob,
+                            sequence[-1].end_ts,
+                        )
+                    tst_confirm = 0
+            else:
+                if attack_prob <= TST_CLEAR_THRESHOLD:
+                    tst_alert = False
+                    LOGGER.warning(
+                        "[TST] back to NORMAL (prob=%.3f <= clear=%.2f, window_end=%.3f)",
+                        attack_prob,
+                        TST_CLEAR_THRESHOLD,
+                        sequence[-1].end_ts,
+                    )
+                elif rate_limiter.should_log():
+                    LOGGER.info(
+                        "[TST] sustained attack prob=%.3f window_end=%.3f",
+                        attack_prob,
+                        sequence[-1].end_ts,
+                    )
+
+        else:
+            LOGGER.error("Unknown model selection: %s", active_model)
+
+    LOGGER.info("Detector exiting")
+
+
+def input_thread(
+    stop_event: threading.Event,
+    state: Dict[str, str],
+    state_lock: threading.Lock,
+) -> None:
+    LOGGER.info("Input controller ready (type 1=XGB, 2=TST, q=quit)")
+    while not stop_event.is_set():
+        try:
+            choice = input("Select model [1=XGB, 2=TST, q=quit]: ").strip().lower()
+        except EOFError:
+            LOGGER.info("Input EOF encountered; stopping")
+            stop_event.set()
+            break
+
+        if choice in {"q", "quit"}:
+            LOGGER.info("Quit requested from console")
+            stop_event.set()
+            break
+
+        if choice not in {"1", "2"}:
+            LOGGER.warning("Invalid selection '%s'", choice)
+            continue
+
+        new_mode = "XGBOOST" if choice == "1" else "TST"
+        with state_lock:
+            if state["current_model"] != new_mode:
+                LOGGER.info("Switching model -> %s", new_mode)
+                state["current_model"] = new_mode
+            else:
+                LOGGER.info("Model already %s", new_mode)
+
+
+def install_signal_handlers(stop_event: threading.Event) -> None:
+    def _handle_signal(signum, _frame):
+        LOGGER.info("Received signal %s; shutting down", signum)
+        stop_event.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, _handle_signal)
+
+
+def main() -> int:
+    configure_logging("manual-detector")
+    LOGGER.info("Starting manual-control detector")
+
+    try:
+        xgb_model = load_xgb_model()
+        scaler, tst_model, _ = load_tst_model()
+    except FileNotFoundError as exc:
+        LOGGER.error(str(exc))
+        return 1
+    except Exception:
+        LOGGER.exception("Failed to initialize models")
+        return 1
+
+    stop_event = threading.Event()
+    install_signal_handlers(stop_event)
+
+    counter = {"count": 0, "bytes": 0}
+    counter_lock = threading.Lock()
+    buffer: Deque[WindowSample] = deque(maxlen=BUFFER_SIZE)
+    buffer_lock = threading.Lock()
+    new_window_event = threading.Event()
+
+    state = {"current_model": DEFAULT_MODEL}
+    state_lock = threading.Lock()
+
+    threads = [
+        threading.Thread(
+            target=collector_thread,
+            name="collector",
+            args=(stop_event, counter, counter_lock),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=window_thread,
+            name="window",
+            args=(stop_event, counter, counter_lock, buffer, buffer_lock, new_window_event),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=detector_thread,
+            name="detector",
+            args=(
+                stop_event,
+                state,
+                state_lock,
+                buffer,
+                buffer_lock,
+                new_window_event,
+                xgb_model,
+                scaler,
+                tst_model,
+            ),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=input_thread,
+            name="input",
+            args=(stop_event, state, state_lock),
+            daemon=True,
+        ),
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    try:
+        while not stop_event.is_set():
+            time.sleep(1.0)
+    except KeyboardInterrupt:
+        LOGGER.info("Keyboard interrupt received; stopping")
+    finally:
+        stop_event.set()
+        for thread in threads:
+            thread.join(timeout=2.0)
+        LOGGER.info("Manual detector stopped")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+============================================================
+
+FILE 5/8: realtime_tst.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\realtime_tst.py
+Size: 12,788 bytes
+Modified: 2025-10-06 08:59:54
+------------------------------------------------------------
+"""Real-time TST-only DDoS detector for MAVLink-over-UDP."""
+
+from __future__ import annotations
+
+import logging
+import signal
+import sys
+import threading
+import time
+from collections import deque
+from dataclasses import dataclass
+from queue import Empty, Full, Queue
+from typing import Deque, Dict, List
+
+import joblib
+import numpy as np
+import torch
+
+from config import (
+    BUFFER_SIZE,
+    IFACE,
+    PORT,
+    SCALER_FILE,
+    TORCH_NUM_THREADS,
+    TST_ATTACK_THRESHOLD,
+    TST_CLEAR_THRESHOLD,
+    TST_CONFIRM_POSITIVES,
+    TST_MODEL_FILE,
+    TST_QUEUE_MAX,
+    TST_SEQ_LENGTH,
+    TST_TORCHSCRIPT_FILE,
+    WINDOW_SIZE,
+    configure_logging,
+    ensure_file,
+    get_udp_bpf,
+)
+
+try:
+    import scapy.all as scapy
+except ImportError as exc:  # pragma: no cover - runtime guard
+    raise SystemExit(
+        "Scapy is required for packet capture. Install via `pip install scapy`."
+    ) from exc
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class WindowSample:
+    start_ts: float
+    end_ts: float
+    count: int
+    total_length: int
+
+
+class RateLimiter:
+    def __init__(self, interval_sec: float) -> None:
+        self.interval = interval_sec
+        self._lock = threading.Lock()
+        self._next_allowed = 0.0
+
+    def should_log(self) -> bool:
+        now = time.time()
+        with self._lock:
+            if now >= self._next_allowed:
+                self._next_allowed = now + self.interval
+                return True
+        return False
+
+
+def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim == 1:
+        logits = logits.unsqueeze(0)
+    if logits.ndim != 2:
+        raise ValueError(f"TST model must return rank-2 logits; got shape {tuple(logits.shape)}")
+    if logits.shape[1] == 1:
+        attack = torch.sigmoid(logits)
+        probs = torch.cat([1 - attack, attack], dim=1)
+    elif logits.shape[1] >= 2:
+        probs = torch.softmax(logits, dim=1)
+    else:
+        raise ValueError(f"TST model produced invalid class dimension: {tuple(logits.shape)}")
+    return probs
+
+
+def _safe_torch_load(path):
+    try:
+        return torch.load(str(path), map_location="cpu", weights_only=False)
+    except TypeError:
+        return torch.load(str(path), map_location="cpu")
+
+
+def load_tst_model():
+    ensure_file(SCALER_FILE, "StandardScaler pickle")
+    scaler = joblib.load(SCALER_FILE)
+
+    if TST_TORCHSCRIPT_FILE.exists():
+        model = torch.jit.load(str(TST_TORCHSCRIPT_FILE), map_location="cpu")
+        scripted = True
+        LOGGER.info("Loaded TorchScript TST model from %s", TST_TORCHSCRIPT_FILE)
+    else:
+        ensure_file(TST_MODEL_FILE, "PyTorch TST model")
+        LOGGER.warning(
+            "TorchScript model not found; falling back to .pth (requires tstplus module)."
+        )
+        try:
+            from tstplus import (
+                TSTPlus,
+                _TSTBackbone,
+                _TSTEncoder,
+                _TSTEncoderLayer,
+            )  # noqa: F401  (register classes for torch.load)
+            globals().setdefault("TSTPlus", TSTPlus)
+            globals().setdefault("_TSTBackbone", _TSTBackbone)
+            globals().setdefault("_TSTEncoder", _TSTEncoder)
+            globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
+        except Exception as exc:  # pragma: no cover - import guard
+            raise RuntimeError(
+                "TorchScript model missing and fallback import of tstplus.TSTPlus failed. "
+                "Install the 'tsai' dependency and ensure tstplus.py is accessible."
+            ) from exc
+        model = _safe_torch_load(TST_MODEL_FILE)
+        scripted = False
+
+    model.eval()
+    torch.set_num_threads(TORCH_NUM_THREADS)
+
+    # Validate that scaler and model agree with the configured sequence length and
+    # produce a 2-class output tensor. Failing fast here avoids obscure runtime errors
+    # deep inside the detector thread.
+    try:
+        zero_counts = np.zeros((TST_SEQ_LENGTH, 1), dtype=np.float32)
+        scaled = scaler.transform(zero_counts).astype(np.float32)
+    except Exception as exc:
+        raise ValueError(
+            "Scaler failed to transform a zero vector; ensure scaler.pkl matches training pipeline"
+        ) from exc
+
+    tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+    with torch.no_grad():
+        try:
+            logits = model(tensor)
+        except Exception as exc:
+            raise ValueError(
+                f"TST model rejected input shaped (1, 1, {TST_SEQ_LENGTH}); check seq length and architecture"
+            ) from exc
+
+    _ = _logits_to_probs(logits)
+
+    LOGGER.info("Validated TST model output shape=%s", tuple(logits.shape))
+
+    return scaler, model, scripted
+
+
+def collector_thread(
+    stop_event: threading.Event,
+    counter: Dict[str, int],
+    counter_lock: threading.Lock,
+) -> None:
+    LOGGER.info("Collector running on iface=%s port=%s", IFACE, PORT)
+
+    def packet_callback(packet) -> None:
+        if stop_event.is_set():
+            return
+        if scapy.UDP in packet and scapy.Raw in packet:
+            payload = packet[scapy.Raw].load
+            if payload and payload[0] in (0xFD, 0xFE):
+                length = len(payload)
+                with counter_lock:
+                    counter["count"] += 1
+                    counter["bytes"] += length
+    bpf = get_udp_bpf()
+    try:
+        sniffer = scapy.AsyncSniffer(
+            iface=IFACE,
+            store=False,
+            prn=packet_callback,
+            filter=bpf,
+        )
+        sniffer.start()
+    except Exception:
+        LOGGER.exception("Failed to start sniffer with payload filter; falling back to port-only")
+        sniffer = scapy.AsyncSniffer(
+            iface=IFACE,
+            store=False,
+            prn=packet_callback,
+            filter=f"udp and port {PORT}",
+        )
+        sniffer.start()
+
+    try:
+        while not stop_event.wait(0.5):
+            pass
+    finally:
+        try:
+            sniffer.stop()
+        except Exception:
+            LOGGER.exception("Error stopping sniffer")
+
+
+def window_thread(
+    stop_event: threading.Event,
+    counter: Dict[str, int],
+    counter_lock: threading.Lock,
+    buffer: Deque[WindowSample],
+    buffer_lock: threading.Lock,
+    detect_queue: Queue,
+) -> None:
+    LOGGER.info("Window aggregator started (window=%.2fs seq=%d)", WINDOW_SIZE, TST_SEQ_LENGTH)
+    drop_limiter = RateLimiter(30.0)
+    window_start = time.time()
+
+    while not stop_event.is_set():
+        deadline = window_start + WINDOW_SIZE
+        remaining = deadline - time.time()
+        if remaining > 0:
+            stop_event.wait(remaining)
+            if stop_event.is_set():
+                break
+
+        with counter_lock:
+            count = counter["count"]
+            total_len = counter["bytes"]
+            counter["count"] = 0
+            counter["bytes"] = 0
+
+        sample = WindowSample(window_start, deadline, count, total_len)
+
+        sequence: List[WindowSample] = []
+        with buffer_lock:
+            buffer.append(sample)
+            if len(buffer) >= TST_SEQ_LENGTH:
+                sequence = list(buffer)[-TST_SEQ_LENGTH:]
+
+        LOGGER.info(
+            "window_end=%.3f count=%d bytes=%d buffered=%d",
+            sample.end_ts,
+            sample.count,
+            sample.total_length,
+            len(buffer),
+        )
+
+        if sequence:
+            try:
+                detect_queue.put_nowait(sequence)
+            except Full:
+                if drop_limiter.should_log():
+                    LOGGER.warning("Detection queue full; dropping TST sequence")
+
+        window_start = deadline
+
+    LOGGER.info("Window aggregator exiting")
+
+
+def detector_thread(
+    stop_event: threading.Event,
+    scaler,
+    model,
+    scripted: bool,
+    detect_queue: Queue,
+) -> None:
+    LOGGER.info(
+        "Detector running (seq=%d threshold=%.2f scripted=%s)",
+        TST_SEQ_LENGTH,
+        TST_ATTACK_THRESHOLD,
+        scripted,
+    )
+
+    current_alert = False
+    confirm_streak = 0
+    rate_limiter = RateLimiter(15.0)
+
+    while not stop_event.is_set():
+        try:
+            sequence: List[WindowSample] = detect_queue.get(timeout=0.5)
+        except Empty:
+            continue
+
+        counts = np.array([s.count for s in sequence], dtype=np.float32)
+        scaled = scaler.transform(counts.reshape(-1, 1)).astype(np.float32)
+        tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+
+        start = time.time()
+        with torch.no_grad():
+            logits = model(tensor)
+            probs = _logits_to_probs(logits)
+            attack_prob = float(probs[0, 1])
+            predicted_idx = int(torch.argmax(probs, dim=1))
+        duration_ms = (time.time() - start) * 1000.0
+
+        LOGGER.debug(
+            "TST inference attack_prob=%.3f predicted=%d duration_ms=%.1f window_end=%.3f",
+            attack_prob,
+            predicted_idx,
+            duration_ms,
+            sequence[-1].end_ts,
+        )
+
+        if not current_alert:
+            if attack_prob >= TST_ATTACK_THRESHOLD:
+                confirm_streak += 1
+                if confirm_streak >= TST_CONFIRM_POSITIVES:
+                    current_alert = True
+                    confirm_streak = 0
+                    LOGGER.warning(
+                        "TST CONFIRMED ATTACK (consecutive=%d, prob=%.3f, window_end=%.3f)",
+                        TST_CONFIRM_POSITIVES,
+                        attack_prob,
+                        sequence[-1].end_ts,
+                    )
+                elif rate_limiter.should_log():
+                    LOGGER.info(
+                        "TST pending confirmation %d/%d prob=%.3f window_end=%.3f",
+                        confirm_streak,
+                        TST_CONFIRM_POSITIVES,
+                        attack_prob,
+                        sequence[-1].end_ts,
+                    )
+            else:
+                if confirm_streak and rate_limiter.should_log():
+                    LOGGER.info(
+                        "TST reset confirmation streak prob=%.3f window_end=%.3f",
+                        attack_prob,
+                        sequence[-1].end_ts,
+                    )
+                confirm_streak = 0
+        else:
+            if attack_prob <= TST_CLEAR_THRESHOLD:
+                current_alert = False
+                LOGGER.warning(
+                    "TST back to NORMAL (prob=%.3f <= clear=%.2f, window_end=%.3f)",
+                    attack_prob,
+                    TST_CLEAR_THRESHOLD,
+                    sequence[-1].end_ts,
+                )
+            elif rate_limiter.should_log():
+                LOGGER.info(
+                    "TST sustained attack prob=%.3f window_end=%.3f",
+                    attack_prob,
+                    sequence[-1].end_ts,
+                )
+
+    LOGGER.info("Detector exiting")
+
+
+def install_signal_handlers(stop_event: threading.Event) -> None:
+    def _handle_signal(signum, _frame):
+        LOGGER.info("Received signal %s; shutting down", signum)
+        stop_event.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, _handle_signal)
+
+
+def main() -> int:
+    configure_logging("tst-realtime")
+    LOGGER.info("Starting realtime TST detector")
+
+    try:
+        scaler, model, scripted = load_tst_model()
+    except FileNotFoundError as exc:
+        LOGGER.error(str(exc))
+        return 1
+    except Exception:
+        LOGGER.exception("Failed to initialize model or scaler")
+        return 1
+
+    stop_event = threading.Event()
+    install_signal_handlers(stop_event)
+
+    counter = {"count": 0, "bytes": 0}
+    counter_lock = threading.Lock()
+    buffer: Deque[WindowSample] = deque(maxlen=BUFFER_SIZE)
+    buffer_lock = threading.Lock()
+    detect_queue: Queue = Queue(maxsize=TST_QUEUE_MAX)
+
+    threads = [
+        threading.Thread(
+            target=collector_thread,
+            name="collector",
+            args=(stop_event, counter, counter_lock),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=window_thread,
+            name="window",
+            args=(stop_event, counter, counter_lock, buffer, buffer_lock, detect_queue),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=detector_thread,
+            name="detector",
+            args=(stop_event, scaler, model, scripted, detect_queue),
+            daemon=True,
+        ),
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    try:
+        while not stop_event.is_set():
+            time.sleep(1.0)
+    except KeyboardInterrupt:
+        LOGGER.info("Keyboard interrupt received; stopping")
+    finally:
+        stop_event.set()
+        for thread in threads:
+            thread.join(timeout=2.0)
+        LOGGER.info("Realtime TST detector stopped")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+============================================================
+
+FILE 6/8: run_tst.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\run_tst.py
+Size: 4,622 bytes
+Modified: 2025-10-06 08:59:54
+------------------------------------------------------------
+"""Offline diagnostic script for the Time Series Transformer model."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from statistics import multimode
+
+import joblib
+import numpy as np
+import pandas as pd
+import torch
+
+
+def _logits_to_probs(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim == 1:
+        logits = logits.unsqueeze(0)
+    if logits.ndim != 2:
+        raise ValueError(f"TST model must return rank-2 logits; got shape {tuple(logits.shape)}")
+    if logits.shape[1] == 1:
+        attack = torch.sigmoid(logits)
+        probs = torch.cat([1 - attack, attack], dim=1)
+    elif logits.shape[1] >= 2:
+        probs = torch.softmax(logits, dim=1)
+    else:
+        raise ValueError(f"TST model produced invalid class dimension: {tuple(logits.shape)}")
+    return probs
+
+
+def _safe_torch_load(path: Path):
+    try:
+        return torch.load(str(path), map_location="cpu", weights_only=False)
+    except TypeError:
+        return torch.load(str(path), map_location="cpu")
+
+from config import (
+    SCALER_FILE,
+    TORCH_NUM_THREADS,
+    TST_ATTACK_THRESHOLD,
+    TST_MODEL_FILE,
+    TST_SEQ_LENGTH,
+    TST_TORCHSCRIPT_FILE,
+    configure_logging,
+    ensure_file,
+)
+
+TEST_DATA_FILE = Path("tcp_test_ddos_data_0.1.csv")
+
+
+def load_model():
+    ensure_file(SCALER_FILE, "StandardScaler pickle")
+    scaler = joblib.load(SCALER_FILE)
+
+    if TST_TORCHSCRIPT_FILE.exists():
+        model = torch.jit.load(str(TST_TORCHSCRIPT_FILE), map_location="cpu")
+        scripted = True
+    else:
+        ensure_file(TST_MODEL_FILE, "PyTorch TST model")
+        try:
+            from tstplus import (  # type: ignore
+                TSTPlus,
+                _TSTBackbone,
+                _TSTEncoder,
+                _TSTEncoderLayer,
+            )
+            globals().setdefault("TSTPlus", TSTPlus)
+            globals().setdefault("_TSTBackbone", _TSTBackbone)
+            globals().setdefault("_TSTEncoder", _TSTEncoder)
+            globals().setdefault("_TSTEncoderLayer", _TSTEncoderLayer)
+        except Exception as exc:
+            print(
+                "❌ TorchScript model missing and unable to import tstplus module for .pth loading."
+            )
+            print("   Install the 'tsai' extra or ensure tstplus.py is available.")
+            raise
+        model = _safe_torch_load(TST_MODEL_FILE)
+        scripted = False
+
+    model.eval()
+    torch.set_num_threads(TORCH_NUM_THREADS)
+    return scaler, model, scripted
+
+
+def main() -> int:
+    configure_logging("run-tst")
+
+    try:
+        ensure_file(TEST_DATA_FILE, "test dataset")
+        scaler, model, scripted = load_model()
+    except FileNotFoundError as exc:
+        print(f"❌ {exc}")
+        return 1
+
+    print("--- run_tst diagnostics ---")
+    print(f"Model source : {'TorchScript' if scripted else 'PyTorch state_dict'}")
+    print(f"Scaler file  : {SCALER_FILE}")
+    print(f"Test dataset : {TEST_DATA_FILE}")
+    print(f"Seq length   : {TST_SEQ_LENGTH}")
+
+    df = pd.read_csv(TEST_DATA_FILE)
+    for col in ("Mavlink_Count", "Status"):
+        if col not in df.columns:
+            print(f"❌ Column '{col}' not found. Available: {list(df.columns)}")
+            return 1
+    if len(df) < TST_SEQ_LENGTH:
+        print(
+            f"❌ Test data has only {len(df)} rows; need at least {TST_SEQ_LENGTH} to form a sequence."
+        )
+        return 1
+
+    counts = df["Mavlink_Count"].iloc[:TST_SEQ_LENGTH].to_numpy(dtype=np.float32)
+    labels = df["Status"].iloc[:TST_SEQ_LENGTH].to_numpy()
+    true_label = multimode(labels)[0]
+
+    scaled = scaler.transform(counts.reshape(-1, 1)).astype(np.float32)
+    tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+
+    with torch.no_grad():
+        logits = model(tensor)
+        probs = _logits_to_probs(logits)
+        predicted_idx = int(torch.argmax(probs, dim=1))
+        attack_prob = float(probs[0, 1])
+
+    prediction = "ATTACK" if predicted_idx == 1 else "NORMAL"
+    confidence = attack_prob if predicted_idx == 1 else float(probs[0, 0])
+    threshold_hit = attack_prob >= TST_ATTACK_THRESHOLD
+
+    print("\n--- Results ---")
+    print(f"Probabilities (normal, attack): {probs.numpy().flatten()}")
+    print(f"Predicted class            : {prediction}")
+    print(f"Attack probability         : {attack_prob:.3f}")
+    print(f"Threshold (config)         : {TST_ATTACK_THRESHOLD:.3f} -> {'trigger' if threshold_hit else 'no trigger'}")
+    print(f"True label (mode)          : {'ATTACK' if true_label == 1 else 'NORMAL'}")
+    print(f"Confidence                 : {confidence:.3f}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+============================================================
+
+FILE 7/8: run_xgboost.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\run_xgboost.py
+Size: 2,123 bytes
+Modified: 2025-10-06 08:59:54
+------------------------------------------------------------
+"""Diagnostic helper for the XGBoost screener model."""
+
+from __future__ import annotations
+
+import sys
+
+import numpy as np
+import xgboost as xgb
+
+from config import XGB_MODEL_FILE, XGB_SEQ_LENGTH, configure_logging, ensure_file
+
+
+def main() -> int:
+    configure_logging("run-xgboost")
+
+    try:
+        ensure_file(XGB_MODEL_FILE, "XGBoost model")
+    except FileNotFoundError as exc:
+        print(f"❌ {exc}")
+        return 1
+
+    model = xgb.XGBClassifier()
+    model.load_model(str(XGB_MODEL_FILE))
+
+    expected = XGB_SEQ_LENGTH
+    features_in = getattr(model, "n_features_in_", None)
+    if features_in not in (None, expected):
+        print(
+            f"❌ Model expects {features_in} features but config specifies {expected}. "
+            "Adjust XGB_SEQ_LENGTH or retrain the model."
+        )
+        return 1
+
+    print("--- run_xgboost diagnostics ---")
+    print(f"Model path        : {XGB_MODEL_FILE}")
+    print(f"Expected features : {expected}")
+
+    base_samples = {
+        "NORMAL": np.array([10, 15, 12, 18, 14], dtype=np.float32),
+        "ATTACK": np.array([150, 200, 180, 220, 190], dtype=np.float32),
+    }
+
+    samples = {
+        label: np.resize(arr, expected).astype(np.float32)
+        for label, arr in base_samples.items()
+    }
+
+    for label, arr in samples.items():
+        if arr.size != expected:
+            print(
+                f"Skipping sample '{label}' because it has {arr.size} entries but expected {expected}."
+            )
+            continue
+
+        sample = arr.reshape(1, -1)
+        try:
+            pred = int(model.predict(sample)[0])
+            probs = model.predict_proba(sample)[0]
+            confidence = probs[pred]
+            verdict = "ATTACK" if pred == 1 else "NORMAL"
+            print(
+                f"\nSample '{label}' -> predicted={verdict} (confidence={confidence:.3f})"
+            )
+            print(f"Probabilities (normal, attack): {probs}")
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"Error evaluating sample '{label}': {exc}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+============================================================
+
+FILE 8/8: tstplus.py
+============================================================
+Full Path: C:\Users\burak\Desktop\research\ddos\tstplus.py
+Size: 17,194 bytes
+Modified: 2025-09-11 11:03:51
+------------------------------------------------------------
+from typing import Callable
+from tsai.imports import *
+from tsai.utils import *
+from tsai.models.layers import *
+from tsai.models.utils import *
+from tsai.models.positional_encoders import *
+from tsai.data.core import *
+
+"""## TST"""
+
+class _TSTEncoderLayer(Module):
+    def __init__(self, q_len, d_model, n_heads, d_k=None, d_v=None, d_ff=256, store_attn=False,
+                 norm='BatchNorm', attn_dropout=0, dropout=0., bias=True, activation="gelu", res_attention=False, pre_norm=False):
+
+        assert not d_model%n_heads, f"d_model ({d_model}) must be divisible by n_heads ({n_heads})"
+        d_k = ifnone(d_k, d_model // n_heads)
+        d_v = ifnone(d_v, d_model // n_heads)
+
+        # Multi-Head attention
+        self.res_attention = res_attention
+        self.self_attn = MultiheadAttention(d_model, n_heads, d_k, d_v, attn_dropout=attn_dropout, proj_dropout=dropout, res_attention=res_attention)
+
+        # Add & Norm
+        self.dropout_attn = nn.Dropout(dropout)
+        if "batch" in norm.lower():
+            self.norm_attn = nn.Sequential(Transpose(1,2), nn.BatchNorm1d(d_model), Transpose(1,2))
+        else:
+            self.norm_attn = nn.LayerNorm(d_model)
+
+        # Position-wise Feed-Forward
+        self.ff = nn.Sequential(nn.Linear(d_model, d_ff, bias=bias),
+                                get_act_fn(activation),
+                                nn.Dropout(dropout),
+                                nn.Linear(d_ff, d_model, bias=bias))
+
+        # Add & Norm
+        self.dropout_ffn = nn.Dropout(dropout)
+        if "batch" in norm.lower():
+            self.norm_ffn = nn.Sequential(Transpose(1,2), nn.BatchNorm1d(d_model), Transpose(1,2))
+        else:
+            self.norm_ffn = nn.LayerNorm(d_model)
+
+        self.pre_norm = pre_norm
+        self.store_attn = store_attn
+
+    def forward(self, src:Tensor, prev:Optional[Tensor]=None, key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None) -> Tensor:
+
+        # Multi-Head attention sublayer
+        if self.pre_norm:
+            src = self.norm_attn(src)
+        ## Multi-Head attention
+        if self.res_attention:
+            src2, attn, scores = self.self_attn(src, src, src, prev, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
+        else:
+            src2, attn = self.self_attn(src, src, src, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
+        if self.store_attn:
+            self.attn = attn
+        ## Add & Norm
+        src = src + self.dropout_attn(src2) # Add: residual connection with residual dropout
+        if not self.pre_norm:
+            src = self.norm_attn(src)
+
+        # Feed-forward sublayer
+        if self.pre_norm:
+            src = self.norm_ffn(src)
+        ## Position-wise Feed-Forward
+        src2 = self.ff(src)
+        ## Add & Norm
+        src = src + self.dropout_ffn(src2) # Add: residual connection with residual dropout
+        if not self.pre_norm:
+            src = self.norm_ffn(src)
+
+        if self.res_attention:
+            return src, scores
+        else:
+            return src
+
+class _TSTEncoder(Module):
+    def __init__(self, q_len, d_model, n_heads, d_k=None, d_v=None, d_ff=None, norm='BatchNorm', attn_dropout=0., dropout=0., activation='gelu',
+                 res_attention=False, n_layers=1, pre_norm=False, store_attn=False):
+        self.layers = nn.ModuleList([_TSTEncoderLayer(q_len, d_model, n_heads=n_heads, d_k=d_k, d_v=d_v, d_ff=d_ff, norm=norm,
+                                                      attn_dropout=attn_dropout, dropout=dropout,
+                                                      activation=activation, res_attention=res_attention,
+                                                      pre_norm=pre_norm, store_attn=store_attn) for i in range(n_layers)])
+        self.res_attention = res_attention
+
+    def forward(self, src:Tensor, key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None):
+        output = src
+        scores = None
+        if self.res_attention:
+            for mod in self.layers: output, scores = mod(output, prev=scores, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
+            return output
+        else:
+            for mod in self.layers: output = mod(output, key_padding_mask=key_padding_mask, attn_mask=attn_mask)
+            return output
+
+#|exporti
+class _TSTBackbone(Module):
+    def __init__(self, c_in, seq_len, max_seq_len=512,
+                 n_layers=3, d_model=128, n_heads=16, d_k=None, d_v=None,
+                 d_ff=256, norm='BatchNorm', attn_dropout=0., dropout=0., act="gelu", store_attn=False,
+                 key_padding_mask='auto', padding_var=None, attn_mask=None, res_attention=True, pre_norm=False,
+                 pe='zeros', learn_pe=True, verbose=False, **kwargs):
+
+        # Input encoding
+        q_len = seq_len
+        self.new_q_len = False
+        if max_seq_len is not None and seq_len > max_seq_len: # Control temporal resolution
+            self.new_q_len = True
+            q_len = max_seq_len
+            tr_factor = math.ceil(seq_len / q_len)
+            total_padding = (tr_factor * q_len - seq_len)
+            padding = (total_padding // 2, total_padding - total_padding // 2)
+            self.W_P = nn.Sequential(Pad1d(padding), Conv1d(c_in, d_model, kernel_size=tr_factor, padding=0, stride=tr_factor))
+            pv(f'temporal resolution modified: {seq_len} --> {q_len} time steps: kernel_size={tr_factor}, stride={tr_factor}, padding={padding}.\n', verbose)
+        elif kwargs:
+            self.new_q_len = True
+            t = torch.rand(1, 1, seq_len)
+            q_len = Conv1d(1, 1, **kwargs)(t).shape[-1]
+            self.W_P = Conv1d(c_in, d_model, **kwargs) # Eq 2
+            pv(f'Conv1d with kwargs={kwargs} applied to input to create input encodings\n', verbose)
+        else:
+            self.W_P = nn.Linear(c_in, d_model)        # Eq 1: projection of feature vectors onto a d-dim vector space
+        self.seq_len = q_len
+
+        # Positional encoding
+        self.W_pos = self._positional_encoding(pe, learn_pe, q_len, d_model)
+
+        # Residual dropout
+        self.dropout = nn.Dropout(dropout)
+
+        # Encoder
+        self.encoder = _TSTEncoder(q_len, d_model, n_heads, d_k=d_k, d_v=d_v, d_ff=d_ff, norm=norm, attn_dropout=attn_dropout, dropout=dropout,
+                                   pre_norm=pre_norm, activation=act, res_attention=res_attention, n_layers=n_layers, store_attn=store_attn)
+        self.transpose = Transpose(-1, -2, contiguous=True)
+        self.key_padding_mask, self.padding_var, self.attn_mask = key_padding_mask, padding_var, attn_mask
+
+    def forward(self, inp) -> Tensor:
+        r"""Pass the input through the TST backbone.
+        Args:
+            inp: input (optionally with padding mask. 1s (meaning padded) in padding mask will be ignored while 0s (non-padded) will be unchanged.)
+        Shape:
+            There are 3 options:
+            1. inp: Tensor containing just time series data [bs x nvars x q_len]
+            2. inp: Tensor containing time series data plus a padding feature in the last channel [bs x (nvars + 1) x q_len]
+            3. inp: tuple containing a tensor with time series data plus a padding mask per batch ([bs x nvars x q_len] , [bs x q_len] )
+        """
+
+        # x and padding mask
+        if isinstance(inp, tuple): x, key_padding_mask = inp
+        elif self.key_padding_mask == 'auto': x, key_padding_mask = self._key_padding_mask(inp) # automatically identify padding mask
+        elif self.key_padding_mask == -1: x, key_padding_mask = inp[:, :-1], inp[:, -1]         # padding mask is the last channel
+        else: x, key_padding_mask = inp, None
+
+        # Input encoding
+        if self.new_q_len: u = self.W_P(x).transpose(2,1) # Eq 2        # u: [bs x d_model x q_len] transposed to [bs x q_len x d_model]
+        else: u = self.W_P(x.transpose(2,1))              # Eq 1        # u: [bs x q_len x nvars] converted to [bs x q_len x d_model]
+
+        # Positional encoding
+        u = self.dropout(u + self.W_pos)
+
+        # Encoder
+        z = self.encoder(u, key_padding_mask=key_padding_mask, attn_mask=self.attn_mask)    # z: [bs x q_len x d_model]
+        z = self.transpose(z)                                                               # z: [bs x d_model x q_len]
+        if key_padding_mask is not None:
+            z = z * torch.logical_not(key_padding_mask.unsqueeze(1))  # zero-out padding embeddings
+        return z
+
+    def _positional_encoding(self, pe, learn_pe, q_len, d_model):
+        # Positional encoding
+        if pe == None:
+            W_pos = torch.empty((q_len, d_model)) # pe = None and learn_pe = False can be used to measure impact of pe
+            nn.init.uniform_(W_pos, -0.02, 0.02)
+            learn_pe = False
+        elif pe == 'zero':
+            W_pos = torch.empty((q_len, 1))
+            nn.init.uniform_(W_pos, -0.02, 0.02)
+        elif pe == 'zeros':
+            W_pos = torch.empty((q_len, d_model))
+            nn.init.uniform_(W_pos, -0.02, 0.02)
+        elif pe == 'normal' or pe == 'gauss':
+            W_pos = torch.zeros((q_len, 1))
+            torch.nn.init.normal_(W_pos, mean=0.0, std=0.1)
+        elif pe == 'uniform':
+            W_pos = torch.zeros((q_len, 1))
+            nn.init.uniform_(W_pos, a=0.0, b=0.1)
+        elif pe == 'lin1d': W_pos = Coord1dPosEncoding(q_len, exponential=False, normalize=True)
+        elif pe == 'exp1d': W_pos = Coord1dPosEncoding(q_len, exponential=True, normalize=True)
+        elif pe == 'lin2d': W_pos = Coord2dPosEncoding(q_len, d_model, exponential=False, normalize=True)
+        elif pe == 'exp2d': W_pos = Coord2dPosEncoding(q_len, d_model, exponential=True, normalize=True)
+        elif pe == 'sincos': W_pos = PositionalEncoding(q_len, d_model, normalize=True)
+        else: raise ValueError(f"{pe} is not a valid pe (positional encoder. Available types: 'gauss'=='normal', \
+            'zeros', 'zero', uniform', 'lin1d', 'exp1d', 'lin2d', 'exp2d', 'sincos', None.)")
+        return nn.Parameter(W_pos, requires_grad=learn_pe)
+
+    def _key_padding_mask(self, x):
+        if self.padding_var is not None:
+            mask = TSMaskTensor(x[:, self.padding_var] == 1)            # key_padding_mask: [bs x q_len]
+            return x, mask
+        else:
+            mask = torch.isnan(x)
+            x[mask] = 0
+            if mask.any():
+                mask = TSMaskTensor((mask.float().mean(1)==1).bool())   # key_padding_mask: [bs x q_len]
+                return x, mask
+            else:
+                return x, None
+
+#|export
+class TSTPlus(nn.Sequential):
+    """TST (Time Series Transformer) is a Transformer that takes continuous time series as inputs"""
+    def __init__(self, c_in:int, c_out:int, seq_len:int, max_seq_len:Optional[int]=512,
+                 n_layers:int=3, d_model:int=128, n_heads:int=16, d_k:Optional[int]=None, d_v:Optional[int]=None,
+                 d_ff:int=256, norm:str='BatchNorm', attn_dropout:float=0., dropout:float=0., act:str="gelu", key_padding_mask:bool='auto',
+                 padding_var:Optional[int]=None, attn_mask:Optional[Tensor]=None, res_attention:bool=True, pre_norm:bool=False, store_attn:bool=False,
+                 pe:str='zeros', learn_pe:bool=True, flatten:bool=True, fc_dropout:float=0.,
+                 concat_pool:bool=False, bn:bool=False, custom_head:Optional[Callable]=None,
+                 y_range:Optional[tuple]=None, verbose:bool=False, **kwargs):
+        """
+        Args:
+            c_in: the number of features (aka variables, dimensions, channels) in the time series dataset.
+            c_out: the number of target classes.
+            seq_len: number of time steps in the time series.
+            max_seq_len: useful to control the temporal resolution in long time series to avoid memory issues. Default=512.
+            d_model: total dimension of the model (number of features created by the model). Default: 128 (range(64-512))
+            n_heads:  parallel attention heads. Default:16 (range(8-16)).
+            d_k: size of the learned linear projection of queries and keys in the MHA. Usual values: 16-512. Default: None -> (d_model/n_heads) = 32.
+            d_v: size of the learned linear projection of values in the MHA. Usual values: 16-512. Default: None -> (d_model/n_heads) = 32.
+            d_ff: the dimension of the feedforward network model. Default: 512 (range(256-512))
+            norm: flag to indicate whether BatchNorm (default) or LayerNorm is used in the encoder layers.
+            attn_dropout: dropout applied to the attention scores
+            dropout: amount of dropout applied to all linear layers except q,k&v projections in the encoder.
+            act: the activation function of intermediate layer, relu or gelu.
+            key_padding_mask:   a boolean padding mask will be applied to attention if 'auto' a mask to those steps in a sample where all features are nan.
+                                Other options include: True -->tuple (x, key_padding_mask), -1 --> key_padding_mask is the last channel, False: no mask.
+            padding_var: (optional) an int indicating the variable that contains the padded steps (0: non-padded, 1: padded).
+            attn_mask: a boolean mask will be applied to attention if a tensor of shape [min(seq_len, max_seq_len) x min(seq_len, max_seq_len)] if provided.
+            res_attention: if True Residual MultiheadAttention is applied.
+            pre_norm: if True normalization will be applied as the first step in the sublayers. Defaults to False
+            store_attn: can be used to visualize attention weights. Default: False.
+            n_layers: number of layers (or blocks) in the encoder. Default: 3 (range(1-4))
+            pe: type of positional encoder.
+                Available types (for experimenting): None, 'exp1d', 'lin1d', 'exp2d', 'lin2d', 'sincos', 'gauss' or 'normal',
+                'uniform', 'zero', 'zeros' (default, as in the paper).
+            learn_pe: learned positional encoder (True, default) or fixed positional encoder.
+            flatten: this will flatten the encoder output to be able to apply an mlp type of head (default=False)
+            fc_dropout: dropout applied to the final fully connected layer.
+            concat_pool: indicates if global adaptive concat pooling will be used instead of global adaptive pooling.
+            bn: indicates if batchnorm will be applied to the head.
+            custom_head: custom head that will be applied to the network. It must contain all kwargs (pass a partial function)
+            y_range: range of possible y values (used in regression tasks).
+            kwargs: nn.Conv1d kwargs. If not {}, a nn.Conv1d with those kwargs will be applied to original time series.
+        Input shape:
+            x: bs (batch size) x nvars (aka features, variables, dimensions, channels) x seq_len (aka time steps)
+            attn_mask: q_len x q_len
+            As mentioned in the paper, the input must be standardized by_var based on the entire training set.
+        """
+        # Backbone
+        backbone = _TSTBackbone(c_in, seq_len=seq_len, max_seq_len=max_seq_len,
+                                n_layers=n_layers, d_model=d_model, n_heads=n_heads, d_k=d_k, d_v=d_v, d_ff=d_ff,
+                                attn_dropout=attn_dropout, dropout=dropout, act=act, key_padding_mask=key_padding_mask, padding_var=padding_var,
+                                attn_mask=attn_mask, res_attention=res_attention, pre_norm=pre_norm, store_attn=store_attn,
+                                pe=pe, learn_pe=learn_pe, verbose=verbose, **kwargs)
+
+        # Head
+        self.head_nf = d_model
+        self.c_out = c_out
+        self.seq_len = backbone.seq_len
+        if custom_head is not None:
+            if isinstance(custom_head, nn.Module): head = custom_head
+            else: head = custom_head(self.head_nf, c_out, seq_len)
+        else: head = self.create_head(self.head_nf, c_out, self.seq_len, act=act, flatten=flatten, concat_pool=concat_pool,
+                                           fc_dropout=fc_dropout, bn=bn, y_range=y_range)
+        super().__init__(OrderedDict([('backbone', backbone), ('head', head)]))
+
+
+    def create_head(self, nf, c_out, seq_len, flatten=True, concat_pool=False, act="gelu", fc_dropout=0., bn=False, y_range=None):
+        layers = [get_act_fn(act)]
+        if flatten:
+            nf *= seq_len
+            layers += [Flatten()]
+        else:
+            if concat_pool: nf *= 2
+            layers = [GACP1d(1) if concat_pool else GAP1d(1)]
+        layers += [LinBnDrop(nf, c_out, bn=bn, p=fc_dropout)]
+        if y_range: layers += [SigmoidRange(*y_range)]
+        return nn.Sequential(*layers)
+
+
+    def show_pe(self, cmap='viridis', figsize=None):
+        plt.figure(figsize=figsize)
+        plt.pcolormesh(self.backbone.W_pos.detach().cpu().T, cmap=cmap)
+        plt.title('Positional Encoding')
+        plt.colorbar()
+        plt.show()
+        plt.figure(figsize=figsize)
+        plt.title('Positional Encoding - value along time axis')
+        plt.plot(F.relu(self.backbone.W_pos.data).mean(1).cpu())
+        plt.plot(-F.relu(-self.backbone.W_pos.data).mean(1).cpu())
+        plt.show()
+
+
+
+============================================================
+
+================================================================================
+END OF LOG
+================================================================================
