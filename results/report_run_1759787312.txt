@@ -1,0 +1,1100 @@
+Session: run_1759787312
+Generated (UTC): 2025-10-06T23:43:06Z
+Run ID: 1759787312
+Suites discovered: 21
+
+Suite: cs-mlkem1024-aesgcm-falcon1024
+  Baseline OWD (p50/p95 ms): 29.282 / 50.396
+  Baseline RTT (p50/p95 ms): 2.193 / 26.103
+  Saturation point (Mbps): 141.000
+  Stop cause: owd_p95_spike | confidence=1.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 3853.570
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem1024-aesgcm-falcon1024_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.163 Mbps | loss=0.000% | avg_rtt=4.740 ms (min=1.567, max=61.738)
+    - 25.0 Mbps | thr=1.504 Mbps | loss=0.000% | avg_rtt=2.975 ms (min=1.557, max=23.360)
+    - 50.0 Mbps | thr=2.021 Mbps | loss=0.000% | avg_rtt=3.770 ms (min=1.468, max=26.226)
+    - 75.0 Mbps | thr=3.108 Mbps | loss=0.001% | avg_rtt=7.162 ms (min=1.448, max=42.642)
+    - 100.0 Mbps | thr=4.568 Mbps | loss=0.562% | avg_rtt=10.610 ms (min=1.479, max=77.171)
+    - 125.0 Mbps | thr=7.596 Mbps | loss=1.636% | avg_rtt=16.003 ms (min=1.489, max=91.461)
+    - 138.0 Mbps | thr=8.624 Mbps | loss=2.065% | avg_rtt=19.949 ms (min=1.496, max=85.731)
+    - 141.0 Mbps | thr=9.715 Mbps | loss=4.030% | avg_rtt=24.186 ms (min=1.454, max=111.670)
+    - 144.0 Mbps | thr=9.995 Mbps | loss=8.954% | avg_rtt=28.743 ms (min=1.430, max=250.282)
+    - 150.0 Mbps | thr=11.219 Mbps | loss=43.701% | avg_rtt=46.279 ms (min=1.612, max=188.644)
+  Telemetry summary:
+    - mark: 1 samples
+      collector_ts_ns: avg=1759793029890160896.000 | min=1759793029890160896.000 | max=1759793029890160896.000
+      timestamp_ns: avg=1759793030186594048.000 | min=1759793030186594048.000 | max=1759793030186594048.000
+    - monitors_started: 1 samples
+      collector_ts_ns: avg=1759793029890135040.000 | min=1759793029890135040.000 | max=1759793029890135040.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759793030184357120.000 | min=1759793030184357120.000 | max=1759793030184357120.000
+    - monitors_stopped: 1 samples
+      collector_ts_ns: avg=1759793513583537920.000 | min=1759793513583537920.000 | max=1759793513583537920.000
+      timestamp_ns: avg=1759793513886041088.000 | min=1759793513886041088.000 | max=1759793513886041088.000
+    - perf_sample: 1 samples
+      branch-misses: avg=19445.000 | min=19445.000 | max=19445.000
+      cache-misses: avg=14089.000 | min=14089.000 | max=14089.000
+      collector_ts_ns: avg=1759793512528201984.000 | min=1759793512528201984.000 | max=1759793512528201984.000
+      context-switches: avg=11.000 | min=11.000 | max=11.000
+      cycles: avg=3110689.000 | min=3110689.000 | max=3110689.000
+      instructions: avg=793788.000 | min=793788.000 | max=793788.000
+      t_offset_ms: avg=482.000 | min=482.000 | max=482.000
+      task-clock: avg=1.910 | min=1.910 | max=1.910
+      timestamp_ns: avg=1759793512823631872.000 | min=1759793512823631872.000 | max=1759793512823631872.000
+      ts_unix_ns: avg=1759793030659971840.000 | min=1759793030659971840.000 | max=1759793030659971840.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759793030136193024.000 | min=1759793030136193024.000 | max=1759793030136193024.000
+      timestamp_ns: avg=1759793030425452032.000 | min=1759793030425452032.000 | max=1759793030425452032.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759793030136161024.000 | min=1759793030136161024.000 | max=1759793030136161024.000
+      duration_ms: avg=1901.109 | min=1901.109 | max=1901.109
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759793030425297920.000 | min=1759793030425297920.000 | max=1759793030425297920.000
+    - rekey_transition_start: 1 samples
+      collector_ts_ns: avg=1759793028253185024.000 | min=1759793028253185024.000 | max=1759793028253185024.000
+      timestamp_ns: avg=1759793028524012032.000 | min=1759793028524012032.000 | max=1759793028524012032.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759793271813949184.000 | min=1759793030136205056.000 | max=1759793513787574016.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759793272104441088.000 | min=1759793030432589056.000 | max=1759793514109140992.000
+    - system_sample: 4831 samples
+      collector_ts_ns: avg=1759793271936583936.000 | min=1759793030136217088.000 | max=1759793513739731968.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=22.549 | min=0.000 | max=82.100
+      cpu_temp_c: avg=61.070 | min=56.000 | max=67.200
+      mem_percent: avg=8.684 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.127 | min=257.023 | max=265.137
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=742.412 | min=91.679 | max=1393.031
+      timestamp_ns: avg=1759793272228816640.000 | min=1759793030446685952.000 | max=1759793514058733056.000
+    - thermal_sample: 481 samples
+      collector_ts_ns: avg=1759793271172183808.000 | min=1759793029890188032.000 | max=1759793512574496000.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=61.050 | min=56.400 | max=66.200
+      timestamp_ns: avg=1759793271464419584.000 | min=1759793030190536960.000 | max=1759793512885819904.000
+      ts_unix_ns: avg=1759793271458871040.000 | min=1759793030184302080.000 | max=1759793512881506048.000
+    - udp_echo_sample: 13477 samples
+      collector_ts_ns: avg=1759793341887222016.000 | min=1759793032084172032.000 | max=1759793496981342976.000
+      processing_ns: avg=3226.281 | min=2111.000 | max=412982.000
+      recv_timestamp_ns: avg=1759793342174740480.000 | min=1759793032376026112.000 | max=1759793497294876928.000
+      send_timestamp_ns: avg=1759793342174743808.000 | min=1759793032376034048.000 | max=1759793497294878976.000
+      sequence: avg=109563.798 | min=0.000 | max=440200.000
+      timestamp_ns: avg=1759793342174996224.000 | min=1759793032376222976.000 | max=1759793497295128064.000
+
+Suite: cs-mlkem1024-aesgcm-falcon512
+  Baseline OWD (p50/p95 ms): 27.149 / 30.295
+  Baseline RTT (p50/p95 ms): 2.170 / 6.240
+  Saturation point (Mbps): 78.000
+  Stop cause: owd_p95_spike | confidence=1.000
+  Search mode: auto | resolution=4.000 Mbps
+  Rekey duration (ms): 6248.679
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem1024-aesgcm-falcon512_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.168 Mbps | loss=0.000% | avg_rtt=2.697 ms (min=1.518, max=28.045)
+    - 25.0 Mbps | thr=1.506 Mbps | loss=0.000% | avg_rtt=3.007 ms (min=1.457, max=23.473)
+    - 50.0 Mbps | thr=2.077 Mbps | loss=0.000% | avg_rtt=3.859 ms (min=1.473, max=27.651)
+    - 75.0 Mbps | thr=3.030 Mbps | loss=0.000% | avg_rtt=7.194 ms (min=1.419, max=73.028)
+    - 78.0 Mbps | thr=3.326 Mbps | loss=0.339% | avg_rtt=8.636 ms (min=1.439, max=52.529)
+    - 82.0 Mbps | thr=3.350 Mbps | loss=0.050% | avg_rtt=8.378 ms (min=1.434, max=78.494)
+    - 88.0 Mbps | thr=3.581 Mbps | loss=0.153% | avg_rtt=9.306 ms (min=1.459, max=57.898)
+    - 100.0 Mbps | thr=4.241 Mbps | loss=0.124% | avg_rtt=9.731 ms (min=1.449, max=65.785)
+  Telemetry summary:
+    - mark: 2 samples
+      collector_ts_ns: avg=1759792637769150976.000 | min=1759792636773933056.000 | max=1759792638764368896.000
+      timestamp_ns: avg=1759792638062985472.000 | min=1759792637054110976.000 | max=1759792639071859968.000
+    - monitors_started: 2 samples
+      collector_ts_ns: avg=1759792637769145856.000 | min=1759792636773927936.000 | max=1759792638764364032.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759792638060029440.000 | min=1759792637051621888.000 | max=1759792639068436992.000
+    - monitors_stopped: 2 samples
+      collector_ts_ns: avg=1759792834327226880.000 | min=1759792638764350976.000 | max=1759793029890103040.000
+      timestamp_ns: avg=1759792834619916288.000 | min=1759792639061946880.000 | max=1759793030177885952.000
+    - perf_sample: 1 samples
+      branch-misses: avg=18164.000 | min=18164.000 | max=18164.000
+      cache-misses: avg=13546.000 | min=13546.000 | max=13546.000
+      collector_ts_ns: avg=1759793028253221120.000 | min=1759793028253221120.000 | max=1759793028253221120.000
+      context-switches: avg=11.000 | min=11.000 | max=11.000
+      cycles: avg=2956361.000 | min=2956361.000 | max=2956361.000
+      instructions: avg=782638.000 | min=782638.000 | max=782638.000
+      t_offset_ms: avg=388.000 | min=388.000 | max=388.000
+      task-clock: avg=1.830 | min=1.830 | max=1.830
+      timestamp_ns: avg=1759793028533910016.000 | min=1759793028533910016.000 | max=1759793028533910016.000
+      ts_unix_ns: avg=1759792639450876416.000 | min=1759792639450876416.000 | max=1759792639450876416.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759792639029435904.000 | min=1759792639029435904.000 | max=1759792639029435904.000
+      timestamp_ns: avg=1759792639315367936.000 | min=1759792639315367936.000 | max=1759792639315367936.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759792639029384960.000 | min=1759792639029384960.000 | max=1759792639029384960.000
+      duration_ms: avg=1746.270 | min=1746.270 | max=1746.270
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759792639315175936.000 | min=1759792639315175936.000 | max=1759792639315175936.000
+    - rekey_transition_start: 2 samples
+      collector_ts_ns: avg=1759792636007964672.000 | min=1759792634748681984.000 | max=1759792637267247104.000
+      timestamp_ns: avg=1759792636302404096.000 | min=1759792635035962112.000 | max=1759792637568846080.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759792834327527168.000 | min=1759792639029453056.000 | max=1759793030091106048.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759792834622800896.000 | min=1759792639322281984.000 | max=1759793030409990912.000
+    - system_sample: 3907 samples
+      collector_ts_ns: avg=1759792834541217024.000 | min=1759792639029475072.000 | max=1759793030030193920.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=14.425 | min=0.000 | max=67.600
+      cpu_temp_c: avg=58.134 | min=55.000 | max=60.800
+      mem_percent: avg=8.696 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.343 | min=256.855 | max=264.133
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=921.880 | min=21.179 | max=1822.591
+      timestamp_ns: avg=1759792834837648640.000 | min=1759792639333925888.000 | max=1759793030346603008.000
+    - thermal_sample: 782 samples
+      collector_ts_ns: avg=1759792832820585472.000 | min=1759792636773939968.000 | max=1759793028891148032.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=58.167 | min=55.000 | max=60.800
+      timestamp_ns: avg=1759792833113416704.000 | min=1759792637057847040.000 | max=1759793029177676032.000
+      ts_unix_ns: avg=1759792833108078592.000 | min=1759792637051492096.000 | max=1759793029173937920.000
+    - udp_echo_sample: 5043 samples
+      collector_ts_ns: avg=1759792858091659264.000 | min=1759792640970053888.000 | max=1759793012941300992.000
+      processing_ns: avg=3432.833 | min=2093.000 | max=94260.000
+      recv_timestamp_ns: avg=1759792858387928576.000 | min=1759792641254692096.000 | max=1759793013214949120.000
+      send_timestamp_ns: avg=1759792858387932416.000 | min=1759792641254697984.000 | max=1759793013214951936.000
+      sequence: avg=34062.859 | min=0.000 | max=93800.000
+      timestamp_ns: avg=1759792858388196864.000 | min=1759792641254874880.000 | max=1759793013215148032.000
+
+Suite: cs-mlkem1024-aesgcm-mldsa44
+  Baseline OWD (p50/p95 ms): 21.812 / 25.549
+  Baseline RTT (p50/p95 ms): 2.327 / 9.576
+  Saturation point (Mbps): 15.000
+  Stop cause: owd_p95_spike | confidence=1.000
+  Search mode: auto | resolution=5.000 Mbps
+  Rekey duration (ms): 4057.827
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem1024-aesgcm-mldsa44_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.151 Mbps | loss=0.000% | avg_rtt=2.942 ms (min=1.502, max=25.550)
+    - 15.0 Mbps | thr=1.344 Mbps | loss=0.000% | avg_rtt=2.827 ms (min=1.487, max=23.504)
+    - 20.0 Mbps | thr=1.416 Mbps | loss=0.000% | avg_rtt=5.126 ms (min=1.531, max=84.264)
+    - 25.0 Mbps | thr=1.527 Mbps | loss=0.003% | avg_rtt=6.027 ms (min=1.533, max=62.283)
+  Telemetry summary:
+    - mark: 1 samples
+      collector_ts_ns: avg=1759791738308737024.000 | min=1759791738308737024.000 | max=1759791738308737024.000
+      timestamp_ns: avg=1759791738572153088.000 | min=1759791738572153088.000 | max=1759791738572153088.000
+    - monitors_started: 1 samples
+      collector_ts_ns: avg=1759791738308707072.000 | min=1759791738308707072.000 | max=1759791738308707072.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759791738567484928.000 | min=1759791738567484928.000 | max=1759791738567484928.000
+    - monitors_stopped: 2 samples
+      collector_ts_ns: avg=1759791944227818496.000 | min=1759791944227814912.000 | max=1759791944227822080.000
+      timestamp_ns: avg=1759791944538131456.000 | min=1759791944538081024.000 | max=1759791944538181888.000
+    - perf_sample: 1 samples
+      branch-misses: avg=18557.000 | min=18557.000 | max=18557.000
+      cache-misses: avg=13321.000 | min=13321.000 | max=13321.000
+      collector_ts_ns: avg=1759791942547332096.000 | min=1759791942547332096.000 | max=1759791942547332096.000
+      context-switches: avg=11.000 | min=11.000 | max=11.000
+      cycles: avg=3041901.000 | min=3041901.000 | max=3041901.000
+      instructions: avg=773909.000 | min=773909.000 | max=773909.000
+      t_offset_ms: avg=203.000 | min=203.000 | max=203.000
+      task-clock: avg=1.870 | min=1.870 | max=1.870
+      timestamp_ns: avg=1759791942831678976.000 | min=1759791942831678976.000 | max=1759791942831678976.000
+      ts_unix_ns: avg=1759791738763631360.000 | min=1759791738763631360.000 | max=1759791738763631360.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759791738550252032.000 | min=1759791738550252032.000 | max=1759791738550252032.000
+      timestamp_ns: avg=1759791738829608960.000 | min=1759791738829608960.000 | max=1759791738829608960.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759791738550244096.000 | min=1759791738550244096.000 | max=1759791738550244096.000
+      duration_ms: avg=2059.659 | min=2059.659 | max=2059.659
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759791738829468928.000 | min=1759791738829468928.000 | max=1759791738829468928.000
+    - rekey_transition_start: 1 samples
+      collector_ts_ns: avg=1759791736509210112.000 | min=1759791736509210112.000 | max=1759791736509210112.000
+      timestamp_ns: avg=1759791736769733888.000 | min=1759791736769733888.000 | max=1759791736769733888.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759791841107910400.000 | min=1759791738550259968.000 | max=1759791944472730112.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759791841412055296.000 | min=1759791738836496896.000 | max=1759791944785416960.000
+    - system_sample: 2058 samples
+      collector_ts_ns: avg=1759791841563365632.000 | min=1759791738604883968.000 | max=1759791944518156032.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=9.672 | min=0.000 | max=61.000
+      cpu_temp_c: avg=56.703 | min=54.000 | max=58.900
+      mem_percent: avg=8.696 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.165 | min=256.781 | max=264.320
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=1086.128 | min=16.723 | max=2434.266
+      timestamp_ns: avg=1759791841861419008.000 | min=1759791738913208064.000 | max=1759791944808997120.000
+    - thermal_sample: 205 samples
+      collector_ts_ns: avg=1759791840767386624.000 | min=1759791738308751872.000 | max=1759791943247582976.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=56.703 | min=54.500 | max=58.400
+      timestamp_ns: avg=1759791841059651328.000 | min=1759791738576009984.000 | max=1759791943537882880.000
+      ts_unix_ns: avg=1759791841054942464.000 | min=1759791738567430912.000 | max=1759791943534061056.000
+    - udp_echo_sample: 1234 samples
+      collector_ts_ns: avg=1759791835978611712.000 | min=1759791740484997888.000 | max=1759791926205865984.000
+      processing_ns: avg=3781.563 | min=2148.000 | max=35871.000
+      recv_timestamp_ns: avg=1759791836273436416.000 | min=1759791740795087104.000 | max=1759791926516516096.000
+      send_timestamp_ns: avg=1759791836273439744.000 | min=1759791740795101952.000 | max=1759791926516519936.000
+      sequence: avg=14790.843 | min=0.000 | max=33700.000
+      timestamp_ns: avg=1759791836273713920.000 | min=1759791740796037120.000 | max=1759791926516680960.000
+
+Suite: cs-mlkem1024-aesgcm-mldsa65
+  Baseline OWD (p50/p95 ms): 23.025 / 26.426
+  Baseline RTT (p50/p95 ms): 2.174 / 7.233
+  Saturation point (Mbps): 75.000
+  Stop cause: owd_p95_spike | confidence=1.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 4839.931
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem1024-aesgcm-mldsa65_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.170 Mbps | loss=0.004% | avg_rtt=2.694 ms (min=1.524, max=22.353)
+    - 25.0 Mbps | thr=1.514 Mbps | loss=0.000% | avg_rtt=3.010 ms (min=1.525, max=28.167)
+    - 50.0 Mbps | thr=2.033 Mbps | loss=0.000% | avg_rtt=3.935 ms (min=1.483, max=30.677)
+    - 75.0 Mbps | thr=3.009 Mbps | loss=0.032% | avg_rtt=7.036 ms (min=1.489, max=52.740)
+    - 78.0 Mbps | thr=3.184 Mbps | loss=0.055% | avg_rtt=7.727 ms (min=1.475, max=66.231)
+    - 82.0 Mbps | thr=3.244 Mbps | loss=0.049% | avg_rtt=7.802 ms (min=1.474, max=62.744)
+    - 88.0 Mbps | thr=3.414 Mbps | loss=0.225% | avg_rtt=8.370 ms (min=1.475, max=51.540)
+    - 100.0 Mbps | thr=4.519 Mbps | loss=0.670% | avg_rtt=10.721 ms (min=1.488, max=68.895)
+  Telemetry summary:
+    - mark: 2 samples
+      collector_ts_ns: avg=1759791944257187584.000 | min=1759791944257176064.000 | max=1759791944257199104.000
+      timestamp_ns: avg=1759791944559636992.000 | min=1759791944556442880.000 | max=1759791944562831104.000
+    - monitors_started: 2 samples
+      collector_ts_ns: avg=1759791944257170944.000 | min=1759791944257161984.000 | max=1759791944257179904.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759791944555986944.000 | min=1759791944552154112.000 | max=1759791944559820032.000
+    - monitors_stopped: 1 samples
+      collector_ts_ns: avg=1759792336230403072.000 | min=1759792336230403072.000 | max=1759792336230403072.000
+      timestamp_ns: avg=1759792336545549056.000 | min=1759792336545549056.000 | max=1759792336545549056.000
+    - perf_sample: 2 samples
+      branch-misses: avg=15927.000 | min=11996.000 | max=19858.000
+      cache-misses: avg=10458.000 | min=6379.000 | max=14537.000
+      collector_ts_ns: avg=1759792334748252672.000 | min=1759792334720632064.000 | max=1759792334775873024.000
+      context-switches: avg=13.000 | min=13.000 | max=13.000
+      cycles: avg=3498258.500 | min=3498213.000 | max=3498304.000
+      instructions: avg=814342.000 | min=814342.000 | max=814342.000
+      t_offset_ms: avg=389.000 | min=389.000 | max=389.000
+      task-clock: avg=2.250 | min=2.250 | max=2.250
+      timestamp_ns: avg=1759792335037691904.000 | min=1759792335035979008.000 | max=1759792335039405056.000
+      ts_unix_ns: avg=1759791944931273216.000 | min=1759791944931272192.000 | max=1759791944931274496.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759791944518174976.000 | min=1759791944518174976.000 | max=1759791944518174976.000
+      timestamp_ns: avg=1759791944816963072.000 | min=1759791944816963072.000 | max=1759791944816963072.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759791944518170112.000 | min=1759791944518170112.000 | max=1759791944518170112.000
+      duration_ms: avg=324.660 | min=324.660 | max=324.660
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759791944816826880.000 | min=1759791944816826880.000 | max=1759791944816826880.000
+    - rekey_transition_start: 2 samples
+      collector_ts_ns: avg=1759791942937358848.000 | min=1759791941695416064.000 | max=1759791944179301888.000
+      timestamp_ns: avg=1759791943233210368.000 | min=1759791941974397952.000 | max=1759791944492023040.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759792140788783360.000 | min=1759791944518183936.000 | max=1759792338493068032.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759792141092365056.000 | min=1759791944821278976.000 | max=1759792338807469056.000
+    - system_sample: 3935 samples
+      collector_ts_ns: avg=1759792141528413696.000 | min=1759791944601637888.000 | max=1759792338443543040.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=14.428 | min=0.000 | max=72.500
+      cpu_temp_c: avg=58.081 | min=54.000 | max=60.800
+      mem_percent: avg=8.773 | min=8.500 | max=8.900
+      mem_used_mb: avg=263.580 | min=255.043 | max=267.824
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=1198.348 | min=49.025 | max=2485.947
+      timestamp_ns: avg=1759792141820834304.000 | min=1759791944909076992.000 | max=1759792338753336064.000
+    - thermal_sample: 780 samples
+      collector_ts_ns: avg=1759792139780783360.000 | min=1759791944257207040.000 | max=1759792335276784896.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=58.033 | min=54.500 | max=60.800
+      timestamp_ns: avg=1759792140070983680.000 | min=1759791944568238080.000 | max=1759792335570199040.000
+      ts_unix_ns: avg=1759792140065884416.000 | min=1759791944551670016.000 | max=1759792335566434048.000
+    - udp_echo_sample: 5005 samples
+      collector_ts_ns: avg=1759792162366047232.000 | min=1759791946461330944.000 | max=1759792318417086976.000
+      processing_ns: avg=3679.933 | min=2074.000 | max=905020.000
+      recv_timestamp_ns: avg=1759792162658235392.000 | min=1759791946773805056.000 | max=1759792318708535040.000
+      send_timestamp_ns: avg=1759792162658239232.000 | min=1759791946773811968.000 | max=1759792318708538112.000
+      sequence: avg=34104.276 | min=0.000 | max=100500.000
+      timestamp_ns: avg=1759792162658504192.000 | min=1759791946774014976.000 | max=1759792318708720128.000
+
+Suite: cs-mlkem1024-aesgcm-mldsa87
+  Baseline OWD (p50/p95 ms): 25.448 / 28.624
+  Baseline RTT (p50/p95 ms): 2.156 / 6.425
+  Saturation point (Mbps): 47.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 6762.794
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem1024-aesgcm-mldsa87_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.174 Mbps | loss=0.000% | avg_rtt=2.740 ms (min=1.541, max=27.657)
+    - 25.0 Mbps | thr=1.497 Mbps | loss=0.000% | avg_rtt=2.926 ms (min=1.489, max=22.611)
+    - 38.0 Mbps | thr=1.728 Mbps | loss=0.000% | avg_rtt=3.364 ms (min=1.506, max=26.674)
+    - 44.0 Mbps | thr=1.849 Mbps | loss=0.000% | avg_rtt=3.467 ms (min=1.482, max=39.032)
+    - 47.0 Mbps | thr=1.926 Mbps | loss=0.002% | avg_rtt=3.666 ms (min=1.489, max=65.139)
+    - 50.0 Mbps | thr=2.054 Mbps | loss=0.000% | avg_rtt=6.749 ms (min=1.462, max=64.326)
+  Telemetry summary:
+    - mark: 2 samples
+      collector_ts_ns: avg=1759792337290884608.000 | min=1759792336290086912.000 | max=1759792338291682048.000
+      timestamp_ns: avg=1759792337564657152.000 | min=1759792336556814080.000 | max=1759792338572499968.000
+    - monitors_started: 2 samples
+      collector_ts_ns: avg=1759792337290868224.000 | min=1759792336290074112.000 | max=1759792338291662080.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759792337561462016.000 | min=1759792336552173056.000 | max=1759792338570750976.000
+    - monitors_stopped: 2 samples
+      collector_ts_ns: avg=1759792487532765952.000 | min=1759792338291617024.000 | max=1759792636773914880.000
+      timestamp_ns: avg=1759792487804782080.000 | min=1759792338564066048.000 | max=1759792637045498112.000
+    - perf_sample: 1 samples
+      branch-misses: avg=18002.000 | min=18002.000 | max=18002.000
+      cache-misses: avg=13437.000 | min=13437.000 | max=13437.000
+      collector_ts_ns: avg=1759792635613946112.000 | min=1759792635613946112.000 | max=1759792635613946112.000
+      context-switches: avg=14.000 | min=14.000 | max=14.000
+      cycles: avg=3019791.000 | min=3019791.000 | max=3019791.000
+      instructions: avg=757732.000 | min=757732.000 | max=757732.000
+      t_offset_ms: avg=296.000 | min=296.000 | max=296.000
+      task-clock: avg=1.860 | min=1.860 | max=1.860
+      timestamp_ns: avg=1759792635927621120.000 | min=1759792635927621120.000 | max=1759792635927621120.000
+      ts_unix_ns: avg=1759792338860866560.000 | min=1759792338860866560.000 | max=1759792338860866560.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759792338539056896.000 | min=1759792338539056896.000 | max=1759792338539056896.000
+      timestamp_ns: avg=1759792338823864064.000 | min=1759792338823864064.000 | max=1759792338823864064.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759792338539023872.000 | min=1759792338539023872.000 | max=1759792338539023872.000
+      duration_ms: avg=2221.175 | min=2221.175 | max=2221.175
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759792338823686912.000 | min=1759792338823686912.000 | max=1759792338823686912.000
+    - rekey_transition_start: 2 samples
+      collector_ts_ns: avg=1759792335048771072.000 | min=1759792333766050048.000 | max=1759792336331492096.000
+      timestamp_ns: avg=1759792335333928960.000 | min=1759792334065423872.000 | max=1759792336602434048.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759792488136744704.000 | min=1759792338539065088.000 | max=1759792638982236928.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759792488431155200.000 | min=1759792338838828032.000 | max=1759792639299204096.000
+    - system_sample: 3002 samples
+      collector_ts_ns: avg=1759792488742524928.000 | min=1759792338587002112.000 | max=1759792638922663936.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=11.331 | min=0.000 | max=71.800
+      cpu_temp_c: avg=57.721 | min=55.000 | max=59.900
+      mem_percent: avg=8.693 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.432 | min=256.297 | max=264.461
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=1120.768 | min=63.468 | max=2496.270
+      timestamp_ns: avg=1759792489043014144.000 | min=1759792338853417984.000 | max=1759792639233841920.000
+    - thermal_sample: 598 samples
+      collector_ts_ns: avg=1759792486024909312.000 | min=1759792336290107904.000 | max=1759792635761636096.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=57.757 | min=55.500 | max=59.400
+      timestamp_ns: avg=1759792486316804608.000 | min=1759792336559896064.000 | max=1759792636060303104.000
+      ts_unix_ns: avg=1759792486311852288.000 | min=1759792336552052992.000 | max=1759792636056519936.000
+    - udp_echo_sample: 2316 samples
+      collector_ts_ns: avg=1759792490172427776.000 | min=1759792340488674048.000 | max=1759792619359058944.000
+      processing_ns: avg=3757.962 | min=2222.000 | max=51982.000
+      recv_timestamp_ns: avg=1759792490471610880.000 | min=1759792340785597952.000 | max=1759792619631298048.000
+      send_timestamp_ns: avg=1759792490471614976.000 | min=1759792340785605888.000 | max=1759792619631301120.000
+      sequence: avg=18915.026 | min=0.000 | max=45300.000
+      timestamp_ns: avg=1759792490471872256.000 | min=1759792340785793024.000 | max=1759792619631472896.000
+
+Suite: cs-mlkem1024-aesgcm-sphincs128fsha2
+  Baseline OWD (p50/p95 ms): 31.821 / 35.003
+  Baseline RTT (p50/p95 ms): 2.147 / 6.237
+  Saturation point (Mbps): 59.000
+  Stop cause: owd_p95_spike | confidence=1.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 3449.047
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem1024-aesgcm-sphincs128fsha2_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.176 Mbps | loss=0.000% | avg_rtt=2.674 ms (min=1.513, max=21.916)
+    - 25.0 Mbps | thr=1.510 Mbps | loss=0.000% | avg_rtt=2.994 ms (min=1.526, max=22.567)
+    - 50.0 Mbps | thr=2.060 Mbps | loss=0.000% | avg_rtt=3.916 ms (min=1.480, max=64.734)
+    - 56.0 Mbps | thr=2.211 Mbps | loss=0.418% | avg_rtt=5.297 ms (min=1.432, max=240.456)
+    - 59.0 Mbps | thr=2.395 Mbps | loss=0.000% | avg_rtt=4.778 ms (min=1.483, max=43.676)
+    - 62.0 Mbps | thr=2.506 Mbps | loss=0.042% | avg_rtt=6.395 ms (min=1.493, max=82.776)
+    - 75.0 Mbps | thr=3.103 Mbps | loss=1.215% | avg_rtt=11.837 ms (min=1.461, max=99.376)
+  Telemetry summary:
+    - mark: 1 samples
+      collector_ts_ns: avg=1759793513583560960.000 | min=1759793513583560960.000 | max=1759793513583560960.000
+      timestamp_ns: avg=1759793513895472896.000 | min=1759793513895472896.000 | max=1759793513895472896.000
+    - monitors_started: 1 samples
+      collector_ts_ns: avg=1759793513583554048.000 | min=1759793513583554048.000 | max=1759793513583554048.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759793513892845056.000 | min=1759793513892845056.000 | max=1759793513892845056.000
+    - monitors_stopped: 1 samples
+      collector_ts_ns: avg=1759793858282825984.000 | min=1759793858282825984.000 | max=1759793858282825984.000
+      timestamp_ns: avg=1759793858592900096.000 | min=1759793858592900096.000 | max=1759793858592900096.000
+    - perf_sample: 1 samples
+      branch-misses: avg=19564.000 | min=19564.000 | max=19564.000
+      cache-misses: avg=14180.000 | min=14180.000 | max=14180.000
+      collector_ts_ns: avg=1759793857014843904.000 | min=1759793857014843904.000 | max=1759793857014843904.000
+      context-switches: avg=11.000 | min=11.000 | max=11.000
+      cycles: avg=3745688.000 | min=3745688.000 | max=3745688.000
+      instructions: avg=801674.000 | min=801674.000 | max=801674.000
+      t_offset_ms: avg=342.000 | min=342.000 | max=342.000
+      task-clock: avg=2.280 | min=2.280 | max=2.280
+      timestamp_ns: avg=1759793857338141952.000 | min=1759793857338141952.000 | max=1759793857338141952.000
+      ts_unix_ns: avg=1759793514228983808.000 | min=1759793514228983808.000 | max=1759793514228983808.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759793513877176064.000 | min=1759793513877176064.000 | max=1759793513877176064.000
+      timestamp_ns: avg=1759793514153308928.000 | min=1759793514153308928.000 | max=1759793514153308928.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759793513831646976.000 | min=1759793513831646976.000 | max=1759793513831646976.000
+      duration_ms: avg=1487.307 | min=1487.307 | max=1487.307
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759793514153165056.000 | min=1759793514153165056.000 | max=1759793514153165056.000
+    - rekey_transition_start: 1 samples
+      collector_ts_ns: avg=1759793512392577024.000 | min=1759793512392577024.000 | max=1759793512392577024.000
+      timestamp_ns: avg=1759793512665701888.000 | min=1759793512665701888.000 | max=1759793512665701888.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759793685944497152.000 | min=1759793513877219072.000 | max=1759793858489231104.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759793686237825024.000 | min=1759793514168631040.000 | max=1759793858812847104.000
+    - system_sample: 3442 samples
+      collector_ts_ns: avg=1759793686117721856.000 | min=1759793513877206016.000 | max=1759793858425060096.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=12.420 | min=0.000 | max=74.400
+      cpu_temp_c: avg=59.474 | min=56.000 | max=62.300
+      mem_percent: avg=8.695 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.395 | min=256.547 | max=264.066
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=961.790 | min=61.073 | max=1862.535
+      timestamp_ns: avg=1759793686421145600.000 | min=1759793514158810880.000 | max=1759793858743491072.000
+    - thermal_sample: 343 samples
+      collector_ts_ns: avg=1759793685442273280.000 | min=1759793513583569920.000 | max=1759793857274552064.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=59.480 | min=56.400 | max=61.800
+      timestamp_ns: avg=1759793685740945920.000 | min=1759793513899031040.000 | max=1759793857592739072.000
+      ts_unix_ns: avg=1759793685736027392.000 | min=1759793513892700928.000 | max=1759793857588877056.000
+    - udp_echo_sample: 3398 samples
+      collector_ts_ns: avg=1759793695497070592.000 | min=1759793515790940928.000 | max=1759793841180423936.000
+      processing_ns: avg=3571.772 | min=2093.000 | max=186001.000
+      recv_timestamp_ns: avg=1759793695799507712.000 | min=1759793516100367104.000 | max=1759793841503781120.000
+      send_timestamp_ns: avg=1759793695799511040.000 | min=1759793516100374016.000 | max=1759793841503783936.000
+      sequence: avg=24929.782 | min=0.000 | max=69400.000
+      timestamp_ns: avg=1759793695799850752.000 | min=1759793516100581120.000 | max=1759793841503993088.000
+
+Suite: cs-mlkem1024-aesgcm-sphincs256fsha2
+  Baseline OWD (p50/p95 ms): 33.637 / 36.935
+  Baseline RTT (p50/p95 ms): 2.132 / 6.699
+  Saturation point (Mbps): 72.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 3904.474
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem1024-aesgcm-sphincs256fsha2_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.183 Mbps | loss=0.000% | avg_rtt=2.728 ms (min=1.570, max=23.347)
+    - 25.0 Mbps | thr=1.483 Mbps | loss=0.000% | avg_rtt=3.018 ms (min=1.497, max=57.184)
+    - 50.0 Mbps | thr=2.047 Mbps | loss=0.002% | avg_rtt=3.895 ms (min=1.498, max=43.617)
+    - 62.0 Mbps | thr=2.457 Mbps | loss=0.000% | avg_rtt=4.696 ms (min=1.483, max=26.939)
+    - 68.0 Mbps | thr=2.811 Mbps | loss=0.000% | avg_rtt=6.077 ms (min=1.523, max=44.942)
+    - 72.0 Mbps | thr=2.952 Mbps | loss=0.023% | avg_rtt=6.762 ms (min=1.426, max=48.518)
+    - 75.0 Mbps | thr=3.093 Mbps | loss=1.713% | avg_rtt=10.160 ms (min=1.462, max=101.241)
+  Telemetry summary:
+    - mark: 1 samples
+      collector_ts_ns: avg=1759793858282842880.000 | min=1759793858282842880.000 | max=1759793858282842880.000
+      timestamp_ns: avg=1759793858601921024.000 | min=1759793858601921024.000 | max=1759793858601921024.000
+    - monitors_started: 1 samples
+      collector_ts_ns: avg=1759793858282838016.000 | min=1759793858282838016.000 | max=1759793858282838016.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759793858598827008.000 | min=1759793858598827008.000 | max=1759793858598827008.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759793858531577088.000 | min=1759793858531577088.000 | max=1759793858531577088.000
+      timestamp_ns: avg=1759793858840645120.000 | min=1759793858840645120.000 | max=1759793858840645120.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759793858531559936.000 | min=1759793858531559936.000 | max=1759793858531559936.000
+      duration_ms: avg=1959.288 | min=1959.288 | max=1959.288
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759793858840503040.000 | min=1759793858840503040.000 | max=1759793858840503040.000
+    - rekey_transition_start: 1 samples
+      collector_ts_ns: avg=1759793856573144064.000 | min=1759793856573144064.000 | max=1759793856573144064.000
+      timestamp_ns: avg=1759793856880955904.000 | min=1759793856880955904.000 | max=1759793856880955904.000
+    - status_reply: 3 samples
+      collector_ts_ns: avg=1759793858764651776.000 | min=1759793858531593984.000 | max=1759793858981764096.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759793859051410432.000 | min=1759793858845047040.000 | max=1759793859257373952.000
+    - system_sample: 3274 samples
+      collector_ts_ns: avg=1759794022348907008.000 | min=1759793858531602944.000 | max=1759794186153635072.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=13.381 | min=0.000 | max=63.200
+      cpu_temp_c: avg=58.503 | min=55.500 | max=60.800
+      mem_percent: avg=8.690 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.417 | min=257.090 | max=265.137
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759794022652650752.000 | min=1759793858843571968.000 | max=1759794186473156096.000
+    - thermal_sample: 327 samples
+      collector_ts_ns: avg=1759794022100253440.000 | min=1759793858332960000.000 | max=1759794185913449984.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=58.535 | min=56.000 | max=60.800
+      timestamp_ns: avg=1759794022402247680.000 | min=1759793858606768128.000 | max=1759794186230518016.000
+      ts_unix_ns: avg=1759794022397290496.000 | min=1759793858598609920.000 | max=1759794186226522112.000
+    - udp_echo_sample: 3643 samples
+      collector_ts_ns: avg=1759794047237506560.000 | min=1759793860467198976.000 | max=1759794185817216000.000
+      processing_ns: avg=3462.898 | min=2093.000 | max=47463.000
+      recv_timestamp_ns: avg=1759794047541358080.000 | min=1759793860770489088.000 | max=1759794186124116992.000
+      send_timestamp_ns: avg=1759794047541360896.000 | min=1759793860770497024.000 | max=1759794186124120064.000
+      sequence: avg=27071.589 | min=0.000 | max=69500.000
+      timestamp_ns: avg=1759794047541622784.000 | min=1759793860770722048.000 | max=1759794186124290048.000
+
+Suite: cs-mlkem512-aesgcm-falcon1024
+  Baseline OWD (p50/p95 ms): 7.020 / 10.193
+  Baseline RTT (p50/p95 ms): 2.254 / 6.543
+  Saturation point (Mbps): 94.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 3722.961
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem512-aesgcm-falcon1024_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.148 Mbps | loss=0.000% | avg_rtt=2.824 ms (min=1.578, max=23.114)
+    - 25.0 Mbps | thr=1.570 Mbps | loss=0.000% | avg_rtt=3.325 ms (min=1.514, max=27.267)
+    - 50.0 Mbps | thr=2.048 Mbps | loss=0.000% | avg_rtt=4.166 ms (min=1.444, max=29.055)
+    - 75.0 Mbps | thr=2.352 Mbps | loss=0.000% | avg_rtt=4.585 ms (min=1.417, max=27.196)
+    - 88.0 Mbps | thr=2.364 Mbps | loss=0.000% | avg_rtt=4.267 ms (min=1.393, max=38.156)
+    - 94.0 Mbps | thr=2.448 Mbps | loss=0.000% | avg_rtt=4.215 ms (min=1.409, max=25.565)
+    - 97.0 Mbps | thr=3.369 Mbps | loss=0.371% | avg_rtt=7.849 ms (min=1.464, max=51.962)
+    - 100.0 Mbps | thr=3.709 Mbps | loss=0.496% | avg_rtt=8.770 ms (min=1.427, max=84.859)
+
+Suite: cs-mlkem512-aesgcm-falcon512
+  Baseline OWD (p50/p95 ms): 4.108 / 7.399
+  Baseline RTT (p50/p95 ms): 1.985 / 6.615
+  Saturation point (Mbps): 75.000
+  Stop cause: owd_p95_spike | confidence=1.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 6271.318
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem512-aesgcm-falcon512_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.228 Mbps | loss=0.000% | avg_rtt=2.698 ms (min=1.509, max=26.783)
+    - 25.0 Mbps | thr=1.400 Mbps | loss=0.000% | avg_rtt=2.815 ms (min=1.471, max=22.998)
+    - 50.0 Mbps | thr=2.019 Mbps | loss=0.000% | avg_rtt=4.660 ms (min=1.433, max=28.355)
+    - 75.0 Mbps | thr=2.205 Mbps | loss=0.000% | avg_rtt=3.894 ms (min=1.411, max=26.299)
+    - 78.0 Mbps | thr=3.240 Mbps | loss=0.000% | avg_rtt=7.336 ms (min=1.413, max=54.567)
+    - 82.0 Mbps | thr=3.458 Mbps | loss=0.000% | avg_rtt=7.925 ms (min=1.458, max=52.395)
+    - 88.0 Mbps | thr=3.690 Mbps | loss=2.319% | avg_rtt=14.607 ms (min=1.458, max=87.109)
+    - 100.0 Mbps | thr=2.623 Mbps | loss=0.000% | avg_rtt=5.030 ms (min=1.451, max=39.870)
+
+Suite: cs-mlkem512-aesgcm-mldsa44
+  Baseline OWD (p50/p95 ms): 0.934 / 5.099
+  Baseline RTT (p50/p95 ms): 2.059 / 6.520
+  Saturation point (Mbps): 10.000
+  Stop cause: owd_p95_spike | confidence=1.000
+  Search mode: auto | resolution=5.000 Mbps
+  Rekey duration (ms): 4116.372
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem512-aesgcm-mldsa44_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.198 Mbps | loss=0.000% | avg_rtt=2.687 ms (min=1.506, max=26.697)
+    - 10.0 Mbps | thr=1.295 Mbps | loss=0.000% | avg_rtt=3.035 ms (min=1.532, max=33.012)
+    - 15.0 Mbps | thr=1.337 Mbps | loss=0.000% | avg_rtt=2.855 ms (min=1.537, max=42.352)
+    - 25.0 Mbps | thr=1.410 Mbps | loss=0.000% | avg_rtt=2.868 ms (min=1.511, max=40.220)
+
+Suite: cs-mlkem512-aesgcm-mldsa65
+  Baseline OWD (p50/p95 ms): 0.845 / 4.646
+  Baseline RTT (p50/p95 ms): 2.078 / 7.124
+  Saturation point (Mbps): 109.000
+  Stop cause: owd_p95_spike | confidence=1.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 4859.344
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem512-aesgcm-mldsa65_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.196 Mbps | loss=0.004% | avg_rtt=2.967 ms (min=1.557, max=129.449)
+    - 25.0 Mbps | thr=1.387 Mbps | loss=0.000% | avg_rtt=2.825 ms (min=1.459, max=24.673)
+    - 50.0 Mbps | thr=1.868 Mbps | loss=0.000% | avg_rtt=3.583 ms (min=1.498, max=35.525)
+    - 75.0 Mbps | thr=2.216 Mbps | loss=0.000% | avg_rtt=3.841 ms (min=1.470, max=34.535)
+    - 100.0 Mbps | thr=2.547 Mbps | loss=0.002% | avg_rtt=4.578 ms (min=1.451, max=29.995)
+    - 106.0 Mbps | thr=2.672 Mbps | loss=0.000% | avg_rtt=4.829 ms (min=1.426, max=30.378)
+    - 109.0 Mbps | thr=2.575 Mbps | loss=0.000% | avg_rtt=4.560 ms (min=1.417, max=26.463)
+    - 112.0 Mbps | thr=4.596 Mbps | loss=1.910% | avg_rtt=13.433 ms (min=1.470, max=87.671)
+    - 125.0 Mbps | thr=5.971 Mbps | loss=2.325% | avg_rtt=15.473 ms (min=1.438, max=106.712)
+
+Suite: cs-mlkem512-aesgcm-mldsa87
+  Baseline OWD (p50/p95 ms): 1.458 / 4.829
+  Baseline RTT (p50/p95 ms): 2.023 / 6.882
+  Saturation point (Mbps): 47.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 6607.866
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem512-aesgcm-mldsa87_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.219 Mbps | loss=0.000% | avg_rtt=2.771 ms (min=1.492, max=27.531)
+    - 25.0 Mbps | thr=1.400 Mbps | loss=0.000% | avg_rtt=3.054 ms (min=1.514, max=27.437)
+    - 38.0 Mbps | thr=1.663 Mbps | loss=0.000% | avg_rtt=3.320 ms (min=1.448, max=37.839)
+    - 44.0 Mbps | thr=1.725 Mbps | loss=0.000% | avg_rtt=3.413 ms (min=1.406, max=25.762)
+    - 47.0 Mbps | thr=1.867 Mbps | loss=0.000% | avg_rtt=3.499 ms (min=1.447, max=23.634)
+    - 50.0 Mbps | thr=1.818 Mbps | loss=0.000% | avg_rtt=5.971 ms (min=1.454, max=66.129)
+
+Suite: cs-mlkem512-aesgcm-sphincs128fsha2
+  Baseline OWD (p50/p95 ms): 9.532 / 12.728
+  Baseline RTT (p50/p95 ms): 2.127 / 6.159
+  Saturation point (Mbps): 20.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=5.000 Mbps
+  Rekey duration (ms): 3819.365
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem512-aesgcm-sphincs128fsha2_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.191 Mbps | loss=0.000% | avg_rtt=2.658 ms (min=1.520, max=22.509)
+    - 15.0 Mbps | thr=1.338 Mbps | loss=0.000% | avg_rtt=2.841 ms (min=1.504, max=24.867)
+    - 20.0 Mbps | thr=1.412 Mbps | loss=0.000% | avg_rtt=2.868 ms (min=1.521, max=23.104)
+    - 25.0 Mbps | thr=1.416 Mbps | loss=0.000% | avg_rtt=5.606 ms (min=1.489, max=62.631)
+
+Suite: cs-mlkem512-aesgcm-sphincs256fsha2
+  Baseline OWD (p50/p95 ms): 10.779 / 14.193
+  Baseline RTT (p50/p95 ms): 2.172 / 6.477
+  Saturation point (Mbps): 62.000
+  Stop cause: owd_p95_spike | confidence=1.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 4866.414
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem512-aesgcm-sphincs256fsha2_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.171 Mbps | loss=0.000% | avg_rtt=2.754 ms (min=1.548, max=38.933)
+    - 25.0 Mbps | thr=1.504 Mbps | loss=0.000% | avg_rtt=3.009 ms (min=1.523, max=24.214)
+    - 50.0 Mbps | thr=2.050 Mbps | loss=0.000% | avg_rtt=3.845 ms (min=1.492, max=27.736)
+    - 62.0 Mbps | thr=2.468 Mbps | loss=0.000% | avg_rtt=4.906 ms (min=1.446, max=59.961)
+    - 65.0 Mbps | thr=2.641 Mbps | loss=0.000% | avg_rtt=5.733 ms (min=1.529, max=53.938)
+    - 68.0 Mbps | thr=2.767 Mbps | loss=0.000% | avg_rtt=6.093 ms (min=1.517, max=57.430)
+    - 75.0 Mbps | thr=3.116 Mbps | loss=0.009% | avg_rtt=7.621 ms (min=1.495, max=60.466)
+
+Suite: cs-mlkem768-aesgcm-falcon1024
+  Baseline OWD (p50/p95 ms): 16.918 / 20.243
+  Baseline RTT (p50/p95 ms): 2.201 / 7.095
+  Saturation point (Mbps): 68.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=4.000 Mbps
+  Rekey duration (ms): 6341.501
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem768-aesgcm-falcon1024_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.175 Mbps | loss=0.000% | avg_rtt=2.738 ms (min=1.520, max=25.133)
+    - 25.0 Mbps | thr=1.491 Mbps | loss=0.000% | avg_rtt=3.188 ms (min=1.522, max=27.372)
+    - 50.0 Mbps | thr=2.040 Mbps | loss=0.000% | avg_rtt=4.138 ms (min=1.498, max=32.638)
+    - 62.0 Mbps | thr=2.496 Mbps | loss=0.080% | avg_rtt=5.830 ms (min=1.484, max=239.363)
+    - 68.0 Mbps | thr=2.687 Mbps | loss=0.000% | avg_rtt=5.467 ms (min=1.474, max=51.261)
+    - 72.0 Mbps | thr=2.904 Mbps | loss=0.040% | avg_rtt=6.733 ms (min=1.400, max=60.895)
+    - 75.0 Mbps | thr=3.062 Mbps | loss=0.000% | avg_rtt=7.203 ms (min=1.400, max=141.631)
+  Telemetry summary:
+    - mark: 2 samples
+      collector_ts_ns: avg=1759790747351044608.000 | min=1759790746345424896.000 | max=1759790748356664064.000
+      timestamp_ns: avg=1759790747620971520.000 | min=1759790746613182976.000 | max=1759790748628760064.000
+    - monitors_started: 2 samples
+      collector_ts_ns: avg=1759790747351019520.000 | min=1759790746345412096.000 | max=1759790748356626944.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759790747618344448.000 | min=1759790746610157056.000 | max=1759790748626532096.000
+    - monitors_stopped: 2 samples
+      collector_ts_ns: avg=1759790920671873536.000 | min=1759790748313906944.000 | max=1759791093029839872.000
+      timestamp_ns: avg=1759790920977951744.000 | min=1759790748620698112.000 | max=1759791093335205120.000
+    - perf_sample: 1 samples
+      branch-misses: avg=17997.000 | min=17997.000 | max=17997.000
+      cache-misses: avg=13429.000 | min=13429.000 | max=13429.000
+      collector_ts_ns: avg=1759791091728505088.000 | min=1759791091728505088.000 | max=1759791091728505088.000
+      context-switches: avg=11.000 | min=11.000 | max=11.000
+      cycles: avg=3048457.000 | min=3048457.000 | max=3048457.000
+      instructions: avg=774862.000 | min=774862.000 | max=774862.000
+      t_offset_ms: avg=342.000 | min=342.000 | max=342.000
+      task-clock: avg=1.880 | min=1.880 | max=1.880
+      timestamp_ns: avg=1759791092035074048.000 | min=1759791092035074048.000 | max=1759791092035074048.000
+      ts_unix_ns: avg=1759790748963593216.000 | min=1759790748963593216.000 | max=1759790748963593216.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759790748621585920.000 | min=1759790748621585920.000 | max=1759790748621585920.000
+      timestamp_ns: avg=1759790748896883968.000 | min=1759790748896883968.000 | max=1759790748896883968.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759790748621570048.000 | min=1759790748621570048.000 | max=1759790748621570048.000
+      duration_ms: avg=1847.373 | min=1847.373 | max=1847.373
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759790748896296960.000 | min=1759790748896296960.000 | max=1759790748896296960.000
+    - rekey_transition_start: 2 samples
+      collector_ts_ns: avg=1759790745507785728.000 | min=1759790744273584128.000 | max=1759790746741987072.000
+      timestamp_ns: avg=1759790745794913792.000 | min=1759790744540968960.000 | max=1759790747048858880.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759790920705961216.000 | min=1759790748621596928.000 | max=1759791093261698048.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759790920996647936.000 | min=1759790748914365952.000 | max=1759791093569696000.000
+    - system_sample: 3442 samples
+      collector_ts_ns: avg=1759790920957679872.000 | min=1759790748668006912.000 | max=1759791093318283008.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=12.862 | min=0.000 | max=65.900
+      cpu_temp_c: avg=57.556 | min=55.000 | max=59.900
+      mem_percent: avg=8.682 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.050 | min=255.383 | max=265.211
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=995.708 | min=44.930 | max=1946.475
+      timestamp_ns: avg=1759790921245450752.000 | min=1759790748950991872.000 | max=1759791093577103104.000
+    - thermal_sample: 345 samples
+      collector_ts_ns: avg=1759790919186579712.000 | min=1759790746345438976.000 | max=1759791092026573056.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=57.582 | min=55.000 | max=59.400
+      timestamp_ns: avg=1759790919472590080.000 | min=1759790746616736000.000 | max=1759791092335034112.000
+      ts_unix_ns: avg=1759790919467628032.000 | min=1759790746609933056.000 | max=1759791092331162880.000
+    - udp_echo_sample: 3594 samples
+      collector_ts_ns: avg=1759790936878112256.000 | min=1759790750599461888.000 | max=1759791076012881920.000
+      processing_ns: avg=3673.734 | min=2129.000 | max=293778.000
+      recv_timestamp_ns: avg=1759790937165740288.000 | min=1759790750874525952.000 | max=1759791076299467008.000
+      send_timestamp_ns: avg=1759790937165743104.000 | min=1759790750874533888.000 | max=1759791076299471104.000
+      sequence: avg=26542.654 | min=0.000 | max=67600.000
+      timestamp_ns: avg=1759790937166098688.000 | min=1759790750874725888.000 | max=1759791076299642880.000
+
+Suite: cs-mlkem768-aesgcm-falcon512
+  Baseline OWD (p50/p95 ms): 15.461 / 19.428
+  Baseline RTT (p50/p95 ms): 2.243 / 6.920
+  Saturation point (Mbps): 47.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 3963.533
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem768-aesgcm-falcon512_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.174 Mbps | loss=0.000% | avg_rtt=2.869 ms (min=1.481, max=33.474)
+    - 25.0 Mbps | thr=1.474 Mbps | loss=0.000% | avg_rtt=3.282 ms (min=1.452, max=27.465)
+    - 38.0 Mbps | thr=1.721 Mbps | loss=0.000% | avg_rtt=3.455 ms (min=1.456, max=26.364)
+    - 44.0 Mbps | thr=1.884 Mbps | loss=0.000% | avg_rtt=3.711 ms (min=1.462, max=32.961)
+    - 47.0 Mbps | thr=1.972 Mbps | loss=0.000% | avg_rtt=3.918 ms (min=1.474, max=23.492)
+    - 50.0 Mbps | thr=2.103 Mbps | loss=0.000% | avg_rtt=7.404 ms (min=1.501, max=112.302)
+  Telemetry summary:
+    - mark: 1 samples
+      collector_ts_ns: avg=1759790447880632064.000 | min=1759790447880632064.000 | max=1759790447880632064.000
+      timestamp_ns: avg=1759790448147044096.000 | min=1759790448147044096.000 | max=1759790448147044096.000
+    - monitors_started: 1 samples
+      collector_ts_ns: avg=1759790447880594944.000 | min=1759790447880594944.000 | max=1759790447880594944.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759790448144989952.000 | min=1759790448144989952.000 | max=1759790448144989952.000
+    - monitors_stopped: 1 samples
+      collector_ts_ns: avg=1759790746299220992.000 | min=1759790746299220992.000 | max=1759790746299220992.000
+      timestamp_ns: avg=1759790746604076032.000 | min=1759790746604076032.000 | max=1759790746604076032.000
+    - perf_sample: 1 samples
+      branch-misses: avg=19376.000 | min=19376.000 | max=19376.000
+      cache-misses: avg=13558.000 | min=13558.000 | max=13558.000
+      collector_ts_ns: avg=1759790745220400128.000 | min=1759790745220400128.000 | max=1759790745220400128.000
+      context-switches: avg=12.000 | min=12.000 | max=12.000
+      cycles: avg=2984054.000 | min=2984054.000 | max=2984054.000
+      instructions: avg=786384.000 | min=786384.000 | max=786384.000
+      t_offset_ms: avg=296.000 | min=296.000 | max=296.000
+      task-clock: avg=1.850 | min=1.850 | max=1.850
+      timestamp_ns: avg=1759790745527439104.000 | min=1759790745527439104.000 | max=1759790745527439104.000
+      ts_unix_ns: avg=1759790448435388928.000 | min=1759790448435388928.000 | max=1759790448435388928.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759790448111801088.000 | min=1759790448111801088.000 | max=1759790448111801088.000
+      timestamp_ns: avg=1759790448388217088.000 | min=1759790448388217088.000 | max=1759790448388217088.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759790448111795968.000 | min=1759790448111795968.000 | max=1759790448111795968.000
+      duration_ms: avg=1992.009 | min=1992.009 | max=1992.009
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759790448387895040.000 | min=1759790448387895040.000 | max=1759790448387895040.000
+    - rekey_transition_start: 1 samples
+      collector_ts_ns: avg=1759790446104838912.000 | min=1759790446104838912.000 | max=1759790446104838912.000
+      timestamp_ns: avg=1759790446395812096.000 | min=1759790446395812096.000 | max=1759790446395812096.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759790597693421568.000 | min=1759790448111803904.000 | max=1759790748621541120.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759790597981814528.000 | min=1759790448402565888.000 | max=1759790748874525952.000
+    - system_sample: 3002 samples
+      collector_ts_ns: avg=1759790598365508864.000 | min=1759790448162194944.000 | max=1759790748566505984.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=11.125 | min=0.000 | max=74.400
+      cpu_temp_c: avg=57.513 | min=55.000 | max=59.400
+      mem_percent: avg=8.693 | min=8.500 | max=8.800
+      mem_used_mb: avg=260.098 | min=254.867 | max=264.629
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=1075.062 | min=0.446 | max=2408.224
+      timestamp_ns: avg=1759790598655458304.000 | min=1759790448462456064.000 | max=1759790748850909952.000
+    - thermal_sample: 297 samples
+      collector_ts_ns: avg=1759790596598747904.000 | min=1759790447880660992.000 | max=1759790745319731968.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=57.544 | min=55.000 | max=59.400
+      timestamp_ns: avg=1759790596881614848.000 | min=1759790448150757120.000 | max=1759790745603917056.000
+      ts_unix_ns: avg=1759790596876715264.000 | min=1759790448144861952.000 | max=1759790745599212032.000
+    - udp_echo_sample: 2340 samples
+      collector_ts_ns: avg=1759790600604581376.000 | min=1759790450039912960.000 | max=1759790728821068032.000
+      processing_ns: avg=3676.496 | min=2148.000 | max=83167.000
+      recv_timestamp_ns: avg=1759790600893307136.000 | min=1759790450344251904.000 | max=1759790729127158016.000
+      send_timestamp_ns: avg=1759790600893311232.000 | min=1759790450344261120.000 | max=1759790729127161088.000
+      sequence: avg=19176.026 | min=0.000 | max=46400.000
+      timestamp_ns: avg=1759790600893597696.000 | min=1759790450344474880.000 | max=1759790729127399936.000
+
+Suite: cs-mlkem768-aesgcm-mldsa44
+  Baseline OWD (p50/p95 ms): 12.625 / 15.764
+  Baseline RTT (p50/p95 ms): 2.154 / 6.323
+  Saturation point (Mbps): 47.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 4122.153
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem768-aesgcm-mldsa44_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.184 Mbps | loss=0.000% | avg_rtt=2.689 ms (min=1.516, max=23.127)
+    - 25.0 Mbps | thr=1.505 Mbps | loss=0.000% | avg_rtt=2.993 ms (min=1.482, max=30.758)
+    - 38.0 Mbps | thr=1.739 Mbps | loss=0.000% | avg_rtt=4.860 ms (min=1.485, max=68.825)
+    - 44.0 Mbps | thr=1.867 Mbps | loss=0.000% | avg_rtt=3.537 ms (min=1.514, max=22.855)
+    - 47.0 Mbps | thr=1.937 Mbps | loss=0.000% | avg_rtt=3.656 ms (min=1.512, max=27.305)
+    - 50.0 Mbps | thr=2.044 Mbps | loss=0.000% | avg_rtt=4.943 ms (min=1.506, max=63.240)
+  Telemetry summary:
+    - monitors_stopped: 1 samples
+      collector_ts_ns: avg=1759790101104148992.000 | min=1759790101104148992.000 | max=1759790101104148992.000
+      timestamp_ns: avg=1759790101406193920.000 | min=1759790101406193920.000 | max=1759790101406193920.000
+    - perf_sample: 1 samples
+      branch-misses: avg=19783.000 | min=19783.000 | max=19783.000
+      cache-misses: avg=13833.000 | min=13833.000 | max=13833.000
+      collector_ts_ns: avg=1759790099974791936.000 | min=1759790099974791936.000 | max=1759790099974791936.000
+      context-switches: avg=11.000 | min=11.000 | max=11.000
+      cycles: avg=3354812.000 | min=3354812.000 | max=3354812.000
+      instructions: avg=794819.000 | min=794819.000 | max=794819.000
+      t_offset_ms: avg=296.000 | min=296.000 | max=296.000
+      task-clock: avg=2.070 | min=2.070 | max=2.070
+      timestamp_ns: avg=1759790100246746112.000 | min=1759790100246746112.000 | max=1759790100246746112.000
+      ts_unix_ns: avg=1759789803188573696.000 | min=1759789803188573696.000 | max=1759789803188573696.000
+    - status_reply: 3 samples
+      collector_ts_ns: avg=1759790101876128512.000 | min=1759790099067943936.000 | max=1759790103381086976.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759790102159660800.000 | min=1759790099341171968.000 | max=1759790103673128960.000
+    - system_sample: 2097 samples
+      collector_ts_ns: avg=1759789998436323072.000 | min=1759789893517808128.000 | max=1759790103324979968.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=11.592 | min=0.000 | max=54.800
+      cpu_temp_c: avg=57.492 | min=54.500 | max=59.400
+      mem_percent: avg=8.690 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.101 | min=255.500 | max=263.980
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=1090.061 | min=18.113 | max=2450.425
+      timestamp_ns: avg=1759789998721604864.000 | min=1759789893818077952.000 | max=1759790103624270080.000
+    - thermal_sample: 412 samples
+      collector_ts_ns: avg=1759789997112914176.000 | min=1759789894087055872.000 | max=1759790100147077120.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=57.461 | min=55.000 | max=59.400
+      timestamp_ns: avg=1759789997391354112.000 | min=1759789894369987072.000 | max=1759790100405903104.000
+      ts_unix_ns: avg=1759789997386379776.000 | min=1759789894365540096.000 | max=1759790100402051072.000
+    - udp_echo_sample: 1750 samples
+      collector_ts_ns: avg=1759789988707486208.000 | min=1759789893574061056.000 | max=1759790083757094912.000
+      processing_ns: avg=3908.002 | min=2092.000 | max=564444.000
+      recv_timestamp_ns: avg=1759789988993877504.000 | min=1759789893876488960.000 | max=1759790084023154944.000
+      send_timestamp_ns: avg=1759789988993882624.000 | min=1759789893876492032.000 | max=1759790084023158016.000
+      sequence: avg=20711.143 | min=0.000 | max=45100.000
+      timestamp_ns: avg=1759789988994128896.000 | min=1759789893876720128.000 | max=1759790084023311104.000
+
+Suite: cs-mlkem768-aesgcm-mldsa65
+  Baseline OWD (p50/p95 ms): 0.758 / 10.918
+  Baseline RTT (p50/p95 ms): 2.043 / 8.993
+  Saturation point (Mbps): 20.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=5.000 Mbps
+  Rekey duration (ms): 3464.273
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem768-aesgcm-mldsa65_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.232 Mbps | loss=0.000% | avg_rtt=2.782 ms (min=1.505, max=38.134)
+    - 15.0 Mbps | thr=1.335 Mbps | loss=0.000% | avg_rtt=3.369 ms (min=1.475, max=23.850)
+    - 20.0 Mbps | thr=1.368 Mbps | loss=0.000% | avg_rtt=2.952 ms (min=1.480, max=40.162)
+    - 25.0 Mbps | thr=1.418 Mbps | loss=0.000% | avg_rtt=5.648 ms (min=1.532, max=61.717)
+
+Suite: cs-mlkem768-aesgcm-mldsa87
+  Baseline OWD (p50/p95 ms): 13.811 / 16.886
+  Baseline RTT (p50/p95 ms): 2.175 / 6.252
+  Saturation point (Mbps): 68.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=4.000 Mbps
+  Rekey duration (ms): 6313.598
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem768-aesgcm-mldsa87_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.171 Mbps | loss=0.000% | avg_rtt=2.696 ms (min=1.554, max=22.636)
+    - 25.0 Mbps | thr=1.513 Mbps | loss=0.000% | avg_rtt=3.186 ms (min=1.467, max=24.904)
+    - 50.0 Mbps | thr=1.999 Mbps | loss=0.000% | avg_rtt=4.130 ms (min=1.478, max=48.724)
+    - 62.0 Mbps | thr=2.137 Mbps | loss=0.000% | avg_rtt=4.172 ms (min=1.435, max=27.709)
+    - 68.0 Mbps | thr=2.378 Mbps | loss=0.017% | avg_rtt=5.178 ms (min=1.433, max=52.406)
+    - 72.0 Mbps | thr=3.215 Mbps | loss=0.010% | avg_rtt=6.998 ms (min=1.466, max=51.798)
+    - 75.0 Mbps | thr=3.191 Mbps | loss=0.094% | avg_rtt=7.971 ms (min=1.457, max=54.305)
+  Telemetry summary:
+    - mark: 2 samples
+      collector_ts_ns: avg=1759790102165725952.000 | min=1759790101152118016.000 | max=1759790103179333888.000
+      timestamp_ns: avg=1759790102426090496.000 | min=1759790101414280960.000 | max=1759790103437900032.000
+    - monitors_started: 2 samples
+      collector_ts_ns: avg=1759790102165710848.000 | min=1759790101152097024.000 | max=1759790103179324928.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759790102423320576.000 | min=1759790101411801088.000 | max=1759790103434840064.000
+    - monitors_stopped: 2 samples
+      collector_ts_ns: avg=1759790275476636416.000 | min=1759790103120157952.000 | max=1759790447833114880.000
+      timestamp_ns: avg=1759790275780528128.000 | min=1759790103422504960.000 | max=1759790448138551040.000
+    - perf_sample: 1 samples
+      branch-misses: avg=18498.000 | min=18498.000 | max=18498.000
+      cache-misses: avg=13337.000 | min=13337.000 | max=13337.000
+      collector_ts_ns: avg=1759790446549632000.000 | min=1759790446549632000.000 | max=1759790446549632000.000
+      context-switches: avg=11.000 | min=11.000 | max=11.000
+      cycles: avg=3012790.000 | min=3012790.000 | max=3012790.000
+      instructions: avg=780239.000 | min=780239.000 | max=780239.000
+      t_offset_ms: avg=342.000 | min=342.000 | max=342.000
+      task-clock: avg=1.860 | min=1.860 | max=1.860
+      timestamp_ns: avg=1759790446851972096.000 | min=1759790446851972096.000 | max=1759790446851972096.000
+      ts_unix_ns: avg=1759790103765329664.000 | min=1759790103765329664.000 | max=1759790103765329664.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759790103425484032.000 | min=1759790103425484032.000 | max=1759790103425484032.000
+      timestamp_ns: avg=1759790103698942976.000 | min=1759790103698942976.000 | max=1759790103698942976.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759790103425467904.000 | min=1759790103425467904.000 | max=1759790103425467904.000
+      duration_ms: avg=1794.038 | min=1794.038 | max=1794.038
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759790103698792960.000 | min=1759790103698792960.000 | max=1759790103698792960.000
+    - rekey_transition_start: 2 samples
+      collector_ts_ns: avg=1759790100358148608.000 | min=1759790099115166976.000 | max=1759790101601129984.000
+      timestamp_ns: avg=1759790100638498560.000 | min=1759790099372301056.000 | max=1759790101904696064.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759790275512317184.000 | min=1759790103425488896.000 | max=1759790448111781120.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759790275787063040.000 | min=1759790103714289920.000 | max=1759790448376546048.000
+    - system_sample: 3444 samples
+      collector_ts_ns: avg=1759790275757038592.000 | min=1759790103425497088.000 | max=1759790448063012096.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=12.740 | min=0.000 | max=69.200
+      cpu_temp_c: avg=57.674 | min=54.500 | max=60.300
+      mem_percent: avg=8.684 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.032 | min=257.262 | max=265.348
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=1015.821 | min=65.074 | max=1966.565
+      timestamp_ns: avg=1759790276042703872.000 | min=1759790103724358912.000 | max=1759790448362376960.000
+    - thermal_sample: 345 samples
+      collector_ts_ns: avg=1759790273998936576.000 | min=1759790101152134912.000 | max=1759790446839202048.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=57.663 | min=55.000 | max=60.300
+      timestamp_ns: avg=1759790274280540160.000 | min=1759790101418355968.000 | max=1759790447138384896.000
+      ts_unix_ns: avg=1759790274275588608.000 | min=1759790101411668992.000 | max=1759790447134398976.000
+    - udp_echo_sample: 3532 samples
+      collector_ts_ns: avg=1759790292121598464.000 | min=1759790105383997952.000 | max=1759790430734728960.000
+      processing_ns: avg=3659.294 | min=2111.000 | max=91445.000
+      recv_timestamp_ns: avg=1759790292406063616.000 | min=1759790105659141120.000 | max=1759790431022383104.000
+      send_timestamp_ns: avg=1759790292406068736.000 | min=1759790105659149056.000 | max=1759790431022385920.000
+      sequence: avg=26552.548 | min=0.000 | max=71000.000
+      timestamp_ns: avg=1759790292406337024.000 | min=1759790105659330048.000 | max=1759790431022583040.000
+
+Suite: cs-mlkem768-aesgcm-sphincs128fsha2
+  Baseline OWD (p50/p95 ms): 18.560 / 21.673
+  Baseline RTT (p50/p95 ms): 2.161 / 6.413
+  Saturation point (Mbps): 47.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 3927.473
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem768-aesgcm-sphincs128fsha2_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.173 Mbps | loss=0.000% | avg_rtt=2.715 ms (min=1.569, max=22.737)
+    - 25.0 Mbps | thr=1.496 Mbps | loss=0.000% | avg_rtt=3.401 ms (min=1.459, max=61.338)
+    - 38.0 Mbps | thr=1.707 Mbps | loss=0.000% | avg_rtt=3.220 ms (min=1.502, max=24.531)
+    - 44.0 Mbps | thr=1.870 Mbps | loss=0.000% | avg_rtt=3.577 ms (min=1.448, max=28.111)
+    - 47.0 Mbps | thr=1.951 Mbps | loss=0.000% | avg_rtt=3.912 ms (min=1.507, max=142.902)
+    - 50.0 Mbps | thr=2.040 Mbps | loss=0.000% | avg_rtt=5.499 ms (min=1.481, max=63.869)
+  Telemetry summary:
+    - mark: 1 samples
+      collector_ts_ns: avg=1759791093086514944.000 | min=1759791093086514944.000 | max=1759791093086514944.000
+      timestamp_ns: avg=1759791093341794048.000 | min=1759791093341794048.000 | max=1759791093341794048.000
+    - monitors_started: 1 samples
+      collector_ts_ns: avg=1759791093086477056.000 | min=1759791093086477056.000 | max=1759791093086477056.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759791093340179968.000 | min=1759791093340179968.000 | max=1759791093340179968.000
+    - monitors_stopped: 1 samples
+      collector_ts_ns: avg=1759791391520100096.000 | min=1759791391520100096.000 | max=1759791391520100096.000
+      timestamp_ns: avg=1759791391830178048.000 | min=1759791391830178048.000 | max=1759791391830178048.000
+    - perf_sample: 1 samples
+      branch-misses: avg=18677.000 | min=18677.000 | max=18677.000
+      cache-misses: avg=13795.000 | min=13795.000 | max=13795.000
+      collector_ts_ns: avg=1759791390412602880.000 | min=1759791390412602880.000 | max=1759791390412602880.000
+      context-switches: avg=11.000 | min=11.000 | max=11.000
+      cycles: avg=3017665.000 | min=3017665.000 | max=3017665.000
+      instructions: avg=788115.000 | min=788115.000 | max=788115.000
+      t_offset_ms: avg=296.000 | min=296.000 | max=296.000
+      task-clock: avg=1.860 | min=1.860 | max=1.860
+      timestamp_ns: avg=1759791390704412928.000 | min=1759791390704412928.000 | max=1759791390704412928.000
+      ts_unix_ns: avg=1759791093632017152.000 | min=1759791093632017152.000 | max=1759791093632017152.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759791093318348032.000 | min=1759791093318348032.000 | max=1759791093318348032.000
+      timestamp_ns: avg=1759791093600169984.000 | min=1759791093600169984.000 | max=1759791093600169984.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759791093318329088.000 | min=1759791093318329088.000 | max=1759791093318329088.000
+      duration_ms: avg=1969.148 | min=1969.148 | max=1969.148
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759791093599854080.000 | min=1759791093599854080.000 | max=1759791093599854080.000
+    - rekey_transition_start: 1 samples
+      collector_ts_ns: avg=1759791091366625024.000 | min=1759791091366625024.000 | max=1759791091366625024.000
+      timestamp_ns: avg=1759791091630629120.000 | min=1759791091630629120.000 | max=1759791091630629120.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759791242901310464.000 | min=1759791093318364928.000 | max=1759791393800666880.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759791243191535872.000 | min=1759791093606379008.000 | max=1759791394067371008.000
+    - system_sample: 3001 samples
+      collector_ts_ns: avg=1759791243544429312.000 | min=1759791093371326976.000 | max=1759791393754536960.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=11.037 | min=0.000 | max=63.200
+      cpu_temp_c: avg=57.279 | min=55.000 | max=59.900
+      mem_percent: avg=8.689 | min=8.600 | max=8.800
+      mem_used_mb: avg=260.188 | min=257.434 | max=263.566
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=1140.973 | min=85.136 | max=2489.697
+      timestamp_ns: avg=1759791243837641728.000 | min=1759791093677190912.000 | max=1759791394060670976.000
+    - thermal_sample: 297 samples
+      collector_ts_ns: avg=1759791241790439936.000 | min=1759791093086530048.000 | max=1759791390520239104.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=57.318 | min=55.500 | max=58.900
+      timestamp_ns: avg=1759791242076857600.000 | min=1759791093346647040.000 | max=1759791390829979904.000
+      ts_unix_ns: avg=1759791242071835136.000 | min=1759791093340068096.000 | max=1759791390826177024.000
+    - udp_echo_sample: 2322 samples
+      collector_ts_ns: avg=1759791245427933184.000 | min=1759791095240588032.000 | max=1759791374124464128.000
+      processing_ns: avg=3630.542 | min=2166.000 | max=34908.000
+      recv_timestamp_ns: avg=1759791245720576768.000 | min=1759791095549132032.000 | max=1759791374433700096.000
+      send_timestamp_ns: avg=1759791245720580352.000 | min=1759791095549137920.000 | max=1759791374433702912.000
+      sequence: avg=18942.679 | min=0.000 | max=45000.000
+      timestamp_ns: avg=1759791245720908288.000 | min=1759791095549317120.000 | max=1759791374433894912.000
+
+Suite: cs-mlkem768-aesgcm-sphincs256fsha2
+  Baseline OWD (p50/p95 ms): 20.014 / 23.199
+  Baseline RTT (p50/p95 ms): 2.150 / 6.224
+  Saturation point (Mbps): 72.000
+  Stop cause: n/a | confidence=0.000
+  Search mode: auto | resolution=3.000 Mbps
+  Rekey duration (ms): 6291.248
+  Per-suite workbook: C:\Users\burak\Desktop\research\output\gcs\run_1759787312\saturation_cs-mlkem768-aesgcm-sphincs256fsha2_run_1759787312.xlsx
+  Rates exercised:
+    - 5.0 Mbps | thr=1.169 Mbps | loss=0.004% | avg_rtt=2.670 ms (min=1.530, max=21.872)
+    - 25.0 Mbps | thr=1.507 Mbps | loss=0.006% | avg_rtt=2.973 ms (min=1.534, max=29.389)
+    - 50.0 Mbps | thr=2.037 Mbps | loss=0.000% | avg_rtt=3.826 ms (min=1.468, max=26.726)
+    - 62.0 Mbps | thr=2.604 Mbps | loss=0.000% | avg_rtt=5.181 ms (min=1.455, max=30.982)
+    - 68.0 Mbps | thr=2.993 Mbps | loss=0.000% | avg_rtt=6.887 ms (min=1.464, max=37.971)
+    - 72.0 Mbps | thr=3.035 Mbps | loss=0.000% | avg_rtt=6.986 ms (min=1.460, max=53.345)
+    - 75.0 Mbps | thr=3.121 Mbps | loss=0.257% | avg_rtt=7.415 ms (min=1.456, max=60.233)
+  Telemetry summary:
+    - mark: 2 samples
+      collector_ts_ns: avg=1759791392577820672.000 | min=1759791391571373056.000 | max=1759791393584268032.000
+      timestamp_ns: avg=1759791392846350080.000 | min=1759791391838126080.000 | max=1759791393854574080.000
+    - monitors_started: 2 samples
+      collector_ts_ns: avg=1759791392577788416.000 | min=1759791391571333888.000 | max=1759791393584242944.000
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      timestamp_ns: avg=1759791392844617984.000 | min=1759791391835587072.000 | max=1759791393853648896.000
+    - monitors_stopped: 2 samples
+      collector_ts_ns: avg=1759791565897730048.000 | min=1759791393536940032.000 | max=1759791738258520064.000
+      timestamp_ns: avg=1759791566202394112.000 | min=1759791393846603008.000 | max=1759791738558184960.000
+    - perf_sample: 1 samples
+      branch-misses: avg=17531.000 | min=17531.000 | max=17531.000
+      cache-misses: avg=13428.000 | min=13428.000 | max=13428.000
+      collector_ts_ns: avg=1759791736955456000.000 | min=1759791736955456000.000 | max=1759791736955456000.000
+      context-switches: avg=11.000 | min=11.000 | max=11.000
+      cycles: avg=2928417.000 | min=2928417.000 | max=2928417.000
+      instructions: avg=778093.000 | min=778093.000 | max=778093.000
+      t_offset_ms: avg=342.000 | min=342.000 | max=342.000
+      task-clock: avg=1.810 | min=1.810 | max=1.810
+      timestamp_ns: avg=1759791737246563072.000 | min=1759791737246563072.000 | max=1759791737246563072.000
+      ts_unix_ns: avg=1759791394189472000.000 | min=1759791394189472000.000 | max=1759791394189472000.000
+    - rekey_complete: 1 samples
+      collector_ts_ns: avg=1759791393800858880.000 | min=1759791393800858880.000 | max=1759791393800858880.000
+      timestamp_ns: avg=1759791394092942080.000 | min=1759791394092942080.000 | max=1759791394092942080.000
+    - rekey_transition_end: 1 samples
+      collector_ts_ns: avg=1759791393800709120.000 | min=1759791393800709120.000 | max=1759791393800709120.000
+      duration_ms: avg=1818.391 | min=1818.391 | max=1818.391
+      success: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759791394092611072.000 | min=1759791394092611072.000 | max=1759791394092611072.000
+    - rekey_transition_start: 2 samples
+      collector_ts_ns: avg=1759791390741755904.000 | min=1759791389480794112.000 | max=1759791392002717952.000
+      timestamp_ns: avg=1759791391021843456.000 | min=1759791389769520128.000 | max=1759791392274167040.000
+    - status_reply: 6 samples
+      collector_ts_ns: avg=1759791565883933440.000 | min=1759791393800881920.000 | max=1759791738497843968.000
+      running: avg=1.000 | min=1.000 | max=1.000
+      timestamp_ns: avg=1759791566186834688.000 | min=1759791394097255936.000 | max=1759791738809371904.000
+    - system_sample: 3444 samples
+      collector_ts_ns: avg=1759791566193230592.000 | min=1759791393853680128.000 | max=1759791738550222080.000
+      cpu_freq_mhz: avg=1800.000 | min=1800.000 | max=1800.000
+      cpu_percent: avg=12.987 | min=0.000 | max=72.500
+      cpu_temp_c: avg=57.610 | min=55.000 | max=60.800
+      mem_percent: avg=8.677 | min=8.600 | max=8.800
+      mem_used_mb: avg=259.875 | min=256.324 | max=264.336
+      proxy_pid: avg=529173.000 | min=529173.000 | max=529173.000
+      rekey_elapsed_ms: avg=1042.567 | min=41.760 | max=2043.359
+      timestamp_ns: avg=1759791566484372992.000 | min=1759791394160755968.000 | max=1759791738813093120.000
+    - thermal_sample: 345 samples
+      collector_ts_ns: avg=1759791564411677440.000 | min=1759791391571390976.000 | max=1759791737264158976.000
+      freq_hz: avg=1800000000.000 | min=1800000000.000 | max=1800000000.000
+      temp_c: avg=57.605 | min=55.000 | max=60.300
+      timestamp_ns: avg=1759791564699563776.000 | min=1759791391842569984.000 | max=1759791737557477888.000
+      ts_unix_ns: avg=1759791564694607360.000 | min=1759791391835492096.000 | max=1759791737553477120.000
+    - udp_echo_sample: 3729 samples
+      collector_ts_ns: avg=1759791584345254912.000 | min=1759791395730081024.000 | max=1759791721081331968.000
+      processing_ns: avg=3473.587 | min=2130.000 | max=105889.000
+      recv_timestamp_ns: avg=1759791584635297024.000 | min=1759791396039109120.000 | max=1759791721365409024.000
+      send_timestamp_ns: avg=1759791584635301888.000 | min=1759791396039116032.000 | max=1759791721365412096.000
+      sequence: avg=27850.040 | min=0.000 | max=69100.000
+      timestamp_ns: avg=1759791584635564800.000 | min=1759791396039311872.000 | max=1759791721365585920.000

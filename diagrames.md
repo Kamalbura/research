@@ -46,6 +46,25 @@ graph TD
 - Telemetry runs out-of-band so control or data hiccups do not hide health signals.
 - Lightweight rate guards (token bucket) live inside the proxy, while the heavier DDoS detectors (XGBoost + Time Series Transformer) run on the ground station where more compute is available.
 
+### Component Map — Simplified View
+
+```mermaid
+flowchart LR
+    GCS[Ground Control Station]
+    Tunnel[Encrypted UDP Tunnel]
+    Drone[Drone + Monitors]
+    Telemetry[Telemetry Loop]
+    DDoS[DDoS Analytics]
+
+    GCS --> Tunnel --> Drone
+    Drone --> Telemetry --> GCS
+    GCS --> DDoS
+```
+
+- Ground station drives the tunnel and analytics.
+- Drone handles mission logic plus local monitors.
+- Telemetry forms a feedback loop that keeps operators informed.
+
 ## 2. Secure Session Lifecycle (MitM Defense)
 
 ```mermaid
@@ -72,6 +91,49 @@ Key points:
 - After the KEM exchange, both sides run HKDF-SHA256 with a fixed salt (`"pq-drone-gcs|hkdf|v1"`) so fresh send/receive keys and nonce seeds exist for each epoch.
 - Rekeys reuse the same flow; epochs increment so old traffic can never be decrypted under the new key schedule.
 
+### Session Lifecycle — Simplified View
+
+```mermaid
+flowchart LR
+    Launch[Scheduler launches proxy]
+    Hello[Signed ServerHello]
+    Verify[Drone verifies suite]
+    HKDF[HKDF derives fresh keys]
+    Secure[Encrypted epoch active]
+    Rekey[Scheduler requests rekey]
+
+    Launch --> Hello --> Verify --> HKDF --> Secure
+    Secure --> Rekey --> Hello
+```
+
+- Scheduler starts the proxy with the right suite.
+- The signed hello is verified before keys are accepted.
+- HKDF produces fresh send/receive keys every epoch.
+
+### Handshake & Encrypted Channel Layout
+
+```mermaid
+sequenceDiagramV
+    participant Drone
+    participant Tunnel as Encrypted Channel (AES-256-GCM)
+    participant GCS
+
+    Drone->>GCS: 1. TCP connect to handshake port
+    GCS-->>Drone: 2. Signed ServerHello<br/>(ML-KEM public key, suite IDs, session ID, challenge)
+    Note over Drone: Verify signature with stored GCS certificate<br/>Check suite policy + wire version
+    Drone->>GCS: 3. ML-KEM ciphertext + HMAC tag (32B PSK)
+    Note over GCS: Verify tag with drone PSK<br/>Decapsulate to recover shared secret
+    Drone-->>Tunnel: 4. HKDF derives drone→gcs / gcs→drone AES keys
+    GCS-->>Tunnel: 4. HKDF derives matching key pair
+    Tunnel-->>Drone: 5. Encrypted UDP epoch 0 active (bidirectional)
+    Tunnel-->>GCS: 5. Telemetry + data packets flow with replay protection
+```
+
+- **Credential use:** The GCS signs the ServerHello with its post-quantum signature private key stored under `secrets/`; the drone verifies using the corresponding public key (certificate-equivalent).
+- **Drone authentication:** The drone appends an HMAC-SHA256 tag calculated with the 32-byte pre-shared key (`DRONE_PSK`). The GCS refuses the handshake if this tag fails.
+- **Key agreement:** Both sides feed the ML-KEM shared secret into HKDF-SHA256 (`salt="pq-drone-gcs|hkdf|v1"`) to derive independent AES-256-GCM keys for each direction.
+- **Data plane:** Once keys are in place, all UDP traffic traverses the encrypted channel, carrying 22-byte authenticated headers with session, epoch, and sequence fields.
+
 ## 3. Replay Protection
 
 ```mermaid
@@ -91,6 +153,29 @@ flowchart LR
 - This window still allows moderate out-of-order delivery, so bursty networks do not break the tunnel.
 - Because the proxy never sends detailed decrypt errors, attackers cannot learn why their injection failed.
 
+### Replay Protection — Simplified View
+
+```mermaid
+flowchart TD
+    Start[Packet arrives]
+    Header{Header + epoch valid?}
+    Window{Sequence inside window?}
+    Decrypt{Decrypt succeeds?}
+    Forward[Forward to app]
+    Drop[Silently drop]
+
+    Start --> Header
+    Header -- No --> Drop
+    Header -- Yes --> Window
+    Window -- No --> Drop
+    Window -- Yes --> Decrypt
+    Decrypt -- No --> Drop
+    Decrypt -- Yes --> Forward
+```
+
+- Checks run in constant time and never leak details.
+- Only packets with fresh sequence numbers reach the application.
+
 ## 4. DDoS & Flooding Perspective
 
 ```mermaid
@@ -108,6 +193,27 @@ graph LR
 - The async proxy applies DSCP tags, pins peers, and throttles with a token bucket before traffic touches the drone.
 - Scheduler-side analytics read the same counters plus live telemetry to spot sustained floods; the two-stage detector (XGBoost screener, Transformer confirmer) treats each 0.6 s window and issues alerts only on consistent abuse.
 - Operators can rehearse failovers by replaying captures through `ddos/run_tst.py` or `tools/sim_driver.py` to make sure thresholds match field reality.
+
+### DDoS Flow — Simplified View
+
+```mermaid
+flowchart LR
+    Net[Internet]
+    Proxy[Async Proxy]
+    Accept[Accepted Traffic]
+    Drop[Rate-Limited]
+    Counters[Telemetry Counters]
+    ML[ML Detectors]
+    Operator[Operator Alert]
+
+    Net --> Proxy
+    Proxy -->|Token bucket| Accept
+    Proxy -->|Excess| Drop
+    Accept --> Counters --> ML --> Operator
+```
+
+- Proxy enforces rate limits before traffic reaches the drone.
+- Telemetry feeds both dashboards and machine-learning detectors.
 
 ## 5. Artifacts & Telemetry At A Glance
 
@@ -155,6 +261,24 @@ sequenceDiagram
 - The GCS proxy performs the PQC handshake with the drone proxy; the scheduler only proceeds once counters show the new suite is live.
 - Final `rekey_complete` closes the loop so the drone drops back to RUNNING state, and telemetry captures the entire transition for later audits.
 
+### Control Loop — Simplified View
+
+```mermaid
+flowchart LR
+    Sched[Scheduler]
+    Follower[Follower]
+    Proxies[GCS & Drone Proxies]
+    Telemetry[Telemetry + Counters]
+
+    Sched -->|mark/rekey| Follower
+    Follower --> Proxies
+    Proxies --> Telemetry
+    Telemetry --> Sched
+```
+
+- Scheduler issues commands, follower orchestrates monitors, proxies execute.
+- Telemetry closes the loop so the scheduler can verify success.
+
 ## 8. Data-Plane Packet Journey
 
 ```mermaid
@@ -176,6 +300,23 @@ flowchart LR
 - The 22-byte header (version, suite IDs, session, seq, epoch) travels as AAD; any mismatch fails fast without touching the decryptor.
 - On the drone side, the replay bitmap and epoch gates drop stale traffic silently, keeping adversaries from probing timing differences.
 
+### Packet Journey — Simplified View
+
+```mermaid
+flowchart LR
+    App[GCS App]
+    Gate[Token Bucket]
+    Enc[AES-GCM Encrypt]
+    Net[Encrypted UDP]
+    Check[Replay Window]
+    Plain[Drone App]
+
+    App --> Gate --> Enc --> Net --> Check --> Plain
+```
+
+- Each packet is throttled, encrypted, tagged, then checked again on the drone.
+- Replay checks happen before plaintext is released to the mission app.
+
 ## 9. Telemetry, Power, and DDoS Analytics Pipeline
 
 ```mermaid
@@ -193,3 +334,20 @@ graph TD
 - The follower aggregates high-frequency metrics (system load, perf counters, INA219 power summaries, UDP echo latency) and pushes them through a single TCP stream.
 - The scheduler records the live feed for the run workbook while also piping samples into the two-stage DDoS detector to catch slow-building floods.
 - Because telemetry is decoupled from the encrypted data path, even heavy rekeys or network churn still deliver health data to operators.
+
+### Telemetry Pipeline — Simplified View
+
+```mermaid
+flowchart LR
+    Monitors[Monitors & Power]
+    Publisher[Telemetry Publisher]
+    Collector[Scheduler Collector]
+    Outputs[Workbook & Alerts]
+    DDoS[ML DDoS Detector]
+
+    Monitors --> Publisher --> Collector --> Outputs
+    Collector --> DDoS --> Outputs
+```
+
+- All monitors feed one publisher, simplifying transport.
+- Collector fans out the same stream to reports and DDoS analytics.
