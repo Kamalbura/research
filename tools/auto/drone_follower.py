@@ -460,6 +460,10 @@ class PowerCaptureManager:
                         summary_dict["summary_json_path"] = str(summary_json_path)
                     except Exception as exc_json:
                         print(f"[follower] power summary write failed: {exc_json}")
+                    print(
+                        f"[follower] power summary suite={suite} avg={summary.avg_power_w:.3f} W "
+                        f"energy={summary.energy_j:.3f} J duration={summary.duration_s:.3f}s"
+                    )
                     with self.lock:
                         self._last_summary = summary_dict
                         self._pending_suite = None

@@ -5,14 +5,7 @@ This note stays high-level on purpose so it can live inside the paper without ov
 ## 1. Component Map
 
 ```mermaid
-graph TD
-    subgraph GCS_Side[Ground Control Station]
-        SCHED[tools/auto/gcs_scheduler.py]
-        GCS_PROXY[core.run_proxy gcs]
-        TELEMETRY_GCS[Telemetry Collector]
-        DDOS_STACK_GCS["DDoS Analytics: XGBoost & TST"]
-    end
-
+graph LR
     subgraph Drone_Side[Drone]
         FOLLOWER[tools/auto/drone_follower.py]
         DRONE_PROXY[core.run_proxy drone]
@@ -21,18 +14,25 @@ graph TD
         DDOS_STACK_DRONE[Token Bucket & Rate Guards]
     end
 
-    subgraph Shared
+    subgraph Shared_Media[Shared Links]
+        CONTROL_TCP[(TCP Control Channel\nJSON commands)]
+        ENCRYPTED_UDP[(Encrypted UDP Tunnel\nAES-256-GCM)]
         SECRETS[secrets/<suite>/ key pairs]
-        CONTROL[channel: JSON over TCP]
-        ENCRYPTED[Encrypted UDP tunnel]
     end
 
+    subgraph GCS_Side[Ground Control Station]
+        SCHED[tools/auto/gcs_scheduler.py]
+        GCS_PROXY[core.run_proxy gcs]
+        TELEMETRY_GCS[Telemetry Collector]
+        DDOS_STACK_GCS["DDoS Analytics: XGBoost & TST"]
+    end
+
+    FOLLOWER -->|status + telemetry| CONTROL_TCP
+    CONTROL_TCP --> SCHED
     SCHED -->|start + rekey commands| GCS_PROXY
-    GCS_PROXY -->|HKDF keys| ENCRYPTED
-    ENCRYPTED --> DRONE_PROXY
+    GCS_PROXY -->|handshake + HKDF keys| ENCRYPTED_UDP
+    ENCRYPTED_UDP --> DRONE_PROXY
     DRONE_PROXY --> FOLLOWER
-    FOLLOWER -->|status + telemetry| CONTROL
-    CONTROL --> SCHED
     FOLLOWER -->|metrics| TELEMETRY_DRONE --> TELEMETRY_GCS
     DRONE_PROXY -->|rate stats| DDOS_STACK_GCS
     DRONE_PROXY -->|token bucket| DDOS_STACK_DRONE
@@ -42,6 +42,7 @@ graph TD
 ```
 
 - Both sides start with the same preloaded trust material so they already know who they are talking to when the system wakes up.
+- Two shared links sit in the middle: the TCP control channel for scheduler ↔ follower commands and the encrypted UDP tunnel for mission data.
 - A small control program on the ground station coordinates what the drone proxy should do next.
 - Status information has its own lane, so even if mission traffic hiccups we still see how the system feels.
 - Basic flood protection happens right where packets arrive, while heavier analytics stay on the ground station where there is more computing power.
@@ -67,20 +68,23 @@ graph TD
 
 ```mermaid
 flowchart LR
-    GCS[Ground Control Station]
-    Tunnel[Encrypted UDP Tunnel]
     Drone[Drone + Monitors]
+    TCP[TCP Control Channel]
+    UDP[Encrypted UDP Tunnel]
+    GCS[Ground Control Station]
     Telemetry[Telemetry Loop]
     DDoS[DDoS Analytics]
 
-    GCS --> Tunnel --> Drone
+    Drone -- TCP cmds --> TCP --> GCS
+    Drone -- Encrypted payloads --> UDP --> GCS
     Drone --> Telemetry --> GCS
     GCS --> DDoS
 ```
 
-- Ground station drives the tunnel and analytics.
-- Drone handles mission tasks and keeps an eye on its own sensors.
+- Drone sits on the left handling mission tasks and onboard sensors.
+- Two middle links show how TCP control commands and UDP encrypted traffic travel separately to the ground station.
 - Telemetry flows in a loop so operators always know what is happening.
+- Ground station drives the analytics once data arrives.
 
 **Plain-language walkthrough**
 
@@ -96,6 +100,104 @@ flowchart LR
 - **Drone + Monitors** — The airborne endpoint plus its onboard health checks and rate guards.
 - **Telemetry Loop** — The always-on feedback channel that streams status data to the ground.
 - **DDoS Analytics** — Ground-based detectors that watch traffic counters for long-running floods.
+
+### MAVProxy launch & key lifecycle (row view)
+
+```mermaid
+flowchart LR
+    subgraph DroneRow[Drone row]
+        direction TB
+        D_start[drone_follower.py<br/>starts core.run_proxy drone]
+        D_proxy[Drone proxy<br/>core/async_proxy.py]
+        D_mav[MAVProxy UDP fanout]
+    end
+
+    subgraph ControlRow[Control TCP lane]
+        direction TB
+        C_chan[Control channel<br/>JSON commands]
+    end
+
+    subgraph DataRow[Handshake and data lane]
+        direction TB
+        H_tcp[Handshake TCP socket<br/>initial + rekey]
+        U_tunnel[Encrypted UDP tunnel<br/>AES-256-GCM epochs]
+        Secrets[secrets/<suite>/ key pairs]
+    end
+
+    subgraph GCSRow[GCS row]
+        direction TB
+        G_start[gcs_scheduler.py<br/>starts core.run_proxy gcs]
+        G_proxy[GCS proxy<br/>core.run_proxy gcs]
+        G_mav[MAVProxy console map]
+    end
+
+    D_start -->|connect| C_chan
+    G_start -->|connect| C_chan
+    C_chan -->|JSON commands| D_proxy
+    C_chan -->|JSON commands| G_proxy
+
+    D_proxy -->|suite hello| H_tcp
+    G_proxy -->|signed reply| H_tcp
+    H_tcp -->|derive keys| U_tunnel
+    U_tunnel -->|ciphertext to drone| D_proxy
+    U_tunnel -->|ciphertext to gcs| G_proxy
+
+    D_mav -->|mission frames| D_proxy
+    G_proxy -->|decrypted feed| G_mav
+
+    G_start -->|rekey trigger| C_chan
+    C_chan -->|epoch advance| H_tcp
+
+```
+
+- Read the row from left (drone) to right (GCS): each lane shows who owns which program, which shared socket is in play, and how control versus data traffic stay separate even though they run at the same time.
+- Drone and GCS automation scripts (`drone_follower.py`, `gcs_scheduler.py`) start the proxies and register with the TCP control channel so commands like `mark`, `start_rekey`, and `rekey_complete` can flow both ways.
+- The handshake TCP socket sits beside the control channel to remind the reader that both initial and runtime key exchanges are authenticated ML-KEM + signature operations before the UDP tunnel is allowed to encrypt traffic.
+- MAVProxy stays attached to loopback UDP ports on both sides; the drone proxy encrypts everything into the UDP tunnel, and the GCS proxy decrypts it back into the MAVProxy console/map without exposing plaintext on the real network.
+
+### MAVProxy control and data flow (simplified)
+
+```mermaid
+flowchart LR
+    DroneLaunch[Drone scripts start proxies]
+    DroneControl[Drone MAVProxy UDP 47003/47004]
+    ControlTCP[TCP control channel JSON commands]
+    HandshakeTCP[Handshake TCP port initial + rekey]
+    EncryptedUDP[Encrypted UDP tunnel AES-256-GCM]
+    GCSControl[GCS MAVProxy console UDP 47002]
+    GCSLaunch[GCS scripts start proxies]
+
+    DroneLaunch --> ControlTCP
+    GCSLaunch --> ControlTCP
+    ControlTCP --> HandshakeTCP
+    HandshakeTCP --> EncryptedUDP
+    DroneControl --> EncryptedUDP --> GCSControl
+```
+
+- The simplified view collapses the implementation into five steps: start both sides, bring up the control TCP channel, authenticate over the handshake TCP port, light the encrypted UDP tunnel, and let MAVProxy carry mission traffic.
+- Following the chain left to right mirrors what a ground operator or drone engineer experiences during startup, keeping the flow unambiguous even if the reader skips the deeper sections.
+
+#### Row view glossary
+
+- **MAVProxy** — Open-source ground control middleware. On the drone it bridges the flight controller serial port to loopback UDP (`47003/47004`); on the GCS it exposes a console/map connected to the proxy decrypted stream (`47002`).
+- **`tools/auto/gcs_scheduler.py` / `tools/auto/drone_follower.py`** — Automation scripts that launch proxies, exchange JSON control messages, and drive rekeys plus load sweeps.
+- **Control channel** — The persistent management TCP socket (`DRONE_CONTROL_PORT`) carrying scheduler to follower commands such as `mark`, `start_rekey`, `rekey_complete`, and telemetry status replies.
+- **Handshake TCP socket** — The authenticated channel where `core/handshake.py` runs the ML-KEM and post-quantum signature exchange before every epoch, both at startup and during runtime rekeys.
+- **Encrypted UDP tunnel** — The AES-256-GCM data path managed by `core/async_proxy.py`, carrying mission traffic with 22-byte authenticated headers and replay protection.
+- **Epoch / rekey** — Each successful handshake increments the epoch counter and refreshes the send/receive keys derived from HKDF, keeping long missions forward-secure.
+- **Loopback UDP fanout** — MAVProxy instances on both sides use localhost UDP sockets so flight software and dashboards continue working even while the encrypted tunnel renegotiates.
+
+- MAVProxy pipes autopilot telemetry through the encrypted UDP tunnel during normal flight; when a rekey command arrives the proxies briefly pause, negotiate a new epoch, and resume streaming without dropping the loopback feeds.
+
+#### Column view glossary
+
+- **MAVProxy** — Open-source ground control middleware. On the drone it bridges the flight controller serial port to loopback UDP (`47003/47004`); on the GCS it exposes a console/map connected to the proxy’s decrypted stream (`47002`).
+- **`tools/auto/gcs_scheduler.py` / `tools/auto/drone_follower.py`** — Automation scripts that launch proxies, exchange JSON control messages, and drive rekeys plus load sweeps.
+- **Control TCP channel** — The persistent management socket (`DRONE_CONTROL_PORT`) carrying scheduler↔follower commands like `mark`, `start_rekey`, and `rekey_complete`.
+- **Handshake TCP socket** — The authenticated channel where `core/handshake.py` runs the ML-KEM + PQ signature exchange before every epoch.
+- **Encrypted UDP tunnel** — The AES-256-GCM data path managed by `core/async_proxy.py`, carrying mission traffic with 22-byte authenticated headers and replay protection.
+- **Epoch / rekey** — Each successful handshake increments the epoch counter and refreshes the send/receive keys derived from HKDF, keeping long missions forward-secure.
+- **Loopback fan-out** — MAVProxy instances on both sides use localhost UDP sockets so flight software and dashboards continue working even while the encrypted tunnel renegotiates.
 
 ## 2. Secure Session Lifecycle (MitM Defense)
 

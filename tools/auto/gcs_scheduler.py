@@ -122,6 +122,7 @@ SATURATION_SIGNALS = ("owd_p95_spike", "delivery_degraded", "loss_excess")
 TELEMETRY_BUFFER_MAXLEN_DEFAULT = 100_000
 REKEY_SETTLE_SECONDS = 1.5
 CLOCK_OFFSET_THRESHOLD_NS = 50_000_000
+CONSTANT_RATE_MBPS_DEFAULT = 8.0
 
 
 def _compute_sampling_params(duration_s: float, event_sample: int, min_delay_samples: int) -> Tuple[int, int]:
@@ -291,7 +292,7 @@ def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
 
 AUTO_GCS_DEFAULTS = {
     "session_prefix": "session",
-    "traffic": "saturation",
+    "traffic": "constant",
     "duration_s": 45.0,
     "pre_gap_s": 1.0,
     "inter_gap_s": 15.0,
@@ -1176,6 +1177,7 @@ def run_suite(
     traffic_mode: str,
     pre_gap: float,
     rate_pps: int,
+    target_bandwidth_mbps: float,
     power_capture_enabled: bool,
     clock_offset_warmup_s: float,
     min_delay_samples: int,
@@ -1229,7 +1231,7 @@ def run_suite(
 
     wire_header_bytes = UDP_HEADER_BYTES + APP_IP_HEADER_BYTES
 
-    if traffic_mode == "blast":
+    if traffic_mode in {"blast", "constant"}:
         if warmup_s > 0:
             warmup_blaster = Blaster(
                 APP_SEND_HOST,
@@ -1322,7 +1324,7 @@ def run_suite(
     sample_quality = "disabled" if effective_sample_every == 0 else "low"
     owd_samples = 0
 
-    if traffic_mode == "blast":
+    if traffic_mode in {"blast", "constant"}:
         owd_p50_ms = blaster.owd_p50_ns / 1_000_000
         owd_p95_ms = blaster.owd_p95_ns / 1_000_000
         rtt_p50_ms = blaster.rtt_p50_ns / 1_000_000
@@ -1348,6 +1350,8 @@ def run_suite(
         "sent": sent_packets,
         "rcvd": rcvd_packets,
         "pps": round(pps, 1),
+        "target_rate_pps": rate_pps,
+        "target_bandwidth_mbps": round(target_bandwidth_mbps, 3) if target_bandwidth_mbps else 0.0,
         "throughput_mbps": round(throughput_mbps, 3),
         "sent_mbps": round(sent_mbps, 3),
         "delivered_ratio": round(delivered_ratio, 3) if sent_mbps > 0 else 0.0,
@@ -1392,11 +1396,20 @@ def run_suite(
         "power_summary_path": power_summary.get("summary_json_path") if power_summary else "",
     }
 
+    if power_summary:
+        print(
+            f"[{ts()}] power summary suite={suite} avg={power_summary.get('avg_power_w', 0.0):.3f} W "
+            f"energy={power_summary.get('energy_j', 0.0):.3f} J samples={power_summary.get('samples', 0)}"
+        )
+    elif power_capture_enabled and power_request_ok and power_error:
+        print(f"[{ts()}] power summary unavailable for suite={suite}: {power_error}")
+
+    target_desc = f" target={target_bandwidth_mbps:.2f} Mb/s" if target_bandwidth_mbps > 0 else ""
     print(
         f"[{ts()}] <<< FINISH suite={suite} mode={traffic_mode} sent={sent_packets} rcvd={rcvd_packets} "
         f"pps~{pps:.0f} thr~{throughput_mbps:.2f} Mb/s sent~{sent_mbps:.2f} Mb/s loss={loss_pct:.2f}% "
         f"rtt_avg={avg_rtt_ms:.3f}ms rtt_max={max_rtt_ms:.3f}ms rekey={rekey_duration_ms:.2f}ms "
-        f"enc_out={row['enc_out']} enc_in={row['enc_in']} >>>"
+        f"enc_out={row['enc_out']} enc_in={row['enc_in']}{target_desc} >>>"
     )
 
     return row
@@ -2105,10 +2118,16 @@ def main() -> None:
     passes = int(auto.get("passes") or 1)
     rate_pps = int(auto.get("rate_pps") or 0)
     bandwidth_mbps = float(auto.get("bandwidth_mbps") or 0.0)
+    constant_rate_defaulted = False
     max_rate_mbps = float(auto.get("max_rate_mbps") or 200.0)
+    if traffic_mode == "constant" and bandwidth_mbps <= 0 and rate_pps <= 0:
+        bandwidth_mbps = CONSTANT_RATE_MBPS_DEFAULT
+        constant_rate_defaulted = True
     if bandwidth_mbps > 0:
         denominator = max(payload_bytes * 8, 1)
         rate_pps = max(1, int((bandwidth_mbps * 1_000_000) / denominator))
+    if traffic_mode == "constant" and rate_pps <= 0:
+        raise ValueError("AUTO_GCS.rate_pps or bandwidth_mbps must be positive for constant traffic")
 
     sat_search_cfg = str(auto.get("sat_search") or SATURATION_SEARCH_MODE).lower()
     if sat_search_cfg not in {"auto", "linear", "bisect"}:
@@ -2130,8 +2149,18 @@ def main() -> None:
     if passes <= 0:
         raise ValueError("AUTO_GCS.passes must be >= 1")
 
-    if traffic_mode not in {"blast", "mavproxy", "saturation"}:
+    if traffic_mode not in {"blast", "constant", "mavproxy", "saturation"}:
         raise ValueError(f"Unsupported traffic mode: {traffic_mode}")
+
+    constant_target_bandwidth_mbps = 0.0
+    if traffic_mode == "constant":
+        if bandwidth_mbps > 0:
+            constant_target_bandwidth_mbps = bandwidth_mbps
+        elif rate_pps > 0:
+            constant_target_bandwidth_mbps = (rate_pps * payload_bytes * 8) / 1_000_000
+    run_target_bandwidth_mbps = (
+        constant_target_bandwidth_mbps if traffic_mode == "constant" else max(0.0, bandwidth_mbps)
+    )
 
     suites_override = auto.get("suites")
     suites = resolve_suites(suites_override)
@@ -2160,7 +2189,12 @@ def main() -> None:
         f"inter_gap={inter_gap:.1f}s payload={payload_bytes}B event_sample={event_sample} passes={passes} "
         f"rate_pps={rate_pps} sat_search={sat_search_cfg}"
     )
-    if bandwidth_mbps > 0:
+    if traffic_mode == "constant":
+        target_msg = f"[{ts()}] constant-rate target {constant_target_bandwidth_mbps:.2f} Mbps (~{rate_pps} pps)"
+        if constant_rate_defaulted:
+            target_msg += " [default]"
+        print(target_msg)
+    elif bandwidth_mbps > 0:
         print(f"[{ts()}] bandwidth target {bandwidth_mbps:.2f} Mbps -> approx {rate_pps} pps")
     print(f"[{ts()}] power capture: {'enabled' if power_capture_enabled else 'disabled'}")
 
@@ -2295,6 +2329,7 @@ def main() -> None:
                         traffic_mode=traffic_mode,
                         pre_gap=pre_gap,
                         rate_pps=rate_pps,
+                        target_bandwidth_mbps=run_target_bandwidth_mbps,
                         power_capture_enabled=power_capture_enabled,
                         clock_offset_warmup_s=offset_warmup_s,
                         min_delay_samples=min_delay_samples,
