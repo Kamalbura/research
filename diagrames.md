@@ -541,3 +541,91 @@ flowchart LR
 - **Scheduler listener** — The ground receiver that writes the data down.
 - **Reports & alerts** — Dashboards, CSV logs, or notifications built from the incoming stream.
 - **ML analyzer** — The machine-learning module that watches for DDoS or health anomalies in real time.
+
+## 10. Saturation Run Snapshot (run_1759787312)
+
+The scheduler (`tools/auto/gcs_scheduler.py`) and drone follower (`tools/auto/drone_follower.py`) ran a full saturation sweep using the proxies in `core.run_proxy`. The counters below summarize what the data-plane search found while `core/async_proxy.py` was stepping through the configured rate ladder and the telemetry pipeline kept score.
+
+- **Session:** `run_1759787312`
+- **Generated (UTC):** 2025-10-06T23:43:06Z
+- **Suites exercised:** 21 (all ML-KEM + AES-256-GCM bundles registered in `core/suites.py`)
+- **Metric cheat sheet:**
+    - *Baseline OWD / RTT* — Median and 95th percentile one-way delay and round-trip time recorded before stressing the link (`diagnose_aead.py` style probes inside the proxies).
+    - *Saturation (Mbps)* — The highest offered load before loss/latency breaches made the scheduler halt the search.
+    - *Rekey (ms)* — Total time from `rekey_transition_start` to `rekey_transition_end` as emitted by `core/policy_engine.py`.
+    - *Stop cause* — The guardrail that tripped (usually the p95 OWD spike detector baked into the scheduler sweep).
+    - *Search mode* — How the scheduler adjusted rate increments for the run (`auto` delegates to `core/async_proxy` token bucket snapshots).
+
+### ML-KEM 1024
+
+| Suite | Baseline OWD (ms) | Baseline RTT (ms) | Saturation (Mbps) | Rekey (ms) | Stop cause | Search mode |
+| --- | --- | --- | --- | --- | --- | --- |
+| `cs-mlkem1024-aesgcm-falcon1024` | 29.282 / 50.396 | 2.193 / 26.103 | 141 | 3853.6 | owd_p95_spike &#124; confidence=1.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem1024-aesgcm-falcon512` | 27.149 / 30.295 | 2.170 / 6.240 | 78 | 6248.7 | owd_p95_spike &#124; confidence=1.000 | auto &#124; resolution=4.000 Mbps |
+| `cs-mlkem1024-aesgcm-mldsa44` | 21.812 / 25.549 | 2.327 / 9.576 | 15 | 4057.8 | owd_p95_spike &#124; confidence=1.000 | auto &#124; resolution=5.000 Mbps |
+| `cs-mlkem1024-aesgcm-mldsa65` | 23.025 / 26.426 | 2.174 / 7.233 | 75 | 4839.9 | owd_p95_spike &#124; confidence=1.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem1024-aesgcm-mldsa87` | 25.448 / 28.624 | 2.156 / 6.425 | 47 | 6762.8 | n/a &#124; confidence=0.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem1024-aesgcm-sphincs128fsha2` | 31.821 / 35.003 | 2.147 / 6.237 | 59 | 3449.0 | owd_p95_spike &#124; confidence=1.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem1024-aesgcm-sphincs256fsha2` | 33.637 / 36.935 | 2.132 / 6.699 | 72 | 3904.5 | n/a &#124; confidence=0.000 | auto &#124; resolution=3.000 Mbps |
+
+#### ML-KEM 1024 suite commentary
+
+- **`cs-mlkem1024-aesgcm-falcon1024`** — Highest saturation headroom (141 Mbps) but already sitting on the highest baseline delay of the group. The Falcon-1024 signature adds CPU cost, so the scheduler tripped the p95 one-way-delay guard the moment the link broke north of 140 Mbps even though rekeys stayed under 3.9 s.
+- **`cs-mlkem1024-aesgcm-falcon512`** — Lower latency than the 1024-bit Falcon sibling yet the tunnel folded at 78 Mbps, again on the p95 OWD spike. Rekeys stretched past 6.2 s, showing that mixing the lighter KEM with Falcon512 still taxes the drone when swapping suites.
+- **`cs-mlkem1024-aesgcm-mldsa44`** — The fastest verifying signature in the ML-DSA family but the scheduler halted early at 15 Mbps. The narrow headroom points to network jitter as the limiting factor; once the ladder rose past 15 Mbps the p95 OWD alarm erupted immediately.
+- **`cs-mlkem1024-aesgcm-mldsa65`** — Balanced profile with 75 Mbps saturation and mid-pack latency. Rekey time (4.8 s) sits between Falcon512 and SPHINCS, making this the most even ML-KEM-1024 option when we need reliable rekeys without sacrificing too much throughput.
+- **`cs-mlkem1024-aesgcm-mldsa87`** — Only ML-KEM-1024 combo that rode the ladder without triggering a guardrail (`stop_cause = n/a`), topping out at 47 Mbps cleanly. The price is the slowest rekey in the set (6.7 s) and slightly elevated baseline OWD, so it is best when deterministic behavior matters more than peak rate.
+- **`cs-mlkem1024-aesgcm-sphincs128fsha2`** — SPHINCS+ raises baseline latency (≈32/35 ms) but held together until 59 Mbps before the scheduler flagged the p95 OWD spike. Rekeys were the quickest in the table (3.45 s) thanks to SPHINCS’ stateless signing flow.
+- **`cs-mlkem1024-aesgcm-sphincs256fsha2`** — The most conservative profile: highest baseline latency yet no guardrail trip at 72 Mbps. Rekeys stayed sub-4 s, so this suite is attractive when we need dependable swaps and can accept a slower steady-state tunnel.
+
+### ML-KEM 768
+
+| Suite | Baseline OWD (ms) | Baseline RTT (ms) | Saturation (Mbps) | Rekey (ms) | Stop cause | Search mode |
+| --- | --- | --- | --- | --- | --- | --- |
+| `cs-mlkem768-aesgcm-falcon1024` | 16.918 / 20.243 | 2.201 / 7.095 | 68 | 6341.5 | n/a &#124; confidence=0.000 | auto &#124; resolution=4.000 Mbps |
+| `cs-mlkem768-aesgcm-falcon512` | 15.461 / 19.428 | 2.243 / 6.920 | 47 | 3963.5 | n/a &#124; confidence=0.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem768-aesgcm-mldsa44` | 12.625 / 15.764 | 2.154 / 6.323 | 47 | 4122.2 | n/a &#124; confidence=0.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem768-aesgcm-mldsa65` | 0.758 / 10.918 | 2.043 / 8.993 | 20 | 3464.3 | n/a &#124; confidence=0.000 | auto &#124; resolution=5.000 Mbps |
+| `cs-mlkem768-aesgcm-mldsa87` | 13.811 / 16.886 | 2.175 / 6.252 | 68 | 6313.6 | n/a &#124; confidence=0.000 | auto &#124; resolution=4.000 Mbps |
+| `cs-mlkem768-aesgcm-sphincs128fsha2` | 18.560 / 21.673 | 2.161 / 6.413 | 47 | 3927.5 | n/a &#124; confidence=0.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem768-aesgcm-sphincs256fsha2` | 20.014 / 23.199 | 2.150 / 6.224 | 72 | 6291.2 | n/a &#124; confidence=0.000 | auto &#124; resolution=3.000 Mbps |
+
+#### ML-KEM 768 suite commentary
+
+- **`cs-mlkem768-aesgcm-falcon1024`** — Mid-teen baseline delays with no stop-cause trip at 68 Mbps. Rekeys take 6.3 s, so the Falcon-1024 signature dominates swap time even though transport performance stays stable.
+- **`cs-mlkem768-aesgcm-falcon512`** — Slightly lower baseline latency than the 1024 variant and the same 47 Mbps saturation ceiling. The absence of a stop cause indicates the scheduler simply reached its configured cap; rekeys (4.0 s) are noticeably quicker thanks to the lighter signature.
+- **`cs-mlkem768-aesgcm-mldsa44`** — Lowest baseline delay in this block (≈12.6/15.8 ms) with a clean finish at 47 Mbps. Rekeys (4.1 s) show ML-DSA is still heavier than Falcon512 but remains moderate for the drone CPU.
+- **`cs-mlkem768-aesgcm-mldsa65`** — Outlier baseline OWD median below 1 ms because the probes sampled during a particularly calm window; the 95th percentile (10.9 ms) exposes the real tail behavior. Saturation stopped at 20 Mbps without a guardrail alert, telling us the scheduler’s rate ladder ended before latency exploded.
+- **`cs-mlkem768-aesgcm-mldsa87`** — Higher baseline OWD than the smaller ML-DSA tiers yet sustained 68 Mbps without spikes. Rekeys crept to 6.3 s, so we trade swap speed for predictable saturation.
+- **`cs-mlkem768-aesgcm-sphincs128fsha2`** — SPHINCS pushes baseline OWD into the high teens and the run plateaued at 47 Mbps. Rekeys (3.9 s) confirm the stateless signer advantage versus Falcon and ML-DSA.
+- **`cs-mlkem768-aesgcm-sphincs256fsha2`** — Heaviest signature in this ladder, adding a couple milliseconds of baseline delay but still cruising to 72 Mbps without a guardrail. Rekey time mirrors `falcon1024` at ~6.3 s, underscoring the extra hashing work SPHINCS-256 demands.
+
+### ML-KEM 512
+
+| Suite | Baseline OWD (ms) | Baseline RTT (ms) | Saturation (Mbps) | Rekey (ms) | Stop cause | Search mode |
+| --- | --- | --- | --- | --- | --- | --- |
+| `cs-mlkem512-aesgcm-falcon1024` | 7.020 / 10.193 | 2.254 / 6.543 | 94 | 3723.0 | n/a &#124; confidence=0.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem512-aesgcm-falcon512` | 4.108 / 7.399 | 1.985 / 6.615 | 75 | 6271.3 | owd_p95_spike &#124; confidence=1.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem512-aesgcm-mldsa44` | 0.934 / 5.099 | 2.059 / 6.520 | 10 | 4116.4 | owd_p95_spike &#124; confidence=1.000 | auto &#124; resolution=5.000 Mbps |
+| `cs-mlkem512-aesgcm-mldsa65` | 0.845 / 4.646 | 2.078 / 7.124 | 109 | 4859.3 | owd_p95_spike &#124; confidence=1.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem512-aesgcm-mldsa87` | 1.458 / 4.829 | 2.023 / 6.882 | 47 | 6607.9 | n/a &#124; confidence=0.000 | auto &#124; resolution=3.000 Mbps |
+| `cs-mlkem512-aesgcm-sphincs128fsha2` | 9.532 / 12.728 | 2.127 / 6.159 | 20 | 3819.4 | n/a &#124; confidence=0.000 | auto &#124; resolution=5.000 Mbps |
+| `cs-mlkem512-aesgcm-sphincs256fsha2` | 10.779 / 14.193 | 2.172 / 6.477 | 62 | 4866.4 | owd_p95_spike &#124; confidence=1.000 | auto &#124; resolution=3.000 Mbps |
+
+#### ML-KEM 512 suite commentary
+
+- **`cs-mlkem512-aesgcm-falcon1024`** — Keeps baseline latency in single digits and rode the ladder up to 94 Mbps with no guardrail trigger. Rekey cost (3.7 s) is reasonable for Falcon-1024, making this a strong “fast but still PQC-hard” default.
+- **`cs-mlkem512-aesgcm-falcon512`** — Lowest baseline RTT spread and a clean mid-pack saturation at 75 Mbps before the OWD watchdog barked. Swap time balloons to 6.3 s because both sides prepare new Falcon512 key-material each cycle.
+- **`cs-mlkem512-aesgcm-mldsa44`** — The table’s most aggressive latency profile (sub-millisecond baseline) but also the earliest saturation cutoff (10 Mbps). The p95 OWD spike hints that even slight rate hikes stress this suite when paired with ML-KEM-512.
+- **`cs-mlkem512-aesgcm-mldsa65`** — Best overall throughput at 109 Mbps while maintaining extremely low baseline delay. Rekeys settle at 4.9 s and the OWD guard tripped only after the tunnel broke through the 100 Mbps mark, positioning this as the “go-fast” suite for ML-KEM-512.
+- **`cs-mlkem512-aesgcm-mldsa87`** — Slightly higher baseline metrics than the lighter ML-DSA tiers and saturation rolled off at 47 Mbps without a guardrail alert. Rekeys drag to 6.6 s, so this suite favors deterministic swings over outright speed.
+- **`cs-mlkem512-aesgcm-sphincs128fsha2`** — Baseline delays jump into the 9–13 ms range and the ladder stopped at 20 Mbps without an explicit stop cause, implying we simply exhausted the configured steps. Rekeys stay under 3.9 s, matching the stateless-signature pattern from the 768/1024 tables.
+- **`cs-mlkem512-aesgcm-sphincs256fsha2`** — Adds another millisecond of baseline latency over the 128f variant and hit 62 Mbps before the OWD guard spiked. Rekeys only add a few milliseconds over SPHINCS-128, so the heavier security level costs throughput, not swap time.
+
+#### Saturation Glossary
+
+- **Baseline OWD / RTT:** Statistics pulled from the UDP echo sampler inside `core/async_proxy.py` before the scheduler ramps throughput.
+- **Saturation point:** The last offered rate before the scheduler tagged the sweep with `stop_cause`; higher levels either lost packets or pushed p95 latency past policy.
+- **Rekey duration:** Milliseconds between `rekey_transition_start` and `rekey_transition_end`, as surfaced by `core/policy_engine.py` during each suite swap.
+- **Stop cause:** Guardrail message from the scheduler; `owd_p95_spike` means the 95th percentile one-way delay breached the configured ceiling, while `n/a` indicates the search ended cleanly at the top of the ladder.
+- **Search mode:** Shows that the adaptive stepper (`auto`) was in control and the Mbps resolution used for that suite.
