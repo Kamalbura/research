@@ -366,7 +366,7 @@ class PowerCaptureManager:
         self._last_error: Optional[str] = None
         self._pending_suite: Optional[str] = None
         self.monitor: Optional[PowerMonitor] = None
-    self.monitor_backend: Optional[str] = None
+        self.monitor_backend: Optional[str] = None
 
         def _parse_int_env(name: str, default: int) -> int:
             raw = os.getenv(name)
