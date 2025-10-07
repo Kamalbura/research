@@ -113,7 +113,7 @@ flowchart LR
 ### Handshake & Encrypted Channel Layout
 
 ```mermaid
-sequenceDiagramV
+sequenceDiagram
     participant Drone
     participant Tunnel as Encrypted Channel (AES-256-GCM)
     participant GCS
@@ -133,6 +133,8 @@ sequenceDiagramV
 - **Drone authentication:** The drone appends an HMAC-SHA256 tag calculated with the 32-byte pre-shared key (`DRONE_PSK`). The GCS refuses the handshake if this tag fails.
 - **Key agreement:** Both sides feed the ML-KEM shared secret into HKDF-SHA256 (`salt="pq-drone-gcs|hkdf|v1"`) to derive independent AES-256-GCM keys for each direction.
 - **Data plane:** Once keys are in place, all UDP traffic traverses the encrypted channel, carrying 22-byte authenticated headers with session, epoch, and sequence fields.
+
+*Mermaid note: keep the opening directive as `sequenceDiagram`—Mermaid does not accept variant suffixes.*
 
 ## 3. Replay Protection
 
