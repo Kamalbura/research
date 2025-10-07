@@ -366,6 +366,7 @@ class PowerCaptureManager:
         self._last_error: Optional[str] = None
         self._pending_suite: Optional[str] = None
         self.monitor: Optional[PowerMonitor] = None
+    self.monitor_backend: Optional[str] = None
 
         def _parse_int_env(name: str, default: int) -> int:
             raw = os.getenv(name)
@@ -427,6 +428,8 @@ class PowerCaptureManager:
                 power_scale=power_scale,
             )
             self.available = True
+            self.monitor_backend = getattr(self.monitor, "backend_name", self.monitor.__class__.__name__)
+            print(f"[follower] power monitor backend: {self.monitor_backend}")
         except PowerMonitorUnavailable as exc:
             self.monitor = None
             self.available = False

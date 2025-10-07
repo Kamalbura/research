@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import math
 import os
+import random
 import re
 import shutil
 import subprocess
@@ -21,6 +22,11 @@ except ModuleNotFoundError:  # pragma: no cover - exercised on non-Pi hosts
         import smbus2 as smbus  # type: ignore
     except ModuleNotFoundError:  # pragma: no cover - exercised on hosts without I2C libs
         smbus = None  # type: ignore[assignment]
+
+try:
+    import psutil  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - psutil optional on host
+    psutil = None  # type: ignore[assignment]
 
 
 _DEFAULT_SAMPLE_HZ = int(os.getenv("INA219_SAMPLE_HZ", "1000"))
@@ -840,6 +846,199 @@ class Rpi5PmicPowerMonitor:
         return power_w / voltage_v
 
 
+class SyntheticPowerMonitor:
+    """Synthetic fallback monitor that approximates power via host telemetry."""
+
+    def __init__(
+        self,
+        output_dir: Path,
+        *,
+        sample_hz: int = _DEFAULT_SAMPLE_HZ,
+        base_power_w: float = 18.0,
+        dynamic_power_w: float = 12.0,
+        voltage_v: float = 11.1,
+        noise_w: float = 1.5,
+    ) -> None:
+        if psutil is None:
+            raise PowerMonitorUnavailable("psutil module not available for synthetic backend")
+        if sample_hz <= 0:
+            raise PowerMonitorUnavailable("sample_hz must be > 0")
+
+        self.output_dir = output_dir
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.sample_hz = sample_hz
+        self.base_power_w = max(0.0, float(base_power_w))
+        self.dynamic_power_w = max(0.0, float(dynamic_power_w))
+        self.noise_w = max(0.0, float(noise_w))
+        self.voltage_v = max(1e-3, float(voltage_v))
+        self._sign_factor = 1
+        self.backend_name = "synthetic"
+
+    @staticmethod
+    def is_supported() -> bool:
+        return psutil is not None
+
+    @property
+    def sign_factor(self) -> int:
+        return self._sign_factor
+
+    def _compute_power(self, cpu_percent: float, net_bytes_per_s: float) -> float:
+        cpu_term = (cpu_percent / 100.0) * self.dynamic_power_w
+        net_term = min(self.dynamic_power_w * 0.5, (net_bytes_per_s / 1_000_000.0) * 4.0)
+        jitter = random.uniform(-self.noise_w, self.noise_w)
+        return max(0.0, self.base_power_w + cpu_term + net_term + jitter)
+
+    def capture(
+        self,
+        *,
+        label: str,
+        duration_s: float,
+        start_ns: Optional[int] = None,
+    ) -> PowerSummary:
+        if duration_s <= 0:
+            raise ValueError("duration_s must be positive")
+
+        if start_ns is not None:
+            delay_ns = start_ns - time.time_ns()
+            if delay_ns > 0:
+                time.sleep(delay_ns / 1_000_000_000)
+
+        safe_label = _sanitize_label(label)
+        ts = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+        csv_path = self.output_dir / f"power_{safe_label}_{ts}.csv"
+
+        dt = 1.0 / float(self.sample_hz)
+        refresh_cpu_every = max(1, int(self.sample_hz * 0.05))  # ~20 Hz refresh
+        refresh_net_every = max(refresh_cpu_every * 2, int(self.sample_hz * 0.1))
+        next_tick = time.perf_counter()
+        start_perf = time.perf_counter()
+        start_wall_ns = time.time_ns()
+
+        samples = 0
+        sum_current = 0.0
+        sum_voltage = 0.0
+        sum_power = 0.0
+
+        cpu_percent = psutil.cpu_percent(interval=None)
+        net = psutil.net_io_counters() if hasattr(psutil, "net_io_counters") else None
+        last_net_total = (net.bytes_sent + net.bytes_recv) if net else 0
+        last_net_ts = time.perf_counter()
+        net_bytes_per_s = 0.0
+
+        with open(csv_path, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["timestamp_ns", "current_a", "voltage_v", "power_w", "sign_factor"])
+
+            target_samples = int(round(duration_s * self.sample_hz))
+            while samples < target_samples:
+                if samples % refresh_cpu_every == 0:
+                    cpu_percent = psutil.cpu_percent(interval=None)
+
+                if net and samples % refresh_net_every == 0:
+                    now = time.perf_counter()
+                    elapsed = max(now - last_net_ts, 1e-6)
+                    net_curr = psutil.net_io_counters()
+                    total = net_curr.bytes_sent + net_curr.bytes_recv
+                    delta = max(0, total - last_net_total)
+                    net_bytes_per_s = delta / elapsed
+                    last_net_total = total
+                    last_net_ts = now
+
+                power_w = self._compute_power(cpu_percent, net_bytes_per_s)
+                voltage_v = self.voltage_v
+                current_a = power_w / voltage_v
+
+                writer.writerow([
+                    time.time_ns(),
+                    f"{current_a:.6f}",
+                    f"{voltage_v:.6f}",
+                    f"{power_w:.6f}",
+                    self._sign_factor,
+                ])
+                if samples % 500 == 0:
+                    handle.flush()
+
+                sum_current += current_a
+                sum_voltage += voltage_v
+                sum_power += power_w
+                samples += 1
+
+                next_tick += dt
+                sleep_for = next_tick - time.perf_counter()
+                if sleep_for > 0:
+                    time.sleep(sleep_for)
+
+        end_perf = time.perf_counter()
+        end_wall_ns = time.time_ns()
+        elapsed_s = max(end_perf - start_perf, 1e-9)
+        avg_current = sum_current / samples if samples else 0.0
+        avg_voltage = sum_voltage / samples if samples else 0.0
+        avg_power = sum_power / samples if samples else 0.0
+        energy_j = sum_power * dt
+        sample_rate = samples / elapsed_s if elapsed_s > 0 else 0.0
+
+        return PowerSummary(
+            label=safe_label,
+            duration_s=elapsed_s,
+            samples=samples,
+            avg_current_a=avg_current,
+            avg_voltage_v=avg_voltage,
+            avg_power_w=avg_power,
+            energy_j=energy_j,
+            sample_rate_hz=sample_rate,
+            csv_path=str(csv_path.resolve()),
+            start_ns=start_wall_ns,
+            end_ns=end_wall_ns,
+        )
+
+    def iter_samples(self, duration_s: Optional[float] = None) -> Iterator[PowerSample]:
+        limit = None if duration_s is None or duration_s <= 0 else duration_s
+        dt = 1.0 / float(self.sample_hz)
+        refresh_cpu_every = max(1, int(self.sample_hz * 0.05))
+        refresh_net_every = max(refresh_cpu_every * 2, int(self.sample_hz * 0.1))
+        start_perf = time.perf_counter()
+        next_tick = time.perf_counter()
+        samples = 0
+
+        cpu_percent = psutil.cpu_percent(interval=None) if psutil else 0.0
+        net = psutil.net_io_counters() if hasattr(psutil, "net_io_counters") else None
+        last_net_total = (net.bytes_sent + net.bytes_recv) if net else 0
+        last_net_ts = time.perf_counter()
+        net_bytes_per_s = 0.0
+
+        while True:
+            if limit is not None and (time.perf_counter() - start_perf) >= limit:
+                break
+
+            if psutil and samples % refresh_cpu_every == 0:
+                cpu_percent = psutil.cpu_percent(interval=None)
+
+            if psutil and net and samples % refresh_net_every == 0:
+                now = time.perf_counter()
+                elapsed = max(now - last_net_ts, 1e-6)
+                net_curr = psutil.net_io_counters()
+                total = net_curr.bytes_sent + net_curr.bytes_recv
+                delta = max(0, total - last_net_total)
+                net_bytes_per_s = delta / elapsed
+                last_net_total = total
+                last_net_ts = now
+
+            power_w = self._compute_power(cpu_percent, net_bytes_per_s)
+            voltage_v = self.voltage_v
+            current_a = power_w / voltage_v
+            yield PowerSample(
+                timestamp_ns=time.time_ns(),
+                current_a=current_a,
+                voltage_v=voltage_v,
+                power_w=power_w,
+            )
+
+            samples += 1
+            next_tick += dt
+            sleep_for = next_tick - time.perf_counter()
+            if sleep_for > 0:
+                time.sleep(sleep_for)
+
 def create_power_monitor(
     output_dir: Path,
     *,
@@ -897,11 +1096,14 @@ def create_power_monitor(
         return Rpi5PowerMonitor(output_dir, **rpi_kwargs)
     if resolved_backend == "rpi5-pmic":
         return Rpi5PmicPowerMonitor(output_dir, sample_hz=resolved_sample_hz, sign_mode=resolved_sign_mode)
+    if resolved_backend == "synthetic":
+        return SyntheticPowerMonitor(output_dir, sample_hz=resolved_sample_hz)
     if resolved_backend != "auto":
         raise ValueError(f"unknown power monitor backend: {backend}")
 
     rpi_error: Optional[PowerMonitorUnavailable] = None
     pmic_error: Optional[PowerMonitorUnavailable] = None
+    synthetic_error: Optional[PowerMonitorUnavailable] = None
     if Rpi5PowerMonitor.is_supported(hwmon_path=hwmon_path, hwmon_name_hint=hwmon_name_hint):
         try:
             return Rpi5PowerMonitor(output_dir, **rpi_kwargs)
@@ -917,17 +1119,26 @@ def create_power_monitor(
     try:
         return Ina219PowerMonitor(output_dir, **ina_kwargs)
     except PowerMonitorUnavailable as exc:
+        ina_error = exc
+        if SyntheticPowerMonitor.is_supported():
+            try:
+                return SyntheticPowerMonitor(output_dir, sample_hz=resolved_sample_hz)
+            except PowerMonitorUnavailable as syn_exc:
+                synthetic_error = syn_exc
         if pmic_error is not None:
             raise pmic_error
         if rpi_error is not None:
             raise rpi_error
-        raise
+        if synthetic_error is not None:
+            raise synthetic_error
+        raise ina_error
 
 
 __all__ = [
     "Ina219PowerMonitor",
     "Rpi5PowerMonitor",
     "Rpi5PmicPowerMonitor",
+    "SyntheticPowerMonitor",
     "PowerMonitor",
     "PowerSummary",
     "PowerSample",
