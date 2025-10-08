@@ -1,0 +1,230 @@
+Suite cs-mlkem1024-aesgcm-falcon1024 — PASS
+  • throughput 1.279 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.021% (95% CI 0.010-0.046)
+  • RTT avg 5.044 ms (p95 28.602 ms, max 84.887 ms)
+  • one-way delay p95 27.124 ms
+  • rekey window 3749.99 ms
+  • encoded packets 550,134 sent / 550,066 received
+  • power 3.493 W avg over 45.0 s (157.203 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem1024-aesgcm-falcon1024_20251007-160910.csv
+
+Suite cs-mlkem1024-aesgcm-falcon512 — PASS
+  • throughput 1.283 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.035% (95% CI 0.019-0.065)
+  • RTT avg 2.974 ms (p95 7.064 ms, max 53.401 ms)
+  • one-way delay p95 8.907 ms
+  • rekey window 3769.89 ms
+  • encoded packets 521,039 sent / 520,979 received
+  • power 3.513 W avg over 45.0 s (158.079 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem1024-aesgcm-falcon512_20251007-160804.csv
+
+Suite cs-mlkem1024-aesgcm-mldsa44 — PASS
+  • throughput 1.281 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 2.924 ms (p95 7.006 ms, max 26.372 ms)
+  • one-way delay p95 7.814 ms
+  • rekey window 3726.01 ms
+  • encoded packets 434,454 sent / 434,408 received
+  • power 3.519 W avg over 45.0 s (158.341 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem1024-aesgcm-mldsa44_20251007-160445.csv
+
+Suite cs-mlkem1024-aesgcm-mldsa65 — PASS
+  • throughput 1.280 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 2.926 ms (p95 7.024 ms, max 25.732 ms)
+  • one-way delay p95 8.246 ms
+  • rekey window 3793.13 ms
+  • encoded packets 463,525 sent / 463,478 received
+  • power 3.519 W avg over 45.0 s (158.344 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem1024-aesgcm-mldsa65_20251007-160551.csv
+
+Suite cs-mlkem1024-aesgcm-mldsa87 — PASS
+  • throughput 1.275 Mb/s (15.9% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 2.991 ms (p95 7.007 ms, max 37.702 ms)
+  • one-way delay p95 8.554 ms
+  • rekey window 3768.51 ms
+  • encoded packets 491,901 sent / 491,851 received
+  • power 3.513 W avg over 45.0 s (158.080 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem1024-aesgcm-mldsa87_20251007-160658.csv
+
+Suite cs-mlkem1024-aesgcm-sphincs128fsha2 — PASS
+  • throughput 1.276 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.021% (95% CI 0.010-0.046)
+  • RTT avg 2.858 ms (p95 6.740 ms, max 49.481 ms)
+  • one-way delay p95 9.359 ms
+  • rekey window 3767.17 ms
+  • encoded packets 578,576 sent / 578,503 received
+  • power 3.512 W avg over 45.0 s (158.059 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem1024-aesgcm-sphincs128fsha2_20251007-161017.csv
+
+Suite cs-mlkem1024-aesgcm-sphincs256fsha2 — PASS
+  • throughput 1.280 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 2.903 ms (p95 6.796 ms, max 35.820 ms)
+  • one-way delay p95 9.739 ms
+  • rekey window 3827.77 ms
+  • encoded packets 607,676 sent / 607,602 received
+  • power 3.506 W avg over 45.0 s (157.788 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem1024-aesgcm-sphincs256fsha2_20251007-161123.csv
+
+Suite cs-mlkem512-aesgcm-falcon1024 — PASS
+  • throughput 1.279 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 3.161 ms (p95 7.332 ms, max 27.962 ms)
+  • one-way delay p95 4.858 ms
+  • rekey window 3766.10 ms
+  • encoded packets 174,880 sent / 174,853 received
+  • power 3.516 W avg over 45.0 s (158.205 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem512-aesgcm-falcon1024_20251007-155445.csv
+
+Suite cs-mlkem512-aesgcm-falcon512 — PASS
+  • throughput 1.275 Mb/s (15.9% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 3.054 ms (p95 7.441 ms, max 24.372 ms)
+  • one-way delay p95 4.353 ms
+  • rekey window 3754.24 ms
+  • encoded packets 145,855 sent / 145,828 received
+  • power 3.506 W avg over 45.0 s (157.782 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem512-aesgcm-falcon512_20251007-155338.csv
+
+Suite cs-mlkem512-aesgcm-mldsa44 — PASS
+  • throughput 1.306 Mb/s (16.3% of target)
+  • delivered ratio 1.000, loss 0.028% (95% CI 0.014-0.055)
+  • RTT avg 3.698 ms (p95 11.314 ms, max 45.099 ms)
+  • one-way delay p95 7.771 ms
+  • rekey window 3956.00 ms
+  • encoded packets 59,196 sent / 59,185 received
+  • power 3.499 W avg over 45.0 s (157.461 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem512-aesgcm-mldsa44_20251007-155019.csv
+
+Suite cs-mlkem512-aesgcm-mldsa65 — PASS
+  • throughput 1.289 Mb/s (16.1% of target)
+  • delivered ratio 1.000, loss 0.028% (95% CI 0.014-0.055)
+  • RTT avg 3.426 ms (p95 9.371 ms, max 57.791 ms)
+  • one-way delay p95 5.382 ms
+  • rekey window 3886.61 ms
+  • encoded packets 88,361 sent / 88,343 received
+  • power 3.506 W avg over 45.0 s (157.790 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem512-aesgcm-mldsa65_20251007-155125.csv
+
+Suite cs-mlkem512-aesgcm-mldsa87 — PASS
+  • throughput 1.275 Mb/s (15.9% of target)
+  • delivered ratio 1.000, loss 0.021% (95% CI 0.010-0.046)
+  • RTT avg 3.165 ms (p95 7.590 ms, max 56.702 ms)
+  • one-way delay p95 4.472 ms
+  • rekey window 3758.59 ms
+  • encoded packets 116,827 sent / 116,800 received
+  • power 3.509 W avg over 45.0 s (157.899 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem512-aesgcm-mldsa87_20251007-155232.csv
+
+Suite cs-mlkem512-aesgcm-sphincs128fsha2 — PASS
+  • throughput 1.275 Mb/s (15.9% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 3.001 ms (p95 6.975 ms, max 34.202 ms)
+  • one-way delay p95 5.114 ms
+  • rekey window 4197.72 ms
+  • encoded packets 203,675 sent / 203,646 received
+  • power 3.506 W avg over 45.0 s (157.765 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem512-aesgcm-sphincs128fsha2_20251007-155551.csv
+
+Suite cs-mlkem512-aesgcm-sphincs256fsha2 — PASS
+  • throughput 1.281 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 2.968 ms (p95 6.821 ms, max 29.076 ms)
+  • one-way delay p95 5.269 ms
+  • rekey window 6375.77 ms
+  • encoded packets 232,432 sent / 232,402 received
+  • power 3.526 W avg over 45.0 s (158.652 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem512-aesgcm-sphincs256fsha2_20251007-155700.csv
+
+Suite cs-mlkem768-aesgcm-falcon1024 — PASS
+  • throughput 1.273 Mb/s (15.9% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 2.887 ms (p95 6.677 ms, max 40.945 ms)
+  • one-way delay p95 6.664 ms
+  • rekey window 3796.65 ms
+  • encoded packets 347,735 sent / 347,692 received
+  • power 3.510 W avg over 45.0 s (157.964 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem768-aesgcm-falcon1024_20251007-160126.csv
+
+Suite cs-mlkem768-aesgcm-falcon512 — PASS
+  • throughput 1.278 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 2.958 ms (p95 6.755 ms, max 36.028 ms)
+  • one-way delay p95 6.301 ms
+  • rekey window 3790.55 ms
+  • encoded packets 318,756 sent / 318,715 received
+  • power 3.530 W avg over 45.0 s (158.843 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem768-aesgcm-falcon512_20251007-160019.csv
+
+Suite cs-mlkem768-aesgcm-mldsa44 — PASS
+  • throughput 1.277 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.007% (95% CI 0.002-0.026)
+  • RTT avg 3.088 ms (p95 7.309 ms, max 22.791 ms)
+  • one-way delay p95 6.225 ms
+  • rekey window 3686.88 ms
+  • encoded packets 261,489 sent / 261,457 received
+  • power 3.506 W avg over 45.0 s (157.772 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem768-aesgcm-mldsa44_20251007-155807.csv
+
+Suite cs-mlkem768-aesgcm-mldsa65 — PASS
+  • throughput 1.315 Mb/s (16.4% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.013)
+  • RTT avg 5.430 ms (p95 33.645 ms, max 63.339 ms)
+  • one-way delay p95 43.083 ms
+  • rekey window 3574.30 ms
+  • encoded packets 29,553 sent / 29,549 received
+  • power 3.492 W avg over 45.0 s (157.156 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem768-aesgcm-mldsa65_20251007-154912.csv
+
+Suite cs-mlkem768-aesgcm-mldsa87 — PASS
+  • throughput 1.269 Mb/s (15.9% of target)
+  • delivered ratio 1.000, loss 0.021% (95% CI 0.010-0.047)
+  • RTT avg 5.105 ms (p95 25.844 ms, max 61.444 ms)
+  • one-way delay p95 21.327 ms
+  • rekey window 3797.43 ms
+  • encoded packets 290,168 sent / 290,129 received
+  • power 3.493 W avg over 45.0 s (157.200 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem768-aesgcm-mldsa87_20251007-155913.csv
+
+Suite cs-mlkem768-aesgcm-sphincs128fsha2 — PASS
+  • throughput 1.279 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.004% (95% CI 0.001-0.020)
+  • RTT avg 3.065 ms (p95 7.219 ms, max 24.092 ms)
+  • one-way delay p95 7.454 ms
+  • rekey window 3798.82 ms
+  • encoded packets 376,729 sent / 376,686 received
+  • power 3.519 W avg over 45.0 s (158.361 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem768-aesgcm-sphincs128fsha2_20251007-160232.csv
+
+Suite cs-mlkem768-aesgcm-sphincs256fsha2 — PASS
+  • throughput 1.281 Mb/s (16.0% of target)
+  • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.014)
+  • RTT avg 2.967 ms (p95 7.118 ms, max 38.520 ms)
+  • one-way delay p95 7.424 ms
+  • rekey window 3795.01 ms
+  • encoded packets 405,257 sent / 405,212 received
+  • power 3.515 W avg over 45.0 s (158.165 J)
+  • samples 45,000 @ 1000.0 Hz
+  • power trace: /home/dev/research/output/drone/run_1759852139/power/power_cs-mlkem768-aesgcm-sphincs256fsha2_20251007-160338.csv

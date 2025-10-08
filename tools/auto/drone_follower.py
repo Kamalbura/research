@@ -216,7 +216,12 @@ class TelemetryPublisher:
     def publish(self, kind: str, payload: dict) -> None:
         if self.stop_event.is_set():
             return
-        message = {"session_id": self.session_id, "kind": kind, **payload}
+        message = {
+            "session_id": self.session_id,
+            "kind": kind,
+            **payload,
+        }
+        message["component"] = "drone_follower"
         try:
             self.queue.put_nowait(message)
         except queue.Full:
@@ -638,6 +643,8 @@ class HighSpeedMonitor(threading.Thread):
         self.csv_path = self.output_dir / f"system_monitoring_{session_id}.csv"
         self.publisher = publisher
         self._vcgencmd_available = True
+        self.rekey_marks_path = self.output_dir / f"rekey_marks_{session_id}.csv"
+        self._rekey_marks_lock = threading.Lock()
 
     def attach_proxy(self, pid: int) -> None:
         self.proxy_pid = pid
@@ -656,6 +663,13 @@ class HighSpeedMonitor(threading.Thread):
                     "pending_suite": new_suite,
                 },
             )
+        self._append_rekey_mark([
+            "start",
+            str(self.rekey_start_ns),
+            old_suite or "",
+            new_suite or "",
+            self.pending_suite or "",
+        ])
 
     def end_rekey(self, *, success: bool, new_suite: Optional[str]) -> None:
         if self.rekey_start_ns is None:
@@ -679,8 +693,29 @@ class HighSpeedMonitor(threading.Thread):
             if self.pending_suite:
                 payload["pending_suite"] = self.pending_suite
             self.publisher.publish("rekey_transition_end", payload)
+        end_timestamp = time.time_ns()
+        self._append_rekey_mark([
+            "end",
+            str(end_timestamp),
+            "ok" if success else "fail",
+            target_suite or "",
+            f"{duration_ms:.3f}",
+        ])
         self.rekey_start_ns = None
         self.pending_suite = None
+
+    def _append_rekey_mark(self, row: list[str]) -> None:
+        try:
+            self.rekey_marks_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._rekey_marks_lock:
+                new_file = not self.rekey_marks_path.exists()
+                with self.rekey_marks_path.open("a", newline="", encoding="utf-8") as handle:
+                    writer = csv.writer(handle)
+                    if new_file:
+                        writer.writerow(["kind", "timestamp_ns", "field1", "field2", "field3"])
+                    writer.writerow(row)
+        except Exception as exc:
+            print(f"[monitor] rekey mark append failed: {exc}")
 
     def run(self) -> None:
         self.csv_handle = open(self.csv_path, "w", newline="", encoding="utf-8")
@@ -887,6 +922,7 @@ class UdpEcho(threading.Thread):
         self.packet_log_handle: Optional[object] = None
         self.packet_writer: Optional[csv.writer] = None
         self.samples = 0
+        self.log_every_packet = False
 
     def run(self) -> None:
         print(
@@ -901,6 +937,7 @@ class UdpEcho(threading.Thread):
             "processing_ns",
             "processing_ms",
             "sequence",
+            "payload_len",
         ])
         self.rx_sock.settimeout(0.001)
         while not self.stop_event.is_set():
@@ -934,13 +971,21 @@ class UdpEcho(threading.Thread):
         except struct.error:
             return
         processing_ns = send_ns - recv_ns
-        if seq % 100 == 0:
+        monitor_active = bool(self.monitor and self.monitor.rekey_start_ns is not None)
+        if monitor_active and not self.log_every_packet:
+            self.log_every_packet = True
+        elif not monitor_active and self.log_every_packet:
+            self.log_every_packet = False
+
+        should_log = self.log_every_packet or (seq % 100 == 0)
+        if should_log:
             self.packet_writer.writerow([
                 recv_ns,
                 send_ns,
                 processing_ns,
                 f"{processing_ns / 1_000_000:.6f}",
                 seq,
+                len(data),
             ])
             # Always flush to prevent data loss on crashes
             if self.packet_log_handle:
@@ -1396,6 +1441,7 @@ class ControlServer(threading.Thread):
                     telemetry: Optional[TelemetryPublisher] = self.state.get("telemetry")
                     pending_suite = self.state.get("pending_suite")
                     last_requested = self.state.get("last_requested_suite")
+                    session_id = self.state.get("session_id")
                     status_payload = {
                         "suite": suite,
                         "pending_suite": pending_suite,
@@ -1406,6 +1452,7 @@ class ControlServer(threading.Thread):
                         "control_port": self.port,
                         "udp_recv_port": APP_RECV_PORT,
                         "udp_send_port": APP_SEND_PORT,
+                        "session_id": session_id,
                         "monitors_enabled": monitors_enabled,
                     }
                 self._send(conn, {"ok": True, **status_payload})
@@ -1435,6 +1482,7 @@ class ControlServer(threading.Thread):
                 return
             if cmd == "mark":
                 suite = request.get("suite")
+                kind = str(request.get("kind") or "rekey")
                 telemetry: Optional[TelemetryPublisher] = None
                 monitor: Optional[HighSpeedMonitor] = None
                 monitors = None
@@ -1476,8 +1524,16 @@ class ControlServer(threading.Thread):
                             "suite": suite,
                             "prev_suite": monitor_prev_suite,
                             "requested_suite": suite,
+                            "kind": kind,
                         },
                     )
+                self._append_mark_entry([
+                    "mark",
+                    str(time.time_ns()),
+                    kind,
+                    suite or "",
+                    monitor_prev_suite or "",
+                ])
                 return
             if cmd == "rekey_complete":
                 status_value = str(request.get("status", "ok"))
@@ -1554,6 +1610,7 @@ class ControlServer(threading.Thread):
                 return
             if cmd == "schedule_mark":
                 suite = request.get("suite")
+                kind = str(request.get("kind") or "window")
                 t0_ns = int(request.get("t0_ns", 0))
                 if not suite or not t0_ns:
                     self._send(conn, {"ok": False, "error": "missing suite or t0_ns"})
@@ -1580,6 +1637,13 @@ class ControlServer(threading.Thread):
                         monitors.rotate(proxy.pid, outdir, suite)
                     else:
                         write_marker(suite)
+                    self._append_mark_entry([
+                        "mark",
+                        str(time.time_ns()),
+                        kind,
+                        suite or "",
+                        "",
+                    ])
 
                 threading.Thread(target=_do_mark, daemon=True).start()
                 self._send(conn, {"ok": True, "scheduled": suite, "t0_ns": t0_ns})
@@ -1591,6 +1655,7 @@ class ControlServer(threading.Thread):
                             "timestamp_ns": time.time_ns(),
                             "suite": suite,
                             "t0_ns": t0_ns,
+                            "kind": kind,
                             "requested_suite": suite,
                         },
                     )
@@ -1667,6 +1732,39 @@ class ControlServer(threading.Thread):
     @staticmethod
     def _send(conn: socket.socket, obj: dict) -> None:
         conn.sendall((json.dumps(obj) + "\n").encode())
+
+    def _append_mark_entry(self, row: list[str]) -> None:
+        monitor = self.state.get("high_speed_monitor")
+        if monitor and hasattr(monitor, "_append_rekey_mark"):
+            try:
+                monitor._append_rekey_mark(row)
+                return
+            except Exception:
+                pass
+        session_dir = self.state.get("session_dir")
+        session_id = self.state.get("session_id")
+        if not session_dir or not session_id:
+            return
+        path = Path(session_dir) / f"rekey_marks_{session_id}.csv"
+        lock = self.state.setdefault("_marks_lock", threading.Lock())
+        try:
+            lock_acquired = lock.acquire(timeout=1.5)
+        except TypeError:
+            lock.acquire()
+            lock_acquired = True
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            new_file = not path.exists()
+            with path.open("a", newline="", encoding="utf-8") as handle:
+                writer = csv.writer(handle)
+                if new_file:
+                    writer.writerow(["kind", "timestamp_ns", "field1", "field2", "field3"])
+                writer.writerow(row)
+        except Exception as exc:
+            print(f"[{ts()}] follower mark append failed: {exc}", flush=True)
+        finally:
+            if lock_acquired:
+                lock.release()
 
 
 def main(argv: Optional[list[str]] = None) -> None:
@@ -1789,6 +1887,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         "device_generation": device_generation,
         "lock": threading.Lock(),
         "session_id": session_id,
+        "session_dir": session_dir,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()

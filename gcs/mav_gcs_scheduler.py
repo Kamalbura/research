@@ -27,6 +27,7 @@ CONTROL_PORT = int(CONFIG.get("DRONE_CONTROL_PORT", 48080))
 LISTEN_PORT = int(CONFIG.get("DRONE_TO_GCS_CTL_PORT", 48181))
 DEFAULT_PRE_GAP = float(CONFIG.get("AUTO_GCS", {}).get("pre_gap_s", 1.0) or 0.0)
 SLEEP_SLICE = 0.2
+CLOCK_OFFSET_TTL_S = 45.0
 
 
 def ts() -> str:
@@ -91,8 +92,24 @@ def _format_power_status(status: Dict[str, object]) -> str:
     return "ok"
 
 
-def _schedule_mark(suite: str, pre_gap_s: float) -> bool:
-    start_ns = time.time_ns() + int(max(pre_gap_s, 0.0) * 1e9)
+def _resolve_gcs_secret(suite_id: str) -> Path:
+    matrix_path = ROOT / "secrets" / "matrix" / suite_id / "gcs_signing.key"
+    if matrix_path.exists():
+        return matrix_path
+    fallback = ROOT / "secrets" / "gcs_signing.key"
+    if fallback.exists():
+        return fallback
+    raise FileNotFoundError(
+        f"Missing GCS signing key for suite '{suite_id}'. Expected {matrix_path} or {fallback}."
+    )
+
+
+def _schedule_mark(suite: str, pre_gap_s: float, *, clock_offset_ns: Optional[int]) -> bool:
+    start_ns_local = time.time_ns() + int(max(pre_gap_s, 0.0) * 1e9)
+    if clock_offset_ns is not None:
+        start_ns = start_ns_local + clock_offset_ns
+    else:
+        start_ns = start_ns_local
     payload = {"cmd": "schedule_mark", "suite": suite, "t0_ns": start_ns}
     try:
         resp = _ctl_send(payload, timeout=1.2, retries=2, backoff=0.3)
@@ -123,7 +140,24 @@ def _poll_power_status(wait_hint_s: float) -> dict:
     return last
 
 
+def _perform_timesync_rpc() -> Tuple[int, int]:
+    t1 = time.time_ns()
+    resp = _ctl_send({"cmd": "timesync", "t1_ns": t1}, timeout=1.2, retries=2, backoff=0.3)
+    t4 = time.time_ns()
+    if not isinstance(resp, dict):
+        raise RuntimeError("invalid_timesync_response")
+    try:
+        t2 = int(resp.get("t2_ns"))
+        t3 = int(resp.get("t3_ns"))
+    except (TypeError, ValueError):
+        raise RuntimeError("missing_timesync_fields") from None
+    delay_ns = (t4 - t1) - (t3 - t2)
+    offset_ns = ((t2 - t1) + (t3 - t4)) // 2
+    return offset_ns, delay_ns
+
+
 def _start_gcs_proxy(initial_suite: str, status_path: Path, counters_path: Path) -> subprocess.Popen:
+    secret_path = _resolve_gcs_secret(initial_suite)
     cmd = [
         sys.executable,
         "-m",
@@ -131,6 +165,8 @@ def _start_gcs_proxy(initial_suite: str, status_path: Path, counters_path: Path)
         "gcs",
         "--suite",
         initial_suite,
+        "--gcs-secret-file",
+        str(secret_path),
         "--control-manual",
         "--status-file",
         str(status_path),
@@ -138,12 +174,25 @@ def _start_gcs_proxy(initial_suite: str, status_path: Path, counters_path: Path)
         str(counters_path),
     ]
     print(f"[{ts()}] starting GCS proxy: {' '.join(cmd)}", flush=True)
+    env = os.environ.copy()
+    env.setdefault("DRONE_HOST", DRONE_HOST)
+    env.setdefault("GCS_HOST", CONFIG.get("GCS_HOST", "127.0.0.1"))
+    env.setdefault("ENABLE_PACKET_TYPE", "1" if CONFIG.get("ENABLE_PACKET_TYPE", True) else "0")
+    env.setdefault("STRICT_UDP_PEER_MATCH", "1" if CONFIG.get("STRICT_UDP_PEER_MATCH", True) else "0")
+    root_str = str(ROOT)
+    existing_py_path = env.get("PYTHONPATH")
+    if existing_py_path:
+        if root_str not in existing_py_path.split(os.pathsep):
+            env["PYTHONPATH"] = root_str + os.pathsep + existing_py_path
+    else:
+        env["PYTHONPATH"] = root_str
     return subprocess.Popen(
         cmd,
         cwd=str(ROOT),
         stdin=subprocess.PIPE,
         text=True,
         bufsize=1,
+        env=env,
     )
 
 
@@ -198,6 +247,11 @@ class GCSScheduler:
         self.gcs_proc: Optional[subprocess.Popen] = None
         self.mavproxy_proc: Optional[subprocess.Popen] = None
         self.step = 0
+        self.current_suite: Optional[str] = None
+        self._clock_offset_ns: Optional[int] = None
+        self._clock_offset_expiry = 0.0
+        self._last_timesync_error: Optional[str] = None
+        self._last_timesync_log = 0.0
 
     def start(self) -> None:
         self.outdir.mkdir(parents=True, exist_ok=True)
@@ -212,12 +266,12 @@ class GCSScheduler:
         else:
             suite_id = _default_initial_suite()
         self.initial_suite = suite_id
-        self.gcs_proc = _start_gcs_proxy(self.initial_suite, self.status_path, self.counters_path)
         if self.autostart_mavproxy:
             self.mavproxy_proc = _start_mavproxy()
+        self._ensure_timesync(force=True)
         print(
             f"[{ts()}] GCS scheduler listening on {self.listen_host}:{self.listen_port}; "
-            f"initial suite {self.initial_suite}",
+            f"waiting for drone schedule (fallback {self.initial_suite})",
             flush=True,
         )
         self._install_signal_handlers()
@@ -231,6 +285,8 @@ class GCSScheduler:
             self.stop_event = True
         _stop_process(self.gcs_proc)
         _stop_process(self.mavproxy_proc)
+        self.gcs_proc = None
+        self.current_suite = None
 
     def _install_signal_handlers(self) -> None:
         def handler(signum, _frame) -> None:
@@ -282,8 +338,8 @@ class GCSScheduler:
         if self.gcs_proc and self.gcs_proc.poll() is not None:
             code = self.gcs_proc.returncode
             print(f"[gcs] proxy exited with code {code}", flush=True)
-            self.stop()
-            return
+            self.gcs_proc = None
+            self.current_suite = None
         if self.mavproxy_proc and self.mavproxy_proc.poll() is not None:
             code = self.mavproxy_proc.returncode
             print(f"[gcs] MAVProxy exited with code {code}", flush=True)
@@ -308,11 +364,34 @@ class GCSScheduler:
             f"duration={duration_s:.1f}s pre_gap={pre_gap_s:.1f}s",
             flush=True,
         )
-        rekey_status, rekey_ms, note = self._activate_suite(suite_id)
         mark_ok = False
         power_status: dict = {}
-        if rekey_status == "ok":
-            mark_ok = _schedule_mark(suite_id, pre_gap_s)
+        rekey_status = "skip"
+        rekey_ms = 0
+        note: Optional[str] = None
+
+        offset_ns = self._ensure_timesync()
+        if offset_ns is None and self._clock_offset_ns is None:
+            print("[gcs] warning: timesync unavailable, using local clock", flush=True)
+
+        if self.gcs_proc is None:
+            ok, ready_note = self._launch_proxy_for_suite(suite_id)
+            if ok:
+                rekey_status = "bootstrap"
+                note = ready_note
+                self.current_suite = suite_id
+            else:
+                rekey_status = "fail"
+                note = ready_note
+        elif self.current_suite != suite_id:
+            rekey_status, rekey_ms, note = self._activate_suite(suite_id)
+            if rekey_status == "ok":
+                self.current_suite = suite_id
+        else:
+            rekey_status = "noop"
+
+        if rekey_status in {"ok", "bootstrap", "noop"}:
+            mark_ok = _schedule_mark(suite_id, pre_gap_s, clock_offset_ns=offset_ns)
             if pre_gap_s > 0:
                 self._sleep_with_checks(pre_gap_s)
             if duration_s > 0:
@@ -321,7 +400,7 @@ class GCSScheduler:
             else:
                 power_status = _poll_power_status(5.0)
         else:
-            print(f"[gcs] rekey failed for {suite_id}: {note}", flush=True)
+            print(f"[gcs] suite change failed for {suite_id}: {note}", flush=True)
         power_note = _format_power_status(power_status)
         self._write_summary(
             algorithm,
@@ -387,6 +466,74 @@ class GCSScheduler:
                 return True, None
             time.sleep(SLEEP_SLICE)
         return False, "timeout"
+
+    def _launch_proxy_for_suite(self, suite_id: str, timeout_s: float = 25.0) -> Tuple[bool, Optional[str]]:
+        if self.stop_event:
+            return False, "stopping"
+        if self.gcs_proc and self.gcs_proc.poll() is None:
+            return True, "already_running"
+        try:
+            self.status_path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            pass
+        try:
+            self.gcs_proc = _start_gcs_proxy(suite_id, self.status_path, self.counters_path)
+        except Exception as exc:
+            return False, f"launch_failed:{exc}"
+        deadline = time.time() + timeout_s
+        while time.time() < deadline and not self.stop_event:
+            if self.gcs_proc and self.gcs_proc.poll() is not None:
+                return False, "proxy_exited"
+            try:
+                data = self.status_path.read_text(encoding="utf-8")
+            except FileNotFoundError:
+                time.sleep(SLEEP_SLICE)
+                continue
+            except OSError:
+                time.sleep(SLEEP_SLICE)
+                continue
+            try:
+                status = json.loads(data)
+            except json.JSONDecodeError:
+                time.sleep(SLEEP_SLICE)
+                continue
+            state = status.get("status") or status.get("state")
+            if state in {"running", "ready", "handshake_ok", "rekey_ok"}:
+                return True, "proxy_started"
+            counters = status.get("counters")
+            if isinstance(counters, dict) and counters.get("last_rekey_suite") == suite_id:
+                return True, "proxy_started"
+            time.sleep(SLEEP_SLICE)
+        return False, "bootstrap_timeout"
+
+    def _ensure_timesync(self, force: bool = False) -> Optional[int]:
+        now = time.time()
+        if not force and self._clock_offset_ns is not None and now < self._clock_offset_expiry:
+            return self._clock_offset_ns
+        try:
+            offset_ns, delay_ns = _perform_timesync_rpc()
+        except Exception as exc:
+            if force:
+                self._clock_offset_ns = None
+            if self._last_timesync_error != str(exc) or (now - self._last_timesync_log) > 30.0:
+                print(f"[gcs] timesync failed: {exc}", flush=True)
+                self._last_timesync_error = str(exc)
+                self._last_timesync_log = now
+            return self._clock_offset_ns
+        self._clock_offset_ns = offset_ns
+        self._clock_offset_expiry = now + CLOCK_OFFSET_TTL_S
+        if delay_ns < 0:
+            delay_ns = 0
+        if self._last_timesync_error is not None or (now - self._last_timesync_log) > 30.0:
+            print(
+                f"[gcs] timesync ok: offset={offset_ns/1e6:.3f}ms rtt={delay_ns/1e6:.3f}ms",
+                flush=True,
+            )
+        self._last_timesync_error = None
+        self._last_timesync_log = now
+        return self._clock_offset_ns
 
     def _write_summary(
         self,

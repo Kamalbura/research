@@ -16,15 +16,19 @@ import subprocess
 import sys
 import threading
 import time
-from collections import deque
+from collections import deque, OrderedDict
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, IO, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, IO, Iterable, List, Optional, Set, Tuple
 
 try:
     from openpyxl import Workbook
+    from openpyxl.chart import BarChart, LineChart, Reference
 except ImportError:  # pragma: no cover
     Workbook = None
+    BarChart = None
+    LineChart = None
+    Reference = None
 
 def _ensure_core_importable() -> Path:
     root = Path(__file__).resolve().parents[2]
@@ -44,6 +48,8 @@ ROOT = _ensure_core_importable()
 
 from core import suites as suites_mod
 from core.config import CONFIG
+from tools.blackout_metrics import compute_blackout
+from tools.merge_power import extract_power_fields
 
 
 DRONE_HOST = CONFIG["DRONE_HOST"]
@@ -86,6 +92,8 @@ PROXY_STATUS_PATH = OUTDIR / "gcs_status.json"
 PROXY_SUMMARY_PATH = OUTDIR / "gcs_summary.json"
 SUMMARY_CSV = OUTDIR / "summary.csv"
 EVENTS_FILENAME = "blaster_events.jsonl"
+BLACKOUT_CSV = OUTDIR / "gcs_blackouts.csv"
+STEP_RESULTS_PATH = OUTDIR / "step_results.jsonl"
 
 SEQ_TS_OVERHEAD_BYTES = 12
 UDP_HEADER_BYTES = 8
@@ -1045,33 +1053,23 @@ def wait_proxy_rekey(
     return "timeout"
 
 
-def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
+def activate_suite(
+    gcs: subprocess.Popen,
+    suite: str,
+    is_first: bool,
+) -> Tuple[float, Optional[int], Optional[int]]:
 
     if gcs.poll() is not None:
 
         raise RuntimeError("GCS proxy is not running; cannot continue")
 
     start_ns = time.time_ns()
+    mark_ns: Optional[int] = None
+    rekey_complete_ns: Optional[int] = None
 
     if is_first:
-
-        try:
-
-            ctl_send({"cmd": "mark", "suite": suite})
-
-        except Exception as exc:
-
-            print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
-
-        finally:
-
-            try:
-
-                ctl_send({"cmd": "rekey_complete", "suite": suite, "status": "ok"})
-
-            except Exception:
-
-                pass
+        mark_ns = None
+        rekey_complete_ns = None
 
         if not wait_rekey_transition(suite, timeout=12.0):
             raise RuntimeError(f"Follower did not confirm initial suite {suite}")
@@ -1093,8 +1091,9 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
 
         baseline = _read_proxy_counters()
 
+        mark_ns = time.time_ns()
         try:
-            ctl_send({"cmd": "mark", "suite": suite})
+            ctl_send({"cmd": "mark", "suite": suite, "kind": "rekey"})
         except Exception as exc:
             print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
         pending_ack = False
@@ -1128,6 +1127,7 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
             print(f"[WARN] error while waiting for proxy rekey {suite}: {exc}", file=sys.stderr)
         finally:
             try:
+                rekey_complete_ns = time.time_ns()
                 ctl_send({"cmd": "rekey_complete", "suite": suite, "status": rekey_status})
             except Exception as exc:
                 print(f"[WARN] rekey_complete failed for {suite}: {exc}", file=sys.stderr)
@@ -1160,7 +1160,8 @@ def activate_suite(gcs: subprocess.Popen, suite: str, is_first: bool) -> float:
     if REKEY_SETTLE_SECONDS > 0:
         time.sleep(REKEY_SETTLE_SECONDS)
 
-    return (time.time_ns() - start_ns) / 1_000_000
+    elapsed_ms = (time.time_ns() - start_ns) / 1_000_000
+    return elapsed_ms, mark_ns, rekey_complete_ns
 
 
 
@@ -1176,13 +1177,14 @@ def run_suite(
     pass_index: int,
     traffic_mode: str,
     pre_gap: float,
+    inter_gap_s: float,
     rate_pps: int,
     target_bandwidth_mbps: float,
     power_capture_enabled: bool,
     clock_offset_warmup_s: float,
     min_delay_samples: int,
 ) -> dict:
-    rekey_duration_ms = activate_suite(gcs, suite, is_first)
+    rekey_duration_ms, rekey_mark_ns, rekey_complete_ns = activate_suite(gcs, suite, is_first)
 
     effective_sample_every, effective_min_delay = _compute_sampling_params(
         duration_s,
@@ -1193,7 +1195,14 @@ def run_suite(
     events_path = suite_outdir(suite) / EVENTS_FILENAME
     start_mark_ns = time.time_ns() + offset_ns + int(0.150 * 1e9) + int(max(pre_gap, 0.0) * 1e9)
     try:
-        ctl_send({"cmd": "schedule_mark", "suite": suite, "t0_ns": start_mark_ns})
+        ctl_send(
+            {
+                "cmd": "schedule_mark",
+                "suite": suite,
+                "t0_ns": start_mark_ns,
+                "kind": "window",
+            }
+        )
     except Exception as exc:
         print(f"[WARN] schedule_mark failed for {suite}: {exc}", file=sys.stderr)
 
@@ -1283,8 +1292,18 @@ def run_suite(
         power_status = poll_power_status(max_wait_s=max(6.0, duration_s * 0.25))
         if power_status.get("error"):
             print(f"[WARN] power status error: {power_status['error']}", file=sys.stderr)
+        if power_status.get("busy"):
+            power_note = "capture_incomplete:busy"
+            if not power_status.get("error") and not power_request_error:
+                power_status.setdefault("error", "capture_incomplete")
 
     power_summary = power_status.get("last_summary") if isinstance(power_status, dict) else None
+    status_for_extract: Dict[str, Any] = {}
+    if isinstance(power_status, dict) and power_status:
+        status_for_extract = power_status
+    elif power_summary:
+        status_for_extract = {"last_summary": power_summary}
+    power_fields = extract_power_fields(status_for_extract) if status_for_extract else {}
     power_capture_complete = bool(power_summary)
     power_error = None
     if not power_capture_complete:
@@ -1294,6 +1313,15 @@ def run_suite(
                 power_error = "capture_incomplete"
         if power_error is None:
             power_error = power_request_error
+
+    if not power_capture_enabled:
+        power_note = "disabled"
+    elif not power_request_ok:
+        power_note = f"request_error:{power_error}" if power_error else "request_error"
+    elif power_capture_complete:
+        power_note = "ok"
+    else:
+        power_note = f"capture_incomplete:{power_error}" if power_error else "capture_incomplete"
 
     elapsed_s = max(1e-9, (end_perf_ns - start_perf_ns) / 1e9)
     pps = sent_packets / elapsed_s if elapsed_s > 0 else 0.0
@@ -1343,9 +1371,53 @@ def run_suite(
     loss_successes = max(0, sent_packets - rcvd_packets)
     loss_low, loss_high = wilson_interval(loss_successes, sent_packets)
 
+    power_avg_w_val = power_fields.get("avg_power_w") if power_fields else None
+    if power_avg_w_val is None and power_summary:
+        power_avg_w_val = power_summary.get("avg_power_w")
+    if power_avg_w_val is not None:
+        try:
+            power_avg_w_val = float(power_avg_w_val)
+        except (TypeError, ValueError):
+            power_avg_w_val = None
+    power_energy_val = power_fields.get("energy_j") if power_fields else None
+    if power_energy_val is None and power_summary:
+        power_energy_val = power_summary.get("energy_j")
+    if power_energy_val is not None:
+        try:
+            power_energy_val = float(power_energy_val)
+        except (TypeError, ValueError):
+            power_energy_val = None
+    power_duration_val = power_fields.get("duration_s") if power_fields else None
+    if power_duration_val is None and power_summary:
+        power_duration_val = power_summary.get("duration_s")
+    if power_duration_val is not None:
+        try:
+            power_duration_val = float(power_duration_val)
+        except (TypeError, ValueError):
+            power_duration_val = None
+    power_summary_path_val = ""
+    if power_fields and power_fields.get("summary_json_path"):
+        power_summary_path_val = str(power_fields.get("summary_json_path") or "")
+    elif power_summary:
+        power_summary_path_val = str(power_summary.get("summary_json_path") or power_summary.get("csv_path") or "")
+    power_csv_path_val = power_summary.get("csv_path") if power_summary else ""
+    power_samples_val = power_summary.get("samples") if power_summary else 0
+    power_avg_current_val = (
+        round(power_summary.get("avg_current_a", 0.0), 6) if power_summary else 0.0
+    )
+    power_avg_voltage_val = (
+        round(power_summary.get("avg_voltage_v", 0.0), 6) if power_summary else 0.0
+    )
+    power_sample_rate_val = (
+        round(power_summary.get("sample_rate_hz", 0.0), 3) if power_summary else 0.0
+    )
+
     row = {
         "pass": pass_index,
         "suite": suite,
+        "traffic_mode": traffic_mode,
+        "pre_gap_s": round(pre_gap, 3),
+    "inter_gap_s": round(inter_gap_s, 3),
         "duration_s": round(elapsed_s, 3),
         "sent": sent_packets,
         "rcvd": rcvd_packets,
@@ -1381,19 +1453,35 @@ def run_suite(
         "rekeys_fail": proxy_stats.get("rekeys_fail", 0),
         "start_ns": start_wall_ns,
         "end_ns": end_wall_ns,
+        "scheduled_mark_ns": start_mark_ns,
+        "rekey_mark_ns": rekey_mark_ns,
+        "rekey_ok_ns": rekey_complete_ns,
         "rekey_ms": round(rekey_duration_ms, 3),
         "power_request_ok": power_request_ok,
         "power_capture_ok": power_capture_complete,
+        "power_note": power_note,
         "power_error": power_error,
-        "power_avg_w": round(power_summary.get("avg_power_w", 0.0), 6) if power_summary else 0.0,
-        "power_energy_j": round(power_summary.get("energy_j", 0.0), 6) if power_summary else 0.0,
-        "power_samples": power_summary.get("samples") if power_summary else 0,
-        "power_avg_current_a": round(power_summary.get("avg_current_a", 0.0), 6) if power_summary else 0.0,
-        "power_avg_voltage_v": round(power_summary.get("avg_voltage_v", 0.0), 6) if power_summary else 0.0,
-        "power_sample_rate_hz": round(power_summary.get("sample_rate_hz", 0.0), 3) if power_summary else 0.0,
-        "power_duration_s": round(power_summary.get("duration_s", 0.0), 3) if power_summary else 0.0,
-        "power_csv_path": power_summary.get("csv_path") if power_summary else "",
-        "power_summary_path": power_summary.get("summary_json_path") if power_summary else "",
+        "power_avg_w": round(power_avg_w_val, 6) if power_avg_w_val is not None else 0.0,
+        "power_energy_j": round(power_energy_val, 6) if power_energy_val is not None else 0.0,
+        "power_samples": power_samples_val,
+        "power_avg_current_a": power_avg_current_val,
+        "power_avg_voltage_v": power_avg_voltage_val,
+        "power_sample_rate_hz": power_sample_rate_val,
+        "power_duration_s": round(power_duration_val, 3) if power_duration_val is not None else 0.0,
+        "power_csv_path": power_csv_path_val or "",
+        "power_summary_path": power_summary_path_val or "",
+        "blackout_ms": None,
+        "gap_max_ms": None,
+        "gap_p99_ms": None,
+        "steady_gap_ms": None,
+        "recv_rate_kpps_before": None,
+        "recv_rate_kpps_after": None,
+        "proc_ns_p95": None,
+        "pair_start_ns": None,
+        "pair_end_ns": None,
+        "blackout_error": None,
+        "timing_guard_ms": None,
+        "timing_guard_violation": False,
     }
 
     if power_summary:
@@ -1433,6 +1521,163 @@ def write_summary(rows: List[dict]) -> None:
             if attempt == 2:
                 print(f"[WARN] failed to write {SUMMARY_CSV}: {exc}", file=sys.stderr)
             time.sleep(0.1)
+
+
+def _append_blackout_records(records: List[Dict[str, Any]]) -> None:
+    if not records:
+        return
+    try:
+        BLACKOUT_CSV.parent.mkdir(parents=True, exist_ok=True)
+        fieldnames = [
+            "timestamp_utc",
+            "session_id",
+            "index",
+            "pass",
+            "suite",
+            "traffic_mode",
+            "rekey_mark_ns",
+            "rekey_ok_ns",
+            "scheduled_mark_ns",
+            "blackout_ms",
+            "gap_max_ms",
+            "gap_p99_ms",
+            "steady_gap_ms",
+            "recv_rate_kpps_before",
+            "recv_rate_kpps_after",
+            "proc_ns_p95",
+            "pair_start_ns",
+            "pair_end_ns",
+            "blackout_error",
+        ]
+        new_file = not BLACKOUT_CSV.exists()
+        with BLACKOUT_CSV.open("a", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            if new_file:
+                writer.writeheader()
+            for record in records:
+                writer.writerow(record)
+        print(f"[{ts()}] updated {BLACKOUT_CSV} ({len(records)} rows)")
+    except Exception as exc:
+        print(f"[WARN] blackout log append failed: {exc}", file=sys.stderr)
+
+
+def _append_step_results(payloads: List[Dict[str, Any]]) -> None:
+    if not payloads:
+        return
+    try:
+        STEP_RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with STEP_RESULTS_PATH.open("a", encoding="utf-8") as handle:
+            for payload in payloads:
+                handle.write(json.dumps(payload) + "\n")
+        print(f"[{ts()}] appended {len(payloads)} step records -> {STEP_RESULTS_PATH}")
+    except Exception as exc:
+        print(f"[WARN] step_results append failed: {exc}", file=sys.stderr)
+
+
+def _enrich_summary_rows(
+    rows: List[dict],
+    *,
+    session_id: str,
+    drone_session_dir: Optional[Path],
+    traffic_mode: str,
+    pre_gap_s: float,
+    duration_s: float,
+    inter_gap_s: float,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    blackout_records: List[Dict[str, Any]] = []
+    step_payloads: List[Dict[str, Any]] = []
+    session_dir_exists = bool(drone_session_dir and drone_session_dir.exists())
+    session_dir_str = str(drone_session_dir) if drone_session_dir else ""
+    for index, row in enumerate(rows):
+        mark_ns = row.get("rekey_mark_ns")
+        ok_ns = row.get("rekey_ok_ns")
+        metrics: Dict[str, Any] = {}
+        blackout_error: Optional[str] = None
+        if session_dir_exists and mark_ns and ok_ns and ok_ns >= mark_ns:
+            try:
+                metrics = compute_blackout(drone_session_dir, int(mark_ns), int(ok_ns))
+            except Exception as exc:
+                blackout_error = str(exc)
+                metrics = {}
+        else:
+            if not session_dir_exists:
+                blackout_error = "session_dir_unavailable"
+            elif not mark_ns or not ok_ns:
+                blackout_error = "missing_mark_or_ok"
+            elif ok_ns is not None and mark_ns is not None and ok_ns < mark_ns:
+                blackout_error = "invalid_timestamp_order"
+
+        row["blackout_ms"] = metrics.get("blackout_ms")
+        row["gap_max_ms"] = metrics.get("gap_max_ms")
+        row["gap_p99_ms"] = metrics.get("gap_p99_ms")
+        row["steady_gap_ms"] = metrics.get("steady_gap_ms")
+        row["recv_rate_kpps_before"] = metrics.get("recv_rate_kpps_before")
+        row["recv_rate_kpps_after"] = metrics.get("recv_rate_kpps_after")
+        row["proc_ns_p95"] = metrics.get("proc_ns_p95")
+        row["pair_start_ns"] = metrics.get("pair_start_ns")
+        row["pair_end_ns"] = metrics.get("pair_end_ns")
+        if blackout_error is None:
+            blackout_error = metrics.get("error")
+        row["blackout_error"] = blackout_error
+
+        guard_ms = int(
+            max(row.get("pre_gap_s", pre_gap_s) or 0.0, 0.0) * 1000.0
+            + max(row.get("duration_s", duration_s) or 0.0, 0.0) * 1000.0
+            + 10_000
+        )
+        row["timing_guard_ms"] = guard_ms
+        rekey_ms = row.get("rekey_ms") or 0.0
+        try:
+            rekey_ms_val = float(rekey_ms)
+        except (TypeError, ValueError):
+            rekey_ms_val = 0.0
+        timing_violation = bool(rekey_ms_val and rekey_ms_val > guard_ms)
+        row["timing_guard_violation"] = timing_violation
+        if timing_violation:
+            print(
+                f"[WARN] rekey duration {rekey_ms_val:.2f} ms exceeds guard {guard_ms} ms (suite={row.get('suite')} pass={row.get('pass')})",
+                file=sys.stderr,
+            )
+
+        row.setdefault("traffic_mode", traffic_mode)
+        row.setdefault("pre_gap_s", pre_gap_s)
+        row.setdefault("inter_gap_s", inter_gap_s)
+
+        blackout_records.append(
+            {
+                "timestamp_utc": ts(),
+                "session_id": session_id,
+                "index": index,
+                "pass": row.get("pass"),
+                "suite": row.get("suite"),
+                "traffic_mode": row.get("traffic_mode"),
+                "rekey_mark_ns": mark_ns or "",
+                "rekey_ok_ns": ok_ns or "",
+                "scheduled_mark_ns": row.get("scheduled_mark_ns") or "",
+                "blackout_ms": row.get("blackout_ms"),
+                "gap_max_ms": row.get("gap_max_ms"),
+                "gap_p99_ms": row.get("gap_p99_ms"),
+                "steady_gap_ms": row.get("steady_gap_ms"),
+                "recv_rate_kpps_before": row.get("recv_rate_kpps_before"),
+                "recv_rate_kpps_after": row.get("recv_rate_kpps_after"),
+                "proc_ns_p95": row.get("proc_ns_p95"),
+                "pair_start_ns": row.get("pair_start_ns"),
+                "pair_end_ns": row.get("pair_end_ns"),
+                "blackout_error": blackout_error or "",
+            }
+        )
+
+        payload = dict(row)
+        payload["ts_utc"] = ts()
+        payload["session_id"] = session_id
+        payload["session_dir"] = session_dir_str
+        payload["index"] = index
+        payload["blackout_error"] = blackout_error
+        payload["timing_guard_ms"] = guard_ms
+        payload["timing_guard_violation"] = timing_violation
+        step_payloads.append(payload)
+
+    return blackout_records, step_payloads
 
 
 class SaturationTester:
@@ -2054,6 +2299,19 @@ def export_combined_excel(
     saturation_overview: List[dict],
     saturation_samples: List[dict],
     telemetry_samples: List[dict],
+    drone_session_dir: Optional[Path] = None,
+    *,
+    traffic_mode: str,
+    payload_bytes: int,
+    event_sample: int,
+    min_delay_samples: int,
+    pre_gap_s: float,
+    duration_s: float,
+    inter_gap_s: float,
+    sat_search: str,
+    sat_delivery_threshold: float,
+    sat_loss_threshold_pct: float,
+    sat_rtt_spike_factor: float,
 ) -> Optional[Path]:
     if Workbook is None:
         print("[WARN] openpyxl not available; skipping combined Excel export", file=sys.stderr)
@@ -2070,16 +2328,162 @@ def export_combined_excel(
     append_dict_sheet(workbook, "saturation_samples", saturation_samples)
     append_dict_sheet(workbook, "telemetry_samples", telemetry_samples)
 
+    def _as_float(value: object) -> Optional[float]:
+        if value in (None, ""):
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _rounded(value: object, digits: int) -> object:
+        num = _as_float(value)
+        if num is None:
+            return ""
+        return round(num, digits)
+
+    paper_header = [
+        "suite",
+        "rekey_ms",
+        "blackout_ms",
+        "gap_p99_ms",
+        "goodput_mbps",
+        "loss_pct",
+        "rtt_p50_ms",
+        "rtt_p95_ms",
+        "owd_p50_ms",
+        "owd_p95_ms",
+        "power_avg_w",
+        "power_energy_j",
+    ]
+    paper_sheet = workbook.create_sheet("paper_tables")
+    paper_sheet.append(paper_header)
+    ordered_rows: "OrderedDict[str, dict]" = OrderedDict()
+    for row in summary_rows:
+        suite_name = str(row.get("suite") or "").strip()
+        if not suite_name:
+            continue
+        ordered_rows[suite_name] = row
+    paper_rows = list(ordered_rows.items())
+    for suite_name, source_row in paper_rows:
+        paper_sheet.append([
+            suite_name,
+            _rounded(source_row.get("rekey_ms"), 3),
+            _rounded(source_row.get("blackout_ms"), 3),
+            _rounded(source_row.get("gap_p99_ms"), 3),
+            _rounded(source_row.get("goodput_mbps"), 3),
+            _rounded(source_row.get("loss_pct"), 3),
+            _rounded(source_row.get("rtt_p50_ms"), 3),
+            _rounded(source_row.get("rtt_p95_ms"), 3),
+            _rounded(source_row.get("owd_p50_ms"), 3),
+            _rounded(source_row.get("owd_p95_ms"), 3),
+            _rounded(source_row.get("power_avg_w"), 6),
+            _rounded(source_row.get("power_energy_j"), 6),
+        ])
+
+    notes_header = [
+        "generated_utc",
+        "session_id",
+        "traffic_mode",
+        "payload_bytes",
+        "event_sample",
+        "min_delay_samples",
+        "pre_gap_s",
+        "duration_s",
+        "inter_gap_s",
+        "sat_search",
+        "sat_delivery_threshold",
+        "sat_loss_threshold_pct",
+        "sat_rtt_spike_factor",
+    ]
+    notes_sheet = workbook.create_sheet("paper_notes")
+    notes_sheet.append(notes_header)
+    notes_sheet.append([
+        ts(),
+        session_id,
+        traffic_mode,
+        payload_bytes,
+        event_sample,
+        min_delay_samples,
+        round(pre_gap_s, 3),
+        round(duration_s, 3),
+        round(inter_gap_s, 3),
+        sat_search,
+        sat_delivery_threshold,
+        sat_loss_threshold_pct,
+        sat_rtt_spike_factor,
+    ])
+
     if SUMMARY_CSV.exists():
         append_csv_sheet(workbook, SUMMARY_CSV, "gcs_summary_csv")
 
-    drone_session_dir = locate_drone_session_dir(session_id)
+    if drone_session_dir is None:
+        drone_session_dir = locate_drone_session_dir(session_id)
     if drone_session_dir:
         info_sheet.append(["drone_session_dir", str(drone_session_dir)])
         for csv_path in sorted(drone_session_dir.glob("*.csv")):
             append_csv_sheet(workbook, csv_path, csv_path.stem[:31])
     else:
         info_sheet.append(["drone_session_dir", "not_found"])
+
+    if paper_rows and BarChart is not None and Reference is not None:
+        row_count = len(paper_rows) + 1
+        suite_categories = Reference(paper_sheet, min_col=1, min_row=2, max_row=row_count)
+
+        rekey_chart = BarChart()
+        rekey_chart.title = "Rekey vs Blackout (ms)"
+        rekey_chart.add_data(
+            Reference(paper_sheet, min_col=2, max_col=3, min_row=1, max_row=row_count),
+            titles_from_data=True,
+        )
+        rekey_chart.set_categories(suite_categories)
+        rekey_chart.y_axis.title = "Milliseconds"
+        rekey_chart.x_axis.title = "Suite"
+        paper_sheet.add_chart(rekey_chart, "H2")
+
+        power_chart = BarChart()
+        power_chart.title = "Avg Power (W)"
+        power_chart.add_data(
+            Reference(paper_sheet, min_col=11, max_col=11, min_row=1, max_row=row_count),
+            titles_from_data=True,
+        )
+        power_chart.set_categories(suite_categories)
+        power_chart.y_axis.title = "Watts"
+        power_chart.x_axis.title = "Suite"
+        paper_sheet.add_chart(power_chart, "H18")
+
+    if summary_rows and LineChart is not None and Reference is not None and "gcs_summary" in workbook.sheetnames:
+        summary_sheet = workbook["gcs_summary"]
+        header_row = next(summary_sheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
+        if header_row:
+            try:
+                pass_col = header_row.index("pass") + 1
+                throughput_col = header_row.index("throughput_mbps") + 1
+            except ValueError:
+                pass_col = throughput_col = None
+            if pass_col and throughput_col and len(summary_rows) >= 1:
+                chart = LineChart()
+                chart.title = "Throughput (Mb/s) vs pass index"
+                chart.add_data(
+                    Reference(
+                        summary_sheet,
+                        min_col=throughput_col,
+                        min_row=1,
+                        max_row=len(summary_rows) + 1,
+                    ),
+                    titles_from_data=True,
+                )
+                chart.set_categories(
+                    Reference(
+                        summary_sheet,
+                        min_col=pass_col,
+                        min_row=2,
+                        max_row=len(summary_rows) + 1,
+                    )
+                )
+                chart.x_axis.title = "Pass"
+                chart.y_axis.title = "Throughput (Mb/s)"
+                summary_sheet.add_chart(chart, "L2")
 
     combined_root = resolve_under_root(COMBINED_OUTPUT_DIR)
     combined_dir = combined_root / session_id
@@ -2235,6 +2639,12 @@ def main() -> None:
     print(f"[{ts()}] session_id={session_id} (source={session_source})")
     os.environ["GCS_SESSION_ID"] = session_id
 
+    drone_session_dir = locate_drone_session_dir(session_id)
+    if drone_session_dir:
+        print(f"[{ts()}] follower session dir -> {drone_session_dir}")
+    else:
+        print(f"[WARN] follower session dir missing for session {session_id}", file=sys.stderr)
+
     session_excel_dir = resolve_under_root(EXCEL_OUTPUT_DIR) / session_id
 
     offset_ns = 0
@@ -2282,7 +2692,7 @@ def main() -> None:
 
         if traffic_mode == "saturation":
             for idx, suite in enumerate(suites):
-                rekey_ms = activate_suite(gcs_proc, suite, is_first=(idx == 0))
+                rekey_ms, rekey_mark_ns, rekey_ok_ns = activate_suite(gcs_proc, suite, is_first=(idx == 0))
                 outdir = suite_outdir(suite)
                 tester = SaturationTester(
                     suite=suite,
@@ -2300,6 +2710,10 @@ def main() -> None:
                 )
                 summary = tester.run()
                 summary["rekey_ms"] = rekey_ms
+                if rekey_mark_ns is not None:
+                    summary["rekey_mark_ns"] = rekey_mark_ns
+                if rekey_ok_ns is not None:
+                    summary["rekey_ok_ns"] = rekey_ok_ns
                 excel_path = tester.export_excel(session_id, session_excel_dir)
                 if excel_path:
                     summary["excel_path"] = str(excel_path)
@@ -2328,6 +2742,7 @@ def main() -> None:
                         pass_index=pass_index,
                         traffic_mode=traffic_mode,
                         pre_gap=pre_gap,
+                        inter_gap_s=inter_gap,
                         rate_pps=rate_pps,
                         target_bandwidth_mbps=run_target_bandwidth_mbps,
                         power_capture_enabled=power_capture_enabled,
@@ -2339,6 +2754,19 @@ def main() -> None:
                     is_last_pass = pass_index == passes - 1
                     if inter_gap > 0 and not (is_last_suite and is_last_pass):
                         time.sleep(inter_gap)
+
+            if summary_rows:
+                blackout_records, step_payloads = _enrich_summary_rows(
+                    summary_rows,
+                    session_id=session_id,
+                    drone_session_dir=drone_session_dir,
+                    traffic_mode=traffic_mode,
+                    pre_gap_s=pre_gap,
+                    duration_s=duration,
+                    inter_gap_s=inter_gap,
+                )
+                _append_blackout_records(blackout_records)
+                _append_step_results(step_payloads)
 
             write_summary(summary_rows)
 
@@ -2352,6 +2780,18 @@ def main() -> None:
                 saturation_overview=saturation_reports,
                 saturation_samples=all_rate_samples,
                 telemetry_samples=telemetry_samples,
+                drone_session_dir=drone_session_dir,
+                traffic_mode=traffic_mode,
+                payload_bytes=payload_bytes,
+                event_sample=event_sample,
+                min_delay_samples=min_delay_samples,
+                pre_gap_s=pre_gap,
+                duration_s=duration,
+                inter_gap_s=inter_gap,
+                sat_search=sat_search_cfg,
+                sat_delivery_threshold=sat_delivery_threshold,
+                sat_loss_threshold_pct=sat_loss_threshold,
+                sat_rtt_spike_factor=sat_spike_factor,
             )
             if combined_path:
                 print(f"[{ts()}] combined workbook written to {combined_path}")
