@@ -46,28 +46,35 @@ from config import (
 from run_tst import load_model as load_tst_model
 
 
-def calculate_predicted_flight_constraint(v_h: float, v_v: float, weight_n: float) -> float:
-    """Estimate the mechanical power requirement (W) for the given airspeed state.
+def calculate_predicted_flight_constraint(
+    v_h: float,
+    v_v: float,
+    weight_n: float,
+    *,
+    air_density: float = 1.225,
+    rotor_radius_m: float = 0.16,
+    rotor_count: int = 4,
+    profile_coefficient: float = 0.012,
+    drag_area_m2: float = 0.12,
+    drag_coefficient: float = 1.05,
+) -> float:
+    """Compute the predicted flight constraint (W) using a multirotor power model.
 
-    The model treats ``weight_n`` as the vehicle weight in Newtons and combines the
-    horizontal and vertical velocity components (m/s) using a simple Euclidean
-    norm. The resulting magnitude approximates airspeed; multiplying by the
-    weight yields a coarse upper bound on the power that the propulsion system
-    must sustain to maintain the requested trajectory.
+    The implementation follows the standard decomposition of rotorcraft
+    power (Equation 19 from the simplified multirotor operating envelope
+    derivation):
 
-    Parameters
-    ----------
-    v_h: float
-        Horizontal velocity in metres per second (m/s).
-    v_v: float
-        Vertical velocity in metres per second (m/s). Positive denotes ascent.
-    weight_n: float
-        Vehicle weight expressed in Newtons. Non-positive inputs collapse to 0.
+    ``P_total = P_induced + P_profile + P_parasitic + P_climb``
+
+    Parameters mirror the physical quantities of the vehicle, defaulting to a
+    mid-sized quadrotor (16 cm radius rotors, four count). The caller provides
+    horizontal and vertical airspeed components in metres per second and the
+    vehicle weight in Newtons.
 
     Returns
     -------
     float
-        Predicted flight constraint in Watts (W). The value is always
+        Estimated mechanical power demand in Watts. The result is always
         non-negative.
     """
 
@@ -75,19 +82,37 @@ def calculate_predicted_flight_constraint(v_h: float, v_v: float, weight_n: floa
         horiz = float(v_h)
         vert = float(v_v)
         weight = max(0.0, float(weight_n))
+        density = float(air_density)
+        rotor_r = max(1e-6, float(rotor_radius_m))
+        rotor_n = max(1, int(rotor_count))
+        profile_coeff = max(0.0, float(profile_coefficient))
+        drag_area = max(0.0, float(drag_area_m2))
+        drag_coeff = max(0.0, float(drag_coefficient))
     except (TypeError, ValueError):
-        raise ValueError("V_h, V_v, and weight must be numeric values") from None
+        raise ValueError("velocity components, weight, and model parameters must be numeric") from None
 
     if weight == 0.0:
         return 0.0
 
-    speed = math.hypot(horiz, vert)
-    if speed <= 0.0:
+    disk_area = rotor_n * math.pi * rotor_r ** 2
+    if disk_area <= 0.0:
         return 0.0
 
-    # Simple correction: ascending flight incurs an additional overhead
-    climb_penalty = max(0.0, vert) * 0.15 * weight
-    return weight * speed + climb_penalty
+    total_speed = math.hypot(horiz, vert)
+
+    hover_induced_velocity = math.sqrt(max(weight, 0.0) / (2.0 * density * disk_area))
+    induced_term = math.sqrt(max(0.0, hover_induced_velocity ** 2 + (vert * 0.5) ** 2))
+    induced_velocity = max(0.0, induced_term - 0.5 * vert)
+    induced_power = weight * induced_velocity
+
+    profile_power = profile_coeff * weight ** 1.5 / math.sqrt(max(1e-9, 2.0 * density * disk_area))
+
+    parasitic_power = 0.5 * density * drag_coeff * drag_area * total_speed ** 3
+
+    climb_power = weight * max(0.0, vert)
+
+    total_power = induced_power + profile_power + parasitic_power + climb_power
+    return max(0.0, total_power)
 
 
 def load_xgb_from_config() -> xgb.XGBClassifier:

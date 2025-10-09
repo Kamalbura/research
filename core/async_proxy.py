@@ -573,9 +573,9 @@ def run_proxy(
                 extra={"role": role, "error": str(exc), "path": str(status_path)},
             )
 
-    if role == "drone" and gcs_sig_public is None:
-        if load_gcs_public is None:
-            raise NotImplementedError("Drone proxy requires GCS public key or loader")
+        if role == "drone" and gcs_sig_public is None:
+            if load_gcs_public is None:
+                raise NotImplementedError("GCS signature public key not provided (provide peer key or loader)")
         gcs_sig_public = load_gcs_public(suite)
 
     handshake_result = _perform_handshake(

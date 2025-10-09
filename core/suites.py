@@ -363,6 +363,7 @@ _SUITE_ALIASES = {
     "cs-kyber768-aesgcm-dilithium3": "cs-mlkem768-aesgcm-mldsa65",
     "cs-kyber1024-aesgcm-dilithium5": "cs-mlkem1024-aesgcm-mldsa87",
     "cs-kyber512-aesgcm-falcon512": "cs-mlkem512-aesgcm-falcon512",
+    "cs-kyber768-aesgcm-falcon512": "cs-mlkem768-aesgcm-falcon512",
     "cs-kyber1024-aesgcm-falcon1024": "cs-mlkem1024-aesgcm-falcon1024",
     "cs-kyber512-aesgcm-sphincs128f_sha2": "cs-mlkem512-aesgcm-sphincs128fsha2",
     "cs-kyber1024-aesgcm-sphincs256f_sha2": "cs-mlkem1024-aesgcm-sphincs256fsha2",

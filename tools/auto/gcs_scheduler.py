@@ -50,6 +50,7 @@ from core import suites as suites_mod
 from core.config import CONFIG
 from tools.blackout_metrics import compute_blackout
 from tools.merge_power import extract_power_fields
+from tools.power_utils import calculate_transient_energy
 
 
 DRONE_HOST = CONFIG["DRONE_HOST"]
@@ -431,6 +432,25 @@ def suite_outdir(suite: str) -> Path:
     target = SUITES_OUTDIR / suite
     mkdirp(target)
     return target
+
+
+def _as_float(value: object) -> Optional[float]:
+    if value in (None, ""):
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(result):
+        return None
+    return result
+
+
+def _rounded(value: object, digits: int) -> object:
+    num = _as_float(value)
+    if num is None:
+        return ""
+    return round(num, digits)
 
 
 def resolve_suites(requested: Optional[Iterable[str]]) -> List[str]:
@@ -1022,6 +1042,73 @@ def wait_proxy_rekey(
 
     baseline_ok = int(baseline.get("rekeys_ok", 0) or 0)
 
+def _extract_companion_metrics(
+    samples: List[dict],
+    *,
+    suite: str,
+    start_ns: int,
+    end_ns: int,
+) -> Dict[str, object]:
+    cpu_max = 0.0
+    rss_max_bytes = 0
+    pfc_sum = 0.0
+    vh_sum = 0.0
+    vv_sum = 0.0
+    kin_count = 0
+
+    for sample in samples:
+        try:
+            ts_ns = int(sample.get("timestamp_ns"))
+        except (TypeError, ValueError):
+            continue
+        if ts_ns < start_ns or ts_ns > end_ns:
+            continue
+        sample_suite = str(sample.get("suite") or "").strip()
+        if sample_suite and sample_suite != suite:
+            continue
+
+        kind = str(sample.get("kind") or "").lower()
+        if kind == "system_sample":
+            cpu_val = _as_float(sample.get("cpu_percent"))
+            if cpu_val is not None:
+                cpu_max = max(cpu_max, cpu_val)
+            mem_mb = _as_float(sample.get("mem_used_mb"))
+            if mem_mb is not None:
+                rss_candidate = int(mem_mb * 1024 * 1024)
+                rss_max_bytes = max(rss_max_bytes, rss_candidate)
+        elif kind == "psutil_sample":
+            cpu_val = _as_float(sample.get("cpu_percent"))
+            if cpu_val is not None:
+                cpu_max = max(cpu_max, cpu_val)
+            rss_val = _as_float(sample.get("rss_bytes"))
+            if rss_val is not None:
+                rss_candidate = int(rss_val)
+                rss_max_bytes = max(rss_max_bytes, rss_candidate)
+        elif kind == "kinematics":
+            pfc_val = _as_float(sample.get("predicted_flight_constraint_w"))
+            vh_val = _as_float(sample.get("velocity_horizontal_mps"))
+            vv_val = _as_float(sample.get("velocity_vertical_mps"))
+            if pfc_val is not None:
+                pfc_sum += pfc_val
+            if vh_val is not None:
+                vh_sum += vh_val
+            if vv_val is not None:
+                vv_sum += vv_val
+            kin_count += 1
+
+    avg_vh = vh_sum / kin_count if kin_count else 0.0
+    avg_vv = vv_sum / kin_count if kin_count else 0.0
+    avg_pfc = pfc_sum / kin_count if kin_count else 0.0
+
+    return {
+        "cpu_max_percent": round(cpu_max, 3),
+        "max_rss_bytes": int(max(0, rss_max_bytes)),
+        "pfc_watts": round(avg_pfc, 3),
+        "kinematics_vh": round(avg_vh, 3),
+        "kinematics_vv": round(avg_vv, 3),
+    }
+
+
     baseline_fail = int(baseline.get("rekeys_fail", 0) or 0)
 
     while time.time() - start < timeout:
@@ -1412,6 +1499,24 @@ def run_suite(
         round(power_summary.get("sample_rate_hz", 0.0), 3) if power_summary else 0.0
     )
 
+    companion_metrics = {
+        "cpu_max_percent": 0.0,
+        "max_rss_bytes": 0,
+        "pfc_watts": 0.0,
+        "kinematics_vh": 0.0,
+        "kinematics_vv": 0.0,
+    }
+    if telemetry_collector and telemetry_collector.enabled:
+        try:
+            companion_metrics = _extract_companion_metrics(
+                telemetry_collector.snapshot(),
+                suite=suite,
+                start_ns=start_wall_ns,
+                end_ns=end_wall_ns,
+            )
+        except Exception as exc:
+            print(f"[WARN] telemetry aggregation failed for suite {suite}: {exc}", file=sys.stderr)
+
     row = {
         "pass": pass_index,
         "suite": suite,
@@ -1431,6 +1536,11 @@ def run_suite(
         "wire_throughput_mbps_est": round(wire_throughput_mbps_est, 3),
         "app_packet_bytes": app_packet_bytes,
         "wire_packet_bytes_est": wire_packet_bytes_est,
+    "cpu_max_percent": companion_metrics["cpu_max_percent"],
+    "max_rss_bytes": companion_metrics["max_rss_bytes"],
+    "pfc_watts": companion_metrics["pfc_watts"],
+    "kinematics_vh": companion_metrics["kinematics_vh"],
+    "kinematics_vv": companion_metrics["kinematics_vv"],
         "goodput_ratio": round(goodput_ratio, 3),
         "rtt_avg_ms": round(avg_rtt_ms, 3),
         "rtt_max_ms": round(max_rtt_ms, 3),
@@ -1457,6 +1567,7 @@ def run_suite(
         "rekey_mark_ns": rekey_mark_ns,
         "rekey_ok_ns": rekey_complete_ns,
         "rekey_ms": round(rekey_duration_ms, 3),
+    "rekey_energy_mJ": 0.0,
         "power_request_ok": power_request_ok,
         "power_capture_ok": power_capture_complete,
         "power_note": power_note,
@@ -1483,6 +1594,31 @@ def run_suite(
         "timing_guard_ms": None,
         "timing_guard_violation": False,
     }
+
+    rekey_energy_error: Optional[str] = None
+    if (
+        power_csv_path_val
+        and isinstance(power_csv_path_val, str)
+        and rekey_mark_ns is not None
+        and rekey_complete_ns is not None
+        and rekey_complete_ns > rekey_mark_ns
+    ):
+        try:
+            energy_mj = calculate_transient_energy(
+                power_csv_path_val,
+                int(rekey_mark_ns),
+                int(rekey_complete_ns),
+            )
+            row["rekey_energy_mJ"] = round(energy_mj, 3)
+        except FileNotFoundError as exc:
+            rekey_energy_error = str(exc)
+        except ValueError as exc:
+            rekey_energy_error = str(exc)
+        except Exception as exc:
+            rekey_energy_error = str(exc)
+
+    if rekey_energy_error:
+        row["rekey_energy_error"] = rekey_energy_error
 
     if power_summary:
         print(
@@ -2328,19 +2464,62 @@ def export_combined_excel(
     append_dict_sheet(workbook, "saturation_samples", saturation_samples)
     append_dict_sheet(workbook, "telemetry_samples", telemetry_samples)
 
-    def _as_float(value: object) -> Optional[float]:
-        if value in (None, ""):
-            return None
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return None
+    def _summarize_kinematics(samples: List[dict]) -> List[dict]:
+        aggregates: dict[str, dict[str, float]] = {}
+        for sample in samples:
+            kind = str(sample.get("kind") or "").lower()
+            if kind != "kinematics":
+                continue
+            suite = str(sample.get("suite") or "unknown").strip() or "unknown"
+            bucket = aggregates.setdefault(
+                suite,
+                {
+                    "count": 0.0,
+                    "pfc_sum": 0.0,
+                    "pfc_max": 0.0,
+                    "speed_sum": 0.0,
+                    "speed_max": 0.0,
+                    "altitude_min": float("inf"),
+                    "altitude_max": float("-inf"),
+                },
+            )
 
-    def _rounded(value: object, digits: int) -> object:
-        num = _as_float(value)
-        if num is None:
-            return ""
-        return round(num, digits)
+            pfc = _as_float(sample.get("predicted_flight_constraint_w"))
+            speed = _as_float(sample.get("speed_mps"))
+            altitude = _as_float(sample.get("altitude_m"))
+
+            bucket["count"] += 1.0
+            if pfc is not None:
+                bucket["pfc_sum"] += pfc
+                bucket["pfc_max"] = max(bucket["pfc_max"], pfc)
+            if speed is not None:
+                bucket["speed_sum"] += speed
+                bucket["speed_max"] = max(bucket["speed_max"], speed)
+            if altitude is not None:
+                bucket["altitude_min"] = min(bucket["altitude_min"], altitude)
+                bucket["altitude_max"] = max(bucket["altitude_max"], altitude)
+
+        summary_rows: List[dict] = []
+        for suite, data in sorted(aggregates.items()):
+            count = max(1.0, data["count"])
+            altitude_min = "" if math.isinf(data["altitude_min"]) else data["altitude_min"]
+            altitude_max = "" if math.isinf(data["altitude_max"]) else data["altitude_max"]
+            summary_rows.append(
+                {
+                    "suite": suite,
+                    "samples": int(data["count"]),
+                    "pfc_avg_w": _rounded(data["pfc_sum"] / count, 3),
+                    "pfc_max_w": _rounded(data["pfc_max"], 3),
+                    "speed_avg_mps": _rounded(data["speed_sum"] / count, 3),
+                    "speed_max_mps": _rounded(data["speed_max"], 3),
+                    "altitude_min_m": _rounded(altitude_min, 3) if altitude_min != "" else "",
+                    "altitude_max_m": _rounded(altitude_max, 3) if altitude_max != "" else "",
+                }
+            )
+        return summary_rows
+
+    kinematics_summary = _summarize_kinematics(telemetry_samples)
+    append_dict_sheet(workbook, "kinematics_summary", kinematics_summary)
 
     paper_header = [
         "suite",
@@ -2748,6 +2927,7 @@ def main() -> None:
                         power_capture_enabled=power_capture_enabled,
                         clock_offset_warmup_s=offset_warmup_s,
                         min_delay_samples=min_delay_samples,
+                        telemetry_collector=telemetry_collector,
                     )
                     summary_rows.append(row)
                     is_last_suite = idx == len(suites) - 1

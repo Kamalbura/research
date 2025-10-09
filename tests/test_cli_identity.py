@@ -58,7 +58,7 @@ class TestCLIIdentity:
         """Test init-identity with different PQC suites."""
         suites_to_test = [
             'cs-kyber512-aesgcm-dilithium2',
-            'cs-kyber768-aesgcm-falcon512', 
+            'cs-kyber768-aesgcm-dilithium3',
             'cs-kyber1024-aesgcm-dilithium5'  # Use dilithium5 instead of sphincs
         ]
         

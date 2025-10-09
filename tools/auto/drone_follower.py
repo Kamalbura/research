@@ -35,6 +35,7 @@ ROOT = _ensure_core_importable()
 import argparse
 import csv
 import json
+import math
 import os
 import shlex
 import signal
@@ -81,6 +82,8 @@ from core.power_monitor import (
     create_power_monitor,
 )
 
+from bench_models import calculate_predicted_flight_constraint
+
 
 CONTROL_HOST = CONFIG.get("DRONE_CONTROL_HOST", "0.0.0.0")
 CONTROL_PORT = int(CONFIG.get("DRONE_CONTROL_PORT", 48080))
@@ -117,6 +120,8 @@ DEFAULT_MONITOR_BASE = Path(
 )
 LOG_INTERVAL_MS = 100
 
+GRAVITY = 9.80665  # m/s^2, standard gravity for synthetic flight modeling
+
 PERF_EVENTS = "task-clock,cycles,instructions,cache-misses,branch-misses,context-switches,branches"
 
 _VCGENCMD_WARNING_EMITTED = False
@@ -151,6 +156,11 @@ AUTO_DRONE_DEFAULTS = {
     "monitor_output_base": None,
     "power_env": {},
     "initial_suite": None,
+    "mock_mass_kg": 6.5,
+    "kinematics_horizontal_mps": 13.0,
+    "kinematics_vertical_mps": 3.5,
+    "kinematics_cycle_s": 18.0,
+    "kinematics_yaw_rate_dps": 45.0,
 }
 
 AUTO_DRONE_CONFIG = _merge_defaults(AUTO_DRONE_DEFAULTS, CONFIG.get("AUTO_DRONE"))
@@ -333,6 +343,75 @@ class TelemetryPublisher:
             except Exception as exc:
                 print(f"[follower] telemetry send failed: {exc}")
                 self._close_socket()
+
+
+class SyntheticKinematicsModel:
+    """Deterministic mock flight profile used for telemetry and PFC estimation."""
+
+    def __init__(
+        self,
+        *,
+        weight_n: float,
+        horizontal_peak_mps: float,
+        vertical_peak_mps: float,
+        yaw_rate_dps: float,
+        cycle_s: float,
+    ) -> None:
+        self.weight_n = max(0.0, weight_n)
+        self.horizontal_peak_mps = max(0.0, horizontal_peak_mps)
+        self.vertical_peak_mps = float(vertical_peak_mps)
+        self.yaw_rate_dps = float(yaw_rate_dps)
+        self.cycle_s = max(4.0, float(cycle_s))
+        self._start_monotonic = time.monotonic()
+        self._last_monotonic = self._start_monotonic
+        self._altitude_m = 30.0
+        self._heading_rad = 0.0
+        self._prev_horizontal_mps = 0.0
+        self._prev_vertical_mps = 0.0
+        self._sequence = 0
+
+    def _phase(self, now: float) -> float:
+        elapsed = now - self._start_monotonic
+        return (elapsed % self.cycle_s) / self.cycle_s
+
+    def step(self, timestamp_ns: int) -> dict:
+        now = time.monotonic()
+        dt = max(0.0, now - self._last_monotonic)
+        self._last_monotonic = now
+        phase = self._phase(now)
+        phase_rad = 2.0 * math.pi * phase
+
+        horiz_mps = self.horizontal_peak_mps * math.sin(phase_rad)
+        vert_mps = self.vertical_peak_mps * math.sin(phase_rad + math.pi / 3.0)
+        speed_mps = math.hypot(horiz_mps, vert_mps)
+
+        yaw_rate_rps = math.radians(self.yaw_rate_dps) * math.cos(phase_rad + math.pi / 6.0)
+        self._heading_rad = (self._heading_rad + yaw_rate_rps * dt) % (2.0 * math.pi)
+        self._altitude_m = max(0.0, self._altitude_m + vert_mps * dt)
+
+        horiz_accel = 0.0 if dt == 0.0 else (horiz_mps - self._prev_horizontal_mps) / dt
+        vert_accel = 0.0 if dt == 0.0 else (vert_mps - self._prev_vertical_mps) / dt
+        self._prev_horizontal_mps = horiz_mps
+        self._prev_vertical_mps = vert_mps
+
+        pfc_w = calculate_predicted_flight_constraint(abs(horiz_mps), vert_mps, self.weight_n)
+        tilt_deg = math.degrees(math.atan2(abs(vert_mps), max(0.1, abs(horiz_mps))))
+
+        self._sequence += 1
+        return {
+            "timestamp_ns": timestamp_ns,
+            "sequence": self._sequence,
+            "velocity_horizontal_mps": horiz_mps,
+            "velocity_vertical_mps": vert_mps,
+            "speed_mps": speed_mps,
+            "horizontal_accel_mps2": horiz_accel,
+            "vertical_accel_mps2": vert_accel,
+            "yaw_rate_dps": math.degrees(yaw_rate_rps),
+            "heading_deg": math.degrees(self._heading_rad),
+            "altitude_m": self._altitude_m,
+            "tilt_deg": tilt_deg,
+            "predicted_flight_constraint_w": pfc_w,
+        }
 
 
 def _summary_to_dict(summary: PowerSummary, *, suite: str, session_id: str) -> dict:
@@ -645,6 +724,39 @@ class HighSpeedMonitor(threading.Thread):
         self._vcgencmd_available = True
         self.rekey_marks_path = self.output_dir / f"rekey_marks_{session_id}.csv"
         self._rekey_marks_lock = threading.Lock()
+        auto_cfg = AUTO_DRONE_CONFIG
+        mass_kg = auto_cfg.get("mock_mass_kg", 6.5)
+        horiz_mps = auto_cfg.get("kinematics_horizontal_mps", 13.0)
+        vert_mps = auto_cfg.get("kinematics_vertical_mps", 3.5)
+        yaw_rate_dps = auto_cfg.get("kinematics_yaw_rate_dps", 45.0)
+        cycle_s = auto_cfg.get("kinematics_cycle_s", 18.0)
+        try:
+            weight_n = max(0.0, float(mass_kg) * GRAVITY)
+        except (TypeError, ValueError):
+            weight_n = 0.0
+        try:
+            horiz_peak = float(horiz_mps)
+        except (TypeError, ValueError):
+            horiz_peak = 0.0
+        try:
+            vert_peak = float(vert_mps)
+        except (TypeError, ValueError):
+            vert_peak = 0.0
+        try:
+            yaw_peak = float(yaw_rate_dps)
+        except (TypeError, ValueError):
+            yaw_peak = 0.0
+        try:
+            cycle = float(cycle_s)
+        except (TypeError, ValueError):
+            cycle = 18.0
+        self._kinematics_model = SyntheticKinematicsModel(
+            weight_n=weight_n,
+            horizontal_peak_mps=max(0.0, horiz_peak),
+            vertical_peak_mps=vert_peak,
+            yaw_rate_dps=yaw_peak,
+            cycle_s=cycle,
+        ) if weight_n > 0.0 else None
 
     def attach_proxy(self, pid: int) -> None:
         self.proxy_pid = pid
@@ -804,6 +916,13 @@ class HighSpeedMonitor(threading.Thread):
             if self.rekey_start_ns is not None:
                 sample["rekey_elapsed_ms"] = (timestamp_ns - self.rekey_start_ns) / 1_000_000
             self.publisher.publish("system_sample", sample)
+            if self._kinematics_model is not None:
+                kin = self._kinematics_model.step(timestamp_ns)
+                kin_payload = dict(kin)
+                kin_payload.setdefault("suite", self.current_suite)
+                kin_payload.setdefault("weight_n", self._kinematics_model.weight_n)
+                kin_payload.setdefault("mass_kg", self._kinematics_model.weight_n / GRAVITY if GRAVITY else 0.0)
+                self.publisher.publish("kinematics", kin_payload)
 
     def stop(self) -> None:
         self.stop_event.set()
