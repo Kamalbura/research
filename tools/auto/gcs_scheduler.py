@@ -1107,24 +1107,39 @@ def _read_proxy_counters() -> dict:
 
 
 def wait_proxy_rekey(
-
     target_suite: str,
-
     baseline: Dict[str, object],
-
     *,
-
     timeout: float = 20.0,
-
     poll_interval: float = 0.4,
-
     proc: subprocess.Popen,
-
 ) -> str:
-
     start = time.time()
 
     baseline_ok = int(baseline.get("rekeys_ok", 0) or 0)
+    baseline_fail = int(baseline.get("rekeys_fail", 0) or 0)
+
+    while time.time() - start < timeout:
+        if proc.poll() is not None:
+            raise RuntimeError("GCS proxy exited during rekey")
+
+        counters = _read_proxy_counters()
+
+        if counters:
+            rekeys_ok = int(counters.get("rekeys_ok", 0) or 0)
+            rekeys_fail = int(counters.get("rekeys_fail", 0) or 0)
+            last_suite = counters.get("last_rekey_suite") or counters.get("suite") or ""
+
+            if rekeys_fail > baseline_fail:
+                return "fail"
+
+            if rekeys_ok > baseline_ok and (not last_suite or last_suite == target_suite):
+                return "ok"
+
+        time.sleep(poll_interval)
+
+    return "timeout"
+
 
 def _extract_companion_metrics(
     samples: List[dict],
@@ -1191,37 +1206,6 @@ def _extract_companion_metrics(
         "kinematics_vh": round(avg_vh, 3),
         "kinematics_vv": round(avg_vv, 3),
     }
-
-
-    baseline_fail = int(baseline.get("rekeys_fail", 0) or 0)
-
-    while time.time() - start < timeout:
-
-        if proc.poll() is not None:
-
-            raise RuntimeError("GCS proxy exited during rekey")
-
-        counters = _read_proxy_counters()
-
-        if counters:
-
-            rekeys_ok = int(counters.get("rekeys_ok", 0) or 0)
-
-            rekeys_fail = int(counters.get("rekeys_fail", 0) or 0)
-
-            last_suite = counters.get("last_rekey_suite") or counters.get("suite") or ""
-
-            if rekeys_fail > baseline_fail:
-
-                return "fail"
-
-            if rekeys_ok > baseline_ok and (not last_suite or last_suite == target_suite):
-
-                return "ok"
-
-        time.sleep(poll_interval)
-
-    return "timeout"
 
 
 def activate_suite(
