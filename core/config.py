@@ -127,16 +127,24 @@ CONFIG = {
         "max_rate_mbps": 200.0,
         # Optional ordered suite subset (None -> all suites)
         "suites": [
-            # Level 1 combinations
+            # NIST Level 2
             "cs-mlkem512-aesgcm-mldsa44",
             "cs-mlkem512-aesgcm-falcon512",
             "cs-mlkem512-aesgcm-sphincs128fsha2",
-            # Level 3 combination (ML-DSA 65 aligns with ML-KEM 768)
+            "cs-frodokem640aes-aesgcm-mldsa44",
+            "cs-classicmceliece348864-aesgcm-sphincs128fsha2",
+            "cs-hqc128-aesgcm-falcon512",
+            # NIST Level 3
             "cs-mlkem768-aesgcm-mldsa65",
-            # Level 5 combinations
+            "cs-frodokem976aes-aesgcm-mldsa65",
+            "cs-classicmceliece460896-aesgcm-mldsa65",
+            "cs-hqc192-aesgcm-mldsa65",
+            # NIST Level 5
             "cs-mlkem1024-aesgcm-mldsa87",
             "cs-mlkem1024-aesgcm-falcon1024",
             "cs-mlkem1024-aesgcm-sphincs256fsha2",
+            "cs-classicmceliece8192128-aesgcm-sphincs256fsha2",
+            "cs-hqc256-aesgcm-mldsa87",
         ],
         # Launch local GCS proxy under scheduler control
         "launch_proxy": True,
