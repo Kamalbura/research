@@ -43,7 +43,13 @@ from config import (
     XGB_MODEL_FILE,
     XGB_SEQ_LENGTH,
 )
-from run_tst import load_model as load_tst_model
+try:
+    from run_tst import load_model as load_tst_model
+except Exception as exc:  # pragma: no cover - optional dependency guard
+    load_tst_model = None  # type: ignore[assignment]
+    _LOAD_TST_ERROR = exc
+else:
+    _LOAD_TST_ERROR = None
 
 
 def calculate_predicted_flight_constraint(
@@ -264,13 +270,19 @@ def main() -> int:
         _ = xgb_model.predict_proba(xgb_feat)
 
     tst_model = None
-    try:
-        scaler, tst_model, scripted = load_tst_model()
-    except Exception as exc:
+    if load_tst_model is not None:
+        try:
+            scaler, tst_model, scripted = load_tst_model()
+        except Exception as exc:
+            print(
+                "❌ Unable to load TST model. If you don't have TorchScript, install 'tsai' for tstplus.py."
+            )
+            print(f"   Details: {exc}")
+    elif _LOAD_TST_ERROR is not None:
         print(
-            "❌ Unable to load TST model. If you don't have TorchScript, install 'tsai' for tstplus.py."
+            "[WARN] TST model loader unavailable (missing dependency). Install torch/joblib to enable TST benchmarking."
         )
-        print(f"   Details: {exc}")
+        print(f"   Import error: {_LOAD_TST_ERROR}")
 
     if tst_model is not None:
         counts = np.random.randint(low=0, high=50, size=(TST_SEQ_LENGTH, 1)).astype(np.float32)
