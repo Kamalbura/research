@@ -10,8 +10,8 @@ from typing import Dict, Any
 
 
 # Baseline host defaults reused throughout the configuration payload.
-_DEFAULT_DRONE_HOST = "192.168.0.102"
-_DEFAULT_GCS_HOST = "192.168.0.103"
+_DEFAULT_DRONE_HOST = "192.168.0.103"
+_DEFAULT_GCS_HOST = "192.168.0.102"
 
 
 # Default configuration - all required keys with correct types
