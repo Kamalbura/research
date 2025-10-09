@@ -31,40 +31,18 @@ class SuiteRecord:
     enc_out: int
     enc_in: int
     power_ok: bool
-    power_request_ok: bool
     power_avg_w: Optional[float]
     power_energy_j: Optional[float]
     power_samples: Optional[int]
     power_sample_rate: Optional[float]
     power_duration_s: Optional[float]
     power_csv_path: Optional[str]
-    power_note: Optional[str]
-    power_error: Optional[str]
-    cpu_max_percent: Optional[float]
-    max_rss_bytes: Optional[int]
-    pfc_watts: Optional[float]
-    kinematics_vh: Optional[float]
-    kinematics_vv: Optional[float]
-    rekey_energy_mj: Optional[float]
-    rekey_energy_error: Optional[str]
-    handshake_role: Optional[str]
-    handshake_total_ms: Optional[float]
-    handshake_energy_mj: Optional[float]
-    handshake_energy_error: Optional[str]
-    timing_guard_ms: Optional[float]
-    timing_guard_violation: bool
 
     @property
     def throughput_pct(self) -> Optional[float]:
         if self.target_mbps <= 0:
             return None
         return (self.throughput_mbps / self.target_mbps) * 100.0
-
-    @property
-    def max_rss_mib(self) -> Optional[float]:
-        if self.max_rss_bytes is None or self.max_rss_bytes <= 0:
-            return None
-        return self.max_rss_bytes / (1024 * 1024)
 
 
 def parse_args() -> argparse.Namespace:
@@ -172,28 +150,12 @@ def _row_to_record(row: dict) -> SuiteRecord:
         enc_out=_int(row.get("enc_out"), 0) or 0,
         enc_in=_int(row.get("enc_in"), 0) or 0,
         power_ok=_bool_from_field(row.get("power_capture_ok", "false")),
-        power_request_ok=_bool_from_field(row.get("power_request_ok", "false")),
         power_avg_w=_float(row.get("power_avg_w")),
         power_energy_j=_float(row.get("power_energy_j")),
         power_samples=_int(row.get("power_samples")),
         power_sample_rate=_float(row.get("power_sample_rate_hz")),
         power_duration_s=_float(row.get("power_duration_s")),
         power_csv_path=row.get("power_csv_path"),
-        power_note=(row.get("power_note") or None),
-        power_error=(row.get("power_error") or None),
-        cpu_max_percent=_float(row.get("cpu_max_percent")),
-        max_rss_bytes=_int(row.get("max_rss_bytes")),
-        pfc_watts=_float(row.get("pfc_watts")),
-        kinematics_vh=_float(row.get("kinematics_vh")),
-        kinematics_vv=_float(row.get("kinematics_vv")),
-        rekey_energy_mj=_float(row.get("rekey_energy_mJ")),
-        rekey_energy_error=(row.get("rekey_energy_error") or None),
-        handshake_role=(row.get("handshake_role") or None),
-        handshake_total_ms=_float(row.get("handshake_total_ms")),
-        handshake_energy_mj=_float(row.get("handshake_energy_mJ")),
-        handshake_energy_error=(row.get("handshake_energy_error") or None),
-        timing_guard_ms=_float(row.get("timing_guard_ms")),
-        timing_guard_violation=_bool_from_field(row.get("timing_guard_violation", "false")),
     )
 
 
@@ -221,73 +183,21 @@ def _format_summary(record: SuiteRecord) -> str:
         if record.rekey_ms is not None
         else "rekey window not reported"
     )
-    if record.rekey_energy_error:
-        rekey_text += f" (energy error: {record.rekey_energy_error})"
-    elif record.rekey_energy_mj is not None and record.rekey_energy_mj > 0:
-        rekey_text += f", energy {record.rekey_energy_mj:.3f} mJ"
-
-    handshake_line: Optional[str] = None
-    handshake_role = (record.handshake_role or "").strip()
-    if record.handshake_total_ms is not None and record.handshake_total_ms > 0:
-        role_prefix = f"{handshake_role} " if handshake_role else ""
-        handshake_line = f"handshake {role_prefix}{record.handshake_total_ms:.3f} ms"
-        if record.handshake_energy_error:
-            handshake_line += f" (energy error: {record.handshake_energy_error})"
-        elif record.handshake_energy_mj is not None and record.handshake_energy_mj > 0:
-            handshake_line += f", energy {record.handshake_energy_mj:.3f} mJ"
-    elif handshake_role:
-        handshake_line = f"handshake role {handshake_role}"
-    elif record.handshake_energy_error:
-        handshake_line = f"handshake energy error: {record.handshake_energy_error}"
-
-    resource_parts: List[str] = []
-    if record.cpu_max_percent is not None and record.cpu_max_percent > 0:
-        resource_parts.append(f"CPU max {record.cpu_max_percent:.1f}%")
-    rss_mib = record.max_rss_mib
-    if rss_mib is not None:
-        resource_parts.append(f"RSS {rss_mib:.1f} MiB")
-    if record.pfc_watts is not None and record.pfc_watts > 0:
-        resource_parts.append(f"PFC {record.pfc_watts:.3f} W")
-    kinematics_parts: List[str] = []
-    if record.kinematics_vh is not None and record.kinematics_vh != 0:
-        kinematics_parts.append(f"vh {record.kinematics_vh:.3f}")
-    if record.kinematics_vv is not None and record.kinematics_vv != 0:
-        kinematics_parts.append(f"vv {record.kinematics_vv:.3f}")
-    if kinematics_parts:
-        resource_parts.append("kinematics " + ", ".join(kinematics_parts))
-
     power_lines: List[str] = []
-
-    def _append_power(text: Optional[str]) -> None:
-        if text and text not in power_lines:
-            power_lines.append(text)
-
-    note_value = (record.power_note or "").strip()
     if record.power_ok and record.power_avg_w is not None and record.power_energy_j is not None:
         rate = record.power_sample_rate or 0.0
         samples = record.power_samples or 0
         duration = record.power_duration_s or 0.0
-        _append_power(
+        power_lines.append(
             f"power {record.power_avg_w:.3f} W avg over {duration:.1f} s ({record.power_energy_j:.3f} J)"
         )
-        _append_power(f"samples {samples:,} @ {rate:.1f} Hz")
+        power_lines.append(
+            f"samples {samples:,} @ {rate:.1f} Hz"
+        )
     elif not record.power_ok:
-        reason_parts: List[str] = []
-        if not record.power_request_ok:
-            reason_parts.append("request failed")
-        if record.power_error:
-            reason_parts.append(record.power_error)
-        if note_value and note_value.lower() != "ok":
-            reason_parts.append(record.power_note)
-        reason = f" ({'; '.join(reason_parts)})" if reason_parts else ""
-        _append_power(f"power capture unavailable{reason}")
+        power_lines.append("power capture unavailable")
     else:
-        _append_power("power metrics missing")
-
-    if note_value and note_value.lower() != "ok":
-        _append_power(f"note {record.power_note}")
-    if record.power_error:
-        _append_power(f"error {record.power_error}")
+        power_lines.append("power metrics missing")
 
     lines = [
         f"Suite {record.suite} — {record.status}",
@@ -298,15 +208,6 @@ def _format_summary(record: SuiteRecord) -> str:
         f"  • {rekey_text}",
         f"  • encoded packets {record.enc_out:,} sent / {record.enc_in:,} received",
     ]
-    if handshake_line:
-        lines.append(f"  • {handshake_line}")
-    if resource_parts:
-        lines.append(f"  • resources {', '.join(resource_parts)}")
-    if record.timing_guard_violation:
-        if record.timing_guard_ms is not None and record.timing_guard_ms > 0:
-            lines.append(f"  • timing guard {record.timing_guard_ms:.1f} ms violation detected")
-        else:
-            lines.append("  • timing guard violation detected")
     lines.extend(f"  • {entry}" for entry in power_lines)
     if record.power_csv_path:
         lines.append(f"  • power trace: {record.power_csv_path}")
@@ -328,15 +229,10 @@ def _write_markdown_table(records: List[SuiteRecord], path: Path) -> None:
         "Loss %",
         "RTT avg (ms)",
         "RTT max (ms)",
-        "Rekey (ms)",
-        "Rekey Energy (mJ)",
-        "Handshake (ms)",
-        "Handshake Energy (mJ)",
-        "CPU max (%)",
-        "RSS (MiB)",
         "Power (W)",
         "Energy (J)",
         "Samples",
+        "Rekey (ms)",
     ]
     lines = ["| " + " | ".join(headers) + " |", "|" + "---|" * len(headers)]
     for record in records:
@@ -346,24 +242,6 @@ def _write_markdown_table(records: List[SuiteRecord], path: Path) -> None:
         power_j = f"{record.power_energy_j:.3f}" if record.power_energy_j is not None else "-"
         samples = f"{record.power_samples:,}" if record.power_samples is not None else "-"
         rekey = f"{record.rekey_ms:.1f}" if record.rekey_ms is not None else "-"
-        rekey_energy = (
-            "ERR"
-            if record.rekey_energy_error
-            else f"{record.rekey_energy_mj:.3f}" if record.rekey_energy_mj is not None and record.rekey_energy_mj > 0 else "-"
-        )
-        handshake_total = (
-            f"{record.handshake_total_ms:.3f}"
-            if record.handshake_total_ms is not None and record.handshake_total_ms > 0
-            else "-"
-        )
-        handshake_energy = (
-            "ERR"
-            if record.handshake_energy_error
-            else f"{record.handshake_energy_mj:.3f}" if record.handshake_energy_mj is not None and record.handshake_energy_mj > 0 else "-"
-        )
-        cpu_max = f"{record.cpu_max_percent:.1f}" if record.cpu_max_percent is not None else "-"
-        rss_mib = record.max_rss_mib
-        rss = f"{rss_mib:.1f}" if rss_mib is not None else "-"
         row = [
             record.suite,
             record.status,
@@ -373,15 +251,10 @@ def _write_markdown_table(records: List[SuiteRecord], path: Path) -> None:
             f"{record.loss_pct:.3f}",
             f"{record.rtt_avg_ms:.3f}",
             f"{record.rtt_max_ms:.3f}",
-            rekey,
-            rekey_energy,
-            handshake_total,
-            handshake_energy,
-            cpu_max,
-            rss,
             power_w,
             power_j,
             samples,
+            rekey,
         ]
         lines.append("| " + " | ".join(row) + " |")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

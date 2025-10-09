@@ -1674,6 +1674,7 @@ def run_suite(
         "rekey_ok_ns": rekey_complete_ns,
         "rekey_ms": round(rekey_duration_ms, 3),
         "rekey_energy_mJ": 0.0,
+        "rekey_energy_error": "",
         "power_request_ok": power_request_ok,
         "power_capture_ok": power_capture_complete,
         "power_note": power_note,
