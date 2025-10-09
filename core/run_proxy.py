@@ -71,11 +71,19 @@ def _flatten_part_b_metrics(handshake_metrics: Dict[str, object]) -> Dict[str, o
 
     flat: Dict[str, object] = {}
 
-    flat["kem_keygen_ms"] = _ns_to_ms(kem_metrics.get("keygen_ns"))
-    flat["kem_encaps_ms"] = _ns_to_ms(kem_metrics.get("encap_ns"))
-    flat["kem_decap_ms"] = _ns_to_ms(kem_metrics.get("decap_ns"))
-    flat["sig_sign_ms"] = _ns_to_ms(sig_metrics.get("sign_ns"))
-    flat["sig_verify_ms"] = _ns_to_ms(sig_metrics.get("verify_ns"))
+    def _emit(prefix: str, source: Dict[str, object], key: str, legacy_key: Optional[str] = None) -> None:
+        ns_value = source.get(key)
+        ms_value = _ns_to_ms(ns_value)
+        flat[f"{prefix}_max_ms"] = ms_value
+        flat[f"{prefix}_avg_ms"] = ms_value
+        if legacy_key:
+            flat[legacy_key] = ms_value
+
+    _emit("kem_keygen", kem_metrics, "keygen_ns", "kem_keygen_ms")
+    _emit("kem_encaps", kem_metrics, "encap_ns", "kem_encaps_ms")
+    _emit("kem_decaps", kem_metrics, "decap_ns", "kem_decap_ms")
+    _emit("sig_sign", sig_metrics, "sign_ns", "sig_sign_ms")
+    _emit("sig_verify", sig_metrics, "verify_ns", "sig_verify_ms")
 
     flat["pub_key_size_bytes"] = int(
         kem_metrics.get("public_key_bytes")
@@ -90,6 +98,26 @@ def _flatten_part_b_metrics(handshake_metrics: Dict[str, object]) -> Dict[str, o
     )
     flat["shared_secret_size_bytes"] = int(kem_metrics.get("shared_secret_bytes", 0) or 0)
 
+    energy_keys = (
+        "kem_keygen_mJ",
+        "kem_encaps_mJ",
+        "kem_decaps_mJ",
+        "sig_sign_mJ",
+        "sig_verify_mJ",
+    )
+    for energy_key in energy_keys:
+        if energy_key.startswith("sig_"):
+            source = sig_metrics
+        else:
+            source = kem_metrics
+        value = source.get(energy_key)
+        if not isinstance(value, (int, float)):
+            value = handshake_metrics.get(energy_key, 0.0)
+        flat[energy_key] = float(value) if isinstance(value, (int, float)) else 0.0
+
+    rekey_energy = handshake_metrics.get("rekey_energy_mJ")
+    flat["rekey_energy_mJ"] = float(rekey_energy) if isinstance(rekey_energy, (int, float)) else 0.0
+
     total_ns = 0
     for key in ("keygen_ns", "encap_ns", "decap_ns"):
         value = kem_metrics.get(key)
@@ -100,6 +128,7 @@ def _flatten_part_b_metrics(handshake_metrics: Dict[str, object]) -> Dict[str, o
         if isinstance(value, (int, float)) and value > 0:
             total_ns += int(value)
     flat["primitive_total_ms"] = _ns_to_ms(total_ns)
+    flat["rekey_ms"] = _ns_to_ms(handshake_metrics.get("handshake_total_ns"))
 
     return flat
 
@@ -112,12 +141,14 @@ def _augment_part_b_metrics(counters: Dict[str, object]) -> None:
 
     handshake_payload = counters.get("handshake_metrics")
     flat_metrics = _flatten_part_b_metrics(handshake_payload) if isinstance(handshake_payload, dict) else {}
-    if not flat_metrics:
-        return
 
     for key, value in flat_metrics.items():
-        # Avoid clobbering values already populated upstream (e.g., tests)
         counters.setdefault(key, value)
+
+    part_b_payload = counters.get("part_b_metrics")
+    if isinstance(part_b_payload, dict):
+        for key, value in part_b_payload.items():
+            counters.setdefault(key, value)
 
 
 def _pretty_print_counters(counters: Dict[str, object]) -> None:

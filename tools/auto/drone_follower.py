@@ -48,7 +48,7 @@ import time
 import queue
 from datetime import datetime, timezone
 from copy import deepcopy
-from typing import IO, Optional, Tuple
+from typing import IO, Callable, Iterable, Optional, Tuple
 
 
 def optimize_cpu_performance(target_khz: int = 1800000) -> None:
@@ -235,6 +235,8 @@ def _collect_hardware_context() -> dict:
             "OQS_OPT_FLAGS",
             "OQS_CFLAGS",
             "OQS_LDFLAGS",
+            "OQS_OPT_LEVEL",
+            "OQS_OPTIMIZATION",
         )
         if os.environ.get(key)
     }
@@ -256,6 +258,37 @@ def _collect_hardware_context() -> dict:
                 info["oqs_build_config"] = build_config
             except TypeError:
                 info["oqs_build_config"] = repr(build_config)
+
+            optimization_hint: Optional[str] = None
+            if isinstance(build_config, dict):
+                for candidate_key in (
+                    "OQS_OPT_FLAG",
+                    "OQS_OPT_FLAGS",
+                    "OPT_FLAGS",
+                    "OPTIMIZATION_FLAGS",
+                    "CFLAGS",
+                    "CMAKE_C_FLAGS",
+                    "CMAKE_CXX_FLAGS",
+                ):
+                    value = build_config.get(candidate_key)
+                    if isinstance(value, str) and value.strip():
+                        optimization_hint = value.strip()
+                        break
+                if optimization_hint is None:
+                    cmake_cache = build_config.get("CMAKE_ARGS")
+                    if isinstance(cmake_cache, str) and cmake_cache:
+                        for token in cmake_cache.split():
+                            if token.startswith("-O"):
+                                optimization_hint = token
+                                break
+            if optimization_hint is None and flag_env_vars:
+                for key in ("OQS_OPT_FLAGS", "CFLAGS", "OQS_CFLAGS"):
+                    candidate = flag_env_vars.get(key)
+                    if candidate:
+                        optimization_hint = candidate
+                        break
+            if optimization_hint:
+                info["oqs_optimization_hint"] = optimization_hint
     except Exception as exc:  # pragma: no cover - diagnostic only
         info["oqs_info_error"] = str(exc)
 
@@ -302,6 +335,11 @@ class TelemetryPublisher:
         self._last_failure_log = 0.0
         self._throttle_after_s = 60.0
         self._throttle_interval_s = 60.0
+        self._status_path: Optional[Path] = None
+        self._last_status_flush = 0.0
+        self._connected_once = False
+        self._last_error: Optional[str] = None
+        self._consecutive_failures = 0
 
     def start(self) -> None:
         self.thread.start()
@@ -333,6 +371,7 @@ class TelemetryPublisher:
         if self.thread.is_alive():
             self.thread.join(timeout=2.0)
         self._close_socket()
+        self._emit_status("stopped")
 
     def _close_socket(self) -> None:
         if self.writer is not None:
@@ -347,6 +386,46 @@ class TelemetryPublisher:
             except Exception:
                 pass
             self.sock = None
+
+    def configure_status_sink(self, path: Path) -> None:
+        self._status_path = path
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        self._emit_status("init")
+
+    def _emit_status(self, event: str, **extra: object) -> None:
+        if self._status_path is None:
+            return
+        now = time.monotonic()
+        if event == "connect_error" and (now - self._last_status_flush) < 5.0:
+            return
+        priority_local = False
+        if not self._connected_once and self._failure_first_monotonic is not None:
+            priority_local = (now - self._failure_first_monotonic) >= 5.0
+        failure_duration_s = 0.0
+        if self._failure_first_monotonic is not None:
+            failure_duration_s = max(0.0, now - self._failure_first_monotonic)
+        payload = {
+            "event": event,
+            "timestamp_ns": time.time_ns(),
+            "session_id": self.session_id,
+            "host": self.host,
+            "port": self.port,
+            "connected_once": self._connected_once,
+            "last_error": self._last_error,
+            "consecutive_failures": self._consecutive_failures,
+            "priority_local_logs": priority_local,
+            "failure_duration_s": failure_duration_s,
+        }
+        if extra:
+            payload.update(extra)
+        try:
+            self._status_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            self._last_status_flush = now
+        except Exception:
+            pass
 
     def _ensure_connection(self) -> bool:
         if self.sock is not None and self.writer is not None:
@@ -381,6 +460,10 @@ class TelemetryPublisher:
             self._connect_start_monotonic = time.monotonic()
             self._failure_first_monotonic = None
             self._last_failure_log = 0.0
+            self._consecutive_failures = 0
+            self._last_error = None
+            self._connected_once = True
+            self._emit_status("connected", attempt=attempt)
             return True
 
     def _log_connect_failure(self, attempt: int, exc: Exception, elapsed_since_start: float) -> None:
@@ -403,6 +486,9 @@ class TelemetryPublisher:
                     f"[follower] telemetry collector still unavailable at {self.host}:{self.port}; throttling failure logs but continuing retries",
                     flush=True,
                 )
+        self._consecutive_failures += 1
+        self._last_error = str(exc)
+        self._emit_status("connect_error", attempt=attempt, error=str(exc), elapsed_since_start=elapsed_since_start)
 
     def _run(self) -> None:
         backoff = self._initial_backoff
@@ -426,6 +512,8 @@ class TelemetryPublisher:
             except Exception as exc:
                 print(f"[follower] telemetry send failed: {exc}")
                 self._close_socket()
+                self._last_error = str(exc)
+                self._emit_status("send_error", error=str(exc))
 
 
 class SyntheticKinematicsModel:
@@ -497,8 +585,16 @@ class SyntheticKinematicsModel:
         }
 
 
-def _summary_to_dict(summary: PowerSummary, *, suite: str, session_id: str) -> dict:
-    return {
+def _summary_to_dict(
+    summary: PowerSummary,
+    *,
+    suite: str,
+    session_id: str,
+    session_dir: Optional[Path] = None,
+    monitor_manifest: Optional[Path] = None,
+    telemetry_status: Optional[Path] = None,
+) -> dict:
+    data = {
         "timestamp_ns": summary.end_ns,
         "suite": suite,
         "label": summary.label,
@@ -514,6 +610,13 @@ def _summary_to_dict(summary: PowerSummary, *, suite: str, session_id: str) -> d
         "start_ns": summary.start_ns,
         "end_ns": summary.end_ns,
     }
+    if session_dir is not None:
+        data["session_dir"] = str(session_dir)
+    if monitor_manifest is not None:
+        data["monitor_manifest_path"] = str(monitor_manifest)
+    if telemetry_status is not None:
+        data["telemetry_status_path"] = str(telemetry_status)
+    return data
 
 
 class PowerCaptureManager:
@@ -534,6 +637,10 @@ class PowerCaptureManager:
         self._pending_suite: Optional[str] = None
         self.monitor: Optional[PowerMonitor] = None
         self.monitor_backend: Optional[str] = None
+        self.session_dir = output_dir.parent
+        self._monitor_manifest: Optional[Path] = None
+        self._telemetry_status: Optional[Path] = None
+        self._artifact_sink: Optional[Callable[[Iterable[Path]], None]] = None
 
         def _parse_int_env(name: str, default: int) -> int:
             raw = os.getenv(name)
@@ -622,14 +729,23 @@ class PowerCaptureManager:
             def worker() -> None:
                 try:
                     summary = self.monitor.capture(label=suite, duration_s=duration_s, start_ns=start_ns)
-                    summary_dict = _summary_to_dict(summary, suite=suite, session_id=self.session_id)
+                    summary_dict = _summary_to_dict(
+                        summary,
+                        suite=suite,
+                        session_id=self.session_id,
+                        session_dir=self.session_dir,
+                        monitor_manifest=self._monitor_manifest,
+                        telemetry_status=self._telemetry_status,
+                    )
                     summary_json_path = Path(summary.csv_path).with_suffix(".json")
                     try:
                         summary_json_path.parent.mkdir(parents=True, exist_ok=True)
                         summary_json_path.write_text(json.dumps(summary_dict, indent=2), encoding="utf-8")
                         summary_dict["summary_json_path"] = str(summary_json_path)
+                        self._notify_artifacts([Path(summary.csv_path), summary_json_path])
                     except Exception as exc_json:
                         print(f"[follower] power summary write failed: {exc_json}")
+                        self._notify_artifacts([Path(summary.csv_path)])
                     print(
                         f"[follower] power summary suite={suite} avg={summary.avg_power_w:.3f} W "
                         f"energy={summary.energy_j:.3f} J duration={summary.duration_s:.3f}s"
@@ -673,7 +789,30 @@ class PowerCaptureManager:
             "last_summary": summary,
             "error": error,
             "pending_suite": pending_suite,
+            "session_dir": str(self.session_dir) if self.session_dir else "",
+            "monitor_manifest_path": str(self._monitor_manifest) if self._monitor_manifest else "",
+            "telemetry_status_path": str(self._telemetry_status) if self._telemetry_status else "",
         }
+
+    def register_monitor_manifest(self, manifest_path: Path) -> None:
+        self._monitor_manifest = manifest_path
+
+    def register_telemetry_status(self, status_path: Path) -> None:
+        self._telemetry_status = status_path
+
+    def register_artifact_sink(self, sink: Callable[[Iterable[Path]], None]) -> None:
+        self._artifact_sink = sink
+
+    def _notify_artifacts(self, paths: Iterable[Path]) -> None:
+        if not paths:
+            return
+        sink = self._artifact_sink
+        if sink is None:
+            return
+        try:
+            sink(list(paths))
+        except Exception:
+            pass
 
 
 
@@ -807,6 +946,10 @@ class HighSpeedMonitor(threading.Thread):
         self._vcgencmd_available = True
         self.rekey_marks_path = self.output_dir / f"rekey_marks_{session_id}.csv"
         self._rekey_marks_lock = threading.Lock()
+    self._summary_lock = threading.Lock()
+    self._max_pfc_w = 0.0
+    self._last_pfc_w = 0.0
+    self._last_kin_sample_ns = 0
         auto_cfg = AUTO_DRONE_CONFIG
         mass_kg = auto_cfg.get("mock_mass_kg", 6.5)
         horiz_mps = auto_cfg.get("kinematics_horizontal_mps", 13.0)
@@ -984,6 +1127,21 @@ class HighSpeedMonitor(threading.Thread):
             ]
         )
         self.csv_handle.flush()
+        kin_payload: Optional[dict] = None
+        if self._kinematics_model is not None:
+            kin = self._kinematics_model.step(timestamp_ns)
+            kin_payload = dict(kin)
+            kin_payload.setdefault("suite", self.current_suite)
+            kin_payload.setdefault("weight_n", self._kinematics_model.weight_n)
+            kin_payload.setdefault("mass_kg", self._kinematics_model.weight_n / GRAVITY if GRAVITY else 0.0)
+            pfc_value = kin_payload.get("predicted_flight_constraint_w")
+            if isinstance(pfc_value, (int, float)):
+                with self._summary_lock:
+                    self._last_pfc_w = float(pfc_value)
+                    self._last_kin_sample_ns = timestamp_ns
+                    if pfc_value > self._max_pfc_w:
+                        self._max_pfc_w = float(pfc_value)
+
         if self.publisher:
             sample = {
                 "timestamp_ns": timestamp_ns,
@@ -999,13 +1157,16 @@ class HighSpeedMonitor(threading.Thread):
             if self.rekey_start_ns is not None:
                 sample["rekey_elapsed_ms"] = (timestamp_ns - self.rekey_start_ns) / 1_000_000
             self.publisher.publish("system_sample", sample)
-            if self._kinematics_model is not None:
-                kin = self._kinematics_model.step(timestamp_ns)
-                kin_payload = dict(kin)
-                kin_payload.setdefault("suite", self.current_suite)
-                kin_payload.setdefault("weight_n", self._kinematics_model.weight_n)
-                kin_payload.setdefault("mass_kg", self._kinematics_model.weight_n / GRAVITY if GRAVITY else 0.0)
+            if kin_payload is not None:
                 self.publisher.publish("kinematics", kin_payload)
+
+    def kinematics_summary(self) -> dict:
+        with self._summary_lock:
+            return {
+                "last_sample_ns": self._last_kin_sample_ns,
+                "last_predicted_flight_constraint_w": self._last_pfc_w,
+                "peak_predicted_flight_constraint_w": self._max_pfc_w,
+            }
 
     def stop(self) -> None:
         self.stop_event.set()
@@ -1222,7 +1383,7 @@ class Monitors:
         "branches",
     ]
 
-    def __init__(self, enabled: bool, telemetry: Optional[TelemetryPublisher]):
+    def __init__(self, enabled: bool, telemetry: Optional[TelemetryPublisher], session_dir: Path):
         self.enabled = enabled
         self.telemetry = telemetry
         self.perf: Optional[subprocess.Popen] = None
@@ -1239,6 +1400,13 @@ class Monitors:
         self.psutil_csv_handle: Optional[object] = None
         self.psutil_writer: Optional[csv.DictWriter] = None
         self.psutil_proc: Optional[psutil.Process] = None
+    self._stats_lock = threading.Lock()
+    self._max_cpu_percent = 0.0
+    self._max_rss_bytes = 0
+    self._last_cpu_percent = 0.0
+    self._last_rss_bytes = 0
+    self._last_num_threads = 0
+    self._last_sample_ns = 0
 
         self.temp_thread: Optional[threading.Thread] = None
         self.temp_stop = threading.Event()
@@ -1247,12 +1415,22 @@ class Monitors:
         self.pidstat_out: Optional[IO[str]] = None
         self._vcgencmd_available = True
 
-    def start(self, pid: int, outdir: Path, suite: str) -> None:
+        self.session_dir = session_dir
+        self.manifest_path = session_dir / "monitor_manifest.json"
+        self._artifact_lock = threading.Lock()
+        self._artifact_paths: set[str] = set()
+        self._write_manifest()
+
+    def start(self, pid: int, outdir: Path, suite: str, *, session_dir: Optional[Path] = None) -> None:
         if not self.enabled:
             return
         outdir.mkdir(parents=True, exist_ok=True)
         self.current_suite = suite
         self._vcgencmd_available = True
+        if session_dir is not None:
+            self.session_dir = session_dir
+            self.manifest_path = self.session_dir / "monitor_manifest.json"
+            self._write_manifest()
 
         # Structured perf samples
         perf_cmd = [
@@ -1333,6 +1511,12 @@ class Monitors:
                     "proxy_pid": pid,
                 },
             )
+        self._record_artifacts(
+            perf_path,
+            self.pidstat_out.name if self.pidstat_out else None,
+            psutil_path,
+            temp_path,
+        )
 
     def _consume_perf(self, stream) -> None:
         if not self.perf_writer:
@@ -1415,6 +1599,15 @@ class Monitors:
                     "num_threads": num_threads,
                 })
                 self.psutil_csv_handle.flush()
+                with self._stats_lock:
+                    self._last_sample_ns = ts_now
+                    self._last_cpu_percent = cpu_percent
+                    self._last_rss_bytes = rss_bytes
+                    self._last_num_threads = num_threads
+                    if cpu_percent > self._max_cpu_percent:
+                        self._max_cpu_percent = cpu_percent
+                    if rss_bytes > self._max_rss_bytes:
+                        self._max_rss_bytes = rss_bytes
                 if self.telemetry:
                     self.telemetry.publish(
                         "psutil_sample",
@@ -1433,6 +1626,21 @@ class Monitors:
                 self.psutil_proc.cpu_percent(interval=None)  # type: ignore[arg-type]
             except Exception:
                 pass
+
+    def resource_summary(self) -> dict:
+        with self._stats_lock:
+            rss_mb = self._last_rss_bytes / (1024 * 1024)
+            peak_rss_mb = self._max_rss_bytes / (1024 * 1024)
+            return {
+                "last_sample_ns": self._last_sample_ns,
+                "last_cpu_percent": self._last_cpu_percent,
+                "last_rss_bytes": self._last_rss_bytes,
+                "last_rss_mb": rss_mb,
+                "last_num_threads": self._last_num_threads,
+                "peak_cpu_percent": self._max_cpu_percent,
+                "peak_rss_bytes": self._max_rss_bytes,
+                "peak_rss_mb": peak_rss_mb,
+            }
 
     def _telemetry_loop(self) -> None:
         while not self.temp_stop.is_set():
@@ -1488,7 +1696,8 @@ class Monitors:
             write_marker(suite)
             return
         self.stop()
-        self.start(pid, outdir, suite)
+        self.start(pid, outdir, suite, session_dir=self.session_dir)
+        self._record_artifacts(outdir / f"perf_samples_{suite}.csv", outdir / f"psutil_proc_{suite}.csv", outdir / f"sys_telemetry_{suite}.csv")
         write_marker(suite)
 
     def stop(self) -> None:
@@ -1547,6 +1756,40 @@ class Monitors:
                     "suite": self.current_suite,
                 },
             )
+        self._write_manifest()
+
+    def register_artifacts(self, *paths: Path) -> None:
+        self._record_artifacts(*paths)
+
+    def _write_manifest(self) -> None:
+        try:
+            self.session_dir.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "session_dir": str(self.session_dir),
+                "artifacts": sorted(self._artifact_paths),
+            }
+            self.manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    def _record_artifacts(self, *paths: Path) -> None:
+        updated = False
+        with self._artifact_lock:
+            for candidate in paths:
+                if candidate is None:
+                    continue
+                try:
+                    path_obj = Path(candidate)
+                except TypeError:
+                    continue
+                path_str = str(path_obj)
+                if not path_str:
+                    continue
+                if path_str not in self._artifact_paths:
+                    self._artifact_paths.add(path_str)
+                    updated = True
+        if updated:
+            self._write_manifest()
 
 
 class ControlServer(threading.Thread):
@@ -1637,13 +1880,22 @@ class ControlServer(threading.Thread):
                 with state_lock:
                     proxy = self.state["proxy"]
                     suite = self.state["suite"]
-                    monitors_enabled = self.state["monitors"].enabled
+                    monitors_obj: Monitors = self.state["monitors"]
+                    high_speed_monitor: HighSpeedMonitor = self.state.get("high_speed_monitor")
+                    manager: Optional[PowerCaptureManager] = self.state.get("power_manager")
+                    monitors_enabled = monitors_obj.enabled
                     running = bool(proxy and proxy.poll() is None)
                     proxy_pid = proxy.pid if proxy else None
                     telemetry: Optional[TelemetryPublisher] = self.state.get("telemetry")
                     pending_suite = self.state.get("pending_suite")
                     last_requested = self.state.get("last_requested_suite")
                     session_id = self.state.get("session_id")
+                    session_dir = self.state.get("session_dir")
+                    telemetry_status_path = self.state.get("telemetry_status_path")
+                    monitor_manifest_path = getattr(monitors_obj, "manifest_path", None)
+                    resource_summary = monitors_obj.resource_summary() if monitors_obj else {}
+                    kinematics_summary = high_speed_monitor.kinematics_summary() if high_speed_monitor else {}
+                    power_status = manager.status() if isinstance(manager, PowerCaptureManager) else {}
                     status_payload = {
                         "suite": suite,
                         "pending_suite": pending_suite,
@@ -1655,8 +1907,64 @@ class ControlServer(threading.Thread):
                         "udp_recv_port": APP_RECV_PORT,
                         "udp_send_port": APP_SEND_PORT,
                         "session_id": session_id,
+                        "session_dir": str(session_dir) if session_dir else "",
                         "monitors_enabled": monitors_enabled,
+                        "monitor_manifest_path": str(monitor_manifest_path) if monitor_manifest_path else "",
+                        "telemetry_status_path": str(telemetry_status_path) if telemetry_status_path else "",
                     }
+                    if resource_summary:
+                        status_payload.update(
+                            {
+                                "resource_last_sample_ns": resource_summary.get("last_sample_ns", 0),
+                                "resource_last_cpu_percent": resource_summary.get("last_cpu_percent", 0.0),
+                                "resource_last_rss_mb": resource_summary.get("last_rss_mb", 0.0),
+                                "resource_last_num_threads": resource_summary.get("last_num_threads", 0),
+                                "resource_peak_cpu_percent": resource_summary.get("peak_cpu_percent", 0.0),
+                                "resource_peak_rss_mb": resource_summary.get("peak_rss_mb", 0.0),
+                            }
+                        )
+                    if kinematics_summary:
+                        status_payload.update(
+                            {
+                                "pfc_last_sample_ns": kinematics_summary.get("last_sample_ns", 0),
+                                "pfc_last_w": kinematics_summary.get("last_predicted_flight_constraint_w", 0.0),
+                                "pfc_peak_w": kinematics_summary.get("peak_predicted_flight_constraint_w", 0.0),
+                            }
+                        )
+                    if power_status:
+                        status_payload.update(
+                            {
+                                "power_available": bool(power_status.get("available", False)),
+                                "power_busy": bool(power_status.get("busy", False)),
+                                "power_error": power_status.get("error") or "",
+                                "power_pending_suite": power_status.get("pending_suite") or "",
+                            }
+                        )
+                        summary = power_status.get("last_summary")
+                        if isinstance(summary, dict):
+                            def _coerce_float(value: object) -> float:
+                                try:
+                                    return float(value)
+                                except (TypeError, ValueError):
+                                    return 0.0
+
+                            def _coerce_int(value: object) -> int:
+                                try:
+                                    return int(value)
+                                except (TypeError, ValueError):
+                                    return 0
+
+                            status_payload.update(
+                                {
+                                    "power_last_suite": summary.get("suite", ""),
+                                    "power_last_energy_j": _coerce_float(summary.get("energy_j")),
+                                    "power_last_avg_w": _coerce_float(summary.get("avg_power_w")),
+                                    "power_last_duration_s": _coerce_float(summary.get("duration_s")),
+                                    "power_last_samples": _coerce_int(summary.get("samples")),
+                                    "power_last_csv_path": summary.get("csv_path", ""),
+                                    "power_last_summary_path": summary.get("summary_json_path", ""),
+                                }
+                            )
                 self._send(conn, {"ok": True, **status_payload})
                 if telemetry:
                     telemetry.publish(
@@ -1913,6 +2221,46 @@ class ControlServer(threading.Thread):
                 status = manager.status()
                 self._send(conn, {"ok": True, **status})
                 return
+            if cmd == "artifact_status":
+                session_dir = self.state.get("session_dir")
+                telemetry_status_path = self.state.get("telemetry_status_path")
+                monitors_obj = self.state.get("monitors")
+                manager = self.state.get("power_manager")
+                manifest_path: Optional[Path] = None
+                monitor_artifacts: list[str] = []
+                if isinstance(monitors_obj, Monitors):
+                    manifest_path = getattr(monitors_obj, "manifest_path", None)
+                    artifact_paths = getattr(monitors_obj, "_artifact_paths", set())
+                    lock_obj = getattr(monitors_obj, "_artifact_lock", None)
+                    lock_acquired = False
+                    if isinstance(lock_obj, threading.Lock):
+                        try:
+                            lock_acquired = lock_obj.acquire(timeout=1.0)
+                        except TypeError:
+                            lock_obj.acquire()
+                            lock_acquired = True
+                    try:
+                        if artifact_paths:
+                            monitor_artifacts = sorted(str(path) for path in artifact_paths)
+                    finally:
+                        if isinstance(lock_obj, threading.Lock) and lock_acquired:
+                            lock_obj.release()
+                power_status = {}
+                if isinstance(manager, PowerCaptureManager):
+                    try:
+                        power_status = manager.status()
+                    except Exception:
+                        power_status = {}
+                response = {
+                    "ok": True,
+                    "session_dir": str(session_dir) if session_dir else "",
+                    "monitor_manifest_path": str(manifest_path) if manifest_path else "",
+                    "telemetry_status_path": str(telemetry_status_path) if telemetry_status_path else "",
+                    "artifact_paths": monitor_artifacts,
+                    "power_status": power_status,
+                }
+                self._send(conn, response)
+                return
             if cmd == "stop":
                 self.state["monitors"].stop()
                 self.state["stop_event"].set()
@@ -2013,6 +2361,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         os.environ.setdefault(env_key, str(env_value))
 
     telemetry: Optional[TelemetryPublisher] = None
+    telemetry_status_path: Optional[Path] = None
     telemetry_enabled = bool(auto.get("telemetry_enabled", True))
     telemetry_host_cfg = auto.get("telemetry_host")
     if telemetry_host_cfg:
@@ -2033,6 +2382,8 @@ def main(argv: Optional[list[str]] = None) -> None:
         telemetry = TelemetryPublisher(telemetry_host, telemetry_port, session_id)
         telemetry.start()
         print(f"[follower] telemetry publisher started (session={session_id})")
+        telemetry_status_path = session_dir / "telemetry_status.json"
+        telemetry.configure_status_sink(telemetry_status_path)
     else:
         print("[follower] telemetry disabled via AUTO_DRONE configuration")
 
@@ -2047,7 +2398,10 @@ def main(argv: Optional[list[str]] = None) -> None:
     _record_hardware_context(session_dir, telemetry)
 
     power_dir = session_dir / "power"
+    power_dir.mkdir(parents=True, exist_ok=True)
     power_manager = PowerCaptureManager(power_dir, session_id, telemetry)
+    if telemetry_status_path is not None:
+        power_manager.register_telemetry_status(telemetry_status_path)
 
     high_speed_monitor = HighSpeedMonitor(session_dir, session_id, telemetry)
     high_speed_monitor.start()
@@ -2057,12 +2411,18 @@ def main(argv: Optional[list[str]] = None) -> None:
     monitors_enabled = bool(auto.get("monitors_enabled", True))
     if not monitors_enabled:
         print("[follower] monitors disabled via AUTO_DRONE configuration")
-    monitors = Monitors(enabled=monitors_enabled, telemetry=telemetry)
+    monitors = Monitors(enabled=monitors_enabled, telemetry=telemetry, session_dir=session_dir)
+    power_manager.register_monitor_manifest(monitors.manifest_path)
+    monitors.register_artifacts(session_dir / "hardware_context.json")
+    if telemetry_status_path is not None:
+        monitors.register_artifacts(telemetry_status_path)
+    power_manager.register_artifact_sink(lambda paths: monitors.register_artifacts(*paths))
     time.sleep(1)
     if proxy.poll() is None:
-        monitors.start(proxy.pid, suite_outdir(initial_suite), initial_suite)
+        monitors.start(proxy.pid, suite_outdir(initial_suite), initial_suite, session_dir=session_dir)
         high_speed_monitor.attach_proxy(proxy.pid)
         high_speed_monitor.current_suite = initial_suite
+        monitors.register_artifacts(high_speed_monitor.csv_path, high_speed_monitor.rekey_marks_path)
 
     echo = UdpEcho(
         APP_BIND_HOST,
@@ -2075,6 +2435,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         telemetry,
     )
     echo.start()
+    monitors.register_artifacts(echo.packet_log_path)
 
     state = {
         "proxy": proxy,
@@ -2092,6 +2453,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         "lock": threading.Lock(),
         "session_id": session_id,
         "session_dir": session_dir,
+        "telemetry_status_path": telemetry_status_path,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()

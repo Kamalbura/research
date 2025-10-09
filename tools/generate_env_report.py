@@ -21,8 +21,8 @@ import platform
 import shutil
 import subprocess
 import sys
-import textwrap
-from typing import List
+import sysconfig
+from typing import Dict, List
 
 
 def run_cmd(cmd: List[str]) -> str:
@@ -76,6 +76,39 @@ def probe_oqs() -> dict:
     return info
 
 
+def collect_compiler_flags() -> Dict[str, str]:
+    flags: Dict[str, str] = {}
+    env_keys = [
+        'CFLAGS',
+        'CXXFLAGS',
+        'CPPFLAGS',
+        'LDFLAGS',
+        'OQS_CMAKE_FLAGS',
+        'OQS_CMAKE_OPTIONS',
+        'OQS_OPT_FLAGS',
+    ]
+    for key in env_keys:
+        value = os.environ.get(key)
+        if value:
+            flags[key] = value
+
+    try:
+        python_opt = sysconfig.get_config_var('OPT')
+        if python_opt:
+            flags['PYTHON_OPT'] = python_opt
+    except Exception:
+        pass
+
+    try:
+        python_cflags = sysconfig.get_config_var('CFLAGS')
+        if python_cflags:
+            flags['PYTHON_CFLAGS'] = python_cflags
+    except Exception:
+        pass
+
+    return flags
+
+
 def audit_secrets_matrix(root: pathlib.Path) -> dict:
     out = {}
     if not root.exists():
@@ -93,7 +126,7 @@ def audit_secrets_matrix(root: pathlib.Path) -> dict:
     return out
 
 
-def render_markdown(info: dict, secrets: dict, conda_list_text: str) -> str:
+def render_markdown(info: dict, secrets: dict, conda_list_text: str, compiler_flags: Dict[str, str]) -> str:
     lines = []
     lines.append('# Environment report')
     lines.append('')
@@ -108,6 +141,14 @@ def render_markdown(info: dict, secrets: dict, conda_list_text: str) -> str:
     lines.append('```')
     lines.append(conda_list_text.strip())
     lines.append('```')
+    lines.append('')
+    lines.append('## Compiler Flags')
+    lines.append('')
+    if compiler_flags:
+        for key, value in compiler_flags.items():
+            lines.append(f"- {key}: `{value}`")
+    else:
+        lines.append('- None detected')
     lines.append('')
     lines.append('## oqs / liboqs info')
     lines.append('')
@@ -152,8 +193,9 @@ def main():
     conda_text = run_cmd(['conda', 'list']) if shutil.which('conda') else run_cmd([sys.executable, '-m', 'pip', 'freeze'])
 
     info = probe_oqs()
+    compiler_flags = collect_compiler_flags()
     secrets = audit_secrets_matrix(pathlib.Path('secrets') / 'matrix')
-    md = render_markdown(info, secrets, conda_text)
+    md = render_markdown(info, secrets, conda_text, compiler_flags)
 
     out_path = pathlib.Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

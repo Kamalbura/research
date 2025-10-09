@@ -8,14 +8,6 @@ import threading
 import time
 from pathlib import Path
 
-import numpy as np
-
-try:
-    import psutil
-except Exception:  # pragma: no cover - import guard
-    print("❌ psutil is required. Install: pip install psutil")
-    raise
-
 import sys
 
 ROOT = Path(__file__).resolve().parent
@@ -23,33 +15,35 @@ DDOS_DIR = ROOT / "ddos"
 if str(DDOS_DIR) not in sys.path:
     sys.path.insert(0, str(DDOS_DIR))
 
-xgb = None
-try:
-    import xgboost as xgb  # type: ignore[assignment]
-except Exception:  # pragma: no cover - optional dependency guard
-    xgb = None
+np = None  # type: ignore[assignment]
+psutil = None  # type: ignore[assignment]
+joblib = None  # type: ignore[assignment]
+xgb = None  # type: ignore[assignment]
+torch = None  # type: ignore[assignment]
+_xgb_import_error: Exception | None = None
+_torch_import_error: Exception | None = None
+_joblib_import_error: Exception | None = None
+_numpy_import_error: Exception | None = None
+_psutil_import_error: Exception | None = None
 
-torch = None
 try:
-    import torch  # type: ignore[assignment]
-except Exception:  # pragma: no cover - optional dependency guard
-    torch = None
-
-from config import (
-    TORCH_NUM_THREADS,
-    TST_MODEL_FILE,
-    TST_SEQ_LENGTH,
-    TST_TORCHSCRIPT_FILE,
-    XGB_MODEL_FILE,
-    XGB_SEQ_LENGTH,
-)
-try:
-    from run_tst import load_model as load_tst_model
-except Exception as exc:  # pragma: no cover - optional dependency guard
-    load_tst_model = None  # type: ignore[assignment]
-    _LOAD_TST_ERROR = exc
-else:
-    _LOAD_TST_ERROR = None
+    from config import (
+        TORCH_NUM_THREADS,
+        TST_MODEL_FILE,
+        TST_SEQ_LENGTH,
+        TST_TORCHSCRIPT_FILE,
+        XGB_MODEL_FILE,
+        XGB_SEQ_LENGTH,
+    )
+except ModuleNotFoundError:  # pragma: no cover - runtime dependency check
+    TORCH_NUM_THREADS = 1
+    XGB_SEQ_LENGTH = 5
+    TST_SEQ_LENGTH = 400
+    XGB_MODEL_FILE = DDOS_DIR / "xgboost_model.bin"
+    TST_TORCHSCRIPT_FILE = DDOS_DIR / "tst_model.torchscript"
+    TST_MODEL_FILE = DDOS_DIR / "tst_model.pth"
+load_tst_model = None  # type: ignore[assignment]
+_LOAD_TST_ERROR: Exception | None = None
 
 
 def calculate_predicted_flight_constraint(
@@ -78,6 +72,10 @@ def calculate_predicted_flight_constraint(
     vehicle weight in Newtons.
 
     Returns
+        try:
+            import numpy as np
+        except ModuleNotFoundError:  # pragma: no cover - import guard
+            np = None  # type: ignore[assignment]
     -------
     float
         Estimated mechanical power demand in Watts. The result is always
@@ -121,12 +119,123 @@ def calculate_predicted_flight_constraint(
     return max(0.0, total_power)
 
 
-def load_xgb_from_config() -> xgb.XGBClassifier:
-    if xgb is None:  # pragma: no cover - runtime dependency check
-        raise RuntimeError("xgboost is required for load_xgb_from_config(); install xgboost")
+def _require_numpy() -> None:
+    _get_numpy()
+
+
+def _get_numpy():
+    global np, _numpy_import_error
+    if np is not None:
+        return np
+    if _numpy_import_error is not None:
+        raise RuntimeError("numpy is required for benchmarking; install numpy") from _numpy_import_error
+    try:
+        import numpy as _np  # type: ignore[import]
+    except ModuleNotFoundError as exc:  # pragma: no cover - import guard
+        _numpy_import_error = exc
+        raise RuntimeError("numpy is required for benchmarking; install numpy") from exc
+    np = _np  # type: ignore[assignment]
+    return np
+
+
+def _get_psutil():
+    global psutil, _psutil_import_error
+    if psutil is not None:
+        return psutil
+    if _psutil_import_error is not None:
+        raise RuntimeError("psutil is required for benchmarking; install psutil") from _psutil_import_error
+    try:
+        import psutil as _psutil  # type: ignore[import]
+    except ModuleNotFoundError as exc:  # pragma: no cover - import guard
+        _psutil_import_error = exc
+        raise RuntimeError("psutil is required for benchmarking; install psutil") from exc
+    psutil = _psutil  # type: ignore[assignment]
+    return psutil
+
+
+def _get_joblib():
+    global joblib, _joblib_import_error
+    if joblib is not None:
+        return joblib
+    if _joblib_import_error is not None:
+        raise RuntimeError("joblib is required for TST benchmarking; install joblib") from _joblib_import_error
+    try:
+        import joblib as _joblib  # type: ignore[import]
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency guard
+        _joblib_import_error = exc
+        raise RuntimeError("joblib is required for TST benchmarking; install joblib") from exc
+    except Exception as exc:  # pragma: no cover - defensive
+        _joblib_import_error = exc
+        raise RuntimeError("joblib import failed; install/verify joblib") from exc
+    joblib = _joblib  # type: ignore[assignment]
+    return joblib
+
+
+def _get_torch():
+    global torch, _torch_import_error
+    if torch is not None:
+        return torch
+    if _torch_import_error is not None:
+        raise RuntimeError("torch is required for this benchmark feature; install torch") from _torch_import_error
+    try:
+        import torch as _torch  # type: ignore[import]
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency guard
+        _torch_import_error = exc
+        raise RuntimeError("torch is required for this benchmark feature; install torch") from exc
+    except Exception as exc:  # pragma: no cover - defensive guard
+        _torch_import_error = exc
+        raise RuntimeError("torch import failed; verify installation") from exc
+    torch = _torch  # type: ignore[assignment]
+    return torch
+
+
+def _get_xgboost():
+    global xgb, _xgb_import_error
+    if xgb is not None:
+        return xgb
+    if _xgb_import_error is not None:
+        raise RuntimeError("xgboost is required for XGB benchmarking; install xgboost") from _xgb_import_error
+    try:
+        import xgboost as _xgb  # type: ignore[import]
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency guard
+        _xgb_import_error = exc
+        raise RuntimeError("xgboost is required for XGB benchmarking; install xgboost") from exc
+    except Exception as exc:  # pragma: no cover - defensive guard
+        _xgb_import_error = exc
+        raise RuntimeError("xgboost import failed; verify installation") from exc
+    xgb = _xgb  # type: ignore[assignment]
+    return xgb
+
+
+def _lazy_load_tst_loader():
+    global load_tst_model, _LOAD_TST_ERROR
+    if load_tst_model is not None or _LOAD_TST_ERROR is not None:
+        return load_tst_model
+    try:
+        _get_torch()
+        _get_joblib()
+    except RuntimeError as exc:  # pragma: no cover - dependency missing at runtime
+        _LOAD_TST_ERROR = exc
+        load_tst_model = None
+        return None
+    try:
+        from run_tst import load_model as _load_model  # type: ignore[import]
+    except ModuleNotFoundError as exc:  # pragma: no cover - missing optional dependency
+        _LOAD_TST_ERROR = exc
+        load_tst_model = None
+    except Exception as exc:  # pragma: no cover - optional dependency guard
+        _LOAD_TST_ERROR = exc
+        load_tst_model = None
+    else:
+        load_tst_model = _load_model  # type: ignore[assignment]
+    return load_tst_model
+
+
+def load_xgb_from_config():
+    xgb_mod = _get_xgboost()
     if not Path(XGB_MODEL_FILE).exists():
         raise FileNotFoundError(f"Missing XGBoost model: {XGB_MODEL_FILE}")
-    model = xgb.XGBClassifier()
+    model = xgb_mod.XGBClassifier()
     model.load_model(str(XGB_MODEL_FILE))
     feats = getattr(model, "n_features_in_", None)
     if feats not in (None, XGB_SEQ_LENGTH):
@@ -140,11 +249,12 @@ class CPUSampler:
     """Background sampler of process CPU% and RSS."""
 
     def __init__(self, interval: float = 0.1) -> None:
+        psutil_mod = _get_psutil()
         self.interval = interval
         self._stop = threading.Event()
         self._samples: list[float] = []
         self._rss: list[int] = []
-        self._proc = psutil.Process()
+        self._proc = psutil_mod.Process()
         self._thread: threading.Thread | None = None
 
     def _run(self) -> None:
@@ -185,10 +295,11 @@ def time_loop(
     pace_ms: float | None,
     sample_interval: float,
 ) -> tuple[float, float, float, float, float]:
+    psutil_mod = _get_psutil()
     for _ in range(warmup):
         fn()
 
-    proc = psutil.Process()
+    proc = psutil_mod.Process()
     sampler = CPUSampler(interval=sample_interval)
     cpu0 = proc.cpu_times()
     t0 = time.perf_counter()
@@ -209,18 +320,18 @@ def time_loop(
 
 
 def bench_matmul(n: int, iters: int) -> tuple[float, float]:
-    if torch is None:  # pragma: no cover - runtime dependency check
-        raise RuntimeError("torch is required for bench_matmul(); install torch")
-    torch.set_num_threads(max(1, torch.get_num_threads()))
-    a = torch.randn((n, n), dtype=torch.float32)
-    b = torch.randn((n, n), dtype=torch.float32)
-    with torch.no_grad():
+    torch_mod = _get_torch()
+    psutil_mod = _get_psutil()
+    torch_mod.set_num_threads(max(1, torch_mod.get_num_threads()))
+    a = torch_mod.randn((n, n), dtype=torch_mod.float32)
+    b = torch_mod.randn((n, n), dtype=torch_mod.float32)
+    with torch_mod.no_grad():
         for _ in range(10):
             _ = a @ b
-    proc = psutil.Process()
+    proc = psutil_mod.Process()
     cpu0 = proc.cpu_times()
     t0 = time.perf_counter()
-    with torch.no_grad():
+    with torch_mod.no_grad():
         for _ in range(iters):
             _ = a @ b
     t1 = time.perf_counter()
@@ -231,6 +342,9 @@ def bench_matmul(n: int, iters: int) -> tuple[float, float]:
 
 
 def main() -> int:
+    np_mod = _get_numpy()
+    _get_psutil()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--iters", type=int, default=500)
     parser.add_argument("--warmup", type=int, default=50)
@@ -257,22 +371,22 @@ def main() -> int:
     parser.add_argument("--mm-iters", type=int, default=200)
     args = parser.parse_args()
 
-    if torch is None:  # pragma: no cover - runtime dependency check
-        raise RuntimeError("torch is required for benchmarking; install torch")
+    torch_mod = _get_torch()
 
-    torch.set_num_threads(max(1, args.torch_threads))
+    torch_mod.set_num_threads(max(1, args.torch_threads))
 
     xgb_model = load_xgb_from_config()
-    xgb_feat = np.random.randint(low=0, high=50, size=(1, XGB_SEQ_LENGTH)).astype(np.float32)
+    xgb_feat = np_mod.random.randint(low=0, high=50, size=(1, XGB_SEQ_LENGTH)).astype(np_mod.float32)
 
     def xgb_infer() -> None:
         _ = xgb_model.predict(xgb_feat)
         _ = xgb_model.predict_proba(xgb_feat)
 
     tst_model = None
-    if load_tst_model is not None:
+    loader = _lazy_load_tst_loader()
+    if loader is not None:
         try:
-            scaler, tst_model, scripted = load_tst_model()
+            scaler, tst_model, scripted = loader()
         except Exception as exc:
             print(
                 "❌ Unable to load TST model. If you don't have TorchScript, install 'tsai' for tstplus.py."
@@ -285,17 +399,17 @@ def main() -> int:
         print(f"   Import error: {_LOAD_TST_ERROR}")
 
     if tst_model is not None:
-        counts = np.random.randint(low=0, high=50, size=(TST_SEQ_LENGTH, 1)).astype(np.float32)
-        scaled = scaler.transform(counts).astype(np.float32)
-        tst_tensor = torch.from_numpy(scaled.reshape(1, 1, -1))
+    counts = np_mod.random.randint(low=0, high=50, size=(TST_SEQ_LENGTH, 1)).astype(np_mod.float32)
+    scaled = scaler.transform(counts).astype(np_mod.float32)
+        tst_tensor = torch_mod.from_numpy(scaled.reshape(1, 1, -1))
         tst_model.eval()
 
-        @torch.no_grad()
+        @torch_mod.no_grad()
         def tst_infer() -> None:
             _ = tst_model(tst_tensor)
 
     print("\n=== Settings ===")
-    print(f"Torch threads      : {torch.get_num_threads()}")
+    print(f"Torch threads      : {torch_mod.get_num_threads()}")
     print(f"Mode               : {args.mode}")
     if args.mode == "paced":
         print(f"Pace per inference : {args.pace_ms:.1f} ms")

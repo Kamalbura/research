@@ -118,11 +118,21 @@ class ProxyCounters:
         artifacts = handshake.get("artifacts") if isinstance(handshake.get("artifacts"), dict) else {}
 
         summary: Dict[str, object] = {}
-        summary["kem_keygen_ms"] = self._ns_to_ms(kem.get("keygen_ns"))
-        summary["kem_encaps_ms"] = self._ns_to_ms(kem.get("encap_ns"))
-        summary["kem_decap_ms"] = self._ns_to_ms(kem.get("decap_ns"))
-        summary["sig_sign_ms"] = self._ns_to_ms(sig.get("sign_ns"))
-        summary["sig_verify_ms"] = self._ns_to_ms(sig.get("verify_ns"))
+
+        def _emit(prefix: str, source: Dict[str, object], key: str, legacy_key: Optional[str] = None) -> None:
+            ns_value = source.get(key)
+            ms_value = self._ns_to_ms(ns_value)
+            summary[f"{prefix}_max_ms"] = ms_value
+            summary[f"{prefix}_avg_ms"] = ms_value
+            if legacy_key:
+                summary[legacy_key] = ms_value
+
+        _emit("kem_keygen", kem, "keygen_ns", "kem_keygen_ms")
+        _emit("kem_encaps", kem, "encap_ns", "kem_encaps_ms")
+        _emit("kem_decaps", kem, "decap_ns", "kem_decap_ms")
+        _emit("sig_sign", sig, "sign_ns", "sig_sign_ms")
+        _emit("sig_verify", sig, "verify_ns", "sig_verify_ms")
+
         summary["pub_key_size_bytes"] = int(
             kem.get("public_key_bytes")
             or artifacts.get("public_key_bytes")
@@ -135,6 +145,23 @@ class ProxyCounters:
             or 0
         )
         summary["shared_secret_size_bytes"] = int(kem.get("shared_secret_bytes", 0) or 0)
+
+        def _avg_ns_for(key: str) -> float:
+            stats = self.primitive_metrics.get(key)
+            if not isinstance(stats, dict):
+                return 0.0
+            count = int(stats.get("count", 0) or 0)
+            total_ns = int(stats.get("total_ns", 0) or 0)
+            if count <= 0 or total_ns <= 0:
+                return 0.0
+            return total_ns / max(count, 1)
+
+        summary["aead_encrypt_avg_ms"] = self._ns_to_ms(_avg_ns_for("aead_encrypt"))
+        summary["aead_decrypt_avg_ms"] = self._ns_to_ms(_avg_ns_for("aead_decrypt_ok"))
+        summary["aead_encrypt_ms"] = summary["aead_encrypt_avg_ms"]
+        summary["aead_decrypt_ms"] = summary["aead_decrypt_avg_ms"]
+
+        summary["rekey_ms"] = self._ns_to_ms(handshake.get("handshake_total_ns"))
 
         total_ns = 0
         for key in ("keygen_ns", "encap_ns", "decap_ns"):

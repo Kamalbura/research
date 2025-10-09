@@ -44,16 +44,31 @@ def test_load_proxy_counters_success(tmp_path: Path) -> None:
                 },
             },
             "part_b_metrics": {
+                "kem_keygen_max_ms": 1.25,
+                "kem_keygen_avg_ms": 1.25,
                 "kem_keygen_ms": 1.25,
+                "kem_encaps_max_ms": 2.5,
+                "kem_encaps_avg_ms": 2.5,
                 "kem_encaps_ms": 2.5,
+                "kem_decaps_max_ms": 3.75,
+                "kem_decaps_avg_ms": 3.75,
                 "kem_decap_ms": 3.75,
+                "sig_sign_max_ms": 4.0,
+                "sig_sign_avg_ms": 4.0,
                 "sig_sign_ms": 4.0,
+                "sig_verify_max_ms": 5.5,
+                "sig_verify_avg_ms": 5.5,
                 "sig_verify_ms": 5.5,
+                "aead_encrypt_avg_ms": 0.42,
+                "aead_decrypt_avg_ms": 0.55,
+                "aead_encrypt_ms": 0.42,
+                "aead_decrypt_ms": 0.55,
                 "pub_key_size_bytes": 1184,
                 "ciphertext_size_bytes": 1088,
                 "sig_size_bytes": 3293,
                 "shared_secret_size_bytes": 32,
                 "primitive_total_ms": 17.0,
+                "rekey_ms": 18.5,
                 "kem_keygen_mJ": 0.8,
                 "kem_encaps_mJ": 1.6,
                 "kem_decap_mJ": 2.4,
@@ -87,8 +102,12 @@ def test_load_proxy_counters_success(tmp_path: Path) -> None:
     assert result.primitive_average_ns("missing") is None
 
     part_b = result.part_b_metrics
+    assert part_b["kem_decaps_max_ms"] == pytest.approx(3.75)
     assert part_b["kem_decap_ms"] == pytest.approx(3.75)
     assert part_b["pub_key_size_bytes"] == 1184
+    assert part_b["rekey_ms"] == pytest.approx(18.5)
+    assert part_b["aead_encrypt_avg_ms"] == pytest.approx(0.42)
+    assert part_b["aead_encrypt_ms"] == pytest.approx(0.42)
     assert result.get_part_b_metric("sig_sign_ms") == pytest.approx(4.0)
     assert result.get_part_b_metric("missing", default=-1.0) == -1.0
     assert result.get_part_b_metric("sig_verify_mJ") == pytest.approx(4.0)

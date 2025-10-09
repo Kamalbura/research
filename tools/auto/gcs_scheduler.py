@@ -10,6 +10,7 @@ import io
 import json
 import math
 import os
+import shlex
 import socket
 import struct
 import subprocess
@@ -20,6 +21,11 @@ from collections import deque, OrderedDict
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, IO, Iterable, List, Optional, Set, Tuple
+
+try:
+    import paramiko  # type: ignore[import]
+except ImportError:  # pragma: no cover - optional dependency
+    paramiko = None
 
 try:
     from openpyxl import Workbook
@@ -331,6 +337,327 @@ SATURATION_SEARCH_MODE = str(AUTO_GCS_CONFIG.get("sat_search") or "auto").lower(
 SATURATION_RTT_SPIKE = float(AUTO_GCS_CONFIG.get("sat_rtt_spike_factor") or 1.6)
 SATURATION_DELIVERY_THRESHOLD = float(AUTO_GCS_CONFIG.get("sat_delivery_threshold") or 0.85)
 SATURATION_LOSS_THRESHOLD = float(AUTO_GCS_CONFIG.get("sat_loss_threshold_pct") or 5.0)
+
+
+def _coerce_bool(value: object, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+POWER_FETCH_TARGET = AUTO_GCS_CONFIG.get("power_fetch_target") or os.getenv("DRONE_POWER_SSH") or os.getenv("DRONE_SSH_TARGET")
+if isinstance(POWER_FETCH_TARGET, str):
+    POWER_FETCH_TARGET = POWER_FETCH_TARGET.strip() or None
+POWER_FETCH_CMD = (AUTO_GCS_CONFIG.get("power_fetch_scp") or os.getenv("DRONE_POWER_SCP") or "scp") or "scp"
+POWER_FETCH_CMD = str(POWER_FETCH_CMD)
+POWER_FETCH_ENABLED = _coerce_bool(AUTO_GCS_CONFIG.get("power_fetch_enabled"), True)
+POWER_FETCH_ENABLED = _coerce_bool(os.getenv("DRONE_POWER_FETCH_ENABLED"), POWER_FETCH_ENABLED)
+
+
+def _parse_ssh_target(target: str) -> Tuple[str, Optional[str], int]:
+    username: Optional[str] = None
+    host_port = target.strip()
+    if "@" in host_port:
+        username, host_port = host_port.split("@", 1)
+    port = 22
+    host = host_port
+    if host_port.startswith("[") and "]" in host_port:
+        close_idx = host_port.find("]")
+        host = host_port[1:close_idx]
+        remainder = host_port[close_idx + 1 :]
+    if remainder.startswith(":"):
+            port_str = remainder[1:]
+            try:
+                port = int(port_str)
+            except ValueError:
+                port = 22
+    elif host_port.count(":") == 1:
+        host_candidate, port_candidate = host_port.split(":", 1)
+        try:
+            port = int(port_candidate)
+            host = host_candidate
+        except ValueError:
+            host = host_port
+            port = 22
+    return host, username, port
+
+
+def _sftp_fetch(remote_path: str, local_path: Path) -> Optional[str]:
+    if paramiko is None:  # pragma: no cover - optional dependency
+        return "paramiko_unavailable"
+    if not POWER_FETCH_TARGET:
+        return "missing_power_fetch_target"
+    host, username, port = _parse_ssh_target(POWER_FETCH_TARGET)
+    client = paramiko.SSHClient()  # type: ignore[attr-defined]
+    try:
+        client.load_system_host_keys()
+    except Exception:
+        pass
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # type: ignore[attr-defined]
+    try:
+        client.connect(
+            hostname=host,
+            port=port,
+            username=username,
+            look_for_keys=True,
+            allow_agent=True,
+            timeout=10.0,
+        )
+        with client.open_sftp() as sftp:  # type: ignore[attr-defined]
+            sftp.get(remote_path, str(local_path))
+        return None
+    except FileNotFoundError as exc:  # pragma: no cover - depends on remote state
+        return f"missing_remote:{exc}"
+    except Exception as exc:  # pragma: no cover - depends on SSH stack
+        return str(exc)
+    finally:
+        try:
+            client.close()
+        except Exception:
+            pass
+
+
+def _ensure_local_artifact(suite: str, remote_path: str, category: str) -> Tuple[Optional[Path], Optional[str]]:
+    if not remote_path:
+        return (None, None)
+
+    remote_str = str(remote_path)
+    try:
+        candidate = Path(remote_str)
+        if candidate.exists():
+            try:
+                return (candidate.resolve(), None)
+            except Exception:
+                return (candidate, None)
+    except Exception:
+        pass
+
+    if not POWER_FETCH_ENABLED:
+        return (None, "power_fetch_disabled")
+    if not POWER_FETCH_TARGET:
+        return (None, "missing_power_fetch_target")
+
+    safe_category = category if category else "artifacts"
+    dest_dir = suite_outdir(suite) / safe_category
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    basename = Path(remote_str).name
+    if not basename:
+        basename = f"artifact_{int(time.time() * 1000)}"
+    local_path = dest_dir / basename
+
+    sftp_error: Optional[str] = None
+    if paramiko is not None:
+        sftp_error = _sftp_fetch(remote_str, local_path)
+        if sftp_error is None:
+            try:
+                resolved = local_path.resolve()
+            except Exception:
+                resolved = local_path
+            return (resolved, None)
+        if sftp_error not in {"paramiko_unavailable", "missing_power_fetch_target"} and local_path.exists():
+            try:
+                local_path.unlink()
+            except Exception:
+                pass
+
+    base_cmd = POWER_FETCH_CMD.strip() or "scp"
+    cmd = shlex.split(base_cmd)
+    cmd += ["-q", f"{POWER_FETCH_TARGET}:{remote_str}", str(local_path)]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except FileNotFoundError as exc:  # pragma: no cover - depends on local toolchain
+        error_text = f"{POWER_FETCH_CMD} unavailable: {exc}"
+        if sftp_error and sftp_error not in {"paramiko_unavailable", "missing_power_fetch_target"}:
+            error_text = f"sftp:{sftp_error}; {error_text}"
+        return (None, error_text)
+    except Exception as exc:  # pragma: no cover - defensive
+        error_text = f"{POWER_FETCH_CMD} failed: {exc}"
+        if sftp_error and sftp_error not in {"paramiko_unavailable", "missing_power_fetch_target"}:
+            error_text = f"sftp:{sftp_error}; {error_text}"
+        return (None, error_text)
+
+    if result.returncode != 0:
+        error_text = result.stderr.strip() or result.stdout.strip() or f"exit {result.returncode}"
+        if local_path.exists():
+            try:
+                local_path.unlink()
+            except Exception:
+                pass
+        if sftp_error and sftp_error not in {"paramiko_unavailable", "missing_power_fetch_target"}:
+            error_text = f"sftp:{sftp_error}; {error_text}"
+        return (None, error_text)
+
+    try:
+        resolved = local_path.resolve()
+    except Exception:
+        resolved = local_path
+    return (resolved, None)
+
+
+def _ensure_local_power_artifact(suite: str, remote_path: str) -> Tuple[Optional[Path], Optional[str]]:
+    return _ensure_local_artifact(suite, remote_path, "power")
+
+
+def _fetch_power_artifacts(suite: str, payload: Dict[str, object]) -> Tuple[Dict[str, Path], Optional[str]]:
+    fetched: Dict[str, Path] = {}
+    errors: List[str] = []
+    for key in ("csv_path", "summary_json_path"):
+        value = payload.get(key)
+        if not value:
+            continue
+        local_path, err = _ensure_local_power_artifact(suite, str(value))
+        if local_path is not None:
+            fetched[key] = local_path
+        elif err:
+            errors.append(f"{key}:{err}")
+    error_msg = "; ".join(errors) if errors else None
+    return fetched, error_msg
+
+
+def _resolve_manifest_entry(entry: object, session_dir: Optional[str]) -> Tuple[Optional[Path], Optional[str]]:
+    if entry in (None, ""):
+        return None, "empty"
+    try:
+        candidate = Path(str(entry))
+    except Exception as exc:
+        return None, f"invalid:{exc}"
+    if session_dir:
+        try:
+            session_path = Path(session_dir)
+        except Exception as exc:
+            return None, f"session_dir_invalid:{exc}"
+        if not candidate.is_absolute():
+            candidate = session_path / candidate
+    return candidate, None
+
+
+def _fetch_monitor_artifacts(suite: str, payload: Dict[str, object]) -> Dict[str, object]:
+    result: Dict[str, object] = {
+        "manifest_path": None,
+        "telemetry_status_path": None,
+        "artifact_paths": [],
+        "categorized_paths": {},
+        "remote_map": {},
+        "status": "",
+        "error": "",
+    }
+
+    if not payload:
+        result["status"] = "missing"
+        return result
+
+    session_dir_val = payload.get("session_dir") or ""
+    session_dir_str = str(session_dir_val) if session_dir_val else ""
+
+    manifest_remote = payload.get("monitor_manifest_path") or ""
+    if not manifest_remote and session_dir_str:
+        manifest_remote = str(Path(session_dir_str) / "monitor_manifest.json")
+
+    errors: List[str] = []
+    disabled_due_to_fetch = False
+    manifest_local: Optional[Path] = None
+    manifest_err: Optional[str] = None
+    categorized_paths: Dict[str, List[Path]] = {}
+    remote_map: Dict[str, str] = {}
+    aggregate_paths: List[Path] = []
+
+    def _record_artifact(category: str, local: Path, remote: str) -> None:
+        local_key = str(local)
+        if local_key in remote_map:
+            return
+        bucket = categorized_paths.setdefault(category, [])
+        bucket.append(local)
+        aggregate_paths.append(local)
+        remote_map[local_key] = remote
+
+    if manifest_remote:
+        manifest_local, manifest_err = _ensure_local_artifact(suite, manifest_remote, "monitor")
+
+    if manifest_local is None:
+        if manifest_err == "power_fetch_disabled":
+            disabled_due_to_fetch = True
+        elif manifest_err:
+            errors.append(f"manifest:{manifest_err}")
+        elif manifest_remote:
+            errors.append("manifest:not_found")
+    else:
+        result["manifest_path"] = manifest_local
+        remote_map[str(manifest_local)] = str(manifest_remote)
+        try:
+            manifest_data = json.loads(manifest_local.read_text(encoding="utf-8"))
+            artifacts = manifest_data.get("artifacts") or []
+        except Exception as exc:
+            errors.append(f"manifest_parse:{exc}")
+            artifacts = []
+
+        seen: Set[str] = set()
+        for entry in artifacts if isinstance(artifacts, list) else []:
+            resolved_path, resolve_err = _resolve_manifest_entry(entry, session_dir_str)
+            if resolved_path is None:
+                if resolve_err and resolve_err != "empty":
+                    errors.append(f"manifest_entry:{resolve_err}")
+                continue
+            resolved_str = str(resolved_path)
+            if resolved_str in seen:
+                continue
+            seen.add(resolved_str)
+            path_obj = Path(resolved_str)
+            parts_lower = [part.lower() for part in path_obj.parts]
+            name_lower = path_obj.name.lower()
+            if "power" in parts_lower or "power" in name_lower:
+                category = "power"
+            else:
+                category = "monitor"
+            local_path, fetch_err = _ensure_local_artifact(suite, resolved_str, category)
+            if local_path is not None:
+                _record_artifact(category, local_path, resolved_str)
+            elif fetch_err == "power_fetch_disabled":
+                disabled_due_to_fetch = True
+            elif fetch_err:
+                errors.append(f"{resolved_str}:{fetch_err}")
+
+    telemetry_remote = payload.get("telemetry_status_path") or ""
+    if not telemetry_remote and session_dir_str:
+        telemetry_remote = str(Path(session_dir_str) / "telemetry_status.json")
+    if telemetry_remote:
+        telemetry_local, telemetry_err = _ensure_local_artifact(suite, telemetry_remote, "telemetry")
+        if telemetry_local is not None:
+            result["telemetry_status_path"] = telemetry_local
+            _record_artifact("telemetry", telemetry_local, str(telemetry_remote))
+        elif telemetry_err == "power_fetch_disabled":
+            disabled_due_to_fetch = True
+        elif telemetry_err:
+            errors.append(f"telemetry:{telemetry_err}")
+
+    if aggregate_paths:
+        result["artifact_paths"] = aggregate_paths
+    if categorized_paths:
+        result["categorized_paths"] = categorized_paths
+    if remote_map:
+        result["remote_map"] = remote_map
+
+    if errors:
+        result["error"] = "; ".join(sorted(set(errors)))
+    if result["manifest_path"] or result["artifact_paths"]:
+        result["status"] = "ok" if not errors else "partial"
+    elif disabled_due_to_fetch and not errors:
+        result["status"] = "disabled"
+    elif errors:
+        result["status"] = "error"
+    else:
+        result["status"] = "missing"
+
+    return result
 
 
 def mkdirp(path: Path) -> None:
@@ -1364,7 +1691,8 @@ def run_suite(
 
     power_request_ok = False
     power_request_error: Optional[str] = None
-    power_status: dict = {}
+    power_status: Dict[str, Any] = {}
+    power_note = ""
     if power_capture_enabled:
         power_start_ns = time.time_ns() + offset_ns + int(max(pre_gap, 0.0) * 1e9)
         power_resp = request_power_capture(suite, duration_s, power_start_ns)
@@ -1374,11 +1702,11 @@ def run_suite(
             print(f"[WARN] power capture not scheduled: {power_request_error}", file=sys.stderr)
         banner = f"[{ts()}] ===== POWER: START in {pre_gap:.1f}s | suite={suite} | duration={duration_s:.1f}s mode={traffic_mode} ====="
     else:
-        power_request_error = "disabled"
         banner = (
             f"[{ts()}] ===== TRAFFIC: START in {pre_gap:.1f}s | suite={suite} | duration={duration_s:.1f}s "
             f"mode={traffic_mode} (power capture disabled) ====="
         )
+
     print(banner)
     if pre_gap > 0:
         time.sleep(pre_gap)
@@ -1457,9 +1785,7 @@ def run_suite(
         if power_status.get("error"):
             print(f"[WARN] power status error: {power_status['error']}", file=sys.stderr)
         if power_status.get("busy"):
-            power_note = "capture_incomplete:busy"
-            if not power_status.get("error") and not power_request_error:
-                power_status.setdefault("error", "capture_incomplete")
+            power_status.setdefault("error", "capture_incomplete")
 
     power_summary = power_status.get("last_summary") if isinstance(power_status, dict) else None
     status_for_extract: Dict[str, Any] = {}
@@ -1478,6 +1804,136 @@ def run_suite(
         if power_error is None:
             power_error = power_request_error
 
+    monitor_payload: Dict[str, object] = {}
+    if isinstance(power_status, dict) and power_status:
+        monitor_payload = dict(power_status)
+    elif isinstance(power_summary, dict):
+        monitor_payload = {
+            "monitor_manifest_path": power_summary.get("monitor_manifest_path"),
+            "telemetry_status_path": power_summary.get("telemetry_status_path"),
+            "session_dir": power_summary.get("session_dir"),
+        }
+
+    monitor_fetch_info = _fetch_monitor_artifacts(suite, monitor_payload)
+    monitor_manifest_local = monitor_fetch_info.get("manifest_path")
+    telemetry_status_local = monitor_fetch_info.get("telemetry_status_path")
+    monitor_artifact_paths: List[Path] = list(monitor_fetch_info.get("artifact_paths") or [])
+    raw_categorized = monitor_fetch_info.get("categorized_paths")
+    monitor_categorized_paths: Dict[str, List[Path]] = {}
+    if isinstance(raw_categorized, dict):
+        for key, values in raw_categorized.items():
+            category = str(key)
+            bucket: List[Path] = []
+            if isinstance(values, Iterable):
+                for item in values:
+                    try:
+                        bucket.append(Path(item))
+                    except Exception:
+                        continue
+            if bucket:
+                monitor_categorized_paths[category] = bucket
+    raw_remote_map = monitor_fetch_info.get("remote_map")
+    monitor_remote_map: Dict[str, str] = {}
+    if isinstance(raw_remote_map, dict):
+        for local_key, remote_val in raw_remote_map.items():
+            try:
+                local_str = str(Path(local_key))
+            except Exception:
+                local_str = str(local_key)
+            monitor_remote_map[local_str] = str(remote_val)
+    monitor_fetch_status = str(monitor_fetch_info.get("status") or "")
+    monitor_fetch_error = str(monitor_fetch_info.get("error") or "")
+
+    fetched_paths: Dict[str, Path] = {}
+    fetch_error_msg: Optional[str] = None
+    power_fetch_status = ""
+    power_fetch_error = ""
+    if POWER_FETCH_ENABLED:
+        combined_paths: Dict[str, object] = {}
+        if isinstance(power_summary, dict):
+            for key in ("csv_path", "summary_json_path"):
+                value = power_summary.get(key)
+                if value:
+                    combined_paths[key] = value
+        if isinstance(power_fields, dict):
+            summary_candidate = power_fields.get("summary_json_path")
+            if summary_candidate and "summary_json_path" not in combined_paths:
+                combined_paths["summary_json_path"] = summary_candidate
+        if combined_paths:
+            fetched_paths, fetch_error_msg = _fetch_power_artifacts(suite, combined_paths)
+            if fetched_paths and fetch_error_msg:
+                power_fetch_status = "partial"
+                power_fetch_error = fetch_error_msg
+            elif fetched_paths:
+                power_fetch_status = "ok"
+            elif fetch_error_msg:
+                power_fetch_status = "error"
+                power_fetch_error = fetch_error_msg
+            else:
+                power_fetch_status = "skipped"
+        else:
+            power_fetch_status = "no_paths"
+    else:
+        power_fetch_status = "disabled"
+
+    if fetched_paths.get("csv_path") is not None:
+        local_csv = fetched_paths["csv_path"]
+        if isinstance(power_summary, dict):
+            power_summary["csv_path"] = str(local_csv)
+        if isinstance(power_fields, dict):
+            power_fields["csv_path"] = str(local_csv)
+    if fetched_paths.get("summary_json_path") is not None:
+        local_summary = fetched_paths["summary_json_path"]
+        if isinstance(power_summary, dict):
+            power_summary["summary_json_path"] = str(local_summary)
+        if isinstance(power_fields, dict):
+            power_fields["summary_json_path"] = str(local_summary)
+
+    if isinstance(power_fields, dict):
+        if not power_fields.get("csv_path"):
+            for candidate in monitor_artifact_paths:
+                parts_lower = [part.lower() for part in candidate.parts]
+                name_lower = candidate.name.lower()
+                if candidate.suffix.lower() == ".csv" and ("power" in parts_lower or "power" in name_lower):
+                    power_fields["csv_path"] = str(candidate)
+                    if isinstance(power_summary, dict):
+                        power_summary.setdefault("csv_path", str(candidate))
+                    break
+        if not power_fields.get("summary_json_path"):
+            for candidate in monitor_artifact_paths:
+                parts_lower = [part.lower() for part in candidate.parts]
+                name_lower = candidate.name.lower()
+                if candidate.suffix.lower() == ".json" and ("power" in parts_lower or "power" in name_lower):
+                    power_fields["summary_json_path"] = str(candidate)
+                    if isinstance(power_summary, dict):
+                        power_summary.setdefault("summary_json_path", str(candidate))
+                    break
+
+    if power_fetch_status in {"error", "partial"} and power_fetch_error:
+        print(
+            f"[WARN] power artifact fetch failed for suite {suite}: {power_fetch_error}",
+            file=sys.stderr,
+        )
+
+    if monitor_fetch_status in {"error", "partial"} and monitor_fetch_error:
+        print(
+            f"[WARN] monitor artifact fetch issues for suite {suite}: {monitor_fetch_error}",
+            file=sys.stderr,
+        )
+
+    def _to_int_or_none(value: object) -> Optional[int]:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    capture_start_remote = (
+        _to_int_or_none(power_summary.get("start_ns")) if isinstance(power_summary, dict) else None
+    )
+    capture_end_remote = (
+        _to_int_or_none(power_summary.get("end_ns")) if isinstance(power_summary, dict) else None
+    )
+
     if not power_capture_enabled:
         power_note = "disabled"
     elif not power_request_ok:
@@ -1485,7 +1941,10 @@ def run_suite(
     elif power_capture_complete:
         power_note = "ok"
     else:
-        power_note = f"capture_incomplete:{power_error}" if power_error else "capture_incomplete"
+        if isinstance(power_status, dict) and power_status.get("busy"):
+            power_note = "capture_incomplete:busy"
+        else:
+            power_note = f"capture_incomplete:{power_error}" if power_error else "capture_incomplete"
 
     elapsed_s = max(1e-9, (end_perf_ns - start_perf_ns) / 1e9)
     pps = sent_packets / elapsed_s if elapsed_s > 0 else 0.0
@@ -1565,6 +2024,10 @@ def run_suite(
     elif power_summary:
         power_summary_path_val = str(power_summary.get("summary_json_path") or power_summary.get("csv_path") or "")
     power_csv_path_val = power_summary.get("csv_path") if power_summary else ""
+    if isinstance(power_summary_path_val, Path):
+        power_summary_path_val = str(power_summary_path_val)
+    if isinstance(power_csv_path_val, Path):
+        power_csv_path_val = str(power_csv_path_val)
     power_samples_val = power_summary.get("samples") if power_summary else 0
     power_avg_current_val = (
         round(power_summary.get("avg_current_a", 0.0), 6) if power_summary else 0.0
@@ -1575,6 +2038,23 @@ def run_suite(
     power_sample_rate_val = (
         round(power_summary.get("sample_rate_hz", 0.0), 3) if power_summary else 0.0
     )
+
+    monitor_manifest_path_val = (
+        str(monitor_manifest_local)
+        if isinstance(monitor_manifest_local, Path)
+        else (monitor_manifest_local or "")
+    )
+    telemetry_status_path_val = (
+        str(telemetry_status_local)
+        if isinstance(telemetry_status_local, Path)
+        else (telemetry_status_local or "")
+    )
+    monitor_artifact_count = len(monitor_artifact_paths)
+    monitor_artifact_paths_serialized = [str(path) for path in monitor_artifact_paths]
+    monitor_categorized_serialized: Dict[str, List[str]] = {
+        category: [str(path) for path in paths]
+        for category, paths in monitor_categorized_paths.items()
+    }
 
     companion_metrics = {
         "cpu_max_percent": 0.0,
@@ -1675,6 +2155,11 @@ def run_suite(
         "rekey_ms": round(rekey_duration_ms, 3),
         "rekey_energy_mJ": 0.0,
         "rekey_energy_error": "",
+        "handshake_energy_start_ns": 0,
+        "handshake_energy_end_ns": 0,
+        "rekey_energy_start_ns": 0,
+        "rekey_energy_end_ns": 0,
+        "clock_offset_ns": offset_ns,
         "power_request_ok": power_request_ok,
         "power_capture_ok": power_capture_complete,
         "power_note": power_note,
@@ -1688,6 +2173,16 @@ def run_suite(
         "power_duration_s": round(power_duration_val, 3) if power_duration_val is not None else 0.0,
         "power_csv_path": power_csv_path_val or "",
         "power_summary_path": power_summary_path_val or "",
+        "power_fetch_status": power_fetch_status,
+        "power_fetch_error": power_fetch_error,
+        "monitor_manifest_path": monitor_manifest_path_val,
+        "telemetry_status_path": telemetry_status_path_val,
+        "monitor_artifacts_fetched": monitor_artifact_count,
+    "monitor_artifact_paths": monitor_artifact_paths_serialized,
+    "monitor_artifact_categories": monitor_categorized_serialized,
+    "monitor_remote_map": monitor_remote_map,
+        "monitor_fetch_status": monitor_fetch_status,
+        "monitor_fetch_error": monitor_fetch_error,
         "blackout_ms": None,
         "gap_max_ms": None,
         "gap_p99_ms": None,
@@ -1719,21 +2214,54 @@ def run_suite(
 
     row.update(handshake_fields)
 
+    def _remote_timestamp(value: object) -> Optional[int]:
+        try:
+            ts = int(value)
+        except (TypeError, ValueError):
+            return None
+        if ts == 0:
+            return None
+        return ts + offset_ns
+
+    def _clamp_to_capture(window_start: Optional[int], window_end: Optional[int]) -> Tuple[Optional[int], Optional[int]]:
+        if window_start is None or window_end is None:
+            return window_start, window_end
+        adjusted_start = window_start
+        adjusted_end = window_end
+        if capture_start_remote is not None and adjusted_start < capture_start_remote:
+            adjusted_start = capture_start_remote
+        if capture_end_remote is not None and adjusted_end > capture_end_remote:
+            adjusted_end = capture_end_remote
+        if adjusted_end <= adjusted_start:
+            return None, None
+        return adjusted_start, adjusted_end
+
+    handshake_start_remote = _remote_timestamp(handshake_fields.get("handshake_wall_start_ns"))
+    handshake_end_remote = _remote_timestamp(handshake_fields.get("handshake_wall_end_ns"))
+    handshake_start_remote, handshake_end_remote = _clamp_to_capture(handshake_start_remote, handshake_end_remote)
+    row["handshake_energy_start_ns"] = handshake_start_remote or 0
+    row["handshake_energy_end_ns"] = handshake_end_remote or 0
+
     row["handshake_energy_mJ"] = 0.0
     row["handshake_energy_error"] = ""
-    if handshake_fields["handshake_wall_start_ns"] and handshake_fields["handshake_wall_end_ns"]:
-        if isinstance(power_csv_path_val, str) and power_csv_path_val:
-            try:
-                energy_mj = calculate_transient_energy(
-                    power_csv_path_val,
-                    int(handshake_fields["handshake_wall_start_ns"]),
-                    int(handshake_fields["handshake_wall_end_ns"]),
-                )
-                row["handshake_energy_mJ"] = round(energy_mj, 3)
-            except (FileNotFoundError, ValueError) as exc:
-                row["handshake_energy_error"] = str(exc)
-            except Exception as exc:
-                row["handshake_energy_error"] = str(exc)
+    if (
+        isinstance(power_csv_path_val, str)
+        and power_csv_path_val
+        and handshake_start_remote is not None
+        and handshake_end_remote is not None
+        and handshake_end_remote > handshake_start_remote
+    ):
+        try:
+            energy_mj = calculate_transient_energy(
+                power_csv_path_val,
+                handshake_start_remote,
+                handshake_end_remote,
+            )
+            row["handshake_energy_mJ"] = round(energy_mj, 3)
+        except (FileNotFoundError, ValueError) as exc:
+            row["handshake_energy_error"] = str(exc)
+        except Exception as exc:
+            row["handshake_energy_error"] = str(exc)
 
     primitive_duration_map = {
         "kem_keygen_ms": row["kem_keygen_ms"],
@@ -1752,18 +2280,24 @@ def run_suite(
             row[energy_key] = round(row["handshake_energy_mJ"] * portion, 3)
 
     rekey_energy_error: Optional[str] = None
+    rekey_start_remote = _remote_timestamp(rekey_mark_ns)
+    rekey_end_remote = _remote_timestamp(rekey_complete_ns)
+    rekey_start_remote, rekey_end_remote = _clamp_to_capture(rekey_start_remote, rekey_end_remote)
+    row["rekey_energy_start_ns"] = rekey_start_remote or 0
+    row["rekey_energy_end_ns"] = rekey_end_remote or 0
+
     if (
-        power_csv_path_val
-        and isinstance(power_csv_path_val, str)
-        and rekey_mark_ns is not None
-        and rekey_complete_ns is not None
-        and rekey_complete_ns > rekey_mark_ns
+        isinstance(power_csv_path_val, str)
+        and power_csv_path_val
+        and rekey_start_remote is not None
+        and rekey_end_remote is not None
+        and rekey_end_remote > rekey_start_remote
     ):
         try:
             energy_mj = calculate_transient_energy(
                 power_csv_path_val,
-                int(rekey_mark_ns),
-                int(rekey_complete_ns),
+                rekey_start_remote,
+                rekey_end_remote,
             )
             row["rekey_energy_mJ"] = round(energy_mj, 3)
         except FileNotFoundError as exc:

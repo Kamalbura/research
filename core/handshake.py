@@ -18,6 +18,97 @@ class HandshakeFormatError(Exception):
 class HandshakeVerifyError(Exception):
     pass
 
+
+def _ns_to_ms(value: object) -> float:
+    try:
+        ns = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if ns <= 0.0:
+        return 0.0
+    return round(ns / 1_000_000.0, 6)
+
+
+def _finalize_handshake_metrics(metrics: Optional[Dict[str, object]]) -> None:
+    """Augment handshake metrics with flattened Part B fields."""
+
+    if not isinstance(metrics, dict):  # defensive guard
+        return
+
+    primitives = metrics.setdefault("primitives", {})
+    if not isinstance(primitives, dict):
+        primitives = {}
+        metrics["primitives"] = primitives
+
+    kem_metrics = primitives.setdefault("kem", {})
+    if not isinstance(kem_metrics, dict):
+        kem_metrics = {}
+        primitives["kem"] = kem_metrics
+
+    sig_metrics = primitives.setdefault("signature", {})
+    if not isinstance(sig_metrics, dict):
+        sig_metrics = {}
+        primitives["signature"] = sig_metrics
+
+    artifacts = metrics.setdefault("artifacts", {})
+    if not isinstance(artifacts, dict):
+        artifacts = {}
+        metrics["artifacts"] = artifacts
+
+    def _export_time(prefix: str, source: Dict[str, object], key: str, legacy_key: Optional[str] = None) -> None:
+        ns_value = source.get(key)
+        ms_value = _ns_to_ms(ns_value)
+        metrics[f"{prefix}_max_ms"] = ms_value
+        metrics[f"{prefix}_avg_ms"] = ms_value
+        if legacy_key:
+            metrics.setdefault(legacy_key, ms_value)
+
+    _export_time("kem_keygen", kem_metrics, "keygen_ns", "kem_keygen_ms")
+    _export_time("kem_encaps", kem_metrics, "encap_ns", "kem_encaps_ms")
+    _export_time("kem_decaps", kem_metrics, "decap_ns", "kem_decap_ms")
+    _export_time("sig_sign", sig_metrics, "sign_ns", "sig_sign_ms")
+    _export_time("sig_verify", sig_metrics, "verify_ns", "sig_verify_ms")
+
+    metrics["pub_key_size_bytes"] = int(kem_metrics.get("public_key_bytes") or artifacts.get("public_key_bytes") or 0)
+    metrics["ciphertext_size_bytes"] = int(kem_metrics.get("ciphertext_bytes") or 0)
+    metrics["sig_size_bytes"] = int(sig_metrics.get("signature_bytes") or artifacts.get("signature_bytes") or 0)
+    metrics["shared_secret_size_bytes"] = int(kem_metrics.get("shared_secret_bytes") or 0)
+
+    handshake_total_ns = metrics.get("handshake_total_ns")
+    metrics["rekey_ms"] = _ns_to_ms(handshake_total_ns)
+
+    total_ns = 0
+    for key in ("keygen_ns", "encap_ns", "decap_ns"):
+        value = kem_metrics.get(key)
+        if isinstance(value, (int, float)) and value > 0:
+            total_ns += int(value)
+    for key in ("sign_ns", "verify_ns"):
+        value = sig_metrics.get(key)
+        if isinstance(value, (int, float)) and value > 0:
+            total_ns += int(value)
+    metrics["primitive_total_ms"] = _ns_to_ms(total_ns)
+
+    energy_keys = (
+        "kem_keygen_mJ",
+        "kem_encaps_mJ",
+        "kem_decaps_mJ",
+        "sig_sign_mJ",
+        "sig_verify_mJ",
+    )
+    for energy_key in energy_keys:
+        value = metrics.get(energy_key)
+        if not isinstance(value, (int, float)):
+            metrics[energy_key] = 0.0
+        else:
+            metrics[energy_key] = float(value)
+
+    # Mirror total rekey energy (if any) onto the handshake metrics payload for flattening.
+    rekey_energy = metrics.get("rekey_energy_mJ")
+    if isinstance(rekey_energy, (int, float)):
+        metrics["rekey_energy_mJ"] = float(rekey_energy)
+    else:
+        metrics.setdefault("rekey_energy_mJ", 0.0)
+
 @dataclass(frozen=True)
 class ServerHello:
     version: int
@@ -107,6 +198,8 @@ def build_server_hello(
     wire += struct.pack("!I", len(kem_pub)) + kem_pub
     wire += struct.pack("!H", len(signature)) + signature
     artifacts["server_hello_bytes"] = len(wire)
+    artifacts.setdefault("public_key_bytes", len(kem_pub))
+    artifacts.setdefault("signature_bytes", len(signature))
     artifacts.setdefault("challenge_bytes", len(challenge))
     ephemeral = ServerEphemeral(
         kem_name=kem_name.decode("utf-8"),
@@ -171,6 +264,10 @@ def parse_and_verify_server_hello(
         metrics_ref.setdefault("role", metrics_ref.get("role", "drone"))
         primitives = metrics_ref.setdefault("primitives", {})
         sig_metrics = primitives.setdefault("signature", {})
+        kem_metrics = primitives.setdefault("kem", {})
+        kem_metrics.setdefault("public_key_bytes", len(kem_pub))
+        artifacts_ref = metrics_ref.setdefault("artifacts", {})
+        artifacts_ref.setdefault("public_key_bytes", len(kem_pub))
     else:
         sig_metrics = None
     sig = None
@@ -424,6 +521,7 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
     )
     handshake_metrics["handshake_wall_end_ns"] = time.time_ns()
     handshake_metrics["handshake_total_ns"] = time.perf_counter_ns() - handshake_perf_start
+    _finalize_handshake_metrics(handshake_metrics)
     return (
         key_recv,
         key_send,
@@ -532,6 +630,7 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
     handshake_metrics["handshake_wall_start_ns"] = handshake_wall_start
     handshake_metrics["handshake_wall_end_ns"] = time.time_ns()
     handshake_metrics["handshake_total_ns"] = time.perf_counter_ns() - handshake_perf_start
+    _finalize_handshake_metrics(handshake_metrics)
 
     # Return in expected format (nonce seeds are unused)
     return (
