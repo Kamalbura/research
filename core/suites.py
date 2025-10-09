@@ -63,6 +63,79 @@ _KEM_REGISTRY = {
             "kyber_1024",
         ),
     },
+    "frodokem640aes": {
+        "oqs_name": "FrodoKEM-640-AES",
+        "token": "frodokem640aes",
+        "nist_level": "L1",
+        "kem_id": 2,
+        "kem_param_id": 1,
+        "aliases": (
+            "FrodoKEM-640-AES",
+            "frodokem-640-aes",
+            "frodokem640aes",
+            "frodokem640",
+        ),
+    },
+    "frodokem976aes": {
+        "oqs_name": "FrodoKEM-976-AES",
+        "token": "frodokem976aes",
+        "nist_level": "L3",
+        "kem_id": 2,
+        "kem_param_id": 2,
+        "aliases": (
+            "FrodoKEM-976-AES",
+            "frodokem-976-aes",
+            "frodokem976aes",
+            "frodokem976",
+        ),
+    },
+    "classicmceliece348864": {
+        "oqs_name": "Classic-McEliece-348864",
+        "token": "classicmceliece348864",
+        "nist_level": "L1",
+        "kem_id": 3,
+        "kem_param_id": 1,
+        "aliases": (
+            "Classic-McEliece-348864",
+            "classicmceliece-348864",
+            "classicmceliece348864",
+        ),
+    },
+    "classicmceliece460896": {
+        "oqs_name": "Classic-McEliece-460896",
+        "token": "classicmceliece460896",
+        "nist_level": "L3",
+        "kem_id": 3,
+        "kem_param_id": 2,
+        "aliases": (
+            "Classic-McEliece-460896",
+            "classicmceliece-460896",
+            "classicmceliece460896",
+        ),
+    },
+    "classicmceliece8192128": {
+        "oqs_name": "Classic-McEliece-8192128",
+        "token": "classicmceliece8192128",
+        "nist_level": "L5",
+        "kem_id": 3,
+        "kem_param_id": 3,
+        "aliases": (
+            "Classic-McEliece-8192128",
+            "classicmceliece-8192128",
+            "classicmceliece8192128",
+        ),
+    },
+    "sntrup761": {
+        "oqs_name": "sntrup761",
+        "token": "sntrup761",
+        "nist_level": "L1",
+        "kem_id": 4,
+        "kem_param_id": 1,
+        "aliases": (
+            "sntrup761",
+            "sntrup-761",
+        ),
+    },
 }
 
 

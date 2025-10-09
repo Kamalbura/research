@@ -156,19 +156,10 @@ class TestSuites:
     
     def test_suite_catalog_cross_product(self):
         """Test registry spans full KEM × SIG cross product for AES-GCM."""
-
         suites = list_suites()
 
-        kems = ["ML-KEM-512", "ML-KEM-768", "ML-KEM-1024"]
-        sigs = [
-            "ML-DSA-44",
-            "ML-DSA-65",
-            "ML-DSA-87",
-            "Falcon-512",
-            "Falcon-1024",
-            "SLH-DSA-SHA2-128f",
-            "SLH-DSA-SHA2-256f",
-        ]
+        kems = {config["kem_name"] for config in suites.values()}
+        sigs = {config["sig_name"] for config in suites.values()}
 
         expected_suites = {
             build_suite_id(kem, "AES-256-GCM", sig) for kem in kems for sig in sigs

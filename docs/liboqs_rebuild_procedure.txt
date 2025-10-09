@@ -1,0 +1,160 @@
+PQC liboqs/liboqs-python Rebuild Notes (Windows, oqs-dev)
+========================================================
+
+Purpose
+-------
+We rebuilt liboqs and liboqs-python in the dedicated `oqs-dev` conda environment so the proxy
+can use KEMs beyond ML-KEM (Kyber), specifically HQC and Classic McEliece. BIKE support was
+requested but is not available on Windows because upstream disables it at configure-time. The
+steps below document the exact procedure, toolchain choices, verification, and current gaps.
+
+Host & Environment Summary
+--------------------------
+- OS: Windows (64-bit)
+- Conda env: `oqs-dev` (Python 3.11.13)
+- Toolchain packages (conda-forge channel):
+  * `cmake 3.31.2`
+  * `ninja 1.13.1` + `ninja-base 1.12.1`
+  * `gcc_win-64 13.2.0`
+  * `gxx_win-64 13.2.0`
+  * `binutils_win-64 2.40.*`
+- Source trees tracked in this workspace:
+  * `liboqs/` @ `71a65ef11024bac2d936627201ee62d2009919e5`
+  * `tmp/liboqs-python/` @ `f70842e3e338fa67af2eb6e72b35a4b23bad2e1c`
+- Install prefix used throughout: `C:\Users\burak\oqs-install`
+
+Step 1 – Prepare the build toolchain
+------------------------------------
+1. Activate the env: `conda activate oqs-dev`.
+2. Install build prerequisites (all via conda-forge to avoid legacy MSYS toolchain):
+   ````
+   conda install -c conda-forge cmake ninja gcc_win-64 gxx_win-64 binutils_win-64
+   ````
+3. Confirm the MinGW-style wrappers resolve (`x86_64-w64-mingw32-gcc.exe`, `...-g++.exe`, etc.)
+   from `C:\Users\burak\miniconda3\envs\oqs-dev\Library\bin`.
+4. Ensure `PATH` does **not** include the older `C:\msys64\usr\bin` or `m2w64` entries that
+   previously conflicted with conda-forge GCC.
+
+Step 2 – Build liboqs (shared DLL)
+----------------------------------
+All commands executed from `C:\Users\burak\Desktop\research\liboqs`.
+
+1. Clean any prior artifacts:
+   ````
+   rmdir /s /q build
+   ````
+   (Only needed if a stale build directory exists.)
+2. Configure with Ninja, requesting a shared library so Python can `ctypes` load it:
+   ````
+   cmake -S . -B build -G Ninja ^
+         -DCMAKE_BUILD_TYPE=Release ^
+         -DBUILD_SHARED_LIBS=ON
+   ````
+   - CMake automatically discovers the conda-forge GCC toolchain.
+   - No additional toggles were required for HQC or Classic McEliece; upstream enables them by
+default on Windows when the necessary C implementation is present.
+   - BIKE remains disabled upstream on Windows (`PLATFORMS.md` documents this guard), so no
+value for `OQS_ENABLE_KEM_BIKE` is honored here.
+3. Compile:
+   ````
+   cmake --build build --config Release
+   ````
+4. Install into the shared prefix that liboqs-python expects:
+   ````
+   cmake --install build --prefix C:\Users\burak\oqs-install
+   ````
+   Key artifacts (from `build/install_manifest.txt`):
+   - `C:\Users\burak\oqs-install\bin\liboqs.dll`
+   - `C:\Users\burak\oqs-install\lib\liboqs.dll.a`
+   - Headers under `C:\Users\burak\oqs-install\include\oqs\` (HQC, Classic McEliece, Frodo,
+     ML-KEM, NTRU families, plus signature headers).
+
+Step 3 – Build & install liboqs-python bindings
+-----------------------------------------------
+All commands executed from `C:\Users\burak\Desktop\research\tmp\liboqs-python`.
+
+1. Remove the PyPI-only `oqs` wheel to avoid symbol clashes (not present anymore, but keep in
+   mind for a clean start): `python -m pip uninstall oqs`.
+2. Point the build system at the freshly installed liboqs:
+   ````
+   set OQS_INSTALL_PATH=C:\Users\burak\oqs-install
+   set PATH=%OQS_INSTALL_PATH%\bin;%PATH%
+   ````
+3. Build and install the bindings directly into `oqs-dev`:
+   ````
+   python -m pip install --no-build-isolation .
+   ````
+   - `hatchling` (shipped with the source tree) handles the wheel build.
+   - The resulting package is visible via `python -m pip show liboqs-python`.
+
+Step 4 – Runtime verification
+-----------------------------
+1. Confirm Python can import the module and load the DLL:
+   ````
+   python -c "import oqs; print(len(oqs.get_enabled_kem_mechanisms()))"
+   ````
+2. For auditability we captured the full mechanism lists:
+   - `tmp/kem_list.json` (32 KEMs)
+   - `tmp/sig_list.json` (221 signature variants)
+   Both files were generated with a helper script that instantiates each mechanism once using
+the rebuilt library.
+3. Highlights from the KEM list:
+   - 10 Classic McEliece parameter sets (348864 up to 8192128f)
+   - 3 HQC sets (`HQC-128/192/256`)
+   - 6 FrodoKEM variants (AES & SHAKE for 640/976/1344)
+   - ML-KEM / Kyber (`Kyber512/768/1024`, `ML-KEM-512/768/1024`)
+   - 6 NTRU parameter sets plus `sntrup761`
+   - **BIKE:** not present; upstream excludes it on Windows.
+4. Signature coverage now surfaces Falcon, the SLH-DSA/SPHINCS+ families, ML-DSA (Dilithium),
+   MAYO, CROSS, UOV, SNOVA, and additional experimental schemes (221 total variants).
+5. Sanity-check binding version:
+   ````
+   python -m pip show liboqs-python
+   # -> Version 0.14.0; Location: C:\Users\burak\miniconda3\envs\oqs-dev\Lib\site-packages
+   ````
+
+Validation inside the proxy tree
+--------------------------------
+- `python -m pytest tests/test_suites_config.py` (optional) uses the registry in
+  `core/suites.py` to ensure every selected suite maps to a real algorithm. Running this inside
+  `oqs-dev` now passes with HQC and Classic McEliece in place.
+- End-to-end list dump (`python tmp/list_kems.py`) also succeeds with the rebuilt bindings.
+
+Outstanding gaps & follow-up items
+----------------------------------
+- **BIKE**: Upstream CMake disables BIKE on Windows builds. To enable it we would need to build
+  liboqs on Linux (WSL or container) or patch the source to provide the necessary assembly
+  intrinsics for MSVC/MinGW.
+- **Environment parity**: `oqs-dev` uses the modern conda-forge GCC toolchain whereas the older
+  `gcs-env` still references `m2w64-*` packages. Keep using the dedicated `oqs-dev` env for
+  research builds to avoid toolchain conflicts.
+- **DLL availability**: Ensure any shell that runs the proxy or unit tests prepends
+  `C:\Users\burak\oqs-install\bin` to `PATH`, otherwise Windows will fail to locate
+  `liboqs.dll` at runtime.
+- **libffi regression**: After installing large dependency sets, `_ctypes` failed to load until
+  we reinstalled `libffi` from the defaults channel (`conda install -c defaults libffi=3.4.4`).
+  Keep this workaround in mind if `_ctypes` errors reappear.
+
+Quick reference commands
+------------------------
+````
+# activate toolchain
+eval $(conda shell.powershell hook)
+conda activate oqs-dev
+
+# rebuild liboqs
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+cmake --build build --config Release
+cmake --install build --prefix C:\Users\burak\oqs-install
+
+# rebuild liboqs-python
+set OQS_INSTALL_PATH=C:\Users\burak\oqs-install
+set PATH=%OQS_INSTALL_PATH%\bin;%PATH%
+python -m pip install --no-build-isolation .
+
+# capture algorithms
+python tmp/list_kems.py
+````
+
+This document should give anyone on the team enough detail to reproduce the build, understand
+which algorithms the new binaries expose, and recognize the remaining platform limitations.
