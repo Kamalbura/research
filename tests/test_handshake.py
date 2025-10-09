@@ -74,6 +74,50 @@ def test_mismatched_role_kdf():
     assert cs != cr2 and cr != cs2
 
 
+def test_handshake_metrics_capture():
+    suite_id = "cs-kyber768-aesgcm-dilithium3"
+    suite = get_suite(suite_id)
+    sig = Signature(suite["sig_name"])
+    gcs_pub = sig.generate_keypair()
+
+    server_metrics = {}
+    wire, eph = build_server_hello(suite_id, sig, metrics=server_metrics)
+    assert "primitives" in server_metrics and "kem" in server_metrics["primitives"]
+    assert "keygen_ns" in server_metrics["primitives"]["kem"]
+
+    client_metrics = {"role": "drone"}
+    hello = parse_and_verify_server_hello(wire, CONFIG["WIRE_VERSION"], gcs_pub, metrics=client_metrics)
+    assert hello.metrics is client_metrics
+    assert "verify_ns" in client_metrics["primitives"]["signature"]
+
+    kem_ct, client_shared = client_encapsulate(hello, metrics=client_metrics)
+    assert client_metrics["primitives"]["kem"].get("ciphertext_bytes") == len(kem_ct)
+
+    server_shared = server_decapsulate(eph, kem_ct, metrics=server_metrics)
+    assert server_metrics["primitives"]["kem"].get("decap_ns") is not None
+
+    derive_transport_keys(
+        "client",
+        hello.session_id,
+        hello.kem_name,
+        hello.sig_name,
+        client_shared,
+        metrics=client_metrics,
+    )
+    derive_transport_keys(
+        "server",
+        eph.session_id,
+        eph.kem_name.encode("utf-8"),
+        eph.sig_name.encode("utf-8"),
+        server_shared,
+        metrics=server_metrics,
+    )
+
+    assert client_metrics.get("kdf_client_ns") is not None
+    assert server_metrics.get("kdf_server_ns") is not None
+    assert client_shared == server_shared
+
+
 def _recv_exact(sock, length: int) -> bytes:
     chunks = bytearray()
     while len(chunks) < length:

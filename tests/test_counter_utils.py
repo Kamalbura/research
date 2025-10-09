@@ -41,6 +41,7 @@ def test_load_proxy_counters_success(tmp_path: Path) -> None:
     assert result.last_rekey_suite == "cs-kyber1024-aesgcm-dilithium5"
     assert result.ts_stop_ns == 42
     assert result.path == file_path
+    assert result.handshake_metrics == {}
 
     # Should not raise when suite matches
     result.ensure_rekey("cs-kyber1024-aesgcm-dilithium5")

@@ -79,8 +79,32 @@ class ProxyCounters:
         self.rekeys_fail = 0
         self.last_rekey_ms = 0
         self.last_rekey_suite: Optional[str] = None
+        self.handshake_metrics: Dict[str, object] = {}
+        self._primitive_templates = {
+            "count": 0,
+            "total_ns": 0,
+            "min_ns": None,
+            "max_ns": 0,
+            "total_in_bytes": 0,
+            "total_out_bytes": 0,
+        }
+        self.primitive_metrics: Dict[str, Dict[str, object]] = {
+            "aead_encrypt": dict(self._primitive_templates),
+            "aead_decrypt_ok": dict(self._primitive_templates),
+            "aead_decrypt_fail": dict(self._primitive_templates),
+        }
 
     def to_dict(self) -> Dict[str, object]:
+        def _serialize(stats: Dict[str, object]) -> Dict[str, object]:
+            return {
+                "count": int(stats.get("count", 0) or 0),
+                "total_ns": int(stats.get("total_ns", 0) or 0),
+                "min_ns": int(stats.get("min_ns") or 0),
+                "max_ns": int(stats.get("max_ns", 0) or 0),
+                "total_in_bytes": int(stats.get("total_in_bytes", 0) or 0),
+                "total_out_bytes": int(stats.get("total_out_bytes", 0) or 0),
+            }
+
         return {
             "ptx_out": self.ptx_out,
             "ptx_in": self.ptx_in,
@@ -97,7 +121,31 @@ class ProxyCounters:
             "rekeys_fail": self.rekeys_fail,
             "last_rekey_ms": self.last_rekey_ms,
             "last_rekey_suite": self.last_rekey_suite or "",
+            "handshake_metrics": self.handshake_metrics,
+            "primitive_metrics": {name: _serialize(stats) for name, stats in self.primitive_metrics.items()},
         }
+
+    def _update_primitive(self, key: str, duration_ns: int, in_bytes: int, out_bytes: int) -> None:
+        stats = self.primitive_metrics.setdefault(key, dict(self._primitive_templates))
+        stats["count"] = int(stats.get("count", 0) or 0) + 1
+        stats["total_ns"] = int(stats.get("total_ns", 0) or 0) + max(0, int(duration_ns))
+        current_min = stats.get("min_ns")
+        if current_min in (None, 0) or (isinstance(current_min, int) and duration_ns < current_min):
+            stats["min_ns"] = max(0, int(duration_ns))
+        current_max = stats.get("max_ns", 0) or 0
+        if duration_ns > current_max:
+            stats["max_ns"] = max(0, int(duration_ns))
+        stats["total_in_bytes"] = int(stats.get("total_in_bytes", 0) or 0) + max(0, int(in_bytes))
+        stats["total_out_bytes"] = int(stats.get("total_out_bytes", 0) or 0) + max(0, int(out_bytes))
+
+    def record_encrypt(self, duration_ns: int, plaintext_bytes: int, ciphertext_bytes: int) -> None:
+        self._update_primitive("aead_encrypt", duration_ns, plaintext_bytes, ciphertext_bytes)
+
+    def record_decrypt_ok(self, duration_ns: int, ciphertext_bytes: int, plaintext_bytes: int) -> None:
+        self._update_primitive("aead_decrypt_ok", duration_ns, ciphertext_bytes, plaintext_bytes)
+
+    def record_decrypt_fail(self, duration_ns: int, ciphertext_bytes: int) -> None:
+        self._update_primitive("aead_decrypt_fail", duration_ns, ciphertext_bytes, 0)
 
 
 def _dscp_to_tos(dscp: Optional[int]) -> Optional[int]:
@@ -202,6 +250,7 @@ def _perform_handshake(
     Optional[str],
     Optional[str],
     Tuple[str, int],
+    Dict[str, object],
 ]:
     """Perform TCP handshake and return keys, session details, and authenticated peer address."""
     if role == "gcs":
@@ -278,11 +327,16 @@ def _perform_handshake(
                             )
                             continue
                         # Support either 5-tuple or 7-tuple
+                        metrics_payload: Dict[str, object] = {}
                         if len(result) >= 7:
                             k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id, kem_name, sig_name = result[:7]
+                            if len(result) >= 8 and isinstance(result[7], dict):
+                                metrics_payload = result[7]
                         else:
                             k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id = result
                             kem_name = sig_name = None
+                        if not metrics_payload:
+                            metrics_payload = {}
                         peer_addr = (ip, cfg["UDP_DRONE_RX"])
                         return (
                             k_d2g,
@@ -293,6 +347,7 @@ def _perform_handshake(
                             kem_name,
                             sig_name,
                             peer_addr,
+                            metrics_payload,
                         )
                     finally:
                         try:
@@ -313,11 +368,16 @@ def _perform_handshake(
             client_sock.connect((cfg["GCS_HOST"], cfg["TCP_HANDSHAKE_PORT"]))
             peer_ip, _peer_port = client_sock.getpeername()
             result = client_drone_handshake(client_sock, suite, gcs_sig_public)
+            metrics_payload: Dict[str, object] = {}
             if len(result) >= 7:
                 k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id, kem_name, sig_name = result[:7]
+                if len(result) >= 8 and isinstance(result[7], dict):
+                    metrics_payload = result[7]
             else:
                 k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id = result
                 kem_name = sig_name = None
+            if not metrics_payload:
+                metrics_payload = {}
             peer_addr = (peer_ip, cfg["UDP_GCS_RX"])
             return (
                 k_d2g,
@@ -328,6 +388,7 @@ def _perform_handshake(
                 kem_name,
                 sig_name,
                 peer_addr,
+                metrics_payload,
             )
         finally:
             client_sock.close()
@@ -573,25 +634,39 @@ def run_proxy(
                 extra={"role": role, "error": str(exc), "path": str(status_path)},
             )
 
-        if role == "drone" and gcs_sig_public is None:
-            if load_gcs_public is None:
-                raise NotImplementedError("GCS signature public key not provided (provide peer key or loader)")
+    if role == "drone" and gcs_sig_public is None:
+        if load_gcs_public is None:
+            raise NotImplementedError("GCS signature public key not provided (provide peer key or loader)")
         gcs_sig_public = load_gcs_public(suite)
 
     handshake_result = _perform_handshake(
         role, suite, gcs_sig_secret, gcs_sig_public, cfg, stop_after_seconds, ready_event
     )
 
-    (
-        k_d2g,
-        k_g2d,
-        _nseed_d2g,
-        _nseed_g2d,
-        session_id,
-        kem_name,
-        sig_name,
-        peer_addr,
-    ) = handshake_result
+    if len(handshake_result) >= 9:
+        (
+            k_d2g,
+            k_g2d,
+            _nseed_d2g,
+            _nseed_g2d,
+            session_id,
+            kem_name,
+            sig_name,
+            peer_addr,
+            handshake_metrics,
+        ) = handshake_result
+    else:
+        (
+            k_d2g,
+            k_g2d,
+            _nseed_d2g,
+            _nseed_g2d,
+            session_id,
+            kem_name,
+            sig_name,
+            peer_addr,
+        ) = handshake_result
+        handshake_metrics = {}
 
     suite_id = suite.get("suite_id")
     if not suite_id:
@@ -600,17 +675,23 @@ def run_proxy(
         except Exception:
             suite_id = "unknown"
 
-    write_status({
+    status_payload = {
         "status": "handshake_ok",
         "suite": suite_id,
         "session_id": session_id.hex(),
-    })
+    }
+    if handshake_metrics:
+        status_payload["handshake_metrics"] = handshake_metrics
+    write_status(status_payload)
 
     sess_display = (
         session_id.hex()
         if cfg.get("LOG_SESSION_ID", False)
         else hashlib.sha256(session_id).hexdigest()[:8] + "..."
     )
+
+    with counters_lock:
+        counters.handshake_metrics = dict(handshake_metrics) if handshake_metrics else {}
 
     logger.info(
         "PQC handshake completed successfully",
@@ -927,7 +1008,13 @@ def run_proxy(
                             payload_out = (b"\x01" + payload) if cfg.get("ENABLE_PACKET_TYPE") else payload
                             with context_lock:
                                 current_sender = active_context["sender"]
+                            encrypt_start_ns = time.perf_counter_ns()
                             wire = current_sender.encrypt(payload_out)
+                            encrypt_elapsed_ns = time.perf_counter_ns() - encrypt_start_ns
+                            ciphertext_len = len(wire)
+                            plaintext_len = len(payload_out)
+                            with counters_lock:
+                                counters.record_encrypt(encrypt_elapsed_ns, plaintext_len, ciphertext_len)
 
                             try:
                                 sockets["encrypted"].sendto(wire, sockets["encrypted_peer"])

@@ -76,6 +76,13 @@ class ProxyCounters:
                 f"expected {expected_suite!r}"
             )
 
+    @property
+    def handshake_metrics(self) -> Dict[str, Any]:
+        """Return recorded handshake metrics if available."""
+
+        payload = self.counters.get("handshake_metrics")
+        return payload if isinstance(payload, dict) else {}
+
 
 @dataclass(frozen=True)
 class TrafficSummary:

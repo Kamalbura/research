@@ -1,8 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hashlib
 import hmac
 import os
 import struct
+import time
+from typing import Dict, Optional
 from core.config import CONFIG
 from core.suites import get_suite
 from core.logging_utils import get_logger
@@ -25,6 +27,7 @@ class ServerHello:
     kem_pub: bytes
     signature: bytes
     challenge: bytes
+    metrics: Optional[Dict[str, object]] = None
 
 @dataclass
 class ServerEphemeral:
@@ -33,8 +36,14 @@ class ServerEphemeral:
     session_id: bytes
     kem_obj: object  # oqs.KeyEncapsulation instance
     challenge: bytes
+    metrics: Dict[str, object] = field(default_factory=dict)
 
-def build_server_hello(suite_id: str, server_sig_obj):
+def build_server_hello(
+    suite_id: str,
+    server_sig_obj,
+    *,
+    metrics: Optional[Dict[str, object]] = None,
+):
     suite = get_suite(suite_id)
     if not suite:
         raise NotImplementedError("suite_id not found")
@@ -47,8 +56,26 @@ def build_server_hello(suite_id: str, server_sig_obj):
         raise NotImplementedError("server_sig_obj must be oqs.Signature")
     session_id = os.urandom(8)
     challenge = os.urandom(8)
+    metrics_ref = metrics if metrics is not None else {}
+    metrics_ref.setdefault("role", "gcs")
+    metrics_ref.setdefault("suite_id", suite_id)
+    metrics_ref.setdefault("kem_name", suite["kem_name"])
+    metrics_ref.setdefault("sig_name", suite["sig_name"])
+    primitives = metrics_ref.setdefault("primitives", {})
+    kem_metrics = primitives.setdefault("kem", {})
+    sig_metrics = primitives.setdefault("signature", {})
+    artifacts = metrics_ref.setdefault("artifacts", {})
+
+    keygen_wall_start = time.time_ns()
+    keygen_perf_start = time.perf_counter_ns()
     kem_obj = KeyEncapsulation(kem_name.decode("utf-8"))
     kem_pub = kem_obj.generate_keypair()
+    keygen_perf_end = time.perf_counter_ns()
+    keygen_wall_end = time.time_ns()
+    kem_metrics["keygen_ns"] = keygen_perf_end - keygen_perf_start
+    kem_metrics["keygen_wall_start_ns"] = keygen_wall_start
+    kem_metrics["keygen_wall_end_ns"] = keygen_wall_end
+    kem_metrics["public_key_bytes"] = len(kem_pub)
     # Include negotiated wire version as first byte of transcript to prevent downgrade
     transcript = (
         struct.pack("!B", version)
@@ -63,7 +90,15 @@ def build_server_hello(suite_id: str, server_sig_obj):
         + b"|"
         + challenge
     )
+    sign_wall_start = time.time_ns()
+    sign_perf_start = time.perf_counter_ns()
     signature = server_sig_obj.sign(transcript)
+    sign_perf_end = time.perf_counter_ns()
+    sign_wall_end = time.time_ns()
+    sig_metrics["sign_ns"] = sign_perf_end - sign_perf_start
+    sig_metrics["sign_wall_start_ns"] = sign_wall_start
+    sig_metrics["sign_wall_end_ns"] = sign_wall_end
+    sig_metrics["signature_bytes"] = len(signature)
     wire = struct.pack("!B", version)
     wire += struct.pack("!H", len(kem_name)) + kem_name
     wire += struct.pack("!H", len(sig_name)) + sig_name
@@ -71,16 +106,25 @@ def build_server_hello(suite_id: str, server_sig_obj):
     wire += challenge
     wire += struct.pack("!I", len(kem_pub)) + kem_pub
     wire += struct.pack("!H", len(signature)) + signature
+    artifacts["server_hello_bytes"] = len(wire)
+    artifacts.setdefault("challenge_bytes", len(challenge))
     ephemeral = ServerEphemeral(
         kem_name=kem_name.decode("utf-8"),
         sig_name=sig_name.decode("utf-8"),
         session_id=session_id,
         kem_obj=kem_obj,
         challenge=challenge,
+        metrics=metrics_ref,
     )
     return wire, ephemeral
 
-def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig_pub: bytes) -> ServerHello:
+def parse_and_verify_server_hello(
+    wire: bytes,
+    expected_version: int,
+    server_sig_pub: bytes,
+    *,
+    metrics: Optional[Dict[str, object]] = None,
+) -> ServerHello:
     try:
         offset = 0
         version = wire[offset]
@@ -122,11 +166,27 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         + b"|"
         + challenge
     )
+    metrics_ref = metrics
+    if metrics_ref is not None:
+        metrics_ref.setdefault("role", metrics_ref.get("role", "drone"))
+        primitives = metrics_ref.setdefault("primitives", {})
+        sig_metrics = primitives.setdefault("signature", {})
+    else:
+        sig_metrics = None
     sig = None
     try:
+        verify_wall_start = time.time_ns() if sig_metrics is not None else None
+        verify_perf_start = time.perf_counter_ns() if sig_metrics is not None else None
         sig = Signature(sig_name.decode("utf-8"))
         if not sig.verify(transcript, signature, server_sig_pub):
             raise HandshakeVerifyError("bad signature")
+        if sig_metrics is not None and verify_perf_start is not None and verify_wall_start is not None:
+            verify_perf_end = time.perf_counter_ns()
+            verify_wall_end = time.time_ns()
+            sig_metrics["verify_ns"] = verify_perf_end - verify_perf_start
+            sig_metrics["verify_wall_start_ns"] = verify_wall_start
+            sig_metrics["verify_wall_end_ns"] = verify_wall_end
+            sig_metrics["signature_bytes"] = len(signature)
     except HandshakeVerifyError:
         raise
     except Exception:
@@ -145,6 +205,7 @@ def parse_and_verify_server_hello(wire: bytes, expected_version: int, server_sig
         kem_pub=kem_pub,
         signature=signature,
         challenge=challenge,
+        metrics=metrics_ref,
     )
 
 def _drone_psk_bytes() -> bytes:
@@ -158,11 +219,24 @@ def _drone_psk_bytes() -> bytes:
     return psk
 
 
-def client_encapsulate(server_hello: ServerHello):
+def client_encapsulate(server_hello: ServerHello, *, metrics: Optional[Dict[str, object]] = None):
     kem = None
     try:
         kem = KeyEncapsulation(server_hello.kem_name.decode("utf-8"))
+        metrics_ref = metrics if metrics is not None else getattr(server_hello, "metrics", None)
+        encap_wall_start = time.time_ns() if metrics_ref is not None else None
+        encap_perf_start = time.perf_counter_ns() if metrics_ref is not None else None
         kem_ct, shared_secret = kem.encap_secret(server_hello.kem_pub)
+        if metrics_ref is not None and encap_perf_start is not None and encap_wall_start is not None:
+            encap_perf_end = time.perf_counter_ns()
+            encap_wall_end = time.time_ns()
+            primitives = metrics_ref.setdefault("primitives", {})
+            kem_metrics = primitives.setdefault("kem", {})
+            kem_metrics["encap_ns"] = encap_perf_end - encap_perf_start
+            kem_metrics["encap_wall_start_ns"] = encap_wall_start
+            kem_metrics["encap_wall_end_ns"] = encap_wall_end
+            kem_metrics["ciphertext_bytes"] = len(kem_ct)
+            kem_metrics.setdefault("shared_secret_bytes", len(shared_secret))
         return kem_ct, shared_secret
     except Exception:
         raise NotImplementedError("client_encapsulate failed")
@@ -174,12 +248,30 @@ def client_encapsulate(server_hello: ServerHello):
                 pass
 
 
-def server_decapsulate(ephemeral: ServerEphemeral, kem_ct: bytes):
+def server_decapsulate(
+    ephemeral: ServerEphemeral,
+    kem_ct: bytes,
+    *,
+    metrics: Optional[Dict[str, object]] = None,
+):
     kem_obj = getattr(ephemeral, "kem_obj", None)
     try:
         if kem_obj is None:
             raise NotImplementedError("server_decapsulate missing kem_obj")
+        metrics_ref = metrics if metrics is not None else getattr(ephemeral, "metrics", None)
+        decap_wall_start = time.time_ns() if metrics_ref is not None else None
+        decap_perf_start = time.perf_counter_ns() if metrics_ref is not None else None
         shared_secret = kem_obj.decap_secret(kem_ct)
+        if metrics_ref is not None and decap_perf_start is not None and decap_wall_start is not None:
+            decap_perf_end = time.perf_counter_ns()
+            decap_wall_end = time.time_ns()
+            primitives = metrics_ref.setdefault("primitives", {})
+            kem_metrics = primitives.setdefault("kem", {})
+            kem_metrics["decap_ns"] = decap_perf_end - decap_perf_start
+            kem_metrics["decap_wall_start_ns"] = decap_wall_start
+            kem_metrics["decap_wall_end_ns"] = decap_wall_end
+            kem_metrics.setdefault("ciphertext_bytes", len(kem_ct))
+            kem_metrics.setdefault("shared_secret_bytes", len(shared_secret))
         return shared_secret
     except Exception:
         raise NotImplementedError("server_decapsulate failed")
@@ -193,7 +285,15 @@ def server_decapsulate(ephemeral: ServerEphemeral, kem_ct: bytes):
             ephemeral.kem_obj = None
 
 
-def derive_transport_keys(role: str, session_id: bytes, kem_name: bytes, sig_name: bytes, shared_secret: bytes):
+def derive_transport_keys(
+    role: str,
+    session_id: bytes,
+    kem_name: bytes,
+    sig_name: bytes,
+    shared_secret: bytes,
+    *,
+    metrics: Optional[Dict[str, object]] = None,
+):
     if role not in {"client", "server"}:
         raise NotImplementedError("invalid role")
     if not (isinstance(session_id, bytes) and len(session_id) == 8):
@@ -205,6 +305,9 @@ def derive_transport_keys(role: str, session_id: bytes, kem_name: bytes, sig_nam
         from cryptography.hazmat.primitives import hashes
     except ImportError:
         raise NotImplementedError("cryptography not available")
+    metrics_ref = metrics
+    derive_wall_start = time.time_ns() if metrics_ref is not None else None
+    derive_perf_start = time.perf_counter_ns() if metrics_ref is not None else None
     info = b"pq-drone-gcs:kdf:v1|" + session_id + b"|" + kem_name + b"|" + sig_name
     hkdf = HKDF(
         algorithm=hashes.SHA256(),
@@ -213,6 +316,13 @@ def derive_transport_keys(role: str, session_id: bytes, kem_name: bytes, sig_nam
         info=info,
     )
     okm = hkdf.derive(shared_secret)
+    if metrics_ref is not None and derive_perf_start is not None and derive_wall_start is not None:
+        derive_perf_end = time.perf_counter_ns()
+        derive_wall_end = time.time_ns()
+        prefix = "server" if role == "server" else "client"
+        metrics_ref[f"kdf_{prefix}_ns"] = derive_perf_end - derive_perf_start
+        metrics_ref[f"kdf_{prefix}_wall_start_ns"] = derive_wall_start
+        metrics_ref[f"kdf_{prefix}_wall_end_ns"] = derive_wall_end
     key_d2g = okm[:32]
     key_g2d = okm[32:64]
 
@@ -245,7 +355,18 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
     if suite_id is None:
         raise ValueError("suite not found in registry")
 
-    hello_wire, ephemeral = build_server_hello(suite_id, gcs_sig_secret)
+    handshake_metrics: Dict[str, object] = {
+        "role": "gcs",
+        "suite_id": suite_id,
+        "kem_name": suite.get("kem_name"),
+        "sig_name": suite.get("sig_name"),
+    }
+    handshake_wall_start = time.time_ns()
+    handshake_perf_start = time.perf_counter_ns()
+    hello_wire, ephemeral = build_server_hello(suite_id, gcs_sig_secret, metrics=handshake_metrics)
+    handshake_metrics["handshake_wall_start_ns"] = handshake_wall_start
+    artifacts = handshake_metrics.setdefault("artifacts", {})
+    artifacts.setdefault("server_hello_bytes", len(hello_wire))
     conn.sendall(struct.pack("!I", len(hello_wire)) + hello_wire)
 
     # Receive KEM ciphertext
@@ -262,6 +383,9 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
         if not chunk:
             raise ConnectionError("Connection closed reading ciphertext")
         kem_ct += chunk
+    primitives = handshake_metrics.setdefault("primitives", {})
+    kem_metrics = primitives.setdefault("kem", {})
+    kem_metrics.setdefault("ciphertext_bytes", len(kem_ct))
 
     tag_len = hashlib.sha256().digest_size
     tag = b""
@@ -270,6 +394,7 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
         if not chunk:
             raise ConnectionError("Connection closed reading drone authentication tag")
         tag += chunk
+    artifacts["auth_tag_bytes"] = len(tag)
 
     expected_tag = hmac.new(_drone_psk_bytes(), hello_wire, hashlib.sha256).digest()
     if not hmac.compare_digest(tag, expected_tag):
@@ -288,16 +413,27 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
         )
         raise HandshakeVerifyError("drone authentication failed")
 
-    shared_secret = server_decapsulate(ephemeral, kem_ct)
+    shared_secret = server_decapsulate(ephemeral, kem_ct, metrics=handshake_metrics)
     key_send, key_recv = derive_transport_keys(
         "server",
         ephemeral.session_id,
         ephemeral.kem_name.encode("utf-8"),
         ephemeral.sig_name.encode("utf-8"),
         shared_secret,
+        metrics=handshake_metrics,
     )
-    # Return (drone→gcs key, gcs→drone key, ...)
-    return key_recv, key_send, b"", b"", ephemeral.session_id, ephemeral.kem_name, ephemeral.sig_name
+    handshake_metrics["handshake_wall_end_ns"] = time.time_ns()
+    handshake_metrics["handshake_total_ns"] = time.perf_counter_ns() - handshake_perf_start
+    return (
+        key_recv,
+        key_send,
+        b"",
+        b"",
+        ephemeral.session_id,
+        ephemeral.kem_name,
+        ephemeral.sig_name,
+        handshake_metrics,
+    )
 
 def client_drone_handshake(client_sock, suite, gcs_sig_public):
     # Real handshake implementation with MANDATORY signature verification
@@ -306,6 +442,15 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
     # Add socket timeout to prevent hanging
     client_sock.settimeout(10.0)
     
+    handshake_metrics: Dict[str, object] = {
+        "role": "drone",
+        "suite_id": suite.get("suite_id") if isinstance(suite, dict) else None,
+        "kem_name": suite.get("kem_name") if isinstance(suite, dict) else None,
+        "sig_name": suite.get("sig_name") if isinstance(suite, dict) else None,
+    }
+    handshake_wall_start = time.time_ns()
+    handshake_perf_start = time.perf_counter_ns()
+
     # Receive server hello with length prefix
     hello_len_bytes = b""
     while len(hello_len_bytes) < 4:
@@ -321,10 +466,17 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
         if not chunk:
             raise NotImplementedError("Connection closed reading hello")
         hello_wire += chunk
-    
+    artifacts = handshake_metrics.setdefault("artifacts", {})
+    artifacts["server_hello_bytes"] = len(hello_wire)
+
     # Parse and VERIFY server hello - NO BYPASS ALLOWED
     # This is critical for security - verification failure must abort
-    hello = parse_and_verify_server_hello(hello_wire, CONFIG["WIRE_VERSION"], gcs_sig_public)
+    hello = parse_and_verify_server_hello(
+        hello_wire,
+        CONFIG["WIRE_VERSION"],
+        gcs_sig_public,
+        metrics=handshake_metrics,
+    )
 
     expected_kem = suite.get("kem_name") if isinstance(suite, dict) else None
     expected_sig = suite.get("sig_name") if isinstance(suite, dict) else None
@@ -356,17 +508,31 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
         raise HandshakeVerifyError(
             f"Downgrade attempt detected: expected {expected_sig}, got {negotiated_sig}"
         )
-    
+
     # Encapsulate and send KEM ciphertext + authentication tag
-    kem_ct, shared_secret = client_encapsulate(hello)
+    kem_ct, shared_secret = client_encapsulate(hello, metrics=handshake_metrics)
+    primitives = handshake_metrics.setdefault("primitives", {})
+    kem_metrics = primitives.setdefault("kem", {})
+    kem_metrics.setdefault("ciphertext_bytes", len(kem_ct))
+    kem_metrics.setdefault("shared_secret_bytes", len(shared_secret))
     tag = hmac.new(_drone_psk_bytes(), hello_wire, hashlib.sha256).digest()
     client_sock.sendall(struct.pack("!I", len(kem_ct)) + kem_ct + tag)
+    artifacts["auth_tag_bytes"] = len(tag)
     
     # Derive transport keys
-    key_send, key_recv = derive_transport_keys("client", hello.session_id, 
-                                              hello.kem_name, hello.sig_name, 
-                                              shared_secret)
-    
+    key_send, key_recv = derive_transport_keys(
+        "client",
+        hello.session_id,
+        hello.kem_name,
+        hello.sig_name,
+        shared_secret,
+        metrics=handshake_metrics,
+    )
+
+    handshake_metrics["handshake_wall_start_ns"] = handshake_wall_start
+    handshake_metrics["handshake_wall_end_ns"] = time.time_ns()
+    handshake_metrics["handshake_total_ns"] = time.perf_counter_ns() - handshake_perf_start
+
     # Return in expected format (nonce seeds are unused)
     return (
         key_send,
@@ -376,5 +542,6 @@ def client_drone_handshake(client_sock, suite, gcs_sig_public):
         hello.session_id,
         hello.kem_name.decode() if isinstance(hello.kem_name, bytes) else hello.kem_name,
         hello.sig_name.decode() if isinstance(hello.sig_name, bytes) else hello.sig_name,
+        handshake_metrics,
     )
 

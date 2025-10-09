@@ -453,6 +453,90 @@ def _rounded(value: object, digits: int) -> object:
     return round(num, digits)
 
 
+def _ns_to_ms(value: object) -> float:
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return round(num / 1_000_000.0, 3)
+
+
+def _ns_to_us(value: object) -> float:
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return round(num / 1_000.0, 3)
+
+
+def _flatten_handshake_metrics(metrics: Dict[str, object]) -> Dict[str, object]:
+    base = {
+        "handshake_role": "",
+        "handshake_total_ms": 0.0,
+        "handshake_wall_start_ns": 0,
+        "handshake_wall_end_ns": 0,
+        "handshake_kem_keygen_us": 0.0,
+        "handshake_kem_encap_us": 0.0,
+        "handshake_kem_decap_us": 0.0,
+        "handshake_sig_sign_us": 0.0,
+        "handshake_sig_verify_us": 0.0,
+        "handshake_kdf_server_us": 0.0,
+        "handshake_kdf_client_us": 0.0,
+        "handshake_kem_pub_bytes": 0,
+        "handshake_kem_ct_bytes": 0,
+        "handshake_sig_bytes": 0,
+        "handshake_auth_tag_bytes": 0,
+        "handshake_shared_secret_bytes": 0,
+        "handshake_server_hello_bytes": 0,
+        "handshake_challenge_bytes": 0,
+    }
+    if not isinstance(metrics, dict) or not metrics:
+        return base.copy()
+
+    result = base.copy()
+
+    def _as_int(value: object) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    result["handshake_role"] = str(metrics.get("role") or "")
+    result["handshake_total_ms"] = _ns_to_ms(metrics.get("handshake_total_ns"))
+    result["handshake_wall_start_ns"] = _as_int(metrics.get("handshake_wall_start_ns"))
+    result["handshake_wall_end_ns"] = _as_int(metrics.get("handshake_wall_end_ns"))
+
+    primitives = metrics.get("primitives") or {}
+    if isinstance(primitives, dict):
+        kem_metrics = primitives.get("kem") or {}
+        if isinstance(kem_metrics, dict):
+            result["handshake_kem_keygen_us"] = _ns_to_us(kem_metrics.get("keygen_ns"))
+            result["handshake_kem_encap_us"] = _ns_to_us(kem_metrics.get("encap_ns"))
+            result["handshake_kem_decap_us"] = _ns_to_us(kem_metrics.get("decap_ns"))
+            result["handshake_kem_pub_bytes"] = _as_int(kem_metrics.get("public_key_bytes"))
+            result["handshake_kem_ct_bytes"] = _as_int(kem_metrics.get("ciphertext_bytes"))
+            result["handshake_shared_secret_bytes"] = _as_int(kem_metrics.get("shared_secret_bytes"))
+        sig_metrics = primitives.get("signature") or {}
+        if isinstance(sig_metrics, dict):
+            result["handshake_sig_sign_us"] = _ns_to_us(sig_metrics.get("sign_ns"))
+            result["handshake_sig_verify_us"] = _ns_to_us(sig_metrics.get("verify_ns"))
+            if not result["handshake_sig_bytes"]:
+                result["handshake_sig_bytes"] = _as_int(sig_metrics.get("signature_bytes"))
+
+    result["handshake_kdf_server_us"] = _ns_to_us(metrics.get("kdf_server_ns"))
+    result["handshake_kdf_client_us"] = _ns_to_us(metrics.get("kdf_client_ns"))
+
+    artifacts = metrics.get("artifacts") or {}
+    if isinstance(artifacts, dict):
+        if not result["handshake_sig_bytes"]:
+            result["handshake_sig_bytes"] = _as_int(artifacts.get("signature_bytes"))
+        result["handshake_auth_tag_bytes"] = _as_int(artifacts.get("auth_tag_bytes"))
+        result["handshake_server_hello_bytes"] = _as_int(artifacts.get("server_hello_bytes"))
+        result["handshake_challenge_bytes"] = _as_int(artifacts.get("challenge_bytes"))
+
+    return result
+
+
 def resolve_suites(requested: Optional[Iterable[str]]) -> List[str]:
     suite_listing = suites_mod.list_suites()
     if isinstance(suite_listing, dict):
@@ -1374,6 +1458,12 @@ def run_suite(
 
     snapshot_proxy_artifacts(suite)
     proxy_stats = read_proxy_stats_live() or read_proxy_summary()
+    handshake_metrics_payload: Dict[str, object] = {}
+    if isinstance(proxy_stats, dict):
+        handshake_metrics_payload = proxy_stats.get("handshake_metrics") or {}
+        if not isinstance(handshake_metrics_payload, dict):
+            handshake_metrics_payload = {}
+    handshake_fields = _flatten_handshake_metrics(handshake_metrics_payload)
 
     if power_capture_enabled and power_request_ok:
         power_status = poll_power_status(max_wait_s=max(6.0, duration_s * 0.25))
@@ -1594,6 +1684,24 @@ def run_suite(
         "timing_guard_ms": None,
         "timing_guard_violation": False,
     }
+
+    row.update(handshake_fields)
+
+    row["handshake_energy_mJ"] = 0.0
+    row["handshake_energy_error"] = ""
+    if handshake_fields["handshake_wall_start_ns"] and handshake_fields["handshake_wall_end_ns"]:
+        if isinstance(power_csv_path_val, str) and power_csv_path_val:
+            try:
+                energy_mj = calculate_transient_energy(
+                    power_csv_path_val,
+                    int(handshake_fields["handshake_wall_start_ns"]),
+                    int(handshake_fields["handshake_wall_end_ns"]),
+                )
+                row["handshake_energy_mJ"] = round(energy_mj, 3)
+            except (FileNotFoundError, ValueError) as exc:
+                row["handshake_energy_error"] = str(exc)
+            except Exception as exc:
+                row["handshake_energy_error"] = str(exc)
 
     rekey_energy_error: Optional[str] = None
     if (
