@@ -5,6 +5,16 @@ Tests for AEAD framing functionality.
 import os
 import pytest
 
+try:
+    from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # type: ignore
+except ImportError:  # pragma: no cover - fallback when ChaCha is unavailable
+    ChaCha20Poly1305 = None
+
+try:
+    import ascon  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    ascon = None
+
 # Skip tests if cryptography not available
 pytest.importorskip("cryptography.hazmat.primitives.ciphers.aead")
 
@@ -61,6 +71,55 @@ def test_round_trip_three_payloads():
         
         # Verify exact match
         assert decrypted == payload
+
+
+@pytest.mark.parametrize(
+    "suite_id",
+    [
+        pytest.param(
+            "cs-mlkem512-chacha20poly1305-mldsa44",
+            marks=pytest.mark.skipif(
+                ChaCha20Poly1305 is None, reason="ChaCha20-Poly1305 unavailable"
+            ),
+        ),
+        pytest.param(
+            "cs-mlkem512-ascon128-mldsa44",
+            marks=pytest.mark.skipif(ascon is None, reason="ascon module not installed"),
+        ),
+    ],
+)
+def test_round_trip_alternative_aeads(suite_id):
+    """Ensure ChaCha20-Poly1305 and ASCON-128 perform full round trips."""
+
+    key = os.urandom(32)
+    session_id = b"\xBB" * 8
+
+    suite = get_suite(suite_id)
+    kem_id, kem_param, sig_id, sig_param = header_ids_for_suite(suite)
+    ids = AeadIds(kem_id, kem_param, sig_id, sig_param)
+
+    sender = Sender(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_send=key,
+        aead_token=suite["aead_token"],
+    )
+
+    receiver = Receiver(
+        version=CONFIG["WIRE_VERSION"],
+        ids=ids,
+        session_id=session_id,
+        epoch=0,
+        key_recv=key,
+        window=CONFIG["REPLAY_WINDOW"],
+        strict_mode=True,
+        aead_token=suite["aead_token"],
+    )
+
+    wire = sender.encrypt(b"alt-aead")
+    assert receiver.decrypt(wire) == b"alt-aead"
 
 
 def test_tamper_header_flip():

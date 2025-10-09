@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import threading
 import time
 from pathlib import Path
@@ -22,17 +23,17 @@ DDOS_DIR = ROOT / "ddos"
 if str(DDOS_DIR) not in sys.path:
     sys.path.insert(0, str(DDOS_DIR))
 
+xgb = None
 try:
-    import xgboost as xgb
-except Exception:  # pragma: no cover - import guard
-    print("❌ xgboost is required. Install: pip install xgboost")
-    raise
+    import xgboost as xgb  # type: ignore[assignment]
+except Exception:  # pragma: no cover - optional dependency guard
+    xgb = None
 
+torch = None
 try:
-    import torch
-except Exception:  # pragma: no cover - import guard
-    print("❌ torch is required. Install CPU build of PyTorch.")
-    raise
+    import torch  # type: ignore[assignment]
+except Exception:  # pragma: no cover - optional dependency guard
+    torch = None
 
 from config import (
     TORCH_NUM_THREADS,
@@ -45,7 +46,53 @@ from config import (
 from run_tst import load_model as load_tst_model
 
 
+def calculate_predicted_flight_constraint(v_h: float, v_v: float, weight_n: float) -> float:
+    """Estimate the mechanical power requirement (W) for the given airspeed state.
+
+    The model treats ``weight_n`` as the vehicle weight in Newtons and combines the
+    horizontal and vertical velocity components (m/s) using a simple Euclidean
+    norm. The resulting magnitude approximates airspeed; multiplying by the
+    weight yields a coarse upper bound on the power that the propulsion system
+    must sustain to maintain the requested trajectory.
+
+    Parameters
+    ----------
+    v_h: float
+        Horizontal velocity in metres per second (m/s).
+    v_v: float
+        Vertical velocity in metres per second (m/s). Positive denotes ascent.
+    weight_n: float
+        Vehicle weight expressed in Newtons. Non-positive inputs collapse to 0.
+
+    Returns
+    -------
+    float
+        Predicted flight constraint in Watts (W). The value is always
+        non-negative.
+    """
+
+    try:
+        horiz = float(v_h)
+        vert = float(v_v)
+        weight = max(0.0, float(weight_n))
+    except (TypeError, ValueError):
+        raise ValueError("V_h, V_v, and weight must be numeric values") from None
+
+    if weight == 0.0:
+        return 0.0
+
+    speed = math.hypot(horiz, vert)
+    if speed <= 0.0:
+        return 0.0
+
+    # Simple correction: ascending flight incurs an additional overhead
+    climb_penalty = max(0.0, vert) * 0.15 * weight
+    return weight * speed + climb_penalty
+
+
 def load_xgb_from_config() -> xgb.XGBClassifier:
+    if xgb is None:  # pragma: no cover - runtime dependency check
+        raise RuntimeError("xgboost is required for load_xgb_from_config(); install xgboost")
     if not Path(XGB_MODEL_FILE).exists():
         raise FileNotFoundError(f"Missing XGBoost model: {XGB_MODEL_FILE}")
     model = xgb.XGBClassifier()
@@ -131,6 +178,8 @@ def time_loop(
 
 
 def bench_matmul(n: int, iters: int) -> tuple[float, float]:
+    if torch is None:  # pragma: no cover - runtime dependency check
+        raise RuntimeError("torch is required for bench_matmul(); install torch")
     torch.set_num_threads(max(1, torch.get_num_threads()))
     a = torch.randn((n, n), dtype=torch.float32)
     b = torch.randn((n, n), dtype=torch.float32)
@@ -176,6 +225,9 @@ def main() -> int:
     parser.add_argument("--mm-n", type=int, default=300)
     parser.add_argument("--mm-iters", type=int, default=200)
     args = parser.parse_args()
+
+    if torch is None:  # pragma: no cover - runtime dependency check
+        raise RuntimeError("torch is required for benchmarking; install torch")
 
     torch.set_num_threads(max(1, args.torch_threads))
 

@@ -422,12 +422,32 @@ def _build_sender_receiver(
     k_g2d: bytes,
     cfg: dict,
 ):
+    aead_token = cfg.get("SUITE_AEAD_TOKEN")
+    if aead_token is None:
+        raise NotImplementedError("SUITE_AEAD_TOKEN missing from proxy config context")
+
     if role == "drone":
-        sender = Sender(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_d2g)
-        receiver = Receiver(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_g2d, cfg["REPLAY_WINDOW"])
+        sender = Sender(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_d2g, aead_token=aead_token)
+        receiver = Receiver(
+            CONFIG["WIRE_VERSION"],
+            ids,
+            session_id,
+            0,
+            k_g2d,
+            cfg["REPLAY_WINDOW"],
+            aead_token=aead_token,
+        )
     else:
-        sender = Sender(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_g2d)
-        receiver = Receiver(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_d2g, cfg["REPLAY_WINDOW"])
+        sender = Sender(CONFIG["WIRE_VERSION"], ids, session_id, 0, k_g2d, aead_token=aead_token)
+        receiver = Receiver(
+            CONFIG["WIRE_VERSION"],
+            ids,
+            session_id,
+            0,
+            k_d2g,
+            cfg["REPLAY_WINDOW"],
+            aead_token=aead_token,
+        )
     return sender, receiver
 
 
@@ -527,6 +547,9 @@ def run_proxy(
         raise ValueError(f"Invalid role: {role}")
 
     _validate_config(cfg)
+
+    cfg = dict(cfg)
+    cfg["SUITE_AEAD_TOKEN"] = suite.get("aead_token", "aesgcm")
 
     counters = ProxyCounters()
     counters_lock = threading.Lock()
@@ -763,6 +786,7 @@ def run_proxy(
                         active_rekeys.discard(rid)
                     return
 
+            prev_token: Optional[str] = cfg.get("SUITE_AEAD_TOKEN")
             try:
                 timeout = cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0)
                 if role == "gcs" and new_secret is not None:
@@ -784,6 +808,7 @@ def run_proxy(
                     new_peer_addr,
                 ) = rk_result
 
+                cfg["SUITE_AEAD_TOKEN"] = new_suite.get("aead_token", "aesgcm")
                 new_ids = _compute_aead_ids(new_suite, new_kem_name, new_sig_name)
                 new_sender, new_receiver = _build_sender_receiver(
                     role, new_ids, new_session_id, new_k_d2g, new_k_g2d, cfg
@@ -832,6 +857,8 @@ def run_proxy(
                     },
                 )
             except Exception as exc:
+                if prev_token is not None:
+                    cfg["SUITE_AEAD_TOKEN"] = prev_token
                 with context_lock:
                     current_suite = active_context["suite"]
                 with counters_lock:

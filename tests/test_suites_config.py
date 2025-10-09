@@ -155,23 +155,26 @@ class TestSuites:
     """Test suite registry integrity and header ID mapping."""
     
     def test_suite_catalog_cross_product(self):
-        """Test registry spans full KEM × SIG cross product for AES-GCM."""
+        """Test registry spans curated KEM × SIG pairs across all AEAD options."""
         suites = list_suites()
 
-        kems = {config["kem_name"] for config in suites.values()}
-        sigs = {config["sig_name"] for config in suites.values()}
+        pairs_to_aeads = {}
+        for suite in suites.values():
+            pair = (suite["kem_name"], suite["sig_name"])
+            pairs_to_aeads.setdefault(pair, set()).add(suite["aead"])
 
-        expected_suites = {
-            build_suite_id(kem, "AES-256-GCM", sig) for kem in kems for sig in sigs
-        }
+        expected_aeads = {"AES-256-GCM", "ChaCha20-Poly1305", "ASCON-128"}
 
-        assert len(suites) == len(expected_suites)
-        assert set(suites.keys()) == expected_suites
+        assert len(pairs_to_aeads) == 15
+        for aeads in pairs_to_aeads.values():
+            assert aeads == expected_aeads
+
+        assert len(suites) == len(pairs_to_aeads) * len(expected_aeads)
     
     def test_suite_fields_complete(self):
         """Test each suite has all required fields."""
-        required_fields = {"kem_name", "sig_name", "aead", "kdf", "nist_level"}
-        
+        required_fields = {"kem_name", "sig_name", "aead", "aead_token", "kdf", "nist_level"}
+
         for suite_id in list_suites():
             suite = get_suite(suite_id)
             assert set(suite.keys()) >= required_fields | {"suite_id"}, \
@@ -181,12 +184,13 @@ class TestSuites:
             assert isinstance(suite["kem_name"], str)
             assert isinstance(suite["sig_name"], str) 
             assert isinstance(suite["aead"], str)
+            assert isinstance(suite["aead_token"], str)
             assert isinstance(suite["kdf"], str)
             assert isinstance(suite["nist_level"], str)
     
     def test_header_ids_unique(self):
-        """Test header ID tuples are unique across all suites."""
-        header_tuples = []
+        """Test header IDs only collide for identical KEM/SIG pairs."""
+        header_map = {}
         
         for suite_id in list_suites():
             suite = get_suite(suite_id)
@@ -197,28 +201,23 @@ class TestSuites:
             for i, id_val in enumerate(header_tuple):
                 assert isinstance(id_val, int), f"Header ID {i} should be int for {suite_id}"
                 assert 1 <= id_val <= 255, f"Header ID {i} out of byte range for {suite_id}"
-            
-            header_tuples.append(header_tuple)
-        
-        # All tuples should be unique
-        assert len(set(header_tuples)) == len(header_tuples), "Header ID tuples must be unique"
+
+            kem_sig_pair = (suite["kem_name"], suite["sig_name"])
+            previous_pair = header_map.setdefault(header_tuple, kem_sig_pair)
+            assert (
+                previous_pair == kem_sig_pair
+            ), "Header tuples should only collide for identical KEM/SIG pairs"
     
     def test_specific_suite_mappings(self):
         """Test specific expected header ID mappings."""
         # Test a few key suites have expected header IDs
-        canonical_cases = [
-            ("cs-mlkem768-aesgcm-mldsa65", (1, 2, 1, 2)),
-            ("cs-mlkem768-aesgcm-falcon512", (1, 2, 2, 1)),
-            ("cs-mlkem512-aesgcm-sphincs128fsha2", (1, 1, 3, 1)),
+        cases = [
+            ("cs-mlkem768-aesgcm-mldsa65", "cs-kyber768-aesgcm-dilithium3", (1, 2, 1, 2)),
+            ("cs-mlkem512-aesgcm-falcon512", "cs-kyber512-aesgcm-falcon512", (1, 1, 2, 1)),
+            ("cs-mlkem1024-aesgcm-sphincs256fsha2", "cs-kyber1024-aesgcm-sphincs256f_sha2", (1, 3, 3, 2)),
         ]
 
-        legacy_ids = [
-            "cs-kyber768-aesgcm-dilithium3",
-            "cs-kyber768-aesgcm-falcon512",
-            "cs-kyber512-aesgcm-sphincs128f_sha2",
-        ]
-
-        for (suite_id, expected_ids), legacy_id in zip(canonical_cases, legacy_ids):
+        for suite_id, legacy_id, expected_ids in cases:
             suite = get_suite(suite_id)
             legacy_suite = get_suite(legacy_id)
             actual_ids = header_ids_for_suite(suite)
@@ -230,6 +229,9 @@ class TestSuites:
             assert legacy_ids_tuple == expected_ids, (
                 f"Legacy alias {legacy_id} should map to {expected_ids}, got {legacy_ids_tuple}"
             )
+
+        extra_suite = get_suite("cs-classicmceliece348864-aesgcm-sphincs128fsha2")
+        assert header_ids_for_suite(extra_suite) == (3, 1, 3, 1)
     
     def test_registry_immutability(self):
         """Test that returned suite dicts cannot mutate the registry."""
@@ -319,7 +321,9 @@ class TestSuites:
     
     def test_aead_kdf_consistency(self):
         """Test AEAD and KDF are consistent across suites."""
+        allowed_aeads = {"AES-256-GCM", "ChaCha20-Poly1305", "ASCON-128"}
+
         for suite_id in list_suites():
             suite = get_suite(suite_id)
-            assert suite["aead"] == "AES-256-GCM", f"Suite {suite_id} should use AES-256-GCM"
+            assert suite["aead"] in allowed_aeads, f"Suite {suite_id} should use allowed AEAD"
             assert suite["kdf"] == "HKDF-SHA256", f"Suite {suite_id} should use HKDF-SHA256"

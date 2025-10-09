@@ -1,3 +1,4 @@
+===============time series transformer =========================
 Suite cs-mlkem1024-aesgcm-falcon1024 — PASS
   • throughput 1.294 Mb/s (16.2% of target)
   • delivered ratio 1.000, loss 0.000% (95% CI 0.000-0.013)

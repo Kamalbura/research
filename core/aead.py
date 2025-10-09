@@ -7,10 +7,19 @@ deterministic 96-bit counter IVs, sliding replay window, and epoch support for r
 
 import struct
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+try:
+    from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+except ImportError:  # pragma: no cover - ChaCha unavailable on very old crypto builds
+    ChaCha20Poly1305 = None
 from cryptography.exceptions import InvalidTag
+
+try:  # Optional dependency installed in gcs-env for PQC evaluation
+    import ascon  # type: ignore
+except ImportError:  # pragma: no cover - ASCON not installed
+    ascon = None
 
 from .config import CONFIG
 from .suites import header_ids_for_suite
@@ -45,6 +54,67 @@ HEADER_LEN = 22
 IV_LEN = 0  # length of IV bytes present on wire (0 after optimization)
 
 
+class _AsconCipher:
+    """Wrapper to present ASCON-128 with the cryptography AEAD interface."""
+
+    __slots__ = ("_key",)
+
+    def __init__(self, key: bytes):
+        self._key = key
+
+    def encrypt(self, nonce: bytes, data: bytes, aad: bytes) -> bytes:
+        return ascon.encrypt(self._key, nonce, aad, data)  # type: ignore[arg-type]
+
+    def decrypt(self, nonce: bytes, data: bytes, aad: bytes) -> bytes:
+        plaintext = ascon.decrypt(self._key, nonce, aad, data)  # type: ignore[arg-type]
+        if plaintext is None:
+            raise InvalidTag("ascon authentication failed")
+        return plaintext
+
+
+def _canonicalize_aead_token(token: str) -> str:
+    candidate = token.lower()
+    if candidate not in {"aesgcm", "chacha20poly1305", "ascon128"}:
+        raise NotImplementedError(f"unknown AEAD token: {token}")
+    return candidate
+
+
+def _instantiate_aead(token: str, key: bytes) -> Tuple[object, int]:
+    """Return AEAD primitive and required nonce length for the suite token."""
+
+    normalized = _canonicalize_aead_token(token)
+
+    if normalized == "aesgcm":
+        if len(key) != 32:
+            raise NotImplementedError("AES-GCM requires 32-byte key material")
+        return AESGCM(key), 12
+
+    if normalized == "chacha20poly1305":
+        if ChaCha20Poly1305 is None:
+            raise NotImplementedError("ChaCha20-Poly1305 not available in cryptography build")
+        if len(key) != 32:
+            raise NotImplementedError("ChaCha20-Poly1305 requires 32-byte key material")
+        return ChaCha20Poly1305(key), 12
+
+    if normalized == "ascon128":
+        if ascon is None:
+            raise NotImplementedError("ascon module not installed")
+        if len(key) < 16:
+            raise NotImplementedError("ASCON-128 requires at least 16 bytes of key material")
+        return _AsconCipher(key[:16]), 16
+
+    raise NotImplementedError(f"unsupported AEAD token: {token}")
+
+
+def _build_nonce(epoch: int, seq: int, nonce_len: int) -> bytes:
+    base = bytes([epoch & 0xFF]) + seq.to_bytes(11, "big")
+    if nonce_len == 12:
+        return base
+    if nonce_len > 12:
+        return base + b"\x00" * (nonce_len - 12)
+    raise NotImplementedError("nonce length must be >= 12 bytes")
+
+
 @dataclass(frozen=True)
 class AeadIds:
     kem_id: int
@@ -66,6 +136,7 @@ class Sender:
     session_id: bytes
     epoch: int
     key_send: bytes
+    aead_token: str = "aesgcm"
     _seq: int = 0
 
     def __post_init__(self):
@@ -81,13 +152,14 @@ class Sender:
         if not isinstance(self.epoch, int) or not (0 <= self.epoch <= 255):
             raise NotImplementedError("epoch must be int in range 0-255")
         
-        if not isinstance(self.key_send, bytes) or len(self.key_send) != 32:
-            raise NotImplementedError("key_send must be exactly 32 bytes")
+        if not isinstance(self.key_send, bytes):
+            raise NotImplementedError("key_send must be bytes")
         
         if not isinstance(self._seq, int) or self._seq < 0:
             raise NotImplementedError("_seq must be non-negative int")
-        
-        self._aesgcm = AESGCM(self.key_send)
+
+        self._aead_token = _canonicalize_aead_token(self.aead_token)
+        self._cipher, self._nonce_len = _instantiate_aead(self._aead_token, self.key_send)
 
     @property
     def seq(self):
@@ -127,12 +199,11 @@ class Sender:
         
         # Pack header with current sequence
         header = self.pack_header(self._seq)
-        
-        # Derive deterministic IV = epoch (1 byte) || seq (11 bytes)
-        iv = bytes([self.epoch & 0xFF]) + self._seq.to_bytes(11, "big")
+
+        iv = _build_nonce(self.epoch, self._seq, self._nonce_len)
 
         try:
-            ciphertext = self._aesgcm.encrypt(iv, plaintext, header)
+            ciphertext = self._cipher.encrypt(iv, plaintext, header)
         except Exception as e:
             raise NotImplementedError(f"AEAD encryption failed: {e}")
         
@@ -163,6 +234,7 @@ class Receiver:
     key_recv: bytes
     window: int
     strict_mode: bool = False  # True = raise exceptions, False = return None
+    aead_token: str = "aesgcm"
     _high: int = -1
     _mask: int = 0
 
@@ -179,8 +251,8 @@ class Receiver:
         if not isinstance(self.epoch, int) or not (0 <= self.epoch <= 255):
             raise NotImplementedError("epoch must be int in range 0-255")
         
-        if not isinstance(self.key_recv, bytes) or len(self.key_recv) != 32:
-            raise NotImplementedError("key_recv must be exactly 32 bytes")
+        if not isinstance(self.key_recv, bytes):
+            raise NotImplementedError("key_recv must be bytes")
         
         if not isinstance(self.window, int) or self.window < 64:
             raise NotImplementedError(f"window must be int >= 64")
@@ -190,8 +262,9 @@ class Receiver:
         
         if not isinstance(self._mask, int) or self._mask < 0:
             raise NotImplementedError("_mask must be non-negative int")
-        
-        self._aesgcm = AESGCM(self.key_recv)
+
+        self._aead_token = _canonicalize_aead_token(self.aead_token)
+        self._cipher, self._nonce_len = _instantiate_aead(self._aead_token, self.key_recv)
         self._last_error: Optional[str] = None
 
     def _check_replay(self, seq: int) -> None:
@@ -272,12 +345,12 @@ class Receiver:
             return None
         
         # Reconstruct deterministic IV instead of reading from wire
-        iv = bytes([epoch & 0xFF]) + seq.to_bytes(11, "big")
+        iv = _build_nonce(epoch, seq, self._nonce_len)
         ciphertext = wire[HEADER_LEN:]
         
         # Decrypt with header as AAD
         try:
-            plaintext = self._aesgcm.decrypt(iv, ciphertext, header)
+            plaintext = self._cipher.decrypt(iv, ciphertext, header)
         except InvalidTag:
             self._last_error = "auth"
             if self.strict_mode:

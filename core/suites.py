@@ -6,7 +6,6 @@ helpers for querying oqs availability.
 
 from __future__ import annotations
 
-from itertools import product
 from types import MappingProxyType
 from typing import Dict, Iterable, Tuple
 
@@ -125,6 +124,42 @@ _KEM_REGISTRY = {
             "classicmceliece8192128",
         ),
     },
+    "hqc128": {
+        "oqs_name": "HQC-128",
+        "token": "hqc128",
+        "nist_level": "L1",
+        "kem_id": 5,
+        "kem_param_id": 1,
+        "aliases": (
+            "HQC-128",
+            "hqc-128",
+            "hqc128",
+        ),
+    },
+    "hqc192": {
+        "oqs_name": "HQC-192",
+        "token": "hqc192",
+        "nist_level": "L3",
+        "kem_id": 5,
+        "kem_param_id": 2,
+        "aliases": (
+            "HQC-192",
+            "hqc-192",
+            "hqc192",
+        ),
+    },
+    "hqc256": {
+        "oqs_name": "HQC-256",
+        "token": "hqc256",
+        "nist_level": "L5",
+        "kem_id": 5,
+        "kem_param_id": 3,
+        "aliases": (
+            "HQC-256",
+            "hqc-256",
+            "hqc256",
+        ),
+    },
     "sntrup761": {
         "oqs_name": "sntrup761",
         "token": "sntrup761",
@@ -143,6 +178,7 @@ _SIG_REGISTRY = {
     "mldsa44": {
         "oqs_name": "ML-DSA-44",
         "token": "mldsa44",
+        "nist_level": "L1",
         "sig_id": 1,
         "sig_param_id": 1,
         "aliases": (
@@ -156,6 +192,7 @@ _SIG_REGISTRY = {
     "mldsa65": {
         "oqs_name": "ML-DSA-65",
         "token": "mldsa65",
+        "nist_level": "L3",
         "sig_id": 1,
         "sig_param_id": 2,
         "aliases": (
@@ -169,6 +206,7 @@ _SIG_REGISTRY = {
     "mldsa87": {
         "oqs_name": "ML-DSA-87",
         "token": "mldsa87",
+        "nist_level": "L5",
         "sig_id": 1,
         "sig_param_id": 3,
         "aliases": (
@@ -182,6 +220,7 @@ _SIG_REGISTRY = {
     "falcon512": {
         "oqs_name": "Falcon-512",
         "token": "falcon512",
+        "nist_level": "L1",
         "sig_id": 2,
         "sig_param_id": 1,
         "aliases": (
@@ -193,6 +232,7 @@ _SIG_REGISTRY = {
     "falcon1024": {
         "oqs_name": "Falcon-1024",
         "token": "falcon1024",
+        "nist_level": "L5",
         "sig_id": 2,
         "sig_param_id": 2,
         "aliases": (
@@ -204,6 +244,7 @@ _SIG_REGISTRY = {
     "sphincs128fsha2": {
         "oqs_name": "SPHINCS+-SHA2-128f-simple",
         "token": "sphincs128fsha2",
+        "nist_level": "L1",
         "sig_id": 3,
         "sig_param_id": 1,
         "aliases": (
@@ -216,6 +257,7 @@ _SIG_REGISTRY = {
     "sphincs256fsha2": {
         "oqs_name": "SPHINCS+-SHA2-256f-simple",
         "token": "sphincs256fsha2",
+        "nist_level": "L5",
         "sig_id": 3,
         "sig_param_id": 2,
         "aliases": (
@@ -239,6 +281,27 @@ _AEAD_REGISTRY = {
             "aesgcm",
             "aes256gcm",
             "aes-gcm",
+        ),
+    },
+    "chacha20poly1305": {
+        "display_name": "ChaCha20-Poly1305",
+        "token": "chacha20poly1305",
+        "kdf": "HKDF-SHA256",
+        "aliases": (
+            "ChaCha20-Poly1305",
+            "chacha20poly1305",
+            "chacha20-poly1305",
+            "chacha20",
+        ),
+    },
+    "ascon128": {
+        "display_name": "ASCON-128",
+        "token": "ascon128",
+        "kdf": "HKDF-SHA256",
+        "aliases": (
+            "ASCON-128",
+            "ascon-128",
+            "ascon128",
         ),
     },
 }
@@ -295,28 +358,14 @@ def build_suite_id(kem: str, aead: str, sig: str) -> str:
     return f"cs-{kem_entry['token']}-{aead_entry['token']}-{sig_entry['token']}"
 
 
-_LEGACY_SUITE_ALIASES: Tuple[Tuple[str, str, str], ...] = (
-    ("ML-KEM-512", "AES-256-GCM", "ML-DSA-44"),
-    ("ML-KEM-768", "AES-256-GCM", "ML-DSA-65"),
-    ("ML-KEM-1024", "AES-256-GCM", "ML-DSA-87"),
-    ("ML-KEM-768", "AES-256-GCM", "Falcon-512"),
-    ("ML-KEM-1024", "AES-256-GCM", "Falcon-1024"),
-    ("ML-KEM-512", "AES-256-GCM", "SLH-DSA-SHA2-128f"),
-    ("ML-KEM-1024", "AES-256-GCM", "SLH-DSA-SHA2-256f"),
-)
-
-
 _SUITE_ALIASES = {
-    legacy_id: build_suite_id(*components)
-    for legacy_id, components in {
-        "cs-kyber512-aesgcm-dilithium2": _LEGACY_SUITE_ALIASES[0],
-        "cs-kyber768-aesgcm-dilithium3": _LEGACY_SUITE_ALIASES[1],
-        "cs-kyber1024-aesgcm-dilithium5": _LEGACY_SUITE_ALIASES[2],
-        "cs-kyber768-aesgcm-falcon512": _LEGACY_SUITE_ALIASES[3],
-        "cs-kyber1024-aesgcm-falcon1024": _LEGACY_SUITE_ALIASES[4],
-        "cs-kyber512-aesgcm-sphincs128f_sha2": _LEGACY_SUITE_ALIASES[5],
-        "cs-kyber1024-aesgcm-sphincs256f_sha2": _LEGACY_SUITE_ALIASES[6],
-    }.items()
+    "cs-kyber512-aesgcm-dilithium2": "cs-mlkem512-aesgcm-mldsa44",
+    "cs-kyber768-aesgcm-dilithium3": "cs-mlkem768-aesgcm-mldsa65",
+    "cs-kyber1024-aesgcm-dilithium5": "cs-mlkem1024-aesgcm-mldsa87",
+    "cs-kyber512-aesgcm-falcon512": "cs-mlkem512-aesgcm-falcon512",
+    "cs-kyber1024-aesgcm-falcon1024": "cs-mlkem1024-aesgcm-falcon1024",
+    "cs-kyber512-aesgcm-sphincs128f_sha2": "cs-mlkem512-aesgcm-sphincs128fsha2",
+    "cs-kyber1024-aesgcm-sphincs256f_sha2": "cs-mlkem1024-aesgcm-sphincs256fsha2",
 }
 
 
@@ -324,6 +373,11 @@ def _compose_suite(kem_key: str, aead_key: str, sig_key: str) -> Dict[str, objec
     kem_entry = _KEM_REGISTRY[kem_key]
     aead_entry = _AEAD_REGISTRY[aead_key]
     sig_entry = _SIG_REGISTRY[sig_key]
+
+    if kem_entry["nist_level"] != sig_entry["nist_level"]:
+        raise NotImplementedError(
+            f"NIST level mismatch for {kem_entry['oqs_name']} / {sig_entry['oqs_name']}"
+        )
 
     suite_id = f"cs-{kem_entry['token']}-{aead_entry['token']}-{sig_entry['token']}"
 
@@ -338,7 +392,28 @@ def _compose_suite(kem_key: str, aead_key: str, sig_key: str) -> Dict[str, objec
         "nist_level": kem_entry["nist_level"],
         "aead": aead_entry["display_name"],
         "kdf": aead_entry["kdf"],
+        "aead_token": aead_entry["token"],
     }
+
+_SUITE_MATRIX: Tuple[Tuple[str, str], ...] = (
+    ("mlkem512", "mldsa44"),
+    ("mlkem512", "falcon512"),
+    ("mlkem512", "sphincs128fsha2"),
+    ("frodokem640aes", "mldsa44"),
+    ("classicmceliece348864", "sphincs128fsha2"),
+    ("hqc128", "falcon512"),
+    ("mlkem768", "mldsa65"),
+    ("frodokem976aes", "mldsa65"),
+    ("classicmceliece460896", "mldsa65"),
+    ("hqc192", "mldsa65"),
+    ("mlkem1024", "mldsa87"),
+    ("mlkem1024", "falcon1024"),
+    ("mlkem1024", "sphincs256fsha2"),
+    ("classicmceliece8192128", "sphincs256fsha2"),
+    ("hqc256", "mldsa87"),
+)
+
+_AEAD_ORDER: Tuple[str, ...] = ("aesgcm", "chacha20poly1305", "ascon128")
 
 
 def _canonicalize_suite_id(suite_id: str) -> str:
@@ -368,9 +443,14 @@ def _canonicalize_suite_id(suite_id: str) -> str:
 
 def _generate_suite_registry() -> MappingProxyType:
     suites: Dict[str, MappingProxyType] = {}
-    for kem_key, sig_key in product(_KEM_REGISTRY.keys(), _SIG_REGISTRY.keys()):
-        suite_dict = _compose_suite(kem_key, "aesgcm", sig_key)
-        suites[suite_dict["suite_id"]] = MappingProxyType(suite_dict)
+    for kem_key, sig_key in _SUITE_MATRIX:
+        if kem_key not in _KEM_REGISTRY:
+            raise NotImplementedError(f"unknown KEM in suite matrix: {kem_key}")
+        if sig_key not in _SIG_REGISTRY:
+            raise NotImplementedError(f"unknown signature in suite matrix: {sig_key}")
+        for aead_key in _AEAD_ORDER:
+            suite_dict = _compose_suite(kem_key, aead_key, sig_key)
+            suites[suite_dict["suite_id"]] = MappingProxyType(suite_dict)
     return MappingProxyType(suites)
 
 
