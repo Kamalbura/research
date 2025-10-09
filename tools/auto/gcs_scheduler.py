@@ -1443,6 +1443,8 @@ def run_suite(
 
     snapshot_proxy_artifacts(suite)
     proxy_stats = read_proxy_stats_live() or read_proxy_summary()
+    if not isinstance(proxy_stats, dict):
+        proxy_stats = {}
     handshake_metrics_payload: Dict[str, object] = {}
     if isinstance(proxy_stats, dict):
         handshake_metrics_payload = proxy_stats.get("handshake_metrics") or {}
