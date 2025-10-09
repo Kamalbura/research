@@ -56,7 +56,7 @@ from core import suites as suites_mod
 from core.config import CONFIG
 from tools.blackout_metrics import compute_blackout
 from tools.merge_power import extract_power_fields
-from tools.power_utils import calculate_transient_energy
+from tools.power_utils import PowerSample, align_gcs_to_drone, integrate_energy_mj, load_power_trace
 
 
 DRONE_HOST = CONFIG["DRONE_HOST"]
@@ -1934,6 +1934,20 @@ def run_suite(
         _to_int_or_none(power_summary.get("end_ns")) if isinstance(power_summary, dict) else None
     )
 
+    power_trace: List[PowerSample]
+    power_trace_error: Optional[str] = None
+    if isinstance(power_csv_path_val, str) and power_csv_path_val:
+        try:
+            power_trace = load_power_trace(power_csv_path_val)
+        except FileNotFoundError as exc:
+            power_trace = []
+            power_trace_error = str(exc)
+        except Exception as exc:  # pragma: no cover - defensive parsing
+            power_trace = []
+            power_trace_error = str(exc)
+    else:
+        power_trace = []
+
     if not power_capture_enabled:
         power_note = "disabled"
     elif not power_request_ok:
@@ -2159,6 +2173,8 @@ def run_suite(
         "handshake_energy_end_ns": 0,
         "rekey_energy_start_ns": 0,
         "rekey_energy_end_ns": 0,
+        "handshake_energy_segments": 0,
+        "rekey_energy_segments": 0,
         "clock_offset_ns": offset_ns,
         "power_request_ok": power_request_ok,
         "power_capture_ok": power_capture_complete,
@@ -2175,12 +2191,14 @@ def run_suite(
         "power_summary_path": power_summary_path_val or "",
         "power_fetch_status": power_fetch_status,
         "power_fetch_error": power_fetch_error,
+        "power_trace_samples": len(power_trace),
+        "power_trace_error": power_trace_error or "",
         "monitor_manifest_path": monitor_manifest_path_val,
         "telemetry_status_path": telemetry_status_path_val,
         "monitor_artifacts_fetched": monitor_artifact_count,
-    "monitor_artifact_paths": monitor_artifact_paths_serialized,
-    "monitor_artifact_categories": monitor_categorized_serialized,
-    "monitor_remote_map": monitor_remote_map,
+        "monitor_artifact_paths": monitor_artifact_paths_serialized,
+        "monitor_artifact_categories": monitor_categorized_serialized,
+        "monitor_remote_map": monitor_remote_map,
         "monitor_fetch_status": monitor_fetch_status,
         "monitor_fetch_error": monitor_fetch_error,
         "blackout_ms": None,
@@ -2221,7 +2239,7 @@ def run_suite(
             return None
         if ts == 0:
             return None
-        return ts + offset_ns
+        return align_gcs_to_drone(ts, offset_ns)
 
     def _clamp_to_capture(window_start: Optional[int], window_end: Optional[int]) -> Tuple[Optional[int], Optional[int]]:
         if window_start is None or window_end is None:
@@ -2243,25 +2261,27 @@ def run_suite(
     row["handshake_energy_end_ns"] = handshake_end_remote or 0
 
     row["handshake_energy_mJ"] = 0.0
-    row["handshake_energy_error"] = ""
+    row["handshake_energy_error"] = power_trace_error or ""
     if (
-        isinstance(power_csv_path_val, str)
-        and power_csv_path_val
+        not power_trace_error
+        and power_trace
         and handshake_start_remote is not None
         and handshake_end_remote is not None
         and handshake_end_remote > handshake_start_remote
     ):
         try:
-            energy_mj = calculate_transient_energy(
-                power_csv_path_val,
+            energy_mj, segments = integrate_energy_mj(
+                power_trace,
                 handshake_start_remote,
                 handshake_end_remote,
             )
             row["handshake_energy_mJ"] = round(energy_mj, 3)
-        except (FileNotFoundError, ValueError) as exc:
-            row["handshake_energy_error"] = str(exc)
+            row["handshake_energy_segments"] = segments
+            row["handshake_energy_error"] = ""
         except Exception as exc:
             row["handshake_energy_error"] = str(exc)
+    elif not row["handshake_energy_error"] and handshake_start_remote and handshake_end_remote:
+        row["handshake_energy_error"] = "power_trace_empty"
 
     primitive_duration_map = {
         "kem_keygen_ms": row["kem_keygen_ms"],
@@ -2279,33 +2299,34 @@ def run_suite(
             portion = duration_ms / duration_total_ms
             row[energy_key] = round(row["handshake_energy_mJ"] * portion, 3)
 
-    rekey_energy_error: Optional[str] = None
+    rekey_energy_error: Optional[str] = power_trace_error
     rekey_start_remote = _remote_timestamp(rekey_mark_ns)
     rekey_end_remote = _remote_timestamp(rekey_complete_ns)
     rekey_start_remote, rekey_end_remote = _clamp_to_capture(rekey_start_remote, rekey_end_remote)
     row["rekey_energy_start_ns"] = rekey_start_remote or 0
     row["rekey_energy_end_ns"] = rekey_end_remote or 0
 
+    row["rekey_energy_segments"] = 0
     if (
-        isinstance(power_csv_path_val, str)
-        and power_csv_path_val
+        not rekey_energy_error
+        and power_trace
         and rekey_start_remote is not None
         and rekey_end_remote is not None
         and rekey_end_remote > rekey_start_remote
     ):
         try:
-            energy_mj = calculate_transient_energy(
-                power_csv_path_val,
+            energy_mj, segments = integrate_energy_mj(
+                power_trace,
                 rekey_start_remote,
                 rekey_end_remote,
             )
             row["rekey_energy_mJ"] = round(energy_mj, 3)
-        except FileNotFoundError as exc:
-            rekey_energy_error = str(exc)
-        except ValueError as exc:
-            rekey_energy_error = str(exc)
+            row["rekey_energy_segments"] = segments
+            rekey_energy_error = None
         except Exception as exc:
             rekey_energy_error = str(exc)
+    elif not rekey_energy_error and rekey_start_remote and rekey_end_remote:
+        rekey_energy_error = "power_trace_empty"
 
     if rekey_energy_error:
         row["rekey_energy_error"] = rekey_energy_error

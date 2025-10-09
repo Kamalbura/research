@@ -55,19 +55,20 @@ def _finalize_handshake_metrics(metrics: Optional[Dict[str, object]]) -> None:
         artifacts = {}
         metrics["artifacts"] = artifacts
 
-    def _export_time(prefix: str, source: Dict[str, object], key: str, legacy_key: Optional[str] = None) -> None:
+    def _export_time(prefix: str, source: Dict[str, object], key: str, legacy_key: Optional[str] = None) -> float:
         ns_value = source.get(key)
         ms_value = _ns_to_ms(ns_value)
         metrics[f"{prefix}_max_ms"] = ms_value
         metrics[f"{prefix}_avg_ms"] = ms_value
         if legacy_key:
             metrics.setdefault(legacy_key, ms_value)
+        return ms_value
 
-    _export_time("kem_keygen", kem_metrics, "keygen_ns", "kem_keygen_ms")
-    _export_time("kem_encaps", kem_metrics, "encap_ns", "kem_encaps_ms")
-    _export_time("kem_decaps", kem_metrics, "decap_ns", "kem_decap_ms")
-    _export_time("sig_sign", sig_metrics, "sign_ns", "sig_sign_ms")
-    _export_time("sig_verify", sig_metrics, "verify_ns", "sig_verify_ms")
+    kem_keygen_ms = _export_time("kem_keygen", kem_metrics, "keygen_ns", "kem_keygen_ms")
+    kem_encaps_ms = _export_time("kem_encaps", kem_metrics, "encap_ns", "kem_encaps_ms")
+    kem_decaps_ms = _export_time("kem_decaps", kem_metrics, "decap_ns", "kem_decap_ms")
+    sig_sign_ms = _export_time("sig_sign", sig_metrics, "sign_ns", "sig_sign_ms")
+    sig_verify_ms = _export_time("sig_verify", sig_metrics, "verify_ns", "sig_verify_ms")
 
     metrics["pub_key_size_bytes"] = int(kem_metrics.get("public_key_bytes") or artifacts.get("public_key_bytes") or 0)
     metrics["ciphertext_size_bytes"] = int(kem_metrics.get("ciphertext_bytes") or 0)
@@ -77,37 +78,8 @@ def _finalize_handshake_metrics(metrics: Optional[Dict[str, object]]) -> None:
     handshake_total_ns = metrics.get("handshake_total_ns")
     metrics["rekey_ms"] = _ns_to_ms(handshake_total_ns)
 
-    total_ns = 0
-    for key in ("keygen_ns", "encap_ns", "decap_ns"):
-        value = kem_metrics.get(key)
-        if isinstance(value, (int, float)) and value > 0:
-            total_ns += int(value)
-    for key in ("sign_ns", "verify_ns"):
-        value = sig_metrics.get(key)
-        if isinstance(value, (int, float)) and value > 0:
-            total_ns += int(value)
-    metrics["primitive_total_ms"] = _ns_to_ms(total_ns)
-
-    energy_keys = (
-        "kem_keygen_mJ",
-        "kem_encaps_mJ",
-        "kem_decaps_mJ",
-        "sig_sign_mJ",
-        "sig_verify_mJ",
-    )
-    for energy_key in energy_keys:
-        value = metrics.get(energy_key)
-        if not isinstance(value, (int, float)):
-            metrics[energy_key] = 0.0
-        else:
-            metrics[energy_key] = float(value)
-
-    # Mirror total rekey energy (if any) onto the handshake metrics payload for flattening.
-    rekey_energy = metrics.get("rekey_energy_mJ")
-    if isinstance(rekey_energy, (int, float)):
-        metrics["rekey_energy_mJ"] = float(rekey_energy)
-    else:
-        metrics.setdefault("rekey_energy_mJ", 0.0)
+    primitive_total = kem_keygen_ms + kem_encaps_ms + kem_decaps_ms + sig_sign_ms + sig_verify_ms
+    metrics["primitive_total_ms"] = round(primitive_total, 6)
 
 @dataclass(frozen=True)
 class ServerHello:
