@@ -941,16 +941,32 @@ def run_proxy(
                 if role == "drone" and public_key is None:
                     raise NotImplementedError("GCS public key not available for rekey")
                 rk_result = _perform_handshake(role, new_suite, base_secret, public_key, cfg, timeout)
-                (
-                    new_k_d2g,
-                    new_k_g2d,
-                    _nd1,
-                    _nd2,
-                    new_session_id,
-                    new_kem_name,
-                    new_sig_name,
-                    new_peer_addr,
-                ) = rk_result
+                if len(rk_result) >= 9:
+                    (
+                        new_k_d2g,
+                        new_k_g2d,
+                        _nd1,
+                        _nd2,
+                        new_session_id,
+                        new_kem_name,
+                        new_sig_name,
+                        new_peer_addr,
+                        new_handshake_metrics,
+                    ) = rk_result
+                else:
+                    (
+                        new_k_d2g,
+                        new_k_g2d,
+                        _nd1,
+                        _nd2,
+                        new_session_id,
+                        new_kem_name,
+                        new_sig_name,
+                        new_peer_addr,
+                    ) = rk_result
+                    new_handshake_metrics = {}
+                if new_handshake_metrics:
+                    new_handshake_metrics = dict(new_handshake_metrics)
 
                 cfg["SUITE_AEAD_TOKEN"] = new_suite.get("aead_token", "aesgcm")
                 new_ids = _compute_aead_ids(new_suite, new_kem_name, new_sig_name)
@@ -976,16 +992,18 @@ def run_proxy(
                     counters.rekeys_ok += 1
                     counters.last_rekey_ms = int(time.time() * 1000)
                     counters.last_rekey_suite = new_suite["suite_id"]
+                    counters.handshake_metrics = dict(new_handshake_metrics) if new_handshake_metrics else {}
                 if role == "drone" and new_public is not None:
                     gcs_sig_public = new_public
                 record_rekey_result(control_state, rid, new_suite["suite_id"], success=True)
-                write_status(
-                    {
-                        "status": "rekey_ok",
-                        "new_suite": new_suite["suite_id"],
-                        "session_id": new_session_id.hex(),
-                    }
-                )
+                status_payload = {
+                    "status": "rekey_ok",
+                    "new_suite": new_suite["suite_id"],
+                    "session_id": new_session_id.hex(),
+                }
+                if new_handshake_metrics:
+                    status_payload["handshake_metrics"] = new_handshake_metrics
+                write_status(status_payload)
                 new_sess_display = (
                     new_session_id.hex()
                     if cfg.get("LOG_SESSION_ID", False)
