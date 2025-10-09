@@ -1354,6 +1354,7 @@ def run_suite(
     power_capture_enabled: bool,
     clock_offset_warmup_s: float,
     min_delay_samples: int,
+    telemetry_collector: Optional["TelemetryCollector"] = None,
 ) -> dict:
     rekey_duration_ms, rekey_mark_ns, rekey_complete_ns = activate_suite(gcs, suite, is_first)
 
