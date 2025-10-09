@@ -946,10 +946,10 @@ class HighSpeedMonitor(threading.Thread):
         self._vcgencmd_available = True
         self.rekey_marks_path = self.output_dir / f"rekey_marks_{session_id}.csv"
         self._rekey_marks_lock = threading.Lock()
-    self._summary_lock = threading.Lock()
-    self._max_pfc_w = 0.0
-    self._last_pfc_w = 0.0
-    self._last_kin_sample_ns = 0
+        self._summary_lock = threading.Lock()
+        self._max_pfc_w = 0.0
+        self._last_pfc_w = 0.0
+        self._last_kin_sample_ns = 0
         auto_cfg = AUTO_DRONE_CONFIG
         mass_kg = auto_cfg.get("mock_mass_kg", 6.5)
         horiz_mps = auto_cfg.get("kinematics_horizontal_mps", 13.0)
@@ -1400,13 +1400,13 @@ class Monitors:
         self.psutil_csv_handle: Optional[object] = None
         self.psutil_writer: Optional[csv.DictWriter] = None
         self.psutil_proc: Optional[psutil.Process] = None
-    self._stats_lock = threading.Lock()
-    self._max_cpu_percent = 0.0
-    self._max_rss_bytes = 0
-    self._last_cpu_percent = 0.0
-    self._last_rss_bytes = 0
-    self._last_num_threads = 0
-    self._last_sample_ns = 0
+        self._stats_lock = threading.Lock()
+        self._max_cpu_percent = 0.0
+        self._max_rss_bytes = 0
+        self._last_cpu_percent = 0.0
+        self._last_rss_bytes = 0
+        self._last_num_threads = 0
+        self._last_sample_ns = 0
 
         self.temp_thread: Optional[threading.Thread] = None
         self.temp_stop = threading.Event()
