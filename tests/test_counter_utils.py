@@ -25,6 +25,41 @@ def test_load_proxy_counters_success(tmp_path: Path) -> None:
             "rekeys_ok": 2,
             "rekeys_fail": 0,
             "last_rekey_suite": "cs-kyber1024-aesgcm-dilithium5",
+            "primitive_metrics": {
+                "aead_encrypt": {
+                    "count": 4,
+                    "total_ns": 2_000,
+                    "min_ns": 300,
+                    "max_ns": 900,
+                    "total_in_bytes": 2400,
+                    "total_out_bytes": 3200,
+                },
+                "aead_decrypt_ok": {
+                    "count": 3,
+                    "total_ns": 1_500,
+                    "min_ns": 400,
+                    "max_ns": 700,
+                    "total_in_bytes": 3300,
+                    "total_out_bytes": 2100,
+                },
+            },
+            "part_b_metrics": {
+                "kem_keygen_ms": 1.25,
+                "kem_encaps_ms": 2.5,
+                "kem_decap_ms": 3.75,
+                "sig_sign_ms": 4.0,
+                "sig_verify_ms": 5.5,
+                "pub_key_size_bytes": 1184,
+                "ciphertext_size_bytes": 1088,
+                "sig_size_bytes": 3293,
+                "shared_secret_size_bytes": 32,
+                "primitive_total_ms": 17.0,
+                "kem_keygen_mJ": 0.8,
+                "kem_encaps_mJ": 1.6,
+                "kem_decap_mJ": 2.4,
+                "sig_sign_mJ": 3.2,
+                "sig_verify_mJ": 4.0,
+            },
         },
         "ts_stop_ns": 42,
     }
@@ -42,6 +77,21 @@ def test_load_proxy_counters_success(tmp_path: Path) -> None:
     assert result.ts_stop_ns == 42
     assert result.path == file_path
     assert result.handshake_metrics == {}
+    assert "aead_encrypt" in result.primitive_metrics
+    encrypt_stats = result.primitive_metrics["aead_encrypt"]
+    assert encrypt_stats["count"] == 4
+    assert encrypt_stats["min_ns"] == 300
+    assert encrypt_stats["total_out_bytes"] == 3200
+    assert result.primitive_average_ns("aead_encrypt") == 500
+    assert result.primitive_average_ns("aead_decrypt_ok") == 500
+    assert result.primitive_average_ns("missing") is None
+
+    part_b = result.part_b_metrics
+    assert part_b["kem_decap_ms"] == pytest.approx(3.75)
+    assert part_b["pub_key_size_bytes"] == 1184
+    assert result.get_part_b_metric("sig_sign_ms") == pytest.approx(4.0)
+    assert result.get_part_b_metric("missing", default=-1.0) == -1.0
+    assert result.get_part_b_metric("sig_verify_mJ") == pytest.approx(4.0)
 
     # Should not raise when suite matches
     result.ensure_rekey("cs-kyber1024-aesgcm-dilithium5")

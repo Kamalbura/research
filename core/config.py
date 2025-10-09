@@ -127,26 +127,15 @@ CONFIG = {
         "max_rate_mbps": 200.0,
         # Optional ordered suite subset (None -> all suites)
         "suites": [
+            # Level 1 combinations
             "cs-mlkem512-aesgcm-mldsa44",
-            "cs-mlkem512-aesgcm-mldsa65",
-            "cs-mlkem512-aesgcm-mldsa87",
             "cs-mlkem512-aesgcm-falcon512",
-            "cs-mlkem512-aesgcm-falcon1024",
             "cs-mlkem512-aesgcm-sphincs128fsha2",
-            "cs-mlkem512-aesgcm-sphincs256fsha2",
-            "cs-mlkem768-aesgcm-mldsa44",
+            # Level 3 combination (ML-DSA 65 aligns with ML-KEM 768)
             "cs-mlkem768-aesgcm-mldsa65",
-            "cs-mlkem768-aesgcm-mldsa87",
-            "cs-mlkem768-aesgcm-falcon512",
-            "cs-mlkem768-aesgcm-falcon1024",
-            "cs-mlkem768-aesgcm-sphincs128fsha2",
-            "cs-mlkem768-aesgcm-sphincs256fsha2",
-            "cs-mlkem1024-aesgcm-mldsa44",
-            "cs-mlkem1024-aesgcm-mldsa65",
+            # Level 5 combinations
             "cs-mlkem1024-aesgcm-mldsa87",
-            "cs-mlkem1024-aesgcm-falcon512",
             "cs-mlkem1024-aesgcm-falcon1024",
-            "cs-mlkem1024-aesgcm-sphincs128fsha2",
             "cs-mlkem1024-aesgcm-sphincs256fsha2",
         ],
         # Launch local GCS proxy under scheduler control

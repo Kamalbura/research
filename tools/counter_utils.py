@@ -83,6 +83,93 @@ class ProxyCounters:
         payload = self.counters.get("handshake_metrics")
         return payload if isinstance(payload, dict) else {}
 
+    @property
+    def part_b_metrics(self) -> Dict[str, Any]:
+        """Return flattened Part B primitive metrics if present."""
+
+        payload = self.counters.get("part_b_metrics")
+        if isinstance(payload, dict):
+            return payload
+
+        extracted: Dict[str, Any] = {}
+        for key in (
+            "kem_keygen_ms",
+            "kem_encaps_ms",
+            "kem_decap_ms",
+            "sig_sign_ms",
+            "sig_verify_ms",
+            "pub_key_size_bytes",
+            "ciphertext_size_bytes",
+            "sig_size_bytes",
+            "shared_secret_size_bytes",
+            "primitive_total_ms",
+            "kem_keygen_mJ",
+            "kem_encaps_mJ",
+            "kem_decap_mJ",
+            "sig_sign_mJ",
+            "sig_verify_mJ",
+        ):
+            value = self.counters.get(key)
+            if value is not None:
+                extracted[key] = value
+
+        return extracted
+
+    @property
+    def primitive_metrics(self) -> Dict[str, Dict[str, int]]:
+        """Return primitive timing/size metrics recorded by the proxy."""
+
+        payload = self.counters.get("primitive_metrics")
+        if not isinstance(payload, dict):
+            return {}
+
+        sanitized: Dict[str, Dict[str, int]] = {}
+        for name, stats in payload.items():
+            if not isinstance(name, str) or not isinstance(stats, dict):
+                continue
+            count = int(stats.get("count", 0) or 0)
+            total_ns = int(stats.get("total_ns", 0) or 0)
+            min_ns_raw = stats.get("min_ns")
+            try:
+                min_ns = int(min_ns_raw) if min_ns_raw not in (None, "") else 0
+            except (TypeError, ValueError):
+                min_ns = 0
+            max_ns = int(stats.get("max_ns", 0) or 0)
+            total_in = int(stats.get("total_in_bytes", 0) or 0)
+            total_out = int(stats.get("total_out_bytes", 0) or 0)
+            sanitized[name] = {
+                "count": count,
+                "total_ns": total_ns,
+                "min_ns": min_ns,
+                "max_ns": max_ns,
+                "total_in_bytes": total_in,
+                "total_out_bytes": total_out,
+            }
+        return sanitized
+
+    def primitive_average_ns(self, name: str) -> Optional[int]:
+        """Return average duration in nanoseconds for primitive ``name`` if present."""
+
+        stats = self.primitive_metrics.get(name)
+        if not stats:
+            return None
+        count = stats.get("count", 0)
+        if count <= 0:
+            return None
+        total_ns = stats.get("total_ns", 0)
+        return int(total_ns) // int(count)
+
+    def get_part_b_metric(self, key: str, default: Optional[float] = None) -> Optional[float]:
+        """Convenience accessor for flattened Part B metrics as floats."""
+
+        value = self.part_b_metrics.get(key)
+        if value is None:
+            return default
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
 
 @dataclass(frozen=True)
 class TrafficSummary:

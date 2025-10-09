@@ -27,6 +27,143 @@ from core.logging_utils import get_logger, configure_file_logger
 logger = get_logger("pqc")
 
 
+def _format_duration_ns(ns: int) -> str:
+    """Return human readable representation for a duration in nanoseconds."""
+
+    if ns < 0:
+        ns = 0
+    if ns >= 1_000_000_000:
+        seconds = ns / 1_000_000_000.0
+        return f"{seconds:.3f} s"
+    if ns >= 1_000_000:
+        millis = ns / 1_000_000.0
+        return f"{millis:.3f} ms"
+    if ns >= 1_000:
+        micros = ns / 1_000.0
+        return f"{micros:.3f} µs"
+    return f"{ns} ns"
+
+
+def _ns_to_ms(value: object) -> float:
+    try:
+        ns = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if ns <= 0.0:
+        return 0.0
+    return round(ns / 1_000_000.0, 6)
+
+
+def _flatten_part_b_metrics(handshake_metrics: Dict[str, object]) -> Dict[str, object]:
+    """Derive flattened Part B primitive metrics from the handshake payload."""
+
+    if not isinstance(handshake_metrics, dict):
+        return {}
+
+    primitives = handshake_metrics.get("primitives") or {}
+    if not isinstance(primitives, dict):
+        primitives = {}
+
+    kem_metrics = primitives.get("kem") if isinstance(primitives.get("kem"), dict) else {}
+    sig_metrics = primitives.get("signature") if isinstance(primitives.get("signature"), dict) else {}
+
+    artifacts = handshake_metrics.get("artifacts") if isinstance(handshake_metrics.get("artifacts"), dict) else {}
+
+    flat: Dict[str, object] = {}
+
+    flat["kem_keygen_ms"] = _ns_to_ms(kem_metrics.get("keygen_ns"))
+    flat["kem_encaps_ms"] = _ns_to_ms(kem_metrics.get("encap_ns"))
+    flat["kem_decap_ms"] = _ns_to_ms(kem_metrics.get("decap_ns"))
+    flat["sig_sign_ms"] = _ns_to_ms(sig_metrics.get("sign_ns"))
+    flat["sig_verify_ms"] = _ns_to_ms(sig_metrics.get("verify_ns"))
+
+    flat["pub_key_size_bytes"] = int(
+        kem_metrics.get("public_key_bytes")
+        or artifacts.get("public_key_bytes")
+        or 0
+    )
+    flat["ciphertext_size_bytes"] = int(kem_metrics.get("ciphertext_bytes", 0) or 0)
+    flat["sig_size_bytes"] = int(
+        sig_metrics.get("signature_bytes")
+        or artifacts.get("signature_bytes")
+        or 0
+    )
+    flat["shared_secret_size_bytes"] = int(kem_metrics.get("shared_secret_bytes", 0) or 0)
+
+    total_ns = 0
+    for key in ("keygen_ns", "encap_ns", "decap_ns"):
+        value = kem_metrics.get(key)
+        if isinstance(value, (int, float)) and value > 0:
+            total_ns += int(value)
+    for key in ("sign_ns", "verify_ns"):
+        value = sig_metrics.get(key)
+        if isinstance(value, (int, float)) and value > 0:
+            total_ns += int(value)
+    flat["primitive_total_ms"] = _ns_to_ms(total_ns)
+
+    return flat
+
+
+def _augment_part_b_metrics(counters: Dict[str, object]) -> None:
+    """Inject flattened primitive timing/size metrics into counter payload."""
+
+    if not isinstance(counters, dict):  # defensive guard
+        return
+
+    handshake_payload = counters.get("handshake_metrics")
+    flat_metrics = _flatten_part_b_metrics(handshake_payload) if isinstance(handshake_payload, dict) else {}
+    if not flat_metrics:
+        return
+
+    for key, value in flat_metrics.items():
+        # Avoid clobbering values already populated upstream (e.g., tests)
+        counters.setdefault(key, value)
+
+
+def _pretty_print_counters(counters: Dict[str, object]) -> None:
+    """Display counters with special handling for nested metrics."""
+
+    scalar_items = []
+    handshake_payload: Optional[Dict[str, object]] = None
+    primitive_payload: Optional[Dict[str, Dict[str, object]]] = None
+
+    for key, value in counters.items():
+        if key == "handshake_metrics" and isinstance(value, dict):
+            handshake_payload = value  # defer printing until after scalars
+            continue
+        if key == "primitive_metrics" and isinstance(value, dict):
+            primitive_payload = value  # defer printing until after scalars
+            continue
+        scalar_items.append((key, value))
+
+    for key, value in sorted(scalar_items, key=lambda item: item[0]):
+        print(f"  {key}: {value}")
+
+    if handshake_payload:
+        print("  handshake_metrics:")
+        for key, value in sorted(handshake_payload.items(), key=lambda item: item[0]):
+            print(f"    {key}: {value}")
+
+    if primitive_payload:
+        print("  primitive_metrics:")
+        for name, stats in sorted(primitive_payload.items(), key=lambda item: item[0]):
+            if not isinstance(stats, dict):
+                print(f"    {name}: {stats}")
+                continue
+            count = int(stats.get("count", 0) or 0)
+            total_ns = int(stats.get("total_ns", 0) or 0)
+            avg_ns = total_ns // count if count > 0 else 0
+            min_ns = int(stats.get("min_ns", 0) or 0)
+            max_ns = int(stats.get("max_ns", 0) or 0)
+            total_in = int(stats.get("total_in_bytes", 0) or 0)
+            total_out = int(stats.get("total_out_bytes", 0) or 0)
+            print(
+                "    "
+                f"{name}: count={count}, avg={_format_duration_ns(avg_ns)}, "
+                f"min={_format_duration_ns(min_ns)}, max={_format_duration_ns(max_ns)}, "
+                f"in_bytes={total_in}, out_bytes={total_out}"
+            )
+
 def _require_signature_class():
     """Lazily import oqs Signature and provide a friendly error if missing."""
 
@@ -476,14 +613,15 @@ def gcs_command(args):
             status_file=status_file,
             load_gcs_secret=load_secret_for_suite,
         )
-        
+
+        _augment_part_b_metrics(counters)
+
         # Log final counters as JSON
         logger.info("GCS proxy shutdown", extra={"counters": counters})
         
         if not quiet:
             print("GCS proxy stopped. Final counters:")
-            for key, value in counters.items():
-                print(f"  {key}: {value}")
+            _pretty_print_counters(counters)
 
         payload = {
             "role": "gcs",
@@ -572,13 +710,14 @@ def drone_command(args):
             load_gcs_public=load_public_for_suite,
         )
         
+        _augment_part_b_metrics(counters)
+
         # Log final counters as JSON
         logger.info("Drone proxy shutdown", extra={"counters": counters})
         
         if not quiet:
             print("Drone proxy stopped. Final counters:")
-            for key, value in counters.items():
-                print(f"  {key}: {value}")
+            _pretty_print_counters(counters)
 
         payload = {
             "role": "drone",

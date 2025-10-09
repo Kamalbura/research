@@ -1607,12 +1607,41 @@ def run_suite(
         except Exception as exc:
             print(f"[WARN] telemetry aggregation failed for suite {suite}: {exc}", file=sys.stderr)
 
+    part_b_metrics = proxy_stats.get("part_b_metrics") if isinstance(proxy_stats.get("part_b_metrics"), dict) else None
+    if not isinstance(part_b_metrics, dict):
+        part_b_metrics = {
+            key: proxy_stats.get(key)
+            for key in (
+                "kem_keygen_ms",
+                "kem_encaps_ms",
+                "kem_decap_ms",
+                "sig_sign_ms",
+                "sig_verify_ms",
+                "primitive_total_ms",
+                "pub_key_size_bytes",
+                "ciphertext_size_bytes",
+                "sig_size_bytes",
+                "shared_secret_size_bytes",
+            )
+        }
+
+    def _metric_ms(name: str) -> float:
+        value = part_b_metrics.get(name)
+        return _as_float(value) if value is not None else 0.0
+
+    def _metric_int(name: str) -> int:
+        value = part_b_metrics.get(name)
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
     row = {
         "pass": pass_index,
         "suite": suite,
         "traffic_mode": traffic_mode,
         "pre_gap_s": round(pre_gap, 3),
-    "inter_gap_s": round(inter_gap_s, 3),
+        "inter_gap_s": round(inter_gap_s, 3),
         "duration_s": round(elapsed_s, 3),
         "sent": sent_packets,
         "rcvd": rcvd_packets,
@@ -1626,11 +1655,11 @@ def run_suite(
         "wire_throughput_mbps_est": round(wire_throughput_mbps_est, 3),
         "app_packet_bytes": app_packet_bytes,
         "wire_packet_bytes_est": wire_packet_bytes_est,
-    "cpu_max_percent": companion_metrics["cpu_max_percent"],
-    "max_rss_bytes": companion_metrics["max_rss_bytes"],
-    "pfc_watts": companion_metrics["pfc_watts"],
-    "kinematics_vh": companion_metrics["kinematics_vh"],
-    "kinematics_vv": companion_metrics["kinematics_vv"],
+        "cpu_max_percent": companion_metrics["cpu_max_percent"],
+        "max_rss_bytes": companion_metrics["max_rss_bytes"],
+        "pfc_watts": companion_metrics["pfc_watts"],
+        "kinematics_vh": companion_metrics["kinematics_vh"],
+        "kinematics_vv": companion_metrics["kinematics_vv"],
         "goodput_ratio": round(goodput_ratio, 3),
         "rtt_avg_ms": round(avg_rtt_ms, 3),
         "rtt_max_ms": round(max_rtt_ms, 3),
@@ -1657,7 +1686,7 @@ def run_suite(
         "rekey_mark_ns": rekey_mark_ns,
         "rekey_ok_ns": rekey_complete_ns,
         "rekey_ms": round(rekey_duration_ms, 3),
-    "rekey_energy_mJ": 0.0,
+        "rekey_energy_mJ": 0.0,
         "power_request_ok": power_request_ok,
         "power_capture_ok": power_capture_complete,
         "power_note": power_note,
@@ -1683,6 +1712,21 @@ def run_suite(
         "blackout_error": None,
         "timing_guard_ms": None,
         "timing_guard_violation": False,
+        "kem_keygen_ms": round(_metric_ms("kem_keygen_ms"), 6),
+        "kem_encaps_ms": round(_metric_ms("kem_encaps_ms"), 6),
+        "kem_decap_ms": round(_metric_ms("kem_decap_ms"), 6),
+        "sig_sign_ms": round(_metric_ms("sig_sign_ms"), 6),
+        "sig_verify_ms": round(_metric_ms("sig_verify_ms"), 6),
+        "primitive_total_ms": round(_metric_ms("primitive_total_ms"), 6),
+        "pub_key_size_bytes": _metric_int("pub_key_size_bytes"),
+        "ciphertext_size_bytes": _metric_int("ciphertext_size_bytes"),
+        "sig_size_bytes": _metric_int("sig_size_bytes"),
+        "shared_secret_size_bytes": _metric_int("shared_secret_size_bytes"),
+        "kem_keygen_mJ": 0.0,
+        "kem_encaps_mJ": 0.0,
+        "kem_decap_mJ": 0.0,
+        "sig_sign_mJ": 0.0,
+        "sig_verify_mJ": 0.0,
     }
 
     row.update(handshake_fields)
@@ -1702,6 +1746,22 @@ def run_suite(
                 row["handshake_energy_error"] = str(exc)
             except Exception as exc:
                 row["handshake_energy_error"] = str(exc)
+
+    primitive_duration_map = {
+        "kem_keygen_ms": row["kem_keygen_ms"],
+        "kem_encaps_ms": row["kem_encaps_ms"],
+        "kem_decap_ms": row["kem_decap_ms"],
+        "sig_sign_ms": row["sig_sign_ms"],
+        "sig_verify_ms": row["sig_verify_ms"],
+    }
+    duration_total_ms = sum(max(0.0, value) for value in primitive_duration_map.values())
+    if duration_total_ms > 0 and row["handshake_energy_mJ"] > 0:
+        for name, duration_ms in primitive_duration_map.items():
+            if duration_ms <= 0:
+                continue
+            energy_key = name.replace("_ms", "_mJ")
+            portion = duration_ms / duration_total_ms
+            row[energy_key] = round(row["handshake_energy_mJ"] * portion, 3)
 
     rekey_energy_error: Optional[str] = None
     if (

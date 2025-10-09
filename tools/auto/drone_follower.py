@@ -37,6 +37,7 @@ import csv
 import json
 import math
 import os
+import platform
 import shlex
 import signal
 import socket
@@ -196,6 +197,88 @@ def log_runtime_environment(component: str) -> None:
     print(f"[{ts()}] {component} python_exe={sys.executable}")
     print(f"[{ts()}] {component} cwd={Path.cwd()}")
     print(f"[{ts()}] {component} sys.path_prefix={preview}")
+
+
+def _collect_hardware_context() -> dict:
+    """Gather hardware, OS, and toolchain context for reproducibility logs."""
+
+    info: dict[str, object] = {
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "processor": platform.processor(),
+        "python_version": platform.python_version(),
+        "python_compiler": platform.python_compiler(),
+        "python_build": platform.python_build(),
+        "executable": sys.executable,
+    }
+
+    try:
+        uname = os.uname()  # type: ignore[attr-defined]
+    except AttributeError:
+        uname = None
+    if uname is not None:
+        info["uname"] = {
+            "sysname": uname.sysname,
+            "nodename": uname.nodename,
+            "release": uname.release,
+            "version": uname.version,
+            "machine": uname.machine,
+        }
+
+    # Capture relevant environment hints for compiler optimisation flags.
+    flag_env_vars = {
+        key: os.environ.get(key)
+        for key in (
+            "CFLAGS",
+            "CXXFLAGS",
+            "LDFLAGS",
+            "OQS_OPT_FLAGS",
+            "OQS_CFLAGS",
+            "OQS_LDFLAGS",
+        )
+        if os.environ.get(key)
+    }
+    if flag_env_vars:
+        info["build_flags"] = flag_env_vars
+
+    try:
+        import oqs  # type: ignore
+
+        info["oqs_python_version"] = getattr(oqs, "__version__", "unknown")
+        get_version = getattr(oqs, "get_version", None)
+        if callable(get_version):
+            info["oqs_library_version"] = get_version()
+        get_build_config = getattr(oqs, "get_build_config", None)
+        if callable(get_build_config):
+            build_config = get_build_config()
+            try:
+                json.dumps(build_config)
+                info["oqs_build_config"] = build_config
+            except TypeError:
+                info["oqs_build_config"] = repr(build_config)
+    except Exception as exc:  # pragma: no cover - diagnostic only
+        info["oqs_info_error"] = str(exc)
+
+    return info
+
+
+def _record_hardware_context(session_dir: Path, telemetry: Optional[TelemetryPublisher]) -> None:
+    """Persist hardware context to disk and telemetry for audit trails."""
+
+    context = _collect_hardware_context()
+    try:
+        session_dir.mkdir(parents=True, exist_ok=True)
+        target = session_dir / "hardware_context.json"
+        target.write_text(json.dumps(context, indent=2), encoding="utf-8")
+        print(f"[follower] hardware context -> {target}")
+    except Exception as exc:
+        print(f"[follower] failed to write hardware context: {exc}")
+
+    if telemetry is not None:
+        try:
+            telemetry.publish("hardware_context", {"timestamp_ns": time.time_ns(), **context})
+        except Exception:
+            pass
 
 
 class TelemetryPublisher:
@@ -1960,6 +2043,8 @@ def main(argv: Optional[list[str]] = None) -> None:
             f"[follower] cpu governor target ~{target_khz / 1000:.0f} MHz ({device_generation})",
             flush=True,
         )
+
+    _record_hardware_context(session_dir, telemetry)
 
     power_dir = session_dir / "power"
     power_manager = PowerCaptureManager(power_dir, session_id, telemetry)

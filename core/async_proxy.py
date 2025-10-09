@@ -94,6 +94,61 @@ class ProxyCounters:
             "aead_decrypt_fail": dict(self._primitive_templates),
         }
 
+    @staticmethod
+    def _ns_to_ms(value: object) -> float:
+        try:
+            ns = float(value)
+        except (TypeError, ValueError):
+            return 0.0
+        if ns <= 0.0:
+            return 0.0
+        return round(ns / 1_000_000.0, 6)
+
+    def _part_b_metrics(self) -> Dict[str, object]:
+        handshake = self.handshake_metrics
+        if not isinstance(handshake, dict) or not handshake:
+            return {}
+
+        primitives = handshake.get("primitives") or {}
+        if not isinstance(primitives, dict):
+            primitives = {}
+
+        kem = primitives.get("kem") if isinstance(primitives.get("kem"), dict) else {}
+        sig = primitives.get("signature") if isinstance(primitives.get("signature"), dict) else {}
+        artifacts = handshake.get("artifacts") if isinstance(handshake.get("artifacts"), dict) else {}
+
+        summary: Dict[str, object] = {}
+        summary["kem_keygen_ms"] = self._ns_to_ms(kem.get("keygen_ns"))
+        summary["kem_encaps_ms"] = self._ns_to_ms(kem.get("encap_ns"))
+        summary["kem_decap_ms"] = self._ns_to_ms(kem.get("decap_ns"))
+        summary["sig_sign_ms"] = self._ns_to_ms(sig.get("sign_ns"))
+        summary["sig_verify_ms"] = self._ns_to_ms(sig.get("verify_ns"))
+        summary["pub_key_size_bytes"] = int(
+            kem.get("public_key_bytes")
+            or artifacts.get("public_key_bytes")
+            or 0
+        )
+        summary["ciphertext_size_bytes"] = int(kem.get("ciphertext_bytes", 0) or 0)
+        summary["sig_size_bytes"] = int(
+            sig.get("signature_bytes")
+            or artifacts.get("signature_bytes")
+            or 0
+        )
+        summary["shared_secret_size_bytes"] = int(kem.get("shared_secret_bytes", 0) or 0)
+
+        total_ns = 0
+        for key in ("keygen_ns", "encap_ns", "decap_ns"):
+            value = kem.get(key)
+            if isinstance(value, (int, float)) and value > 0:
+                total_ns += int(value)
+        for key in ("sign_ns", "verify_ns"):
+            value = sig.get(key)
+            if isinstance(value, (int, float)) and value > 0:
+                total_ns += int(value)
+        summary["primitive_total_ms"] = self._ns_to_ms(total_ns)
+
+        return summary
+
     def to_dict(self) -> Dict[str, object]:
         def _serialize(stats: Dict[str, object]) -> Dict[str, object]:
             return {
@@ -105,7 +160,7 @@ class ProxyCounters:
                 "total_out_bytes": int(stats.get("total_out_bytes", 0) or 0),
             }
 
-        return {
+        result = {
             "ptx_out": self.ptx_out,
             "ptx_in": self.ptx_in,
             "enc_out": self.enc_out,
@@ -124,6 +179,14 @@ class ProxyCounters:
             "handshake_metrics": self.handshake_metrics,
             "primitive_metrics": {name: _serialize(stats) for name, stats in self.primitive_metrics.items()},
         }
+
+        part_b = self._part_b_metrics()
+        if part_b:
+            result["part_b_metrics"] = part_b
+            for key, value in part_b.items():
+                result.setdefault(key, value)
+
+        return result
 
     def _update_primitive(self, key: str, duration_ns: int, in_bytes: int, out_bytes: int) -> None:
         stats = self.primitive_metrics.setdefault(key, dict(self._primitive_templates))
@@ -1009,7 +1072,22 @@ def run_proxy(
                             with context_lock:
                                 current_sender = active_context["sender"]
                             encrypt_start_ns = time.perf_counter_ns()
-                            wire = current_sender.encrypt(payload_out)
+                            try:
+                                wire = current_sender.encrypt(payload_out)
+                            except Exception as exc:
+                                encrypt_elapsed_ns = time.perf_counter_ns() - encrypt_start_ns
+                                with counters_lock:
+                                    counters.drops += 1
+                                    counters.drop_other += 1
+                                logger.warning(
+                                    "Encrypt failed",
+                                    extra={
+                                        "role": role,
+                                        "error": str(exc),
+                                        "payload_len": len(payload_out),
+                                    },
+                                )
+                                continue
                             encrypt_elapsed_ns = time.perf_counter_ns() - encrypt_start_ns
                             ciphertext_len = len(wire)
                             plaintext_len = len(payload_out)
@@ -1058,62 +1136,33 @@ def run_proxy(
                             with counters_lock:
                                 counters.enc_in += 1
 
+                            cipher_len = len(wire)
+                            decrypt_start_ns = time.perf_counter_ns()
                             try:
                                 plaintext = current_receiver.decrypt(wire)
-                                if plaintext is None:
-                                    with counters_lock:
-                                        counters.drops += 1
-                                        last_reason = current_receiver.last_error_reason()
-                                        # Bug #7 fix: Proper error classification without redundancy
-                                        if last_reason == "auth":
-                                            counters.drop_auth += 1
-                                        elif last_reason == "header":
-                                            counters.drop_header += 1
-                                        elif last_reason == "replay":
-                                            counters.drop_replay += 1
-                                        elif last_reason == "session":
-                                            counters.drop_session_epoch += 1
-                                        elif last_reason is None or last_reason == "unknown":
-                                            # Only parse header if receiver didn't classify it
-                                            reason, _seq = _parse_header_fields(
-                                                CONFIG["WIRE_VERSION"],
-                                                current_receiver.ids,
-                                                current_receiver.session_id,
-                                                wire,
-                                            )
-                                            if reason in (
-                                                "version_mismatch",
-                                                "crypto_id_mismatch",
-                                                "header_too_short",
-                                                "header_unpack_error",
-                                            ):
-                                                counters.drop_header += 1
-                                            elif reason == "session_mismatch":
-                                                counters.drop_session_epoch += 1
-                                            elif reason == "auth_fail_or_replay":
-                                                counters.drop_auth += 1
-                                            else:
-                                                counters.drop_other += 1
-                                        else:
-                                            # Unrecognized last_reason value
-                                            counters.drop_other += 1
-                                    continue
                             except ReplayError:
+                                decrypt_elapsed_ns = time.perf_counter_ns() - decrypt_start_ns
                                 with counters_lock:
                                     counters.drops += 1
                                     counters.drop_replay += 1
+                                    counters.record_decrypt_fail(decrypt_elapsed_ns, cipher_len)
                                 continue
                             except HeaderMismatch:
+                                decrypt_elapsed_ns = time.perf_counter_ns() - decrypt_start_ns
                                 with counters_lock:
                                     counters.drops += 1
                                     counters.drop_header += 1
+                                    counters.record_decrypt_fail(decrypt_elapsed_ns, cipher_len)
                                 continue
                             except AeadAuthError:
+                                decrypt_elapsed_ns = time.perf_counter_ns() - decrypt_start_ns
                                 with counters_lock:
                                     counters.drops += 1
                                     counters.drop_auth += 1
+                                    counters.record_decrypt_fail(decrypt_elapsed_ns, cipher_len)
                                 continue
                             except NotImplementedError as exc:
+                                decrypt_elapsed_ns = time.perf_counter_ns() - decrypt_start_ns
                                 with counters_lock:
                                     counters.drops += 1
                                     reason, _seq = _parse_header_fields(
@@ -1130,6 +1179,7 @@ def run_proxy(
                                         counters.drop_session_epoch += 1
                                     else:
                                         counters.drop_auth += 1
+                                    counters.record_decrypt_fail(decrypt_elapsed_ns, cipher_len)
                                 logger.warning(
                                     "Decrypt failed (classified)",
                                     extra={
@@ -1141,14 +1191,61 @@ def run_proxy(
                                 )
                                 continue
                             except Exception as exc:
+                                decrypt_elapsed_ns = time.perf_counter_ns() - decrypt_start_ns
                                 with counters_lock:
                                     counters.drops += 1
                                     counters.drop_other += 1
+                                    counters.record_decrypt_fail(decrypt_elapsed_ns, cipher_len)
                                 logger.warning(
                                     "Decrypt failed (other)",
                                     extra={"role": role, "error": str(exc), "wire_len": len(wire)},
                                 )
                                 continue
+
+                            decrypt_elapsed_ns = time.perf_counter_ns() - decrypt_start_ns
+                            if plaintext is None:
+                                with counters_lock:
+                                    counters.drops += 1
+                                    last_reason = current_receiver.last_error_reason()
+                                    # Bug #7 fix: Proper error classification without redundancy
+                                    if last_reason == "auth":
+                                        counters.drop_auth += 1
+                                    elif last_reason == "header":
+                                        counters.drop_header += 1
+                                    elif last_reason == "replay":
+                                        counters.drop_replay += 1
+                                    elif last_reason == "session":
+                                        counters.drop_session_epoch += 1
+                                    elif last_reason is None or last_reason == "unknown":
+                                        # Only parse header if receiver didn't classify it
+                                        reason, _seq = _parse_header_fields(
+                                            CONFIG["WIRE_VERSION"],
+                                            current_receiver.ids,
+                                            current_receiver.session_id,
+                                            wire,
+                                        )
+                                        if reason in (
+                                            "version_mismatch",
+                                            "crypto_id_mismatch",
+                                            "header_too_short",
+                                            "header_unpack_error",
+                                        ):
+                                            counters.drop_header += 1
+                                        elif reason == "session_mismatch":
+                                            counters.drop_session_epoch += 1
+                                        elif reason == "auth_fail_or_replay":
+                                            counters.drop_auth += 1
+                                        else:
+                                            counters.drop_other += 1
+                                    else:
+                                        # Unrecognized last_reason value
+                                        counters.drop_other += 1
+                                    counters.record_decrypt_fail(decrypt_elapsed_ns, cipher_len)
+                                continue
+
+                            plaintext_len = len(plaintext)
+                            with counters_lock:
+                                counters.record_decrypt_ok(decrypt_elapsed_ns, cipher_len, plaintext_len)
 
                             try:
                                 if plaintext and plaintext[0] == 0x02:
