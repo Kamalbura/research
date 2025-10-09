@@ -10,8 +10,8 @@ from typing import Dict, Any
 
 
 # Baseline host defaults reused throughout the configuration payload.
-_DEFAULT_DRONE_HOST = "192.168.43.240"
-_DEFAULT_GCS_HOST = "192.168.43.133"
+_DEFAULT_DRONE_HOST = "192.168.0.102"
+_DEFAULT_GCS_HOST = "192.168.0.103"
 
 
 # Default configuration - all required keys with correct types
@@ -193,8 +193,6 @@ _ENV_OVERRIDABLE = {
     "GCS_PLAINTEXT_RX",    # Added for testing/benchmarking flexibility
     "DRONE_PLAINTEXT_HOST",
     "GCS_PLAINTEXT_HOST",
-    "DRONE_HOST",
-    "GCS_HOST",
     "ENABLE_PACKET_TYPE",
     "STRICT_UDP_PEER_MATCH",
     "LOG_SESSION_ID",
