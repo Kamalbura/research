@@ -42,6 +42,8 @@ CONFIG = {
     # Crypto/runtime
     "REPLAY_WINDOW": 1024,
     "WIRE_VERSION": 1,      # header version byte (frozen)
+    # Allow slower suites to finish the rekey handshake without timing out
+    "REKEY_HANDSHAKE_TIMEOUT": 45.0,
 
     # --- Optional hardening / QoS knobs (NOT required; safe defaults) ---
     # Limit TCP handshake attempts accepted per IP at the GCS (server) side.
@@ -180,6 +182,7 @@ _REQUIRED_KEYS = {
     "STRICT_UDP_PEER_MATCH": bool,
     "LOG_SESSION_ID": bool,
     "DRONE_PSK": str,
+    "REKEY_HANDSHAKE_TIMEOUT": float,
 }
 
 # Keys that can be overridden by environment variables
@@ -191,6 +194,8 @@ _ENV_OVERRIDABLE = {
     "DRONE_PLAINTEXT_RX",  # Added for testing/benchmarking flexibility  
     "GCS_PLAINTEXT_TX",    # Added for testing/benchmarking flexibility
     "GCS_PLAINTEXT_RX",    # Added for testing/benchmarking flexibility
+    "DRONE_HOST",
+    "GCS_HOST",
     "DRONE_PLAINTEXT_HOST",
     "GCS_PLAINTEXT_HOST",
     "ENABLE_PACKET_TYPE",
@@ -214,6 +219,12 @@ def validate_config(cfg: Dict[str, Any]) -> None:
     # Check types for all keys
     for key, expected_type in _REQUIRED_KEYS.items():
         value = cfg[key]
+        if key == "REKEY_HANDSHAKE_TIMEOUT":
+            if not isinstance(value, (int, float)):
+                raise NotImplementedError(
+                    f"CONFIG[{key}] must be float seconds, got {type(value).__name__}"
+                )
+            continue
         if not isinstance(value, expected_type):
             raise NotImplementedError(f"CONFIG[{key}] must be {expected_type.__name__}, got {type(value).__name__}")
     
@@ -305,6 +316,8 @@ def _apply_env_overrides(cfg: Dict[str, Any]) -> Dict[str, Any]:
                         result[key] = False
                     else:
                         raise ValueError(f"invalid boolean literal: {env_value}")
+                elif expected_type == float:
+                    result[key] = float(env_value)
                 else:
                     raise NotImplementedError(f"Unsupported type for env override: {expected_type}")
             except ValueError:
