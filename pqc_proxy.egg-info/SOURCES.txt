@@ -7,10 +7,10 @@ core/config.py
 core/handshake.py
 core/logging_utils.py
 core/policy_engine.py
+core/power_monitor.py
 core/project_config.py
 core/run_proxy.py
 core/suites.py
-core/temp-file.py
 pqc_proxy.egg-info/PKG-INFO
 pqc_proxy.egg-info/SOURCES.txt
 pqc_proxy.egg-info/dependency_links.txt
@@ -28,7 +28,9 @@ tests/test_hardening_features.py
 tests/test_kdf_roles.py
 tests/test_loss_dup_oom.py
 tests/test_packet_types.py
+tests/test_power_utils.py
 tests/test_rekey_epoch.py
 tests/test_replay_window.py
+tests/test_secret_loader.py
 tests/test_security_hardening.py
 tests/test_suites_config.py

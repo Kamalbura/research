@@ -370,17 +370,18 @@ def _parse_ssh_target(target: str) -> Tuple[str, Optional[str], int]:
         username, host_port = host_port.split("@", 1)
     port = 22
     host = host_port
+    remainder = ""
     if host_port.startswith("[") and "]" in host_port:
         close_idx = host_port.find("]")
         host = host_port[1:close_idx]
         remainder = host_port[close_idx + 1 :]
     if remainder.startswith(":"):
-            port_str = remainder[1:]
-            try:
-                port = int(port_str)
-            except ValueError:
-                port = 22
-    elif host_port.count(":") == 1:
+        port_str = remainder[1:]
+        try:
+            port = int(port_str)
+        except ValueError:
+            port = 22
+    elif host_port.count(":") == 1 and not host_port.startswith("["):
         host_candidate, port_candidate = host_port.split(":", 1)
         try:
             port = int(port_candidate)
@@ -887,6 +888,66 @@ def resolve_suites(requested: Optional[Iterable[str]]) -> List[str]:
             resolved.append(suite_id)
             seen.add(suite_id)
     return resolved
+
+
+def preflight_filter_suites(candidates: List[str]) -> Tuple[List[str], List[Dict[str, object]]]:
+    """Filter out suites whose primitives are not available in the current runtime."""
+
+    try:
+        enabled_kems = {name for name in suites_mod.enabled_kems()}
+    except Exception as exc:
+        print(f"[WARN] suite capability probe failed (KEM list): {exc}", file=sys.stderr)
+        return list(candidates), []
+
+    try:
+        enabled_sigs = {name for name in suites_mod.enabled_sigs()}
+    except Exception as exc:
+        print(f"[WARN] suite capability probe failed (signature list): {exc}", file=sys.stderr)
+        return list(candidates), []
+
+    filtered: List[str] = []
+    skipped: List[Dict[str, object]] = []
+
+    for suite_id in candidates:
+        try:
+            suite_info = suites_mod.get_suite(suite_id)
+        except NotImplementedError as exc:
+            skipped.append(
+                {
+                    "suite": suite_id,
+                    "reason": "unknown_suite",
+                    "details": str(exc),
+                    "stage": "preflight",
+                }
+            )
+            continue
+
+        missing_reasons: List[str] = []
+        kem_name = suite_info.get("kem_name")
+        sig_name = suite_info.get("sig_name")
+
+        if enabled_kems and kem_name not in enabled_kems:
+            missing_reasons.append("kem_unavailable")
+        if enabled_sigs and sig_name not in enabled_sigs:
+            missing_reasons.append("sig_unavailable")
+
+        if missing_reasons:
+            skipped.append(
+                {
+                    "suite": suite_info.get("suite_id", suite_id),
+                    "reason": "+".join(missing_reasons),
+                    "details": {
+                        "kem_name": kem_name,
+                        "sig_name": sig_name,
+                    },
+                    "stage": "preflight",
+                }
+            )
+            continue
+
+        filtered.append(suite_info["suite_id"])
+
+    return filtered, skipped
 
 
 def preferred_initial_suite(candidates: List[str]) -> Optional[str]:
@@ -3460,6 +3521,18 @@ def main() -> None:
     suites = resolve_suites(suites_override)
     if not suites:
         raise RuntimeError("No suites selected for execution")
+
+    suites, preflight_skips = preflight_filter_suites(suites)
+    if preflight_skips:
+        for entry in preflight_skips:
+            suite_label = entry.get("suite")
+            reason_label = entry.get("reason")
+            print(
+                f"[WARN] filtering out suite {suite_label}: {reason_label}",
+                file=sys.stderr,
+            )
+    if not suites:
+        raise RuntimeError("No suites remain after preflight capability filtering")
 
     session_prefix = str(auto.get("session_prefix") or "session")
     env_session_id = os.environ.get("GCS_SESSION_ID")
