@@ -70,33 +70,44 @@ def run_checks() -> bool:
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM, ChaCha20Poly1305
         from core.suites import _AEAD_REGISTRY
 
-        # Test for ASCON separately as it's in newer versions
-        has_ascon = False
         try:
-            from cryptography.hazmat.primitives.ciphers.aead import ASCON128
-            has_ascon = True
-        except ImportError:
-            pass
+            import ascon  # type: ignore
+        except ImportError:  # pragma: no cover - optional dependency
+            ascon = None  # type: ignore
 
-        aead_map = {
-            "aesgcm": AESGCM,
-            "chacha20poly1305": ChaCha20Poly1305,
-            "ascon128": ASCON128 if has_ascon else None,
+        aead_checks = {
+            "aesgcm": (
+                AESGCM,
+                lambda cls: cls(b"\0" * 32),
+            ),
+            "chacha20poly1305": (
+                ChaCha20Poly1305,
+                lambda cls: cls(b"\0" * 32),
+            ),
+            "ascon128": (
+                ascon,
+                lambda module: module.encrypt(b"\0" * 16, b"\0" * 16, b"", b""),  # type: ignore[attr-defined]
+            ),
         }
 
         for key, params in _AEAD_REGISTRY.items():
-            cipher_class = aead_map.get(key)
-            if cipher_class:
-                try:
-                    # Try to instantiate it with a dummy key
-                    key_size = 32 if key != "ascon128" else 16
-                    cipher_class(b'\0' * key_size)
-                    print(f"  [ OK ] {params['display_name']}")
-                except Exception as e:
-                    print(f"  [ ERROR ] {params['display_name']} - Instantiation failed: {e}")
-                    all_ok = False
-            else:
-                print(f"  [ MISSING ] {params['display_name']} (token: {key}) - Likely needs 'cryptography' library upgrade.")
+            checker = aead_checks.get(key)
+            if not checker:
+                print(f"  [ MISSING ] {params['display_name']} (token: {key}) - Unknown AEAD token.")
+                all_ok = False
+                continue
+
+            impl, probe = checker
+            if impl is None:
+                print(f"  [ MISSING ] {params['display_name']} (token: {key}) - Dependency not installed.")
+                all_ok = False
+                continue
+
+            try:
+                probe(impl)
+                print(f"  [ OK ] {params['display_name']}")
+            except Exception as e:
+                print(f"  [ ERROR ] {params['display_name']} - Probe failed: {e}")
                 all_ok = False
 
     except ImportError:
