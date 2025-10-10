@@ -483,15 +483,25 @@ def get_suite(suite_id: str) -> Dict:
 
 
 def _safe_get_enabled_kem_mechanisms() -> Iterable[str]:
-    from oqs.oqs import get_enabled_KEM_mechanisms
+    try:
+        from oqs.oqs import get_enabled_KEM_mechanisms as kem_loader  # type: ignore[attr-defined]
+    except ImportError:
+        from oqs.oqs import get_enabled_kem_mechanisms as kem_loader  # type: ignore[attr-defined]
+    except AttributeError:
+        from oqs.oqs import get_enabled_kem_mechanisms as kem_loader  # type: ignore[attr-defined]
 
-    return get_enabled_KEM_mechanisms()
+    return kem_loader()
 
 
 def _safe_get_enabled_sig_mechanisms() -> Iterable[str]:
-    from oqs.oqs import get_enabled_sig_mechanisms
+    try:
+        from oqs.oqs import get_enabled_sig_mechanisms as sig_loader  # type: ignore[attr-defined]
+    except ImportError:
+        from oqs.oqs import get_enabled_sig_mechanisms as sig_loader  # type: ignore[attr-defined]
+    except AttributeError:
+        from oqs.oqs import get_enabled_sig_mechanisms as sig_loader  # type: ignore[attr-defined]
 
-    return get_enabled_sig_mechanisms()
+    return sig_loader()
 
 
 def enabled_kems() -> Tuple[str, ...]:
