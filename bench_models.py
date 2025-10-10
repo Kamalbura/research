@@ -399,8 +399,8 @@ def main() -> int:
         print(f"   Import error: {_LOAD_TST_ERROR}")
 
     if tst_model is not None:
-    counts = np_mod.random.randint(low=0, high=50, size=(TST_SEQ_LENGTH, 1)).astype(np_mod.float32)
-    scaled = scaler.transform(counts).astype(np_mod.float32)
+        counts = np_mod.random.randint(low=0, high=50, size=(TST_SEQ_LENGTH, 1)).astype(np_mod.float32)
+        scaled = scaler.transform(counts).astype(np_mod.float32)
         tst_tensor = torch_mod.from_numpy(scaled.reshape(1, 1, -1))
         tst_model.eval()
 
