@@ -1874,7 +1874,10 @@ class TelemetryCollector:
                 try:
                     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     if family == socket.AF_INET6:
-                        srv.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+                        try:
+                            srv.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+                        except OSError:
+                            pass
                     srv.bind(sockaddr)
                     srv.listen(8)
                     srv.settimeout(0.5)

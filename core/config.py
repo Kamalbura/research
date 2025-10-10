@@ -159,6 +159,25 @@ CONFIG = {
         "telemetry_port": 52080,
         # Emit combined Excel workbook when run completes
         "export_combined_excel": True,
+        # Optional post-run fetch of drone artifacts (logs, power captures)
+        "post_fetch": {
+            "enabled": True,
+            "host": None,
+            "username": "dev",
+            "password": "kamal123",
+            "port": 22,
+            "logs_remote": "~/research/logs/auto/drone",
+            "logs_local": "logs/auto",
+            "output_remote": "~/research/output/drone",
+            "output_local": "output/drone",
+        },
+        "post_report": {
+            "enabled": True,
+            "script": "tools/report_constant_run.py",
+            "output_dir": "output/gcs",
+            "table_name": "run_summary_table.md",
+            "text_name": "run_suite_summaries.txt",
+        },
     },
 }
 

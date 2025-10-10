@@ -17,6 +17,8 @@ import subprocess
 import sys
 import threading
 import time
+import stat
+import shutil
 from collections import deque, OrderedDict
 from copy import deepcopy
 from pathlib import Path
@@ -1390,7 +1392,7 @@ def snapshot_proxy_artifacts(suite: str) -> None:
         _robust_copy(PROXY_SUMMARY_PATH, target_dir / "gcs_summary.json")
 
 
-def start_gcs_proxy(initial_suite: str) -> tuple[subprocess.Popen, IO[str]]:
+def start_gcs_proxy(initial_suite: str) -> tuple[subprocess.Popen, IO[str], Path]:
     key_path = SECRETS_DIR / initial_suite / "gcs_signing.key"
     if not key_path.exists():
         raise FileNotFoundError(f"Missing GCS signing key for suite {initial_suite}: {key_path}")
@@ -1437,7 +1439,7 @@ def start_gcs_proxy(initial_suite: str) -> tuple[subprocess.Popen, IO[str]]:
         env=env,
         cwd=str(ROOT),
     )
-    return proc, log_handle
+    return proc, log_handle, log_path
 
 
 def read_proxy_stats_live() -> dict:
@@ -3027,7 +3029,11 @@ class TelemetryCollector:
                 try:
                     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     if family == socket.AF_INET6:
-                        srv.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+                        # Allow dual-stack sockets so IPv4-only drones can connect
+                        try:
+                            srv.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+                        except OSError:
+                            pass
                     srv.bind(sockaddr)
                     srv.listen(8)
                     srv.settimeout(0.5)
@@ -3118,6 +3124,176 @@ def resolve_under_root(path: Path) -> Path:
     return expanded if expanded.is_absolute() else ROOT / expanded
 
 
+def _sftp_normalize(sftp, remote_path: str) -> str:
+    if not remote_path:
+        return remote_path
+    try:
+        return sftp.normalize(remote_path)
+    except IOError:
+        return remote_path
+
+
+def _sftp_download_tree(sftp, remote_path: str, local_path: Path) -> None:
+    local_path.mkdir(parents=True, exist_ok=True)
+    for entry in sftp.listdir_attr(remote_path):
+        remote_child = remote_path.rstrip("/") + "/" + entry.filename
+        local_child = local_path / entry.filename
+        if stat.S_ISDIR(entry.st_mode):
+            _sftp_download_tree(sftp, remote_child, local_child)
+        else:
+            local_child.parent.mkdir(parents=True, exist_ok=True)
+            sftp.get(remote_child, str(local_child))
+
+
+def _post_run_fetch_artifacts(session_id: str) -> None:
+    fetch_cfg = AUTO_GCS_CONFIG.get("post_fetch") or {}
+    enabled_default = _coerce_bool(fetch_cfg.get("enabled"), False)
+    enabled = _coerce_bool(os.getenv("DRONE_FETCH_ENABLED"), enabled_default)
+    if not enabled:
+        return
+    host = os.getenv("DRONE_FETCH_HOST") or fetch_cfg.get("host") or DRONE_HOST
+    username = os.getenv("DRONE_FETCH_USER") or fetch_cfg.get("username") or "dev"
+    password = os.getenv("DRONE_FETCH_PASSWORD") or fetch_cfg.get("password")
+    port_raw = os.getenv("DRONE_FETCH_PORT") or fetch_cfg.get("port") or 22
+    try:
+        port = int(port_raw)
+    except (TypeError, ValueError):
+        port = 22
+
+    if not host or not username or not password:
+        print(f"[WARN] post_fetch disabled: missing host/username/password")
+        return
+    if paramiko is None:
+        print("[WARN] post_fetch disabled: paramiko not available", file=sys.stderr)
+        return
+
+    logs_remote = os.getenv("DRONE_FETCH_LOGS_REMOTE") or fetch_cfg.get("logs_remote") or "~/research/logs/auto/drone"
+    logs_local_base = os.getenv("DRONE_FETCH_LOGS_LOCAL") or fetch_cfg.get("logs_local") or "logs/auto"
+    output_remote_base = os.getenv("DRONE_FETCH_OUTPUT_REMOTE") or fetch_cfg.get("output_remote") or "~/research/output/drone"
+    output_local_base = os.getenv("DRONE_FETCH_OUTPUT_LOCAL") or fetch_cfg.get("output_local") or "output/drone"
+
+    local_logs_root = resolve_under_root(Path(str(logs_local_base)))
+    local_logs_dest = local_logs_root / f"drone_{session_id}"
+    local_output_root = resolve_under_root(Path(str(output_local_base)))
+    local_output_dest = local_output_root / session_id
+
+    client = paramiko.SSHClient()  # type: ignore[attr-defined]
+    try:
+        try:
+            client.load_system_host_keys()
+        except Exception:
+            pass
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # type: ignore[attr-defined]
+        client.connect(hostname=host, port=port, username=username, password=password, timeout=10.0)
+        with client.open_sftp() as sftp:  # type: ignore[attr-defined]
+            if logs_remote:
+                try:
+                    remote_logs_path = _sftp_normalize(sftp, logs_remote)
+                    print(f"[{ts()}] post_fetch logs -> {local_logs_dest}")
+                    _sftp_download_tree(sftp, remote_logs_path, local_logs_dest)
+                except FileNotFoundError:
+                    print(f"[WARN] post_fetch logs missing at {logs_remote}")
+                except IOError as exc:
+                    print(f"[WARN] post_fetch logs failed: {exc}")
+            if output_remote_base:
+                try:
+                    remote_output_session = output_remote_base.rstrip("/") + f"/{session_id}"
+                    remote_output_path = _sftp_normalize(sftp, remote_output_session)
+                    print(f"[{ts()}] post_fetch output -> {local_output_dest}")
+                    _sftp_download_tree(sftp, remote_output_path, local_output_dest)
+                except FileNotFoundError:
+                    print(f"[WARN] post_fetch output missing at {output_remote_base}/{session_id}")
+                except IOError as exc:
+                    print(f"[WARN] post_fetch output failed: {exc}")
+    except Exception as exc:
+        print(f"[WARN] post_fetch connection failed: {exc}")
+    finally:
+        try:
+            client.close()
+        except Exception:
+            pass
+
+
+def _post_run_collect_local(session_id: str, *, gcs_log_path: Optional[Path], combined_workbook: Optional[Path]) -> Path:
+    session_dir = OUTDIR / session_id
+    session_dir.mkdir(parents=True, exist_ok=True)
+    if gcs_log_path and gcs_log_path.exists():
+        target = session_dir / gcs_log_path.name
+        try:
+            shutil.copy2(gcs_log_path, target)
+        except Exception as exc:
+            print(f"[WARN] failed to copy GCS log: {exc}", file=sys.stderr)
+    if SUMMARY_CSV.exists():
+        try:
+            shutil.copy2(SUMMARY_CSV, session_dir / SUMMARY_CSV.name)
+        except Exception as exc:
+            print(f"[WARN] failed to copy summary CSV: {exc}", file=sys.stderr)
+    if combined_workbook and combined_workbook.exists():
+        try:
+            shutil.copy2(combined_workbook, session_dir / combined_workbook.name)
+        except Exception as exc:
+            print(f"[WARN] failed to copy combined workbook: {exc}", file=sys.stderr)
+    return session_dir
+
+
+def _post_run_generate_reports(session_id: str, *, session_dir: Path) -> None:
+    report_cfg = AUTO_GCS_CONFIG.get("post_report") or {}
+    enabled_default = _coerce_bool(report_cfg.get("enabled"), True)
+    enabled = _coerce_bool(os.getenv("DRONE_REPORT_ENABLED"), enabled_default)
+    if not enabled:
+        return
+    script_rel = os.getenv("DRONE_REPORT_SCRIPT") or report_cfg.get("script") or "tools/report_constant_run.py"
+    script_path = resolve_under_root(Path(script_rel))
+    if not script_path.exists():
+        print(f"[WARN] report script missing: {script_path}")
+        return
+    if not SUMMARY_CSV.exists():
+        print(f"[WARN] report generation skipped: {SUMMARY_CSV} missing")
+        return
+    output_rel = os.getenv("DRONE_REPORT_OUTPUT" ) or report_cfg.get("output_dir")
+    if output_rel:
+        output_dir = resolve_under_root(Path(output_rel)) / session_id
+    else:
+        output_dir = session_dir if session_dir else resolve_under_root(Path("output/gcs")) / session_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    table_name = os.getenv("DRONE_REPORT_TABLE") or report_cfg.get("table_name")
+    text_name = os.getenv("DRONE_REPORT_TEXT") or report_cfg.get("text_name")
+
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--summary-csv",
+        str(SUMMARY_CSV),
+        "--run-id",
+        session_id,
+        "--output-dir",
+        str(output_dir),
+    ]
+    if table_name:
+        cmd += ["--table-name", str(table_name)]
+    if text_name:
+        cmd += ["--text-name", str(text_name)]
+
+    env = os.environ.copy()
+    root_str = str(ROOT)
+    existing = env.get("PYTHONPATH")
+    if existing:
+        if root_str not in existing.split(os.pathsep):
+            env["PYTHONPATH"] = root_str + os.pathsep + existing
+    else:
+        env["PYTHONPATH"] = root_str
+
+    print(f"[{ts()}] post_run report -> {output_dir}")
+    result = subprocess.run(cmd, cwd=str(ROOT), text=True, capture_output=True, env=env)
+    if result.returncode != 0:
+        print(f"[WARN] report generation failed (exit {result.returncode}): {result.stderr.strip()}")
+    elif result.stderr.strip():
+        print(result.stderr.strip())
+    if result.stdout.strip():
+        print(result.stdout.strip())
+
+
 def safe_sheet_name(name: str) -> str:
     sanitized = "".join("_" if ch in '[]:*?/\\' else ch for ch in name).strip()
     if not sanitized:
@@ -3149,8 +3325,20 @@ def append_dict_sheet(workbook, title: str, rows: List[dict]) -> None:
             if key not in headers:
                 headers.append(key)
     ws.append(headers)
+    def _coerce(value: object) -> object:
+        if value is None:
+            return ""
+        if isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, Path):
+            return str(value)
+        try:
+            return json.dumps(value, ensure_ascii=True, sort_keys=True)
+        except TypeError:
+            return str(value)
+
     for row in rows:
-        ws.append([row.get(header, "") for header in headers])
+        ws.append([_coerce(row.get(header)) for header in headers])
 
 
 def append_csv_sheet(workbook, path: Path, title: str) -> None:
@@ -3642,7 +3830,8 @@ def main() -> None:
 
     gcs_proc: Optional[subprocess.Popen] = None
     log_handle = None
-    gcs_proc, log_handle = start_gcs_proxy(suites[0])
+    gcs_log_path: Optional[Path] = None
+    gcs_proc, log_handle, gcs_log_path = start_gcs_proxy(suites[0])
 
     try:
         ready = wait_handshake(timeout=20.0)
@@ -3652,6 +3841,7 @@ def main() -> None:
         saturation_reports: List[dict] = []
         all_rate_samples: List[dict] = []
         telemetry_samples: List[dict] = []
+    combined_path: Optional[Path] = None
 
         if traffic_mode == "saturation":
             for idx, suite in enumerate(suites):
@@ -3783,6 +3973,14 @@ def main() -> None:
                 log_handle.close()
             except Exception:
                 pass
+
+        session_dir = _post_run_collect_local(
+            session_id,
+            gcs_log_path=gcs_log_path,
+            combined_workbook=combined_path,
+        )
+        _post_run_generate_reports(session_id, session_dir=session_dir)
+        _post_run_fetch_artifacts(session_id=session_id)
 
         if telemetry_collector:
             telemetry_collector.stop()
