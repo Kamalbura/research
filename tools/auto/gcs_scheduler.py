@@ -3832,6 +3832,7 @@ def main() -> None:
     log_handle = None
     gcs_log_path: Optional[Path] = None
     gcs_proc, log_handle, gcs_log_path = start_gcs_proxy(suites[0])
+    combined_path: Optional[Path] = None
 
     try:
         ready = wait_handshake(timeout=20.0)
@@ -3841,7 +3842,6 @@ def main() -> None:
         saturation_reports: List[dict] = []
         all_rate_samples: List[dict] = []
         telemetry_samples: List[dict] = []
-    combined_path: Optional[Path] = None
 
         if traffic_mode == "saturation":
             for idx, suite in enumerate(suites):

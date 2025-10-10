@@ -22,8 +22,8 @@ def main():
     actual frequency achieved.
     """
     try:
-    i2c_bus = busio.I2C(board.SCL, board.SDA)
-    ina219 = INA219(i2c_bus, shunt_resistance=SHUNT_OHMS)
+        i2c_bus = busio.I2C(board.SCL, board.SDA)
+        ina219 = INA219(i2c_bus, shunt_resistance=SHUNT_OHMS)
 
         print("INA219 High-Frequency Benchmark")
         
