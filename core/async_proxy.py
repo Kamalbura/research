@@ -343,6 +343,13 @@ def _perform_handshake(
     Dict[str, object],
 ]:
     """Perform TCP handshake and return keys, session details, and authenticated peer address."""
+    try:
+        io_timeout = float(stop_after_seconds) if stop_after_seconds else float(cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0))
+    except (TypeError, ValueError):
+        io_timeout = float(cfg.get("REKEY_HANDSHAKE_TIMEOUT", 20.0))
+    if io_timeout < 10.0:
+        io_timeout = 10.0
+
     if role == "gcs":
         if gcs_sig_secret is None:
             raise NotImplementedError("GCS signature secret not provided")
@@ -409,7 +416,7 @@ def _perform_handshake(
                             continue
 
                         try:
-                            result = server_gcs_handshake(conn, suite, gcs_sig_secret)
+                            result = server_gcs_handshake(conn, suite, gcs_sig_secret, timeout=io_timeout)
                         except HandshakeVerifyError:
                             logger.warning(
                                 "Rejected drone handshake with failed authentication",
@@ -457,7 +464,7 @@ def _perform_handshake(
         try:
             client_sock.connect((cfg["GCS_HOST"], cfg["TCP_HANDSHAKE_PORT"]))
             peer_ip, _peer_port = client_sock.getpeername()
-            result = client_drone_handshake(client_sock, suite, gcs_sig_public)
+            result = client_drone_handshake(client_sock, suite, gcs_sig_public, timeout=io_timeout)
             metrics_payload: Dict[str, object] = {}
             if len(result) >= 7:
                 k_d2g, k_g2d, nseed_d2g, nseed_g2d, session_id, kem_name, sig_name = result[:7]

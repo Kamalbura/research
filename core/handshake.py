@@ -401,7 +401,7 @@ def derive_transport_keys(
     else:  # server == GCS
         # GCS perspective: send_to_drone first, receive_from_drone second.
         return key_g2d, key_d2g
-def server_gcs_handshake(conn, suite, gcs_sig_secret):
+def server_gcs_handshake(conn, suite, gcs_sig_secret, *, timeout: float = 10.0):
     """Authenticated GCS side handshake.
 
     Requires a ready oqs.Signature object (with generated key pair). Fails fast if not.
@@ -409,7 +409,10 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
     from oqs.oqs import Signature
     import struct
 
-    conn.settimeout(10.0)
+    try:
+        conn.settimeout(float(timeout))
+    except Exception:
+        conn.settimeout(10.0)
 
     if not isinstance(gcs_sig_secret, Signature):
         raise ValueError("gcs_sig_secret must be an oqs.Signature object with a loaded keypair")
@@ -505,12 +508,15 @@ def server_gcs_handshake(conn, suite, gcs_sig_secret):
         handshake_metrics,
     )
 
-def client_drone_handshake(client_sock, suite, gcs_sig_public):
+def client_drone_handshake(client_sock, suite, gcs_sig_public, *, timeout: float = 10.0):
     # Real handshake implementation with MANDATORY signature verification
     import struct
     
     # Add socket timeout to prevent hanging
-    client_sock.settimeout(10.0)
+    try:
+        client_sock.settimeout(float(timeout))
+    except Exception:
+        client_sock.settimeout(10.0)
     
     handshake_metrics: Dict[str, object] = {
         "role": "drone",
