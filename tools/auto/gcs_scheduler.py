@@ -1934,20 +1934,6 @@ def run_suite(
         _to_int_or_none(power_summary.get("end_ns")) if isinstance(power_summary, dict) else None
     )
 
-    power_trace: List[PowerSample]
-    power_trace_error: Optional[str] = None
-    if isinstance(power_csv_path_val, str) and power_csv_path_val:
-        try:
-            power_trace = load_power_trace(power_csv_path_val)
-        except FileNotFoundError as exc:
-            power_trace = []
-            power_trace_error = str(exc)
-        except Exception as exc:  # pragma: no cover - defensive parsing
-            power_trace = []
-            power_trace_error = str(exc)
-    else:
-        power_trace = []
-
     if not power_capture_enabled:
         power_note = "disabled"
     elif not power_request_ok:
@@ -2052,6 +2038,20 @@ def run_suite(
     power_sample_rate_val = (
         round(power_summary.get("sample_rate_hz", 0.0), 3) if power_summary else 0.0
     )
+
+    power_trace: List[PowerSample]
+    power_trace_error: Optional[str] = None
+    if isinstance(power_csv_path_val, str) and power_csv_path_val:
+        try:
+            power_trace = load_power_trace(power_csv_path_val)
+        except FileNotFoundError as exc:
+            power_trace = []
+            power_trace_error = str(exc)
+        except Exception as exc:  # pragma: no cover - defensive parsing
+            power_trace = []
+            power_trace_error = str(exc)
+    else:
+        power_trace = []
 
     monitor_manifest_path_val = (
         str(monitor_manifest_local)
