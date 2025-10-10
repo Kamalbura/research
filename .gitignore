@@ -7,11 +7,17 @@ __pycache__/
 **/__pycache__/
 *.py[cod]
 *$py.class
-
+logs/
 # Harness outputs
 artifacts/harness/
 legacy/
 # Logs and JSON outputs
+# Auto-generated run artifacts
+logs/auto/drone/
+logs/auto/gcs/run_*/
+output/drone/run_*/
+output/gcs/run_*/
+
 # Local virtualenv / environment
 env/
 venv/
