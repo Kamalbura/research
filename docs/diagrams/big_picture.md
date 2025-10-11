@@ -3,6 +3,7 @@
 This diagram shows both sides (GCS and Drone), the control-plane handshake, the data-plane AEAD path, and the internal modules that move data and perform rekeying and policy decisions.
 
 ```mermaid
+%%{init: {'securityLevel': 'loose', 'flowchart': {'htmlLabels': true}}}%%
 flowchart LR
   %% LAYOUT
   classDef comp fill:#eef,stroke:#447,stroke-width:1px
@@ -10,18 +11,19 @@ flowchart LR
   classDef io fill:#fffaf0,stroke:#cc9900,stroke-width:1px
   classDef net fill:#f9f9f9,stroke:#888,stroke-dasharray:3 3
   classDef warn fill:#ffecec,stroke:#cc6666
+  classDef note fill:#ffffe0,stroke:#999,stroke-dasharray:3 3,color:#333
 
   %% GCS SIDE
   subgraph GCS[Ground Control Station]
     direction TB
-    GCSApps[Traffic/Control Apps\n(blasters, tests)]:::io
-    GCSProxy[core/run_proxy.py]:::comp
-    GCSAsync[core/async_proxy.py\nUDP/TCP orchestration]:::mod
-    GCSHS[core/handshake.py\nKEM+SIG, HKDF]:::mod
-    GCSAEAD[core/aead.py\nSender/Receiver, replay]:::mod
-    GCSPolicy[core/policy_engine.py\nRekey 2PC FSM]:::mod
-    GCSCfg[core/config.py & suites.py]:::mod
-    GCSLog[core/logging_utils.py]:::mod
+  GCSApps["Traffic/Control Apps<br/>(blasters, tests)"]
+  GCSProxy["core/run_proxy.py"]
+  GCSAsync["core/async_proxy.py<br/>UDP/TCP orchestration"]
+  GCSHS["core/handshake.py<br/>KEM+SIG, HKDF"]
+  GCSAEAD["core/aead.py<br/>Sender/Receiver, replay"]
+  GCSPolicy["core/policy_engine.py<br/>Rekey 2PC FSM"]
+  GCSCfg["core/config.py &amp; suites.py"]
+  GCSLog["core/logging_utils.py"]
 
     GCSApps -->|UDP plaintext| GCSProxy
     GCSProxy --> GCSAsync
@@ -37,14 +39,14 @@ flowchart LR
   %% DRONE SIDE
   subgraph DRN[Drone]
     direction TB
-    DroneApps[Flight/Telemetry Apps\n(UdpEcho, Telemetry, Power)]:::io
-    DroneProxy[core/run_proxy.py]:::comp
-    DroneAsync[core/async_proxy.py\nUDP/TCP orchestration]:::mod
-    DroneHS[core/handshake.py\nKEM+SIG, HKDF]:::mod
-    DroneAEAD[core/aead.py\nSender/Receiver, replay]:::mod
-    DronePolicy[core/policy_engine.py\nRekey 2PC FSM]:::mod
-    DroneCfg[core/config.py & suites.py]:::mod
-    DroneLog[core/logging_utils.py]:::mod
+  DroneApps["Flight/Telemetry Apps<br/>(UdpEcho, Telemetry, Power)"]
+  DroneProxy["core/run_proxy.py"]
+  DroneAsync["core/async_proxy.py<br/>UDP/TCP orchestration"]
+  DroneHS["core/handshake.py<br/>KEM+SIG, HKDF"]
+  DroneAEAD["core/aead.py<br/>Sender/Receiver, replay"]
+  DronePolicy["core/policy_engine.py<br/>Rekey 2PC FSM"]
+  DroneCfg["core/config.py &amp; suites.py"]
+  DroneLog["core/logging_utils.py"]
 
     DroneApps <-->|UDP plaintext| DroneProxy
     DroneProxy --> DroneAsync
@@ -60,9 +62,9 @@ flowchart LR
   %% NETWORK / CONTROL + DATA PLANES
   subgraph NET[Network]
     direction LR
-    TCPHS[TCP Handshake\n(client<->server)]:::net
-    UDPAEAD[UDP Encrypted\nAES-GCM frames]:::net
-    UDPPlain[UDP Plaintext\napp-side]:::net
+  TCPHS["TCP Handshake<br/>(client&lt;-&gt;server)"]:::net
+  UDPAEAD["UDP Encrypted<br/>AES-GCM frames"]:::net
+  UDPPlain["UDP Plaintext<br/>app-side"]:::net
   end
 
   %% Cross links
@@ -75,16 +77,20 @@ flowchart LR
   GCSApps -. app traffic .-> UDPPlain
   UDPPlain -. app traffic .-> DroneApps
 
-  %% LABELS & NOTES
-  note over TCPHS: KEM Encaps/Decaps + SIG verify\nDerive 2x32B keys via HKDF-SHA256
-  note over UDPAEAD: Header 22B (!BBBBB8sQB), nonce=epoch||seq(11)\nReplay window in Receiver; drops are silent
-  note over GCSPolicy,DronePolicy: Control messages drive NEGOTIATING→SWAPPING→RUNNING
+  %% LABELS & NOTES (flowchart doesn't support "note over"; use dedicated nodes)
+  NoteTCPHS["KEM Encaps/Decaps + SIG verify<br/>Derive 2x32B keys via HKDF-SHA256"]
+  NoteTCPHS -.-> TCPHS
+  NoteUDPAEAD["Header 22B (!BBBBB8sQB), nonce = epoch || seq(11)<br/>Receiver replay window; silent drops on auth fail"]
+  NoteUDPAEAD -.-> UDPAEAD
+  NoteRekey["Control rekey path:<br/>NEGOTIATING → SWAPPING → RUNNING"]
+  NoteRekey -.-> GCSPolicy
+  NoteRekey -.-> DronePolicy
 
   %% DATA PATH DETAIL
   subgraph DATAFLOW[Data-plane flow]
     direction TB
-    AppOut[App Payload]:::io --> Header[Build 22B header\n(epoch, seq, suite ids)]:::mod --> Nonce[epoch||seq(11)]:::mod --> Encrypt[AES-GCM seal]:::mod --> Packet[Header||Ciphertext||Tag]:::io
-    Packet --> Verify[Header check + replay window]:::mod --> Open[AES-GCM open]:::mod --> AppIn[Deliver plaintext to app]:::io
+  AppOut["App Payload"] --> Header["Build 22B header<br/>(epoch, seq, suite ids)"] --> Nonce["epoch||seq(11)"] --> Encrypt["AES-GCM seal"] --> Packet["Header||Ciphertext||Tag"]
+  Packet --> Verify["Header check + replay window"] --> Open["AES-GCM open"] --> AppIn["Deliver plaintext to app"]
   end
 
   GCSApps --> AppOut
@@ -99,10 +105,17 @@ flowchart LR
   Run --> DronePolicy
 
   %% ERROR/OBSERVABILITY
-  GCSAEAD -. AeadAuthError on auth fail .-> GCSLog:::warn
-  DroneAEAD -. AeadAuthError on auth fail .-> DroneLog:::warn
-  GCSHS -. HandshakeVerifyError on decaps/verify fail .-> GCSLog:::warn
-  DroneHS -. HandshakeVerifyError on decaps/verify fail .-> DroneLog:::warn
+  GCSAEAD -. AeadAuthError on auth fail .-> GCSLog
+  DroneAEAD -. AeadAuthError on auth fail .-> DroneLog
+  GCSHS -. HandshakeVerifyError on decaps/verify fail .-> GCSLog
+  DroneHS -. HandshakeVerifyError on decaps/verify fail .-> DroneLog
+
+  %% GROUPED CLASS ASSIGNMENTS
+  class GCSProxy,DroneProxy comp
+  class GCSAsync,DroneAsync,GCSHS,DroneHS,GCSAEAD,DroneAEAD,GCSPolicy,DronePolicy,GCSCfg,DroneCfg,GCSLog,DroneLog,Header,Nonce,Encrypt,Verify,Open,Propose,Neg,Swap,Run mod
+  class GCSApps,DroneApps,AppOut,Packet,AppIn io
+  class TCPHS,UDPAEAD,UDPPlain net
+  class NoteTCPHS,NoteUDPAEAD,NoteRekey note
 ```
 
 ## How each side actually works

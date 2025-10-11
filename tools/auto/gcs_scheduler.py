@@ -19,10 +19,12 @@ import threading
 import time
 import stat
 import shutil
+import ctypes
+from contextlib import contextmanager
 from collections import deque, OrderedDict
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, IO, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, IO, Iterable, Iterator, List, Optional, Set, Tuple
 
 try:
     import paramiko  # type: ignore[import]
@@ -153,6 +155,188 @@ class SuiteSkipped(RuntimeError):
 
 CLOCK_OFFSET_THRESHOLD_NS = 50_000_000
 CONSTANT_RATE_MBPS_DEFAULT = 8.0
+WINDOWS_TIMER_RESOLUTION_MS = 1
+
+try:
+    _WINMM = ctypes.WinDLL("winmm") if os.name == "nt" else None
+except Exception:  # pragma: no cover - Windows only path
+    _WINMM = None
+
+_WINDOWS_TIMER_LOCK = threading.Lock()
+_WINDOWS_TIMER_USERS = 0
+
+
+@contextmanager
+def _windows_timer_resolution() -> Iterator[bool]:
+    """Best-effort reduction of Windows timer quantum during high-rate sends."""
+
+    if os.name != "nt" or _WINMM is None:
+        yield False
+        return
+
+    acquired = False
+    global _WINDOWS_TIMER_USERS
+
+    with _WINDOWS_TIMER_LOCK:
+        if _WINDOWS_TIMER_USERS == 0:
+            try:
+                result = _WINMM.timeBeginPeriod(WINDOWS_TIMER_RESOLUTION_MS)  # type: ignore[attr-defined]
+            except Exception:
+                yield False
+                return
+            if result != 0:
+                yield False
+                return
+        _WINDOWS_TIMER_USERS += 1
+        acquired = True
+
+    try:
+        yield True
+    finally:
+        if acquired:
+            with _WINDOWS_TIMER_LOCK:
+                _WINDOWS_TIMER_USERS -= 1
+                if _WINDOWS_TIMER_USERS == 0:
+                    try:
+                        _WINMM.timeEndPeriod(WINDOWS_TIMER_RESOLUTION_MS)  # type: ignore[attr-defined]
+                    except Exception:
+                        pass
+
+
+def _precise_sleep_until(target_perf_ns: int) -> None:
+    """Sleep with sub-millisecond granularity using perf_counter."""
+
+    while True:
+        now = time.perf_counter_ns()
+        remaining = target_perf_ns - now
+        if remaining <= 0:
+            return
+        if remaining > 5_000_000:  # >5 ms
+            time.sleep((remaining - 2_000_000) / 1_000_000_000)
+        elif remaining > 200_000:  # >0.2 ms
+            time.sleep(0)
+        else:
+            # Busy-wait for the final few hundred nanoseconds
+            continue
+
+
+def _extract_iperf3_udp_metrics(report: Dict[str, Any]) -> Dict[str, float]:
+    end_section = report.get("end") or {}
+    summary = end_section.get("sum") or {}
+    streams = end_section.get("streams") or []
+
+    if (isinstance(summary, dict) and "packets" in summary) or not streams:
+        source = summary if isinstance(summary, dict) else {}
+    else:
+        source = {}
+        for entry in streams:
+            if not isinstance(entry, dict):
+                continue
+            for key in ("udp", "sender", "receiver"):
+                candidate = entry.get(key)
+                if isinstance(candidate, dict) and "packets" in candidate:
+                    source = candidate
+                    break
+            if source:
+                break
+
+    receiver = {}
+    if streams:
+        first = streams[0]
+        if isinstance(first, dict):
+            receiver = first.get("receiver") or {}
+
+    def _get(obj: Dict[str, Any], key: str, default: float = 0.0) -> float:
+        value = obj.get(key, default) if isinstance(obj, dict) else default
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    metrics = {
+        "bits_per_second": _get(source, "bits_per_second"),
+        "packets": int(_get(source, "packets")),
+        "bytes": int(_get(source, "bytes")),
+        "lost_packets": int(_get(source, "lost_packets")),
+        "lost_percent": _get(source, "lost_percent"),
+        "jitter_ms": _get(source, "jitter_ms"),
+        "receiver_bytes": int(_get(receiver, "bytes", _get(source, "bytes"))),
+        "receiver_packets": int(_get(receiver, "packets", _get(source, "packets"))),
+        "receiver_bps": _get(receiver, "bits_per_second", _get(source, "bits_per_second")),
+    }
+    return metrics
+
+
+def _run_iperf3_client(
+    suite: str,
+    *,
+    duration_s: float,
+    bandwidth_mbps: float,
+    payload_bytes: int,
+    server_host: str,
+    server_port: int,
+    binary: str,
+    extra_args: Iterable[object],
+) -> Dict[str, Any]:
+    if bandwidth_mbps <= 0:
+        raise RuntimeError("iperf3 traffic requires positive bandwidth")
+
+    duration_int = max(1, int(round(duration_s)))
+    payload_len = max(8, int(payload_bytes))
+    bitrate_arg = f"{bandwidth_mbps:.6f}M"
+
+    cmd: List[str] = [
+        str(binary),
+        "-c",
+        str(server_host),
+        "-u",
+        "-b",
+        bitrate_arg,
+        "-t",
+        str(duration_int),
+        "-p",
+        str(int(server_port)),
+        "-l",
+        str(payload_len),
+        "--json",
+    ]
+
+    for arg in extra_args or []:
+        cmd.append(str(arg))
+
+    printable = " ".join(shlex.quote(part) for part in cmd)
+    print(f"[{ts()}] launching iperf3 for suite {suite}: {printable}")
+
+    try:
+        completed = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"iperf3 binary not found: {exc}") from exc
+
+    if completed.returncode != 0:
+        error_text = completed.stderr.strip() or completed.stdout.strip() or f"exit {completed.returncode}"
+        raise RuntimeError(f"iperf3 failed: {error_text}")
+
+    try:
+        report = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"iperf3 returned invalid JSON: {exc}") from exc
+
+    metrics = _extract_iperf3_udp_metrics(report)
+    if not metrics.get("packets"):
+        raise RuntimeError("iperf3 report missing packet counters")
+
+    result = {
+        "sent_packets": int(metrics["packets"]),
+        "sent_bytes": int(metrics["bytes"]),
+        "rcvd_packets": int(metrics["receiver_packets"]),
+        "rcvd_bytes": int(metrics["receiver_bytes"]),
+        "lost_packets": int(metrics["lost_packets"]),
+        "lost_percent": float(metrics["lost_percent"]),
+        "jitter_ms": float(metrics["jitter_ms"]),
+        "throughput_bps": float(metrics["receiver_bps"] or metrics["bits_per_second"]),
+        "raw_report": report,
+    }
+    return result
 
 
 def _compute_sampling_params(duration_s: float, event_sample: int, min_delay_samples: int) -> Tuple[int, int]:
@@ -323,6 +507,7 @@ def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
 AUTO_GCS_DEFAULTS = {
     "session_prefix": "session",
     "traffic": "constant",
+    "traffic_engine": "native",
     "duration_s": 45.0,
     "pre_gap_s": 1.0,
     "inter_gap_s": 15.0,
@@ -344,6 +529,13 @@ AUTO_GCS_DEFAULTS = {
     "telemetry_port": TELEMETRY_PORT,
     "export_combined_excel": True,
     "power_capture": True,
+    "iperf3": {
+        "server_host": None,
+        "server_port": 5201,
+        "binary": "iperf3",
+        "extra_args": [],
+        "force_cli": False,
+    },
 }
 
 AUTO_GCS_CONFIG = _merge_defaults(AUTO_GCS_DEFAULTS, CONFIG.get("AUTO_GCS"))
@@ -1152,7 +1344,7 @@ class Blaster:
 
         stop_at = self._now() + int(max(0.0, duration_s) * 1e9)
         payload_pad = b"\x00" * (self.payload_bytes - 12)
-        interval_ns = 0.0 if rate_pps <= 0 else 1_000_000_000.0 / max(1, rate_pps)
+        interval_ns = 0 if rate_pps <= 0 else max(1, int(round(1_000_000_000 / max(1, rate_pps))))
 
         stop_event = threading.Event()
         self._stop_event = stop_event
@@ -1165,56 +1357,57 @@ class Blaster:
             self.pending.clear()
 
         seq = 0
-        burst = 32 if interval_ns == 0.0 else 1
-        next_send_ns = float(self._now())
+        burst = 32 if interval_ns == 0 else 1
+        next_send_target = time.perf_counter_ns()
+
         try:
-            while self._now() < stop_at:
-                if max_packets is not None:
-                    with self._lock:
-                        if self.sent >= max_packets:
-                            break
-                loop_progress = False
-                sends_this_loop = burst
-                while sends_this_loop > 0:
-                    now_ns = self._now()
-                    if now_ns >= stop_at:
-                        break
-                    if interval_ns > 0.0:
-                        wait_ns = next_send_ns - now_ns
-                        if wait_ns > 0:
-                            time.sleep(min(wait_ns / 1_000_000_000.0, 0.001))
-                            break
-                    t_send = self._now()
-                    packet = seq.to_bytes(4, "big") + int(t_send).to_bytes(8, "big") + payload_pad
-                    try:
-                        self.tx.sendto(packet, self.send_addr)
-                    except Exception as exc:  # pragma: no cover - hard to surface in tests
-                        self._log_event({"event": "send_error", "err": str(exc), "seq": seq, "ts": ts()})
-                        break
-                    t_send_int = int(t_send)
-                    with self._lock:
-                        if self.sample_every and (seq % self.sample_every == 0):
-                            self.pending[seq] = t_send_int
-                        self.sent += 1
-                        self.sent_bytes += len(packet)
-                    loop_progress = True
-                    self._maybe_log("send", seq, t_send_int)
-                    seq += 1
-                    sends_this_loop -= 1
-                    if interval_ns > 0.0:
-                        next_send_ns = max(next_send_ns + interval_ns, float(t_send) + interval_ns)
+            with _windows_timer_resolution():
+                while self._now() < stop_at:
                     if max_packets is not None:
                         with self._lock:
                             if self.sent >= max_packets:
                                 break
-                if interval_ns == 0.0 and (seq & 0x3FFF) == 0:
-                    time.sleep(0)
-                if not loop_progress:
-                    time.sleep(0.0005)
+                    loop_progress = False
+                    sends_this_loop = burst
+                    while sends_this_loop > 0:
+                        if interval_ns > 0:
+                            _precise_sleep_until(next_send_target)
+                        now_ns = self._now()
+                        if now_ns >= stop_at:
+                            break
+                        packet = seq.to_bytes(4, "big") + int(now_ns).to_bytes(8, "big") + payload_pad
+                        try:
+                            self.tx.sendto(packet, self.send_addr)
+                        except Exception as exc:  # pragma: no cover - hard to surface in tests
+                            self._log_event({"event": "send_error", "err": str(exc), "seq": seq, "ts": ts()})
+                            break
+                        t_send_int = int(now_ns)
+                        with self._lock:
+                            if self.sample_every and (seq % self.sample_every == 0):
+                                self.pending[seq] = t_send_int
+                            self.sent += 1
+                            self.sent_bytes += len(packet)
+                        loop_progress = True
+                        self._maybe_log("send", seq, t_send_int)
+                        seq += 1
+                        sends_this_loop -= 1
+                        if interval_ns > 0:
+                            next_send_target += interval_ns
+                            current_perf = time.perf_counter_ns()
+                            if next_send_target < current_perf - interval_ns:
+                                next_send_target = current_perf
+                        if max_packets is not None:
+                            with self._lock:
+                                if self.sent >= max_packets:
+                                    break
+                    if interval_ns == 0 and (seq & 0x3FFF) == 0:
+                        time.sleep(0)
+                    if not loop_progress:
+                        time.sleep(0.0005)
 
-            tail_deadline = self._now() + int(0.25 * 1e9)
-            while self._now() < tail_deadline:
-                time.sleep(0.0005)
+                tail_deadline = self._now() + int(0.25 * 1e9)
+                while self._now() < tail_deadline:
+                    time.sleep(0.0005)
         finally:
             stop_event.set()
             rx_thread.join(timeout=0.5)
@@ -1847,6 +2040,8 @@ def run_suite(
     offset_ns: int,
     pass_index: int,
     traffic_mode: str,
+    traffic_engine: str,
+    iperf3_config: Dict[str, Any],
     pre_gap: float,
     inter_gap_s: float,
     rate_pps: int,
@@ -1872,7 +2067,38 @@ def run_suite(
         min_delay_samples,
     )
 
-    events_path = suite_outdir(suite) / EVENTS_FILENAME
+    suite_dir = suite_outdir(suite)
+    engine_kind = str(traffic_engine or "native").lower()
+    use_iperf3 = traffic_mode in {"blast", "constant"} and engine_kind == "iperf3"
+    iperf3_cfg = iperf3_config if isinstance(iperf3_config, dict) else {}
+    iperf3_server_host = str(iperf3_cfg.get("server_host") or APP_SEND_HOST)
+    iperf3_server_port = int(iperf3_cfg.get("server_port") or APP_SEND_PORT)
+    iperf3_binary = str(iperf3_cfg.get("binary") or "iperf3")
+    extra_args_cfg = iperf3_cfg.get("extra_args")
+    if isinstance(extra_args_cfg, (list, tuple)):
+        iperf3_extra_args = [str(arg) for arg in extra_args_cfg]
+    elif extra_args_cfg is None:
+        iperf3_extra_args = []
+    else:
+        iperf3_extra_args = [str(extra_args_cfg)]
+
+    derived_bandwidth = target_bandwidth_mbps if target_bandwidth_mbps > 0 else 0.0
+    if derived_bandwidth <= 0 and rate_pps > 0:
+        derived_bandwidth = (rate_pps * payload_bytes * 8) / 1_000_000
+
+    if use_iperf3 and derived_bandwidth <= 0:
+        print(
+            f"[WARN] iperf3 engine requires bandwidth target; falling back to native blaster for suite {suite}",
+            file=sys.stderr,
+        )
+        use_iperf3 = False
+
+    traffic_engine_resolved = "iperf3" if use_iperf3 else "native"
+    if use_iperf3:
+        effective_sample_every = 0
+        effective_min_delay = 0
+
+    events_path = None if use_iperf3 else suite_dir / EVENTS_FILENAME
     start_mark_ns = time.time_ns() + offset_ns + int(0.150 * 1e9) + int(max(pre_gap, 0.0) * 1e9)
     try:
         ctl_send(
@@ -1918,44 +2144,90 @@ def run_suite(
     max_rtt_ns = 0
     rtt_samples = 0
     blaster_sent_bytes = 0
+    blaster: Optional[Blaster] = None
+    iperf3_result: Dict[str, Any] = {}
+    iperf3_jitter_ms: Optional[float] = None
+    iperf3_lost_pct: Optional[float] = None
+    iperf3_lost_packets: Optional[int] = None
+    iperf3_report_path: Optional[str] = None
 
     wire_header_bytes = UDP_HEADER_BYTES + APP_IP_HEADER_BYTES
 
     if traffic_mode in {"blast", "constant"}:
-        if warmup_s > 0:
-            warmup_blaster = Blaster(
+        if use_iperf3:
+            start_wall_ns = time.time_ns()
+            start_perf_ns = time.perf_counter_ns()
+            iperf3_result = _run_iperf3_client(
+                suite,
+                duration_s=duration_s,
+                bandwidth_mbps=derived_bandwidth,
+                payload_bytes=payload_bytes,
+                server_host=iperf3_server_host,
+                server_port=iperf3_server_port,
+                binary=iperf3_binary,
+                extra_args=iperf3_extra_args,
+            )
+            sent_packets = iperf3_result.get("sent_packets", 0)
+            rcvd_packets = iperf3_result.get("rcvd_packets", 0)
+            rcvd_bytes = iperf3_result.get("rcvd_bytes", 0)
+            blaster_sent_bytes = iperf3_result.get("sent_bytes", 0)
+            iperf3_jitter_ms = iperf3_result.get("jitter_ms")
+            iperf3_lost_pct = iperf3_result.get("lost_percent")
+            iperf3_lost_packets = iperf3_result.get("lost_packets")
+            if iperf3_lost_packets is not None:
+                try:
+                    iperf3_lost_packets = int(iperf3_lost_packets)
+                except (TypeError, ValueError):
+                    iperf3_lost_packets = None
+            raw_report = iperf3_result.get("raw_report")
+            if isinstance(raw_report, dict):
+                report_bytes = json.dumps(raw_report, indent=2).encode("utf-8")
+                report_path = suite_dir / "iperf3_report.json"
+                try:
+                    _atomic_write_bytes(report_path, report_bytes)
+                    iperf3_report_path = str(report_path)
+                except Exception as exc:
+                    print(f"[WARN] failed to persist iperf3 report for {suite}: {exc}", file=sys.stderr)
+        else:
+            if warmup_s > 0:
+                warmup_blaster = Blaster(
+                    APP_SEND_HOST,
+                    APP_SEND_PORT,
+                    APP_RECV_HOST,
+                    APP_RECV_PORT,
+                    events_path=None,
+                    payload_bytes=payload_bytes,
+                    sample_every=0,
+                    offset_ns=offset_ns,
+                )
+                warmup_blaster.run(duration_s=warmup_s, rate_pps=rate_pps)
+            start_wall_ns = time.time_ns()
+            start_perf_ns = time.perf_counter_ns()
+            blaster = Blaster(
                 APP_SEND_HOST,
                 APP_SEND_PORT,
                 APP_RECV_HOST,
                 APP_RECV_PORT,
-                events_path=None,
+                events_path,
                 payload_bytes=payload_bytes,
-                sample_every=0,
+                sample_every=effective_sample_every if effective_sample_every > 0 else 0,
                 offset_ns=offset_ns,
             )
-            warmup_blaster.run(duration_s=warmup_s, rate_pps=rate_pps)
-        start_wall_ns = time.time_ns()
-        start_perf_ns = time.perf_counter_ns()
-        blaster = Blaster(
-            APP_SEND_HOST,
-            APP_SEND_PORT,
-            APP_RECV_HOST,
-            APP_RECV_PORT,
-            events_path,
-            payload_bytes=payload_bytes,
-            sample_every=effective_sample_every if effective_sample_every > 0 else 0,
-            offset_ns=offset_ns,
-        )
-        blaster.run(duration_s=duration_s, rate_pps=rate_pps)
-        sent_packets = blaster.sent
-        rcvd_packets = blaster.rcvd
-        rcvd_bytes = blaster.rcvd_bytes
-        blaster_sent_bytes = blaster.sent_bytes
-        wire_header_bytes = getattr(blaster, "wire_header_bytes", wire_header_bytes)
-        sample_count = max(1, blaster.rtt_samples)
-        avg_rtt_ns = blaster.rtt_sum_ns // sample_count
-        max_rtt_ns = blaster.rtt_max_ns
-        rtt_samples = blaster.rtt_samples
+            blaster.run(duration_s=duration_s, rate_pps=rate_pps)
+            sent_packets = blaster.sent
+            rcvd_packets = blaster.rcvd
+            rcvd_bytes = blaster.rcvd_bytes
+            blaster_sent_bytes = blaster.sent_bytes
+            wire_header_bytes = getattr(blaster, "wire_header_bytes", wire_header_bytes)
+            sample_count = max(1, blaster.rtt_samples)
+            avg_rtt_ns = blaster.rtt_sum_ns // sample_count
+            max_rtt_ns = blaster.rtt_max_ns
+            rtt_samples = blaster.rtt_samples
+        if use_iperf3 and rcvd_bytes == 0 and iperf3_result.get("throughput_bps"):
+            throughput_bps = float(iperf3_result["throughput_bps"])
+            rcvd_bytes = int(throughput_bps * duration_s / 8)
+        if use_iperf3 and blaster_sent_bytes == 0 and sent_packets > 0:
+            blaster_sent_bytes = sent_packets * payload_bytes
     else:
         time.sleep(duration_s)
 
@@ -2011,7 +2283,10 @@ def run_suite(
             "session_dir": power_summary.get("session_dir"),
         }
 
-    monitor_fetch_info = _fetch_monitor_artifacts(suite, monitor_payload)
+    monitor_fetch_info = _fetch_monitor_artifacts(suite, monitor_payload) if not use_iperf3 else {
+        "status": "external",
+        "error": "traffic_engine=iperf3",
+    }
     monitor_manifest_local = monitor_fetch_info.get("manifest_path")
     telemetry_status_local = monitor_fetch_info.get("telemetry_status_path")
     monitor_artifact_paths: List[Path] = list(monitor_fetch_info.get("artifact_paths") or [])
@@ -2172,7 +2447,7 @@ def run_suite(
     sample_quality = "disabled" if effective_sample_every == 0 else "low"
     owd_samples = 0
 
-    if traffic_mode in {"blast", "constant"}:
+    if traffic_mode in {"blast", "constant"} and blaster is not None:
         owd_p50_ms = blaster.owd_p50_ns / 1_000_000
         owd_p95_ms = blaster.owd_p95_ns / 1_000_000
         rtt_p50_ms = blaster.rtt_p50_ns / 1_000_000
@@ -2184,12 +2459,18 @@ def run_suite(
                 or (blaster.rtt_samples >= effective_min_delay and blaster.owd_samples >= effective_min_delay)
             ):
                 sample_quality = "ok"
+    elif use_iperf3:
+        sample_quality = "external"
 
     loss_pct = 0.0
     if sent_packets:
         loss_pct = max(0.0, (sent_packets - rcvd_packets) * 100.0 / sent_packets)
-    loss_successes = max(0, sent_packets - rcvd_packets)
-    loss_low, loss_high = wilson_interval(loss_successes, sent_packets)
+    if use_iperf3:
+        loss_low = loss_high = (iperf3_lost_pct or loss_pct) / 100.0
+        loss_successes = max(0, iperf3_lost_packets or sent_packets - rcvd_packets)
+    else:
+        loss_successes = max(0, sent_packets - rcvd_packets)
+        loss_low, loss_high = wilson_interval(loss_successes, sent_packets)
 
     power_avg_w_val = power_fields.get("avg_power_w") if power_fields else None
     if power_avg_w_val is None and power_summary:
@@ -2318,6 +2599,7 @@ def run_suite(
         "pass": pass_index,
         "suite": suite,
         "traffic_mode": traffic_mode,
+        "traffic_engine": traffic_engine_resolved,
         "pre_gap_s": round(pre_gap, 3),
         "inter_gap_s": round(inter_gap_s, 3),
         "duration_s": round(elapsed_s, 3),
@@ -2390,6 +2672,10 @@ def run_suite(
         "power_fetch_error": power_fetch_error,
         "power_trace_samples": len(power_trace),
         "power_trace_error": power_trace_error or "",
+        "iperf3_jitter_ms": round(iperf3_jitter_ms, 3) if iperf3_jitter_ms is not None else None,
+        "iperf3_lost_pct": round(iperf3_lost_pct, 3) if iperf3_lost_pct is not None else None,
+        "iperf3_lost_packets": iperf3_lost_packets,
+        "iperf3_report_path": iperf3_report_path or "",
         "monitor_manifest_path": monitor_manifest_path_val,
         "telemetry_status_path": telemetry_status_path_val,
         "monitor_artifacts_fetched": monitor_artifact_count,
@@ -2538,7 +2824,8 @@ def run_suite(
 
     target_desc = f" target={target_bandwidth_mbps:.2f} Mb/s" if target_bandwidth_mbps > 0 else ""
     print(
-        f"[{ts()}] <<< FINISH suite={suite} mode={traffic_mode} sent={sent_packets} rcvd={rcvd_packets} "
+        f"[{ts()}] <<< FINISH suite={suite} mode={traffic_mode} engine={traffic_engine_resolved} "
+        f"sent={sent_packets} rcvd={rcvd_packets} "
         f"pps~{pps:.0f} thr~{throughput_mbps:.2f} Mb/s sent~{sent_mbps:.2f} Mb/s loss={loss_pct:.2f}% "
         f"rtt_avg={avg_rtt_ms:.3f}ms rtt_max={max_rtt_ms:.3f}ms rekey={rekey_duration_ms:.2f}ms "
         f"enc_out={row['enc_out']} enc_in={row['enc_in']}{target_desc} >>>"
@@ -3758,6 +4045,16 @@ def main() -> None:
     auto = AUTO_GCS_CONFIG
 
     traffic_mode = str(auto.get("traffic") or "blast").lower()
+    traffic_engine = str(auto.get("traffic_engine") or "native").lower()
+    iperf3_config = auto.get("iperf3") or {}
+    if not isinstance(iperf3_config, dict):
+        iperf3_config = {}
+    if traffic_engine not in {"native", "iperf3"}:
+        print(
+            f"[WARN] unsupported traffic_engine={traffic_engine}; defaulting to native",
+            file=sys.stderr,
+        )
+        traffic_engine = "native"
     pre_gap = float(auto.get("pre_gap_s") or 1.0)
     inter_gap = float(auto.get("inter_gap_s") or 15.0)
     duration = float(auto.get("duration_s") or 15.0)
@@ -4020,6 +4317,8 @@ def main() -> None:
                             offset_ns=offset_ns,
                             pass_index=pass_index,
                             traffic_mode=traffic_mode,
+                            traffic_engine=traffic_engine,
+                            iperf3_config=iperf3_config,
                             pre_gap=pre_gap,
                             inter_gap_s=inter_gap,
                             rate_pps=rate_pps,

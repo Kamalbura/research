@@ -77,6 +77,11 @@ class SuiteRecord:
     gap_p99_ms: Optional[float]
     gap_max_ms: Optional[float]
     steady_gap_ms: Optional[float]
+    traffic_engine: Optional[str]
+    iperf3_jitter_ms: Optional[float]
+    iperf3_lost_pct: Optional[float]
+    iperf3_lost_packets: Optional[int]
+    iperf3_report_path: Optional[str]
 
     @property
     def throughput_pct(self) -> Optional[float]:
@@ -242,6 +247,11 @@ def _row_to_record(row: dict) -> SuiteRecord:
         gap_p99_ms=_float(row.get("gap_p99_ms")),
         gap_max_ms=_float(row.get("gap_max_ms")),
         steady_gap_ms=_float(row.get("steady_gap_ms")),
+    traffic_engine=((row.get("traffic_engine") or "").strip() or None),
+    iperf3_jitter_ms=_float(row.get("iperf3_jitter_ms")),
+    iperf3_lost_pct=_float(row.get("iperf3_lost_pct")),
+    iperf3_lost_packets=_int(row.get("iperf3_lost_packets")),
+    iperf3_report_path=((row.get("iperf3_report_path") or "").strip() or None),
     )
 
 
@@ -391,6 +401,24 @@ def _format_summary(record: SuiteRecord) -> str:
         lines.append(f"  • crypto breakdown {', '.join(breakdown_parts)}")
     if resource_parts:
         lines.append(f"  • resources {', '.join(resource_parts)}")
+    engine_raw = (record.traffic_engine or "").strip()
+    if engine_raw:
+        engine = engine_raw.lower()
+        detail_parts: List[str] = []
+        if record.iperf3_jitter_ms is not None and record.iperf3_jitter_ms > 0:
+            detail_parts.append(f"jitter {record.iperf3_jitter_ms:.3f} ms")
+        if record.iperf3_lost_pct is not None and record.iperf3_lost_pct >= 0:
+            lost_text = f"loss {record.iperf3_lost_pct:.3f}%"
+            if record.iperf3_lost_packets is not None and record.iperf3_lost_packets >= 0:
+                lost_text += f" ({record.iperf3_lost_packets:,} packets)"
+            detail_parts.append(lost_text)
+        if record.iperf3_report_path:
+            detail_parts.append("report captured")
+        detail = ", ".join(detail_parts)
+        if detail:
+            lines.append(f"  • traffic engine {engine}{' — ' + detail if detail else ''}")
+        else:
+            lines.append(f"  • traffic engine {engine}")
     if record.timing_guard_ms is not None and record.timing_guard_ms > 0:
         guard_status = "violation" if record.timing_guard_violation else "clear"
         lines.append(f"  • timing guard {record.timing_guard_ms:.1f} ms ({guard_status})")

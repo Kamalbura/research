@@ -109,6 +109,8 @@ CONFIG = {
         "session_prefix": "run",
         # Traffic profile: "blast", "constant", "mavproxy", or "saturation"
         "traffic": "constant",
+        # Traffic engine: "native" (built-in blaster) or "iperf3" (external client)
+        "traffic_engine": "native",
         # Duration for active traffic window per suite (seconds)
         "duration_s": 45.0,
         # Delay after rekey before starting traffic (seconds)
@@ -140,6 +142,14 @@ CONFIG = {
         "telemetry_port": 52080,
         # Emit combined Excel workbook when run completes
         "export_combined_excel": True,
+        # Optional iperf3 configuration used when traffic_engine == "iperf3"
+        "iperf3": {
+            "server_host": None,
+            "server_port": 5201,
+            "binary": "iperf3",
+            "extra_args": [],
+            "force_cli": False,
+        },
         # Optional post-run fetch of drone artifacts (logs, power captures)
         "post_fetch": {
             "enabled": True,
