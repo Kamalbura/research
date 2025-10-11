@@ -194,10 +194,6 @@ _ENV_OVERRIDABLE = {
     "DRONE_PLAINTEXT_RX",  # Added for testing/benchmarking flexibility  
     "GCS_PLAINTEXT_TX",    # Added for testing/benchmarking flexibility
     "GCS_PLAINTEXT_RX",    # Added for testing/benchmarking flexibility
-    "DRONE_HOST",
-    "GCS_HOST",
-    "DRONE_PLAINTEXT_HOST",
-    "GCS_PLAINTEXT_HOST",
     "ENABLE_PACKET_TYPE",
     "STRICT_UDP_PEER_MATCH",
     "LOG_SESSION_ID",

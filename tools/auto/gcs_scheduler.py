@@ -1731,10 +1731,6 @@ def activate_suite(
                     elapsed_s=elapsed_s,
                 )
             raise RuntimeError(f"Proxy reported rekey status {rekey_status} for suite {suite}")
-    else:
-        elapsed_ms = (time.time_ns() - start_ns) / 1_000_000
-        elapsed_s = elapsed_ms / 1000.0
-
     elapsed_ms = (time.time_ns() - start_ns) / 1_000_000
 
     if REKEY_SETTLE_SECONDS > 0:
@@ -3712,12 +3708,14 @@ def main() -> None:
     power_capture_enabled = bool(auto.get("power_capture", True))
 
     telemetry_enabled = bool(auto.get("telemetry_enabled", True))
-    telemetry_target_host = (
-        auto.get("telemetry_target_host")
-    or auto.get("telemetry_bind_host")
-    or DRONE_HOST
-    or TELEMETRY_BIND_HOST
-    )
+    telemetry_target_host_cfg = auto.get("telemetry_target_host")
+    telemetry_target_host = str(telemetry_target_host_cfg or "").strip()
+    if not telemetry_target_host:
+        bind_candidate = str(auto.get("telemetry_bind_host") or "").strip()
+        if bind_candidate and bind_candidate not in {"0.0.0.0", "::", "*"}:
+            telemetry_target_host = bind_candidate
+    if not telemetry_target_host:
+        telemetry_target_host = DRONE_HOST
     telemetry_port_cfg = auto.get("telemetry_port")
     telemetry_port = TELEMETRY_PORT if telemetry_port_cfg in (None, "") else int(telemetry_port_cfg)
 
@@ -3801,9 +3799,9 @@ def main() -> None:
 
     telemetry_collector: Optional[TelemetryCollector] = None
     if telemetry_enabled:
-    telemetry_collector = TelemetryCollector(telemetry_target_host, telemetry_port)
+        telemetry_collector = TelemetryCollector(telemetry_target_host, telemetry_port)
         telemetry_collector.start()
-    print(f"[{ts()}] telemetry subscriber -> {telemetry_target_host}:{telemetry_port}")
+        print(f"[{ts()}] telemetry subscriber -> {telemetry_target_host}:{telemetry_port}")
     else:
         print(f"[{ts()}] telemetry collector disabled via AUTO_GCS configuration")
 
