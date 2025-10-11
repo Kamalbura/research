@@ -10,8 +10,8 @@ from typing import Dict, Any
 
 
 # Baseline host defaults reused throughout the configuration payload.
-_DEFAULT_DRONE_HOST = "192.168.0.103"
-_DEFAULT_GCS_HOST = "192.168.0.102"
+_DEFAULT_DRONE_HOST = "192.168.1.139"
+_DEFAULT_GCS_HOST = "192.168.1.193"
 
 
 # Default configuration - all required keys with correct types
@@ -88,8 +88,8 @@ CONFIG = {
         "cpu_optimize": True,
         # Enable telemetry publisher back to the scheduler
         "telemetry_enabled": True,
-        # Optional explicit telemetry host/port (None -> derive from CONFIG)
-    "telemetry_host": _DEFAULT_GCS_HOST,
+        # Optional explicit telemetry host/port (None -> derive from CONTROL_HOST defaults)
+        "telemetry_host": None,
         "telemetry_port": 52080,
         # Override monitoring output base directory (None -> DEFAULT_MONITOR_BASE)
         "monitor_output_base": None,

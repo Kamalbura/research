@@ -48,7 +48,9 @@ import time
 import queue
 from datetime import datetime, timezone
 from copy import deepcopy
-from typing import IO, Callable, Iterable, Optional, Tuple
+from typing import IO, Callable, Dict, Iterable, Optional, Tuple
+
+from dataclasses import dataclass
 
 
 def optimize_cpu_performance(target_khz: int = 1800000) -> None:
@@ -314,35 +316,31 @@ def _record_hardware_context(session_dir: Path, telemetry: Optional[TelemetryPub
             pass
 
 
+@dataclass
+class _TelemetryClient:
+    conn: socket.socket
+    writer: IO[str]
+    peer: str
+
+
 class TelemetryPublisher:
-    """Best-effort telemetry pipe from the drone follower to the GCS scheduler."""
+    """Server-side telemetry broadcaster that mirrors the control channel semantics."""
 
     def __init__(self, host: str, port: int, session_id: str) -> None:
         self.host = host
         self.port = port
         self.session_id = session_id
-        self.queue: "queue.Queue[dict]" = queue.Queue(maxsize=5000)
         self.stop_event = threading.Event()
-        self.thread = threading.Thread(target=self._run, daemon=True)
-        self.sock: Optional[socket.socket] = None
-        self.writer = None
-        self._connect_attempts = 0
-        self._max_connect_attempts = 60
-        self._initial_backoff = 1.0
-        self._connect_deadline_s = 60.0
-        self._connect_start_monotonic = time.monotonic()
-        self._failure_first_monotonic: Optional[float] = None
-        self._last_failure_log = 0.0
-        self._throttle_after_s = 60.0
-        self._throttle_interval_s = 60.0
+        self.lock = threading.Lock()
+        self.clients: Dict[socket.socket, _TelemetryClient] = {}
+        self.server: Optional[socket.socket] = None
+        self.accept_thread: Optional[threading.Thread] = None
         self._status_path: Optional[Path] = None
         self._last_status_flush = 0.0
         self._connected_once = False
-        self._last_error: Optional[str] = None
-        self._consecutive_failures = 0
 
     def start(self) -> None:
-        self.thread.start()
+        self._start_server()
 
     def publish(self, kind: str, payload: dict) -> None:
         if self.stop_event.is_set():
@@ -353,39 +351,40 @@ class TelemetryPublisher:
             **payload,
         }
         message["component"] = "drone_follower"
-        try:
-            self.queue.put_nowait(message)
-        except queue.Full:
-            # Drop oldest by removing one item to make space, then enqueue.
+        message.setdefault("timestamp_ns", time.time_ns())
+        text = json.dumps(message) + "\n"
+        with self.lock:
+            clients = list(self.clients.values())
+        for client in clients:
             try:
-                self.queue.get_nowait()
-            except queue.Empty:
-                pass
-            try:
-                self.queue.put_nowait(message)
-            except queue.Full:
-                pass
+                client.writer.write(text)
+                client.writer.flush()
+            except Exception:
+                self._remove_client(client, reason="send_error")
 
     def stop(self) -> None:
         self.stop_event.set()
-        if self.thread.is_alive():
-            self.thread.join(timeout=2.0)
-        self._close_socket()
-        self._emit_status("stopped")
-
-    def _close_socket(self) -> None:
-        if self.writer is not None:
+        if self.accept_thread and self.accept_thread.is_alive():
+            self.accept_thread.join(timeout=2.0)
+        with self.lock:
+            clients = list(self.clients.values())
+            self.clients.clear()
+        for client in clients:
             try:
-                self.writer.close()
+                client.writer.close()
             except Exception:
                 pass
-            self.writer = None
-        if self.sock is not None:
             try:
-                self.sock.close()
+                client.conn.close()
             except Exception:
                 pass
-            self.sock = None
+        if self.server is not None:
+            try:
+                self.server.close()
+            except Exception:
+                pass
+            self.server = None
+        self._emit_status("stopped", active_clients=0)
 
     def configure_status_sink(self, path: Path) -> None:
         self._status_path = path
@@ -393,20 +392,11 @@ class TelemetryPublisher:
             path.parent.mkdir(parents=True, exist_ok=True)
         except Exception:
             pass
-        self._emit_status("init")
+        self._emit_status("init", active_clients=len(self.clients))
 
     def _emit_status(self, event: str, **extra: object) -> None:
         if self._status_path is None:
             return
-        now = time.monotonic()
-        if event == "connect_error" and (now - self._last_status_flush) < 5.0:
-            return
-        priority_local = False
-        if not self._connected_once and self._failure_first_monotonic is not None:
-            priority_local = (now - self._failure_first_monotonic) >= 5.0
-        failure_duration_s = 0.0
-        if self._failure_first_monotonic is not None:
-            failure_duration_s = max(0.0, now - self._failure_first_monotonic)
         payload = {
             "event": event,
             "timestamp_ns": time.time_ns(),
@@ -414,106 +404,134 @@ class TelemetryPublisher:
             "host": self.host,
             "port": self.port,
             "connected_once": self._connected_once,
-            "last_error": self._last_error,
-            "consecutive_failures": self._consecutive_failures,
-            "priority_local_logs": priority_local,
-            "failure_duration_s": failure_duration_s,
+            "active_clients": len(self.clients),
         }
         if extra:
             payload.update(extra)
         try:
             self._status_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-            self._last_status_flush = now
+            self._last_status_flush = time.monotonic()
         except Exception:
             pass
 
-    def _ensure_connection(self) -> bool:
-        if self.sock is not None and self.writer is not None:
-            return True
-        return self._attempt_connection()
-
-    def _attempt_connection(self) -> bool:
-        self._connect_attempts += 1
-        attempt = self._connect_attempts
+    def _start_server(self) -> None:
         try:
-            sock = socket.create_connection((self.host, self.port), timeout=3.0)
-        except OSError as exc:
-            elapsed = time.monotonic() - self._connect_start_monotonic
-            self._log_connect_failure(attempt, exc, elapsed)
-            self._close_socket()
-            return False
-        else:
-            self.sock = sock
-            self.writer = sock.makefile("w", encoding="utf-8", buffering=1)
-            hello = {
-                "session_id": self.session_id,
-                "kind": "telemetry_hello",
-                "timestamp_ns": time.time_ns(),
-            }
-            self.writer.write(json.dumps(hello) + "\n")
-            self.writer.flush()
-            print(
-                f"[follower] telemetry connected to {self.host}:{self.port} on attempt {attempt}",
-                flush=True,
+            addrinfo = socket.getaddrinfo(
+                self.host,
+                self.port,
+                0,
+                socket.SOCK_STREAM,
+                proto=0,
+                flags=socket.AI_PASSIVE if not self.host else 0,
             )
-            self._connect_attempts = 0
-            self._connect_start_monotonic = time.monotonic()
-            self._failure_first_monotonic = None
-            self._last_failure_log = 0.0
-            self._consecutive_failures = 0
-            self._last_error = None
-            self._connected_once = True
-            self._emit_status("connected", attempt=attempt)
-            return True
+        except socket.gaierror as exc:
+            raise OSError(f"telemetry bind failed for {self.host}:{self.port}: {exc}") from exc
 
-    def _log_connect_failure(self, attempt: int, exc: Exception, elapsed_since_start: float) -> None:
-        now = time.monotonic()
-        if self._failure_first_monotonic is None:
-            self._failure_first_monotonic = now
-        elapsed_total = now - self._failure_first_monotonic
-        should_log = True
-        if elapsed_total >= self._throttle_after_s:
-            if now - self._last_failure_log < self._throttle_interval_s:
-                should_log = False
-        if should_log:
-            print(
-                f"[follower] telemetry connect attempt {attempt}/{self._max_connect_attempts} to {self.host}:{self.port} failed after {elapsed_since_start:.1f}s: {exc}",
-                flush=True,
-            )
-            self._last_failure_log = now
-            if elapsed_total >= self._throttle_after_s and attempt >= self._max_connect_attempts:
-                print(
-                    f"[follower] telemetry collector still unavailable at {self.host}:{self.port}; throttling failure logs but continuing retries",
-                    flush=True,
-                )
-        self._consecutive_failures += 1
-        self._last_error = str(exc)
-        self._emit_status("connect_error", attempt=attempt, error=str(exc), elapsed_since_start=elapsed_since_start)
-
-    def _run(self) -> None:
-        backoff = self._initial_backoff
-        while not self.stop_event.is_set():
-            if not self._ensure_connection():
-                time.sleep(min(backoff, 5.0))
-                backoff = min(backoff * 1.5, 5.0)
-                continue
-            backoff = self._initial_backoff
+        last_exc: Optional[Exception] = None
+        for family, socktype, proto, _canon, sockaddr in addrinfo:
             try:
-                item = self.queue.get(timeout=0.5)
-            except queue.Empty:
-                continue
-            try:
-                if self.writer is None:
-                    continue
-                if "timestamp_ns" not in item:
-                    item["timestamp_ns"] = time.time_ns()
-                self.writer.write(json.dumps(item) + "\n")
-                self.writer.flush()
+                srv = socket.socket(family, socktype, proto)
+                try:
+                    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    if family == socket.AF_INET6:
+                        try:
+                            srv.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+                        except OSError:
+                            pass
+                    srv.bind(sockaddr)
+                    srv.listen(5)
+                    srv.settimeout(0.5)
+                except Exception:
+                    srv.close()
+                    raise
             except Exception as exc:
-                print(f"[follower] telemetry send failed: {exc}")
-                self._close_socket()
-                self._last_error = str(exc)
-                self._emit_status("send_error", error=str(exc))
+                last_exc = exc
+                continue
+            self.server = srv
+            break
+
+        if self.server is None:
+            message = last_exc or RuntimeError("no suitable address family")
+            raise OSError(f"telemetry bind failed for {self.host}:{self.port}: {message}")
+
+        print(f"[follower] telemetry listening on {self.host}:{self.port}", flush=True)
+        self._emit_status("listening", active_clients=0)
+        self.accept_thread = threading.Thread(target=self._accept_loop, daemon=True)
+        self.accept_thread.start()
+
+    def _accept_loop(self) -> None:
+        assert self.server is not None
+        while not self.stop_event.is_set():
+            try:
+                conn, addr = self.server.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                if self.stop_event.is_set():
+                    break
+                continue
+            peer = f"{addr[0]}:{addr[1]}"
+            client = self._register_client(conn, peer)
+            if client is None:
+                continue
+            threading.Thread(target=self._monitor_client, args=(client,), daemon=True).start()
+
+    def _register_client(self, conn: socket.socket, peer: str) -> Optional[_TelemetryClient]:
+        try:
+            writer = conn.makefile("w", encoding="utf-8", buffering=1)
+        except Exception:
+            conn.close()
+            return None
+        hello = {
+            "session_id": self.session_id,
+            "kind": "telemetry_hello",
+            "timestamp_ns": time.time_ns(),
+        }
+        try:
+            writer.write(json.dumps(hello) + "\n")
+            writer.flush()
+        except Exception:
+            try:
+                writer.close()
+            except Exception:
+                pass
+            conn.close()
+            return None
+        client = _TelemetryClient(conn=conn, writer=writer, peer=peer)
+        with self.lock:
+            self.clients[conn] = client
+        self._connected_once = True
+        print(f"[follower] telemetry client {peer} connected", flush=True)
+        self._emit_status("connected", peer=peer, active_clients=len(self.clients))
+        return client
+
+    def _monitor_client(self, client: _TelemetryClient) -> None:
+        conn = client.conn
+        try:
+            while not self.stop_event.is_set():
+                data = conn.recv(1024)
+                if not data:
+                    break
+        except Exception:
+            pass
+        finally:
+            self._remove_client(client, reason="disconnect")
+
+    def _remove_client(self, client: _TelemetryClient, *, reason: str) -> None:
+        with self.lock:
+            existing = self.clients.pop(client.conn, None)
+        if existing is None:
+            return
+        try:
+            existing.writer.close()
+        except Exception:
+            pass
+        try:
+            existing.conn.close()
+        except Exception:
+            pass
+        print(f"[follower] telemetry client {existing.peer} closed ({reason})", flush=True)
+        self._emit_status("disconnected", peer=existing.peer, reason=reason, active_clients=len(self.clients))
 
 
 class SyntheticKinematicsModel:
@@ -2364,19 +2382,11 @@ def main(argv: Optional[list[str]] = None) -> None:
     telemetry_status_path: Optional[Path] = None
     telemetry_enabled = bool(auto.get("telemetry_enabled", True))
     telemetry_host_cfg = auto.get("telemetry_host")
-    if telemetry_host_cfg:
-        telemetry_host = telemetry_host_cfg
-    else:
-        telemetry_host = TELEMETRY_DEFAULT_HOST
+    telemetry_host = str(telemetry_host_cfg or CONTROL_HOST or "0.0.0.0").strip() or "0.0.0.0"
     telemetry_port_cfg = auto.get("telemetry_port")
     telemetry_port = TELEMETRY_DEFAULT_PORT if telemetry_port_cfg in (None, "") else int(telemetry_port_cfg)
 
-    expected_bind = str(CONFIG.get("GCS_TELEMETRY_BIND") or "").strip()
-    if expected_bind and expected_bind not in {"0.0.0.0", "::", ""} and telemetry_host != expected_bind:
-        raise RuntimeError(
-            f"Telemetry target {telemetry_host}:{telemetry_port} differs from GCS bind {expected_bind}; update AUTO_DRONE.telemetry_host"
-        )
-    print(f"[follower] telemetry target {telemetry_host}:{telemetry_port}")
+    print(f"[follower] telemetry listening on {telemetry_host}:{telemetry_port}")
 
     if telemetry_enabled:
         telemetry = TelemetryPublisher(telemetry_host, telemetry_port, session_id)

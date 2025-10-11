@@ -137,7 +137,19 @@ SATURATION_LINEAR_RATES = [
 ]
 SATURATION_SIGNALS = ("owd_p95_spike", "delivery_degraded", "loss_excess")
 TELEMETRY_BUFFER_MAXLEN_DEFAULT = 100_000
-REKEY_SETTLE_SECONDS = 1.5
+REKEY_SETTLE_SECONDS = 2.0
+REKEY_WAIT_TIMEOUT_SECONDS = 45.0
+REKEY_SKIP_MULTIPLIER = 2.0
+REKEY_SKIP_THRESHOLD_SECONDS = REKEY_WAIT_TIMEOUT_SECONDS * REKEY_SKIP_MULTIPLIER
+class SuiteSkipped(RuntimeError):
+    def __init__(self, suite: str, reason: str, *, elapsed_s: Optional[float] = None) -> None:
+        message = reason
+        if elapsed_s is not None:
+            message = f"{reason} (elapsed {elapsed_s:.2f}s)"
+        super().__init__(message)
+        self.suite = suite
+        self.elapsed_s = elapsed_s
+
 CLOCK_OFFSET_THRESHOLD_NS = 50_000_000
 CONSTANT_RATE_MBPS_DEFAULT = 8.0
 
@@ -327,7 +339,7 @@ AUTO_GCS_DEFAULTS = {
     "launch_proxy": True,
     "monitors_enabled": True,
     "telemetry_enabled": True,
-    "telemetry_bind_host": TELEMETRY_BIND_HOST,
+    "telemetry_target_host": DRONE_HOST,
     "telemetry_port": TELEMETRY_PORT,
     "export_combined_excel": True,
     "power_capture": True,
@@ -1611,6 +1623,7 @@ def activate_suite(
     start_ns = time.time_ns()
     mark_ns: Optional[int] = None
     rekey_complete_ns: Optional[int] = None
+    rekey_status = "ok" if is_first else "pending"
 
     if is_first:
         mark_ns = None
@@ -1652,7 +1665,7 @@ def activate_suite(
 
         try:
 
-            result = wait_proxy_rekey(suite, baseline, timeout=24.0, proc=gcs)
+            result = wait_proxy_rekey(suite, baseline, timeout=REKEY_WAIT_TIMEOUT_SECONDS, proc=gcs)
 
             rekey_status = result
 
@@ -1694,18 +1707,39 @@ def activate_suite(
         else:
             expected_suite = suite
 
-        if not wait_rekey_transition(expected_suite, timeout=24.0):
+        transition_ok = wait_rekey_transition(expected_suite, timeout=REKEY_WAIT_TIMEOUT_SECONDS)
+
+        elapsed_ms = (time.time_ns() - start_ns) / 1_000_000
+        elapsed_s = elapsed_ms / 1000.0
+
+        if not transition_ok:
+            if rekey_status == "timeout" and elapsed_s >= REKEY_SKIP_THRESHOLD_SECONDS:
+                raise SuiteSkipped(
+                    suite,
+                    f"rekey transition confirmation exceeded {REKEY_SKIP_THRESHOLD_SECONDS:.2f}s",
+                    elapsed_s=elapsed_s,
+                )
             raise RuntimeError(
                 f"Follower did not confirm suite {expected_suite} after rekey status {rekey_status}"
             )
 
         if rekey_status != "ok":
+            if rekey_status == "timeout" and elapsed_s >= REKEY_SKIP_THRESHOLD_SECONDS:
+                raise SuiteSkipped(
+                    suite,
+                    f"rekey exceeded {REKEY_SKIP_THRESHOLD_SECONDS:.2f}s timeout threshold",
+                    elapsed_s=elapsed_s,
+                )
             raise RuntimeError(f"Proxy reported rekey status {rekey_status} for suite {suite}")
+    else:
+        elapsed_ms = (time.time_ns() - start_ns) / 1_000_000
+        elapsed_s = elapsed_ms / 1000.0
+
+    elapsed_ms = (time.time_ns() - start_ns) / 1_000_000
 
     if REKEY_SETTLE_SECONDS > 0:
         time.sleep(REKEY_SETTLE_SECONDS)
 
-    elapsed_ms = (time.time_ns() - start_ns) / 1_000_000
     return elapsed_ms, mark_ns, rekey_complete_ns
 
 
@@ -2979,9 +3013,6 @@ class TelemetryCollector:
         self.host = host
         self.port = port
         self.stop_event = threading.Event()
-        self.server: Optional[socket.socket] = None
-        self.accept_thread: Optional[threading.Thread] = None
-        self.client_threads: List[threading.Thread] = []
         # Bug #9 fix: Use deque with maxlen to prevent unbounded memory growth
         env_maxlen = os.getenv("GCS_TELEM_MAXLEN")
         maxlen = TELEMETRY_BUFFER_MAXLEN_DEFAULT
@@ -3003,85 +3034,40 @@ class TelemetryCollector:
                     file=sys.stderr,
                 )
                 maxlen = TELEMETRY_BUFFER_MAXLEN_DEFAULT
-        self.samples: deque = deque(maxlen=maxlen)  # ~10MB limit for long tests
+        self.samples: deque = deque(maxlen=maxlen)
         self.lock = threading.Lock()
         self.enabled = True
+        self.thread: Optional[threading.Thread] = None
+        self._last_error: Optional[str] = None
 
     def start(self) -> None:
-        try:
-            addrinfo = socket.getaddrinfo(
-                self.host,
-                self.port,
-                0,
-                socket.SOCK_STREAM,
-                proto=0,
-                flags=socket.AI_PASSIVE if not self.host else 0,
-            )
-        except socket.gaierror as exc:
-            print(f"[WARN] telemetry collector disabled: {exc}", file=sys.stderr)
-            self.enabled = False
+        if not self.enabled:
             return
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
 
-        last_exc: Optional[Exception] = None
-        for family, socktype, proto, _canon, sockaddr in addrinfo:
-            try:
-                srv = socket.socket(family, socktype, proto)
-                try:
-                    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    if family == socket.AF_INET6:
-                        # Allow dual-stack sockets so IPv4-only drones can connect
-                        try:
-                            srv.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-                        except OSError:
-                            pass
-                    srv.bind(sockaddr)
-                    srv.listen(8)
-                    srv.settimeout(0.5)
-                except Exception:
-                    srv.close()
-                    raise
-            except Exception as exc:
-                last_exc = exc
-                continue
-
-            self.server = srv
-            self.accept_thread = threading.Thread(target=self._accept_loop, daemon=True)
-            self.accept_thread.start()
-            print(f"[{ts()}] telemetry collector listening on {self.host}:{self.port}")
-            return
-
-        self.enabled = False
-        message = last_exc or RuntimeError("no suitable address family")
-        print(f"[WARN] telemetry collector disabled: {message}", file=sys.stderr)
-        if self.server:
-            try:
-                self.server.close()
-            except Exception:
-                pass
-            self.server = None
-
-    def _accept_loop(self) -> None:
-        assert self.server is not None
+    def _run(self) -> None:
+        backoff = 1.0
         while not self.stop_event.is_set():
             try:
-                conn, addr = self.server.accept()
-            except socket.timeout:
-                continue
-            except OSError:
-                break
+                with socket.create_connection((self.host, self.port), timeout=5.0) as sock:
+                    sock.settimeout(1.0)
+                    print(f"[{ts()}] telemetry connected to {self.host}:{self.port}")
+                    self._read_stream(sock)
+                    print(f"[{ts()}] telemetry disconnected from {self.host}:{self.port}")
+                    backoff = 1.0
             except Exception as exc:
+                self._last_error = str(exc)
                 if not self.stop_event.is_set():
-                    print(f"[WARN] telemetry accept error: {exc}", file=sys.stderr)
-                continue
-            thread = threading.Thread(target=self._client_loop, args=(conn, addr), daemon=True)
-            thread.start()
-            self.client_threads.append(thread)
+                    print(f"[WARN] telemetry connection error: {exc}", file=sys.stderr)
+            if self.stop_event.is_set():
+                break
+            time.sleep(min(backoff, 5.0))
+            backoff = min(backoff * 1.5, 5.0)
 
-    def _client_loop(self, conn: socket.socket, addr) -> None:
-        peer = f"{addr[0]}:{addr[1]}"
+    def _read_stream(self, sock: socket.socket) -> None:
         try:
-            conn.settimeout(1.0)
-            with conn, conn.makefile("r", encoding="utf-8") as reader:
+            with sock.makefile("r", encoding="utf-8") as reader:
                 for line in reader:
                     if self.stop_event.is_set():
                         break
@@ -3094,30 +3080,21 @@ class TelemetryCollector:
                         continue
                     payload.setdefault("collector_ts_ns", time.time_ns())
                     payload.setdefault("source", "drone")
-                    payload.setdefault("peer", peer)
+                    payload.setdefault("peer", f"{self.host}:{self.port}")
                     with self.lock:
                         self.samples.append(payload)
         except Exception:
-            # drop connection silently
-            pass
+            if not self.stop_event.is_set():
+                raise
 
     def snapshot(self) -> List[dict]:
         with self.lock:
-            # Convert deque to list for compatibility
             return list(self.samples)
 
     def stop(self) -> None:
         self.stop_event.set()
-        if self.server:
-            try:
-                self.server.close()
-            except Exception:
-                pass
-        if self.accept_thread and self.accept_thread.is_alive():
-            self.accept_thread.join(timeout=1.5)
-        for thread in self.client_threads:
-            if thread.is_alive():
-                thread.join(timeout=1.0)
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=1.5)
 
 def resolve_under_root(path: Path) -> Path:
     expanded = path.expanduser()
@@ -3735,7 +3712,12 @@ def main() -> None:
     power_capture_enabled = bool(auto.get("power_capture", True))
 
     telemetry_enabled = bool(auto.get("telemetry_enabled", True))
-    telemetry_bind_host = auto.get("telemetry_bind_host") or TELEMETRY_BIND_HOST
+    telemetry_target_host = (
+        auto.get("telemetry_target_host")
+    or auto.get("telemetry_bind_host")
+    or DRONE_HOST
+    or TELEMETRY_BIND_HOST
+    )
     telemetry_port_cfg = auto.get("telemetry_port")
     telemetry_port = TELEMETRY_PORT if telemetry_port_cfg in (None, "") else int(telemetry_port_cfg)
 
@@ -3819,9 +3801,9 @@ def main() -> None:
 
     telemetry_collector: Optional[TelemetryCollector] = None
     if telemetry_enabled:
-        telemetry_collector = TelemetryCollector(telemetry_bind_host, telemetry_port)
+    telemetry_collector = TelemetryCollector(telemetry_target_host, telemetry_port)
         telemetry_collector.start()
-        print(f"[{ts()}] telemetry collector -> {telemetry_bind_host}:{telemetry_port}")
+    print(f"[{ts()}] telemetry subscriber -> {telemetry_target_host}:{telemetry_port}")
     else:
         print(f"[{ts()}] telemetry collector disabled via AUTO_GCS configuration")
 
@@ -3845,7 +3827,13 @@ def main() -> None:
 
         if traffic_mode == "saturation":
             for idx, suite in enumerate(suites):
-                rekey_ms, rekey_mark_ns, rekey_ok_ns = activate_suite(gcs_proc, suite, is_first=(idx == 0))
+                try:
+                    rekey_ms, rekey_mark_ns, rekey_ok_ns = activate_suite(gcs_proc, suite, is_first=(idx == 0))
+                except SuiteSkipped as exc:
+                    print(f"[WARN] skipping suite {suite}: {exc}", file=sys.stderr)
+                    if inter_gap > 0 and idx < len(suites) - 1:
+                        time.sleep(inter_gap)
+                    continue
                 outdir = suite_outdir(suite)
                 tester = SaturationTester(
                     suite=suite,
@@ -3884,25 +3872,33 @@ def main() -> None:
         else:
             for pass_index in range(passes):
                 for idx, suite in enumerate(suites):
-                    row = run_suite(
-                        gcs_proc,
-                        suite,
-                        is_first=(pass_index == 0 and idx == 0),
-                        duration_s=duration,
-                        payload_bytes=payload_bytes,
-                        event_sample=event_sample,
-                        offset_ns=offset_ns,
-                        pass_index=pass_index,
-                        traffic_mode=traffic_mode,
-                        pre_gap=pre_gap,
-                        inter_gap_s=inter_gap,
-                        rate_pps=rate_pps,
-                        target_bandwidth_mbps=run_target_bandwidth_mbps,
-                        power_capture_enabled=power_capture_enabled,
-                        clock_offset_warmup_s=offset_warmup_s,
-                        min_delay_samples=min_delay_samples,
-                        telemetry_collector=telemetry_collector,
-                    )
+                    try:
+                        row = run_suite(
+                            gcs_proc,
+                            suite,
+                            is_first=(pass_index == 0 and idx == 0),
+                            duration_s=duration,
+                            payload_bytes=payload_bytes,
+                            event_sample=event_sample,
+                            offset_ns=offset_ns,
+                            pass_index=pass_index,
+                            traffic_mode=traffic_mode,
+                            pre_gap=pre_gap,
+                            inter_gap_s=inter_gap,
+                            rate_pps=rate_pps,
+                            target_bandwidth_mbps=run_target_bandwidth_mbps,
+                            power_capture_enabled=power_capture_enabled,
+                            clock_offset_warmup_s=offset_warmup_s,
+                            min_delay_samples=min_delay_samples,
+                            telemetry_collector=telemetry_collector,
+                        )
+                    except SuiteSkipped as exc:
+                        print(f"[WARN] skipping suite {suite}: {exc}", file=sys.stderr)
+                        is_last_suite = idx == len(suites) - 1
+                        is_last_pass = pass_index == passes - 1
+                        if inter_gap > 0 and not (is_last_suite and is_last_pass):
+                            time.sleep(inter_gap)
+                        continue
                     summary_rows.append(row)
                     is_last_suite = idx == len(suites) - 1
                     is_last_pass = pass_index == passes - 1
