@@ -106,68 +106,68 @@ CONFIG = {
 
     "AUTO_GCS": {
         # Session IDs default to "<prefix>_<unix>" unless GCS_SESSION_ID env overrides
-        "session_prefix": "run",
+        "session_prefix": "run",  # string prefix for run IDs
         # Traffic profile: "blast", "constant", "mavproxy", or "saturation"
-        "traffic": "constant",
+        "traffic": "constant",  # modes: constant|blast|mavproxy|saturation
         # Traffic engine: "native" (built-in blaster) or "iperf3" (external client)
-        "traffic_engine": "native",
+        "traffic_engine": "iperf3",  # generator: native|iperf3
         # Duration for active traffic window per suite (seconds)
-        "duration_s": 45.0,
+        "duration_s": 45.0,  # positive float seconds
         # Delay after rekey before starting traffic (seconds)
-        "pre_gap_s": 1.0,
+        "pre_gap_s": 1.0,  # non-negative float seconds
         # Delay between suites (seconds)
-        "inter_gap_s": 15.0,
+        "inter_gap_s": 15.0,  # non-negative float seconds
         # UDP payload size (bytes) for blaster calculations
-        "payload_bytes": 256,
+        "payload_bytes": 256,  # payload bytes (>0)
         # Sample every Nth send/receive event (0 disables)
-        "event_sample": 100,
+        "event_sample": 100,  # packets between samples (>=0)
         # Number of full passes across suite list
-        "passes": 1,
+        "passes": 1,  # positive integer
         # Explicit packets-per-second override; 0 means best-effort
-        "rate_pps": 0,
+        "rate_pps": 0,  # packets/sec (>=0)
         # Optional bandwidth target in Mbps (converted to PPS if > 0)
-        "bandwidth_mbps": 0.0,
+        "bandwidth_mbps": 0.0,  # Mbps target (>=0)
         # Max rate explored during saturation sweeps (Mbps)
-        "max_rate_mbps": 200.0,
+        "max_rate_mbps": 200.0,  # saturation upper bound Mbps (>0)
         # Optional ordered suite subset (None -> all suites from core.suites, including ChaCha20-Poly1305 and ASCON variants)
-        "suites": None,
+        "suites": None,  # None or iterable of suite names
         # Launch local GCS proxy under scheduler control
-        "launch_proxy": True,
+        "launch_proxy": True,  # bool controls local proxy launch
         # Enable local proxy monitors (perf/pidstat/psutil)
-        "monitors_enabled": True,
+        "monitors_enabled": True,  # bool controlling monitor sidecars
         # Start telemetry collector on the scheduler side
-        "telemetry_enabled": True,
+        "telemetry_enabled": True,  # bool gating telemetry collector
         # Bind/port for telemetry collector (defaults to CONFIG values)
-        "telemetry_bind_host": "0.0.0.0",
-        "telemetry_port": 52080,
+        "telemetry_bind_host": "0.0.0.0",  # bind address string
+        "telemetry_port": 52080,  # telemetry listen port (1-65535)
         # Emit combined Excel workbook when run completes
-        "export_combined_excel": True,
+        "export_combined_excel": True,  # bool to generate combined workbook
         # Optional iperf3 configuration used when traffic_engine == "iperf3"
         "iperf3": {
-            "server_host": None,
-            "server_port": 5201,
-            "binary": "iperf3",
-            "extra_args": [],
-            "force_cli": False,
+            "server_host": None,  # override iperf3 server host or None for default
+            "server_port": 5201,  # iperf3 UDP port (1-65535)
+            "binary": "iperf3",  # iperf3 executable path/name
+            "extra_args": [],  # additional CLI args list
+            "force_cli": False,  # bool to force CLI output mode
         },
         # Optional post-run fetch of drone artifacts (logs, power captures)
         "post_fetch": {
-            "enabled": True,
-            "host": None,
-            "username": "dev",
-            "password": "kamal123",
-            "port": 22,
-            "logs_remote": "~/research/logs/auto/drone",
-            "logs_local": "logs/auto",
-            "output_remote": "~/research/output/drone",
-            "output_local": "output/drone",
+            "enabled": True,  # bool toggling post-run fetch
+            "host": None,  # SSH host or None to skip
+            "username": "dev",  # SSH username string
+            "password": "kamal123",  # SSH password or None if key-based
+            "port": 22,  # SSH port (1-65535)
+            "logs_remote": "~/research/logs/auto/drone",  # remote logs path
+            "logs_local": "logs/auto",  # local logs directory
+            "output_remote": "~/research/output/drone",  # remote output path
+            "output_local": "output/drone",  # local output directory
         },
         "post_report": {
-            "enabled": True,
-            "script": "tools/report_constant_run.py",
-            "output_dir": "output/gcs",
-            "table_name": "run_summary_table.md",
-            "text_name": "run_suite_summaries.txt",
+            "enabled": True,  # bool toggling post-run report generation
+            "script": "tools/report_constant_run.py",  # reporting script path
+            "output_dir": "output/gcs",  # base output directory
+            "table_name": "run_summary_table.md",  # Markdown table filename
+            "text_name": "run_suite_summaries.txt",  # narrative summary filename
         },
     },
 }

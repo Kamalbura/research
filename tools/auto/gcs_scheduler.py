@@ -505,36 +505,36 @@ def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
 
 
 AUTO_GCS_DEFAULTS = {
-    "session_prefix": "session",
-    "traffic": "constant",
-    "traffic_engine": "native",
-    "duration_s": 45.0,
-    "pre_gap_s": 1.0,
-    "inter_gap_s": 15.0,
-    "payload_bytes": 256,
-    "event_sample": 100,
-    "passes": 1,
-    "rate_pps": 0,
-    "bandwidth_mbps": 0.0,
-    "max_rate_mbps": 200.0,
-    "sat_search": "auto",
-    "sat_delivery_threshold": 0.85,
-    "sat_loss_threshold_pct": 5.0,
-    "sat_rtt_spike_factor": 1.6,
-    "suites": None,
-    "launch_proxy": True,
-    "monitors_enabled": True,
-    "telemetry_enabled": True,
-    "telemetry_target_host": DRONE_HOST,
-    "telemetry_port": TELEMETRY_PORT,
-    "export_combined_excel": True,
-    "power_capture": True,
+    "session_prefix": "session",  # string prefix for generated session IDs
+    "traffic": "constant",  # modes: constant|blast|mavproxy|saturation
+    "traffic_engine": "iperf3",  # traffic generator: native|iperf3
+    "duration_s": 45.0,  # positive float seconds per traffic window
+    "pre_gap_s": 1.0,  # non-negative float seconds before traffic starts
+    "inter_gap_s": 15.0,  # non-negative float seconds between suites
+    "payload_bytes": 256,  # UDP payload size in bytes (>0)
+    "event_sample": 100,  # sample every N packets (0 disables sampling)
+    "passes": 1,  # positive integer pass count over suite list
+    "rate_pps": 0,  # target packets/sec (0 lets bandwidth_mbps drive)
+    "bandwidth_mbps": 0.0,  # Mbps target (0 means derive from rate_pps)
+    "max_rate_mbps": 200.0,  # saturation search maximum Mbps (>0)
+    "sat_search": "auto",  # saturation search: auto|linear|bisect
+    "sat_delivery_threshold": 0.85,  # accepted delivery ratio in saturation
+    "sat_loss_threshold_pct": 5.0,  # max loss percent during saturation
+    "sat_rtt_spike_factor": 1.6,  # RTT spike multiplier for saturation skip
+    "suites": None,  # None for all suites or explicit iterable override
+    "launch_proxy": True,  # run local proxy (False assumes external proxy)
+    "monitors_enabled": True,  # enable local monitor collection
+    "telemetry_enabled": True,  # publish telemetry back to scheduler
+    "telemetry_target_host": DRONE_HOST,  # override telemetry target host
+    "telemetry_port": TELEMETRY_PORT,  # override telemetry port
+    "export_combined_excel": True,  # write combined Excel workbook
+    "power_capture": True,  # request power capture from follower
     "iperf3": {
-        "server_host": None,
-        "server_port": 5201,
-        "binary": "iperf3",
-        "extra_args": [],
-        "force_cli": False,
+        "server_host": None,  # override iperf3 server host or None for default
+        "server_port": 5201,  # iperf3 UDP port (1-65535)
+        "binary": "iperf3",  # iperf3 executable path/name
+        "extra_args": [],  # additional CLI args list for iperf3
+        "force_cli": False,  # force CLI even if JSON parsing fails
     },
 }
 

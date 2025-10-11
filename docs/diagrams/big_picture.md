@@ -16,14 +16,14 @@ flowchart LR
   %% GCS SIDE
   subgraph GCS[Ground Control Station]
     direction TB
-  GCSApps["Traffic/Control Apps<br/>(blasters, tests)"]
-  GCSProxy["core/run_proxy.py"]
-  GCSAsync["core/async_proxy.py<br/>UDP/TCP orchestration"]
-  GCSHS["core/handshake.py<br/>KEM+SIG, HKDF"]
-  GCSAEAD["core/aead.py<br/>Sender/Receiver, replay"]
-  GCSPolicy["core/policy_engine.py<br/>Rekey 2PC FSM"]
-  GCSCfg["core/config.py &amp; suites.py"]
-  GCSLog["core/logging_utils.py"]
+  GCSApps[Traffic Control Apps]
+  GCSProxy[run_proxy]
+  GCSAsync[async_proxy]
+  GCSHS[handshake]
+  GCSAEAD[aead]
+  GCSPolicy[policy_engine]
+  GCSCfg[config & suites]
+  GCSLog[logging]
 
     GCSApps -->|UDP plaintext| GCSProxy
     GCSProxy --> GCSAsync
@@ -39,14 +39,14 @@ flowchart LR
   %% DRONE SIDE
   subgraph DRN[Drone]
     direction TB
-  DroneApps["Flight/Telemetry Apps<br/>(UdpEcho, Telemetry, Power)"]
-  DroneProxy["core/run_proxy.py"]
-  DroneAsync["core/async_proxy.py<br/>UDP/TCP orchestration"]
-  DroneHS["core/handshake.py<br/>KEM+SIG, HKDF"]
-  DroneAEAD["core/aead.py<br/>Sender/Receiver, replay"]
-  DronePolicy["core/policy_engine.py<br/>Rekey 2PC FSM"]
-  DroneCfg["core/config.py &amp; suites.py"]
-  DroneLog["core/logging_utils.py"]
+  DroneApps[Telemetry Apps]
+  DroneProxy[run_proxy]
+  DroneAsync[async_proxy]
+  DroneHS[handshake]
+  DroneAEAD[aead]
+  DronePolicy[policy_engine]
+  DroneCfg[config & suites]
+  DroneLog[logging]
 
     DroneApps <-->|UDP plaintext| DroneProxy
     DroneProxy --> DroneAsync
@@ -62,9 +62,9 @@ flowchart LR
   %% NETWORK / CONTROL + DATA PLANES
   subgraph NET[Network]
     direction LR
-  TCPHS["TCP Handshake<br/>(client&lt;-&gt;server)"]:::net
-  UDPAEAD["UDP Encrypted<br/>AES-GCM frames"]:::net
-  UDPPlain["UDP Plaintext<br/>app-side"]:::net
+  TCPHS[TCP Handshake]
+  UDPAEAD[Encrypted UDP]
+  UDPPlain[Plaintext UDP]
   end
 
   %% Cross links
@@ -78,19 +78,19 @@ flowchart LR
   UDPPlain -. app traffic .-> DroneApps
 
   %% LABELS & NOTES (flowchart doesn't support "note over"; use dedicated nodes)
-  NoteTCPHS["KEM Encaps/Decaps + SIG verify<br/>Derive 2x32B keys via HKDF-SHA256"]
+  NoteTCPHS[KEM verify + HKDF keys]
   NoteTCPHS -.-> TCPHS
-  NoteUDPAEAD["Header 22B (!BBBBB8sQB), nonce = epoch || seq(11)<br/>Receiver replay window; silent drops on auth fail"]
+  NoteUDPAEAD[22-byte header; epoch+seq nonce; replay window]
   NoteUDPAEAD -.-> UDPAEAD
-  NoteRekey["Control rekey path:<br/>NEGOTIATING → SWAPPING → RUNNING"]
+  NoteRekey[Rekey FSM: NEGOTIATING -> SWAPPING -> RUNNING]
   NoteRekey -.-> GCSPolicy
   NoteRekey -.-> DronePolicy
 
   %% DATA PATH DETAIL
   subgraph DATAFLOW[Data-plane flow]
     direction TB
-  AppOut["App Payload"] --> Header["Build 22B header<br/>(epoch, seq, suite ids)"] --> Nonce["epoch||seq(11)"] --> Encrypt["AES-GCM seal"] --> Packet["Header||Ciphertext||Tag"]
-  Packet --> Verify["Header check + replay window"] --> Open["AES-GCM open"] --> AppIn["Deliver plaintext to app"]
+  AppOut[App payload] --> Header[Header build] --> Nonce[Nonce] --> Encrypt[Encrypt] --> Packet[Packet frame]
+  Packet --> Verify[Verify + replay] --> Open[Decrypt] --> AppIn[Deliver plaintext]
   end
 
   GCSApps --> AppOut
@@ -99,7 +99,7 @@ flowchart LR
   %% CONTROL PATH DETAIL
   subgraph CONTROL[Control-plane rekey]
     direction LR
-    Propose[Propose new suite IDs]:::mod --> Neg[NEGOTIATING]:::mod --> Swap[SWAPPING (freeze old, set new epoch)]:::mod --> Run[RUNNING (new keys)]:::mod
+  Propose[Propose new suite IDs] --> Neg[NEGOTIATING] --> Swap[SWAPPING freeze old set new epoch] --> Run[RUNNING new keys]
   end
   GCSPolicy --> Propose
   Run --> DronePolicy
