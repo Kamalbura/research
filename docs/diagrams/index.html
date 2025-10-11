@@ -1,0 +1,257 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PQC Proxy Diagrams</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 1rem; }
+      header { position: sticky; top: 0; background: #fff; padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+      nav a { margin-right: 1rem; }
+      .diagram { margin: 2rem 0; }
+      pre { background: #f7f7f7; padding: 1rem; overflow: auto; }
+    </style>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+  </head>
+  <body>
+    <header>
+      <strong>PQC Drone↔GCS – Architecture Diagrams</strong>
+      <nav>
+  <a href="#big">Big picture</a>
+  <a href="#system">System</a>
+        <a href="#core">Core modules</a>
+        <a href="#data">Data plane</a>
+        <a href="#handshake">Handshake</a>
+        <a href="#rekey">Rekey FSM</a>
+        <a href="#orchestration">Scheduler & Follower</a>
+      </nav>
+    </header>
+
+      <section id="big" class="diagram">
+        <h2>Big picture: End-to-end architecture</h2>
+        <p>Open <code>big_picture.md</code> in VS Code for the source, or view this rendered version:</p>
+        <div class="mermaid">
+          flowchart LR
+            classDef comp fill:#eef,stroke:#447,stroke-width:1px
+            classDef mod fill:#f7faff,stroke:#6699cc,stroke-width:1px
+            classDef io fill:#fffaf0,stroke:#cc9900,stroke-width:1px
+            classDef net fill:#f9f9f9,stroke:#888,stroke-dasharray:3 3
+            classDef warn fill:#ffecec,stroke:#cc6666
+
+            subgraph GCS[Ground Control Station]
+              direction TB
+              GCSApps[Traffic/Control Apps\n(blasters, tests)]:::io
+              GCSProxy[core/run_proxy.py]:::comp
+              GCSAsync[core/async_proxy.py\nUDP/TCP orchestration]:::mod
+              GCSHS[core/handshake.py\nKEM+SIG, HKDF]:::mod
+              GCSAEAD[core/aead.py\nSender/Receiver, replay]:::mod
+              GCSPolicy[core/policy_engine.py\nRekey 2PC FSM]:::mod
+              GCSCfg[core/config.py & suites.py]:::mod
+              GCSLog[core/logging_utils.py]:::mod
+              GCSApps -->|UDP plaintext| GCSProxy
+              GCSProxy --> GCSAsync
+              GCSAsync --> GCSHS
+              GCSAsync --> GCSAEAD
+              GCSAsync --> GCSPolicy
+              GCSHS --> GCSCfg
+              GCSAEAD --> GCSCfg
+              GCSPolicy --> GCSCfg
+              GCSProxy --> GCSLog
+            end
+
+            subgraph DRN[Drone]
+              direction TB
+              DroneApps[Flight/Telemetry Apps\n(UdpEcho, Telemetry, Power)]:::io
+              DroneProxy[core/run_proxy.py]:::comp
+              DroneAsync[core/async_proxy.py\nUDP/TCP orchestration]:::mod
+              DroneHS[core/handshake.py\nKEM+SIG, HKDF]:::mod
+              DroneAEAD[core/aead.py\nSender/Receiver, replay]:::mod
+              DronePolicy[core/policy_engine.py\nRekey 2PC FSM]:::mod
+              DroneCfg[core/config.py & suites.py]:::mod
+              DroneLog[core/logging_utils.py]:::mod
+              DroneApps <-->|UDP plaintext| DroneProxy
+              DroneProxy --> DroneAsync
+              DroneAsync --> DroneHS
+              DroneAsync --> DroneAEAD
+              DroneAsync --> DronePolicy
+              DroneHS --> DroneCfg
+              DroneAEAD --> DroneCfg
+              DronePolicy --> DroneCfg
+              DroneProxy --> DroneLog
+            end
+
+            subgraph NET[Network]
+              direction LR
+              TCPHS[TCP Handshake\n(client<->server)]:::net
+              UDPAEAD[UDP Encrypted\nAES-GCM frames]:::net
+              UDPPlain[UDP Plaintext\napp-side]:::net
+            end
+
+            GCSAsync -- Client role --> TCPHS
+            TCPHS -- Server role --> DroneAsync
+            GCSAEAD -- AEAD UDP --> UDPAEAD
+            UDPAEAD -- AEAD UDP --> DroneAEAD
+            GCSApps -. app traffic .-> UDPPlain
+            UDPPlain -. app traffic .-> DroneApps
+
+            note over TCPHS: KEM Encaps/Decaps + SIG verify\nDerive 2x32B keys via HKDF-SHA256
+            note over UDPAEAD: Header 22B (!BBBBB8sQB), nonce=epoch||seq(11)\nReplay window in Receiver; drops are silent
+            note over GCSPolicy,DronePolicy: Control messages drive NEGOTIATING→SWAPPING→RUNNING
+
+            subgraph DATAFLOW[Data-plane flow]
+              direction TB
+              AppOut[App Payload]:::io --> Header[Build 22B header\n(epoch, seq, suite ids)]:::mod --> Nonce[epoch||seq(11)]:::mod --> Encrypt[AES-GCM seal]:::mod --> Packet[Header||Ciphertext||Tag]:::io
+              Packet --> Verify[Header check + replay window]:::mod --> Open[AES-GCM open]:::mod --> AppIn[Deliver plaintext to app]:::io
+            end
+            GCSApps --> AppOut
+            AppIn --> DroneApps
+
+            subgraph CONTROL[Control-plane rekey]
+              direction LR
+              Propose[Propose new suite IDs]:::mod --> Neg[NEGOTIATING]:::mod --> Swap[SWAPPING (freeze old, set new epoch)]:::mod --> Run[RUNNING (new keys)]:::mod
+            end
+            GCSPolicy --> Propose
+            Run --> DronePolicy
+
+            GCSAEAD -. AeadAuthError on auth fail .-> GCSLog:::warn
+            DroneAEAD -. AeadAuthError on auth fail .-> DroneLog:::warn
+            GCSHS -. HandshakeVerifyError on decaps/verify fail .-> GCSLog:::warn
+            DroneHS -. HandshakeVerifyError on decaps/verify fail .-> DroneLog:::warn
+        </div>
+      </section>
+    <section id="system" class="diagram">
+      <h2>System overview</h2>
+      <div class="mermaid">
+        flowchart LR
+          subgraph GCS[Ground Control Station]
+            GCSApp[Traffic/Control Apps]
+            GCSProxy[core/run_proxy.py]
+          end
+
+          subgraph Network
+            UDPPlain[Plaintext UDP]
+            UDPEnc[Encrypted UDP]
+            TCPHS[TCP Handshake]
+          end
+
+          subgraph Drone
+            DroneApp[Flight/Telemetry Apps]
+            DroneProxy[core/run_proxy.py]
+          end
+
+          GCSApp-- UDP plain -->GCSProxy
+          GCSProxy-- TCPHS (KEM+SIG) -->DroneProxy
+          GCSProxy-- AEAD UDP -->DroneProxy
+          DroneProxy-- UDP plain -->DroneApp
+
+          classDef comp fill:#eef,stroke:#447
+          class GCSApp,GCSProxy,DroneApp,DroneProxy comp
+      </div>
+    </section>
+
+    <section id="core" class="diagram">
+      <h2>Core modules wiring</h2>
+      <div class="mermaid">
+        flowchart TB
+          run[run_proxy.py]
+          ap[async_proxy.py]
+          hs[handshake.py]
+          ae[aead.py]
+          su[suites.py]
+          pe[policy_engine.py]
+          cf[config.py]
+          lg[logging_utils.py]
+
+          run --> ap
+          run --> cf
+          run --> lg
+          ap --> hs
+          ap --> ae
+          hs --> su
+          ae --> su
+          ap --> pe
+          ap --> cf
+          pe --> cf
+      </div>
+    </section>
+
+    <section id="data" class="diagram">
+      <h2>Data plane: header and nonce</h2>
+      <div class="mermaid">
+        sequenceDiagram
+          participant S as Sender (core/aead.Sender)
+          participant R as Receiver (core/aead.Receiver)
+          Note over S,R: Header = 22 bytes: !BBBBB8sQB (wire, aeadId, sigId, kemId, infoId, epoch(8), seq(8), payloadLen)
+          S->>S: Nonce = epoch(8) || seq(11 bytes)
+          S->>R: [Header || Ciphertext || Tag]
+          R->>R: Validate header, replay window, derive nonce
+          R->>R: AES-GCM open; drop on auth fail
+      </div>
+      <div class="mermaid">
+        flowchart LR
+          hdr[22-byte Header]
+          nce[Nonce: epoch || seq(11)]
+          kdf[HKDF-SHA256 -> 2x32B keys]
+          aead[AES-256-GCM]
+          hdr --> aead
+          nce --> aead
+          kdf --> aead
+      </div>
+    </section>
+
+    <section id="handshake" class="diagram">
+      <h2>Handshake</h2>
+      <div class="mermaid">
+        sequenceDiagram
+          participant C as GCS (client)
+          participant S as Drone (server)
+          C->>S: ClientHello (suites, nonce, sig)
+          S->>C: ServerHello (sig, KEM pk, params)
+          C->>C: Encapsulate -> ct, K
+          C->>S: ct
+          S->>S: Decapsulate(ct) -> K
+          Note over C,S: HKDF-SHA256(salt, info) => 2x32B keys
+          C-->>S: Move to RUNNING data plane
+      </div>
+    </section>
+
+    <section id="rekey" class="diagram">
+      <h2>Rekey two-phase commit</h2>
+      <div class="mermaid">
+        stateDiagram-v2
+          [*] --> RUNNING
+          RUNNING --> NEGOTIATING: control msg (propose new suite)
+          NEGOTIATING --> SWAPPING: both ready, freeze old
+          SWAPPING --> RUNNING: both confirm new keys
+          NEGOTIATING --> RUNNING: abort/timeout
+      </div>
+    </section>
+
+    <section id="orchestration" class="diagram">
+      <h2>Scheduler and follower</h2>
+      <div class="mermaid">
+        flowchart LR
+          subgraph GCS Orchestration
+            sch[tools/auto/gcs_scheduler.py]
+            gcsProxy[core/run_proxy.py]
+            blaster[traffic drivers]
+          end
+
+          subgraph Drone Orchestration
+            fol[tools/auto/drone_follower.py]
+            droneProxy[core/run_proxy.py]
+            telem[Telemetry/Power monitors]
+          end
+
+          sch --> gcsProxy
+          sch --> blaster
+          fol --> droneProxy
+          fol --> telem
+          gcsProxy <---> droneProxy
+      </div>
+    </section>
+  </body>
+</html>

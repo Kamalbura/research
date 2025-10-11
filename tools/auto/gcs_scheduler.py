@@ -3230,15 +3230,16 @@ def _post_run_fetch_artifacts(session_id: str) -> None:
         return
     host = os.getenv("DRONE_FETCH_HOST") or fetch_cfg.get("host") or DRONE_HOST
     username = os.getenv("DRONE_FETCH_USER") or fetch_cfg.get("username") or "dev"
-    password = os.getenv("DRONE_FETCH_PASSWORD") or fetch_cfg.get("password")
+    password_raw = os.getenv("DRONE_FETCH_PASSWORD") or fetch_cfg.get("password")
+    password = password_raw or None
     port_raw = os.getenv("DRONE_FETCH_PORT") or fetch_cfg.get("port") or 22
     try:
         port = int(port_raw)
     except (TypeError, ValueError):
         port = 22
 
-    if not host or not username or not password:
-        print(f"[WARN] post_fetch disabled: missing host/username/password")
+    if not host or not username:
+        print(f"[WARN] post_fetch disabled: missing host/username")
         return
     if paramiko is None:
         print("[WARN] post_fetch disabled: paramiko not available", file=sys.stderr)
@@ -3261,7 +3262,35 @@ def _post_run_fetch_artifacts(session_id: str) -> None:
         except Exception:
             pass
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # type: ignore[attr-defined]
-        client.connect(hostname=host, port=port, username=username, password=password, timeout=10.0)
+        try:
+            client.connect(
+                hostname=host,
+                port=port,
+                username=username,
+                password=password,
+                look_for_keys=True,
+                allow_agent=True,
+                timeout=10.0,
+            )
+        except Exception as exc:
+            requires_passphrase = False
+            if paramiko and hasattr(paramiko, "ssh_exception"):
+                requires_passphrase = isinstance(
+                    exc,
+                    getattr(paramiko.ssh_exception, "PasswordRequiredException"),
+                )
+            if requires_passphrase:
+                client.connect(
+                    hostname=host,
+                    port=port,
+                    username=username,
+                    password=password,
+                    look_for_keys=False,
+                    allow_agent=True,
+                    timeout=10.0,
+                )
+            else:
+                raise
         with client.open_sftp() as sftp:  # type: ignore[attr-defined]
             if logs_remote:
                 try:

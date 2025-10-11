@@ -307,8 +307,9 @@ def client_encapsulate(server_hello: ServerHello, *, metrics: Optional[Dict[str,
             kem_metrics["ciphertext_bytes"] = len(kem_ct)
             kem_metrics.setdefault("shared_secret_bytes", len(shared_secret))
         return kem_ct, shared_secret
-    except Exception:
-        raise NotImplementedError("client_encapsulate failed")
+    except Exception as exc:
+        # Propagate operational failure with context
+        raise HandshakeVerifyError(f"client encapsulation failed: {exc}") from exc
     finally:
         if kem is not None and hasattr(kem, "free"):
             try:
@@ -342,8 +343,9 @@ def server_decapsulate(
             kem_metrics.setdefault("ciphertext_bytes", len(kem_ct))
             kem_metrics.setdefault("shared_secret_bytes", len(shared_secret))
         return shared_secret
-    except Exception:
-        raise NotImplementedError("server_decapsulate failed")
+    except Exception as exc:
+        # Propagate operational failure with context
+        raise HandshakeVerifyError(f"server decapsulation failed: {exc}") from exc
     finally:
         if kem_obj is not None and hasattr(kem_obj, "free"):
             try:

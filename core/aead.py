@@ -204,8 +204,9 @@ class Sender:
 
         try:
             ciphertext = self._cipher.encrypt(iv, plaintext, header)
-        except Exception as e:
-            raise NotImplementedError(f"AEAD encryption failed: {e}")
+        except Exception as exc:
+            # Surface operational failures with a domain-specific exception
+            raise AeadAuthError(f"encryption failure: {exc}") from exc
         
         # Increment sequence on success
         self._seq += 1
@@ -356,8 +357,12 @@ class Receiver:
             if self.strict_mode:
                 raise AeadAuthError("AEAD authentication failed")
             return None
-        except Exception as e:
-            raise NotImplementedError(f"AEAD decryption failed: {e}")
+        except Exception as exc:
+            # Uncommon backend/primitive errors should also be reported consistently
+            self._last_error = "auth"
+            if self.strict_mode:
+                raise AeadAuthError(f"AEAD decryption failed: {exc}") from exc
+            return None
         self._last_error = None
         return plaintext
 
