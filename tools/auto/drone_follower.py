@@ -46,6 +46,7 @@ import subprocess
 import threading
 import time
 import queue
+from collections import deque
 from datetime import datetime, timezone
 from copy import deepcopy
 from typing import IO, Callable, Dict, Iterable, Optional, Tuple
@@ -877,6 +878,18 @@ def suite_outdir(suite: str) -> Path:
     path = OUTDIR / suite
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def _tail_file_lines(path: Path, limit: int = 120) -> list[str]:
+    limit = max(1, min(int(limit), 500))
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            lines = list(deque(handle, maxlen=limit))
+    except FileNotFoundError:
+        return []
+    except OSError:
+        return []
+    return [line.rstrip("\n") for line in lines]
 
 
 def suite_secrets_dir(suite: str) -> Path:
@@ -1914,6 +1927,7 @@ class ControlServer(threading.Thread):
                     resource_summary = monitors_obj.resource_summary() if monitors_obj else {}
                     kinematics_summary = high_speed_monitor.kinematics_summary() if high_speed_monitor else {}
                     power_status = manager.status() if isinstance(manager, PowerCaptureManager) else {}
+                    log_path = self.state.get("log_path")
                     status_payload = {
                         "suite": suite,
                         "pending_suite": pending_suite,
@@ -1929,6 +1943,7 @@ class ControlServer(threading.Thread):
                         "monitors_enabled": monitors_enabled,
                         "monitor_manifest_path": str(monitor_manifest_path) if monitor_manifest_path else "",
                         "telemetry_status_path": str(telemetry_status_path) if telemetry_status_path else "",
+                        "log_path": str(log_path) if log_path else "",
                     }
                     if resource_summary:
                         status_payload.update(
@@ -2005,6 +2020,39 @@ class ControlServer(threading.Thread):
                     {
                         "ok": True,
                         "session_id": session_value,
+                    },
+                )
+                return
+            if cmd == "log_tail":
+                with state_lock:
+                    log_path = self.state.get("log_path")
+                override = request.get("path")
+                if override:
+                    try:
+                        candidate = Path(str(override))
+                        log_path = candidate
+                    except Exception:
+                        pass
+                if not log_path:
+                    self._send(conn, {"ok": False, "error": "log_path_unavailable"})
+                    return
+                lines_requested = request.get("lines")
+                try:
+                    line_count = int(lines_requested) if lines_requested is not None else 120
+                except (TypeError, ValueError):
+                    line_count = 120
+                tail_lines = _tail_file_lines(Path(log_path), line_count)
+                banner = f"[follower] LOG TAIL ({log_path}) last {len(tail_lines)} lines"
+                print(banner, flush=True)
+                for entry in tail_lines:
+                    print(entry, flush=True)
+                self._send(
+                    conn,
+                    {
+                        "ok": True,
+                        "path": str(log_path),
+                        "lines": tail_lines,
+                        "count": len(tail_lines),
                     },
                 )
                 return
@@ -2464,6 +2512,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         "session_id": session_id,
         "session_dir": session_dir,
         "telemetry_status_path": telemetry_status_path,
+        "log_path": Path(getattr(proxy_log, "name", "")) if proxy_log else None,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()

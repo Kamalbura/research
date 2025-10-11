@@ -139,8 +139,9 @@ SATURATION_SIGNALS = ("owd_p95_spike", "delivery_degraded", "loss_excess")
 TELEMETRY_BUFFER_MAXLEN_DEFAULT = 100_000
 REKEY_SETTLE_SECONDS = 2.0
 REKEY_WAIT_TIMEOUT_SECONDS = 45.0
-REKEY_SKIP_MULTIPLIER = 2.0
+REKEY_SKIP_MULTIPLIER = 1.0
 REKEY_SKIP_THRESHOLD_SECONDS = REKEY_WAIT_TIMEOUT_SECONDS * REKEY_SKIP_MULTIPLIER
+FAILURE_LOG_TAIL_LINES = 120
 class SuiteSkipped(RuntimeError):
     def __init__(self, suite: str, reason: str, *, elapsed_s: Optional[float] = None) -> None:
         message = reason
@@ -1505,6 +1506,58 @@ def _read_proxy_counters() -> dict:
     return {}
 
 
+def _tail_file_lines(path: Path, limit: int = FAILURE_LOG_TAIL_LINES) -> List[str]:
+    limit = max(1, min(int(limit), 500))
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            lines = list(deque(handle, maxlen=limit))
+    except FileNotFoundError:
+        return []
+    except OSError:
+        return []
+    return [line.rstrip("\n") for line in lines]
+
+
+def dump_failure_diagnostics(
+    suite: str,
+    reason: str,
+    *,
+    gcs_log_handle: Optional[IO[str]] = None,
+    gcs_log_path: Optional[Path] = None,
+    tail_lines: int = FAILURE_LOG_TAIL_LINES,
+) -> None:
+    banner = f"[{ts()}] diagnostics for suite {suite}: {reason}"
+    print(banner, flush=True)
+    if gcs_log_handle:
+        try:
+            gcs_log_handle.flush()
+        except Exception:
+            pass
+    if gcs_log_path:
+        gcs_tail = _tail_file_lines(gcs_log_path, tail_lines)
+        if gcs_tail:
+            print(f"[{ts()}] --- GCS proxy log tail ({gcs_log_path}) ---", flush=True)
+            for line in gcs_tail:
+                print(line, flush=True)
+        else:
+            print(f"[WARN] gcs log tail unavailable at {gcs_log_path}", file=sys.stderr)
+    else:
+        print("[WARN] gcs log path unavailable for diagnostics", file=sys.stderr)
+    try:
+        resp = ctl_send({"cmd": "log_tail", "lines": tail_lines}, timeout=1.5, retries=1)
+    except Exception as exc:
+        print(f"[WARN] follower log tail request failed: {exc}", file=sys.stderr)
+        return
+    follower_lines = resp.get("lines")
+    follower_path = resp.get("path") or "remote"
+    if isinstance(follower_lines, list) and follower_lines:
+        print(f"[{ts()}] --- follower log tail ({follower_path}) ---", flush=True)
+        for line in follower_lines:
+            print(str(line), flush=True)
+    else:
+        print(f"[WARN] follower log tail empty ({follower_path})", file=sys.stderr)
+
+
 
 
 
@@ -1614,6 +1667,10 @@ def activate_suite(
     gcs: subprocess.Popen,
     suite: str,
     is_first: bool,
+    *,
+    gcs_log_handle: Optional[IO[str]] = None,
+    gcs_log_path: Optional[Path] = None,
+    failure_tail_lines: int = FAILURE_LOG_TAIL_LINES,
 ) -> Tuple[float, Optional[int], Optional[int]]:
 
     if gcs.poll() is not None:
@@ -1662,6 +1719,7 @@ def activate_suite(
             pending_ack_error = str(exc)
 
         rekey_status = "timeout"
+        diagnostics_emitted = False
 
         try:
 
@@ -1679,10 +1737,26 @@ def activate_suite(
 
         except RuntimeError as exc:
             rekey_status = "error"
+            dump_failure_diagnostics(
+                suite,
+                f"proxy exited during rekey: {exc}",
+                gcs_log_handle=gcs_log_handle,
+                gcs_log_path=gcs_log_path,
+                tail_lines=failure_tail_lines,
+            )
+            diagnostics_emitted = True
             raise
         except Exception as exc:
             rekey_status = "error"
             print(f"[WARN] error while waiting for proxy rekey {suite}: {exc}", file=sys.stderr)
+            dump_failure_diagnostics(
+                suite,
+                f"exception while waiting for proxy rekey: {exc}",
+                gcs_log_handle=gcs_log_handle,
+                gcs_log_path=gcs_log_path,
+                tail_lines=failure_tail_lines,
+            )
+            diagnostics_emitted = True
         finally:
             try:
                 rekey_complete_ns = time.time_ns()
@@ -1713,10 +1787,22 @@ def activate_suite(
         elapsed_s = elapsed_ms / 1000.0
 
         if not transition_ok:
+            if not diagnostics_emitted:
+                reason = (
+                    f"timeout waiting for follower to report suite {expected_suite} after status {rekey_status}"
+                )
+                dump_failure_diagnostics(
+                    suite,
+                    reason,
+                    gcs_log_handle=gcs_log_handle,
+                    gcs_log_path=gcs_log_path,
+                    tail_lines=failure_tail_lines,
+                )
+                diagnostics_emitted = True
             if rekey_status == "timeout" and elapsed_s >= REKEY_SKIP_THRESHOLD_SECONDS:
                 raise SuiteSkipped(
                     suite,
-                    f"rekey transition confirmation exceeded {REKEY_SKIP_THRESHOLD_SECONDS:.2f}s",
+                    f"rekey confirmation exceeded {REKEY_SKIP_THRESHOLD_SECONDS:.2f}s limit",
                     elapsed_s=elapsed_s,
                 )
             raise RuntimeError(
@@ -1724,10 +1810,20 @@ def activate_suite(
             )
 
         if rekey_status != "ok":
+            if not diagnostics_emitted:
+                reason = f"proxy reported rekey status {rekey_status}"
+                dump_failure_diagnostics(
+                    suite,
+                    reason,
+                    gcs_log_handle=gcs_log_handle,
+                    gcs_log_path=gcs_log_path,
+                    tail_lines=failure_tail_lines,
+                )
+                diagnostics_emitted = True
             if rekey_status == "timeout" and elapsed_s >= REKEY_SKIP_THRESHOLD_SECONDS:
                 raise SuiteSkipped(
                     suite,
-                    f"rekey exceeded {REKEY_SKIP_THRESHOLD_SECONDS:.2f}s timeout threshold",
+                    f"rekey exceeded {REKEY_SKIP_THRESHOLD_SECONDS:.2f}s limit",
                     elapsed_s=elapsed_s,
                 )
             raise RuntimeError(f"Proxy reported rekey status {rekey_status} for suite {suite}")
@@ -1759,8 +1855,16 @@ def run_suite(
     clock_offset_warmup_s: float,
     min_delay_samples: int,
     telemetry_collector: Optional["TelemetryCollector"] = None,
+    gcs_log_handle: Optional[IO[str]] = None,
+    gcs_log_path: Optional[Path] = None,
 ) -> dict:
-    rekey_duration_ms, rekey_mark_ns, rekey_complete_ns = activate_suite(gcs, suite, is_first)
+    rekey_duration_ms, rekey_mark_ns, rekey_complete_ns = activate_suite(
+        gcs,
+        suite,
+        is_first,
+        gcs_log_handle=gcs_log_handle,
+        gcs_log_path=gcs_log_path,
+    )
 
     effective_sample_every, effective_min_delay = _compute_sampling_params(
         duration_s,
@@ -3826,7 +3930,13 @@ def main() -> None:
         if traffic_mode == "saturation":
             for idx, suite in enumerate(suites):
                 try:
-                    rekey_ms, rekey_mark_ns, rekey_ok_ns = activate_suite(gcs_proc, suite, is_first=(idx == 0))
+                    rekey_ms, rekey_mark_ns, rekey_ok_ns = activate_suite(
+                        gcs_proc,
+                        suite,
+                        is_first=(idx == 0),
+                        gcs_log_handle=log_handle,
+                        gcs_log_path=gcs_log_path,
+                    )
                 except SuiteSkipped as exc:
                     print(f"[WARN] skipping suite {suite}: {exc}", file=sys.stderr)
                     if inter_gap > 0 and idx < len(suites) - 1:
@@ -3889,6 +3999,8 @@ def main() -> None:
                             clock_offset_warmup_s=offset_warmup_s,
                             min_delay_samples=min_delay_samples,
                             telemetry_collector=telemetry_collector,
+                            gcs_log_handle=log_handle,
+                            gcs_log_path=gcs_log_path,
                         )
                     except SuiteSkipped as exc:
                         print(f"[WARN] skipping suite {suite}: {exc}", file=sys.stderr)

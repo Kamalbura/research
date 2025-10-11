@@ -14,6 +14,7 @@ is retained for backward compatibility; a future refactor may rename it to
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import queue
@@ -720,15 +721,39 @@ def run_proxy(
     def write_status(payload: Dict[str, object]) -> None:
         if status_path is None:
             return
-        try:
-            status_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp_path = status_path.with_suffix(status_path.suffix + ".tmp")
-            tmp_path.write_text(json.dumps(payload), encoding="utf-8")
-            tmp_path.replace(status_path)
-        except Exception as exc:
+        status_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = status_path.with_suffix(status_path.suffix + ".tmp")
+        raw = json.dumps(payload)
+
+        def _should_retry(exc: OSError) -> bool:
+            if exc.errno in (errno.EACCES, errno.EPERM):
+                return True
+            win_err = getattr(exc, "winerror", None)
+            return win_err in (5, 32)
+
+        last_error: Optional[BaseException] = None
+        for attempt in range(5):
+            try:
+                tmp_path.write_text(raw, encoding="utf-8")
+                tmp_path.replace(status_path)
+                return
+            except OSError as exc:
+                last_error = exc
+                if attempt < 4 and _should_retry(exc):
+                    time.sleep(0.05 * (attempt + 1))
+                    continue
+                break
+            finally:
+                try:
+                    if tmp_path.exists():
+                        tmp_path.unlink()
+                except OSError:
+                    pass
+
+        if last_error is not None:
             logger.warning(
                 "Failed to write status file",
-                extra={"role": role, "error": str(exc), "path": str(status_path)},
+                extra={"role": role, "error": str(last_error), "path": str(status_path)},
             )
 
     if role == "drone" and gcs_sig_public is None:
@@ -808,12 +833,15 @@ def run_proxy(
         while not stop_status_writer.is_set():
             try:
                 with counters_lock:
-                    payload = {
-                        "status": "running",
-                        "suite": suite_id,
-                        "counters": counters.to_dict(),
-                        "ts_ns": time.time_ns(),
-                    }
+                    counters_snapshot = counters.to_dict()
+                with context_lock:
+                    current_suite = active_context.get("suite", suite_id)
+                payload = {
+                    "status": "running",
+                    "suite": current_suite,
+                    "counters": counters_snapshot,
+                    "ts_ns": time.time_ns(),
+                }
                 write_status(payload)
             except Exception:
                 logger.debug("status writer failed", extra={"role": role})
@@ -866,7 +894,7 @@ def run_proxy(
         )
 
         def worker() -> None:
-            nonlocal gcs_sig_public
+            nonlocal gcs_sig_public, suite_id
             try:
                 new_suite = get_suite(target_suite_id)
                 new_secret = None
@@ -1038,6 +1066,7 @@ def run_proxy(
                 if new_handshake_metrics:
                     status_payload["handshake_metrics"] = new_handshake_metrics
                 write_status(status_payload)
+                suite_id = new_suite["suite_id"]
                 new_sess_display = (
                     new_session_id.hex()
                     if cfg.get("LOG_SESSION_ID", False)
