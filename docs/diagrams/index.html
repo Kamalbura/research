@@ -5,265 +5,486 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PQC Proxy Diagrams</title>
     <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 1rem; }
-      header { position: sticky; top: 0; background: #fff; padding: 0.5rem 0; border-bottom: 1px solid #eee; }
-      nav a { margin-right: 1rem; }
-      .diagram { margin: 2rem 0; }
-      pre { background: #f7f7f7; padding: 1rem; overflow: auto; }
+      :root {
+        color-scheme: light;
+      }
+
+      body {
+        font-family: "Segoe UI", Roboto, system-ui, -apple-system, sans-serif;
+        margin: 0;
+        background: #f5f6f8;
+        color: #1a1d21;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid #e1e4e8;
+        padding: 0.75rem 1.5rem;
+        box-shadow: 0 1px 8px rgba(15, 23, 42, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      header strong {
+        font-size: 1.1rem;
+        letter-spacing: 0.02em;
+      }
+
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      nav a {
+        text-decoration: none;
+        color: #0f62fe;
+        font-weight: 600;
+        padding-bottom: 0.15rem;
+        border-bottom: 2px solid transparent;
+        transition: border-color 0.2s ease, color 0.2s ease;
+      }
+
+      nav a:hover,
+      nav a:focus-visible {
+        border-color: #0f62fe;
+      }
+
+      main {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 1.5rem 1.5rem 4rem;
+      }
+
+      .diagram {
+        margin: 2.5rem 0;
+        padding: 2rem;
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e6e9ef;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        display: grid;
+        gap: 1.5rem;
+      }
+
+      .diagram--fullpage {
+        min-height: calc(100vh - 6rem);
+        align-items: center;
+        justify-items: center;
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .diagram--fullpage figure {
+        width: 100%;
+        max-width: 1360px;
+      }
+
+      .diagram--doc {
+        gap: 2rem;
+      }
+
+      .doc-columns {
+        display: grid;
+        gap: 1.5rem;
+      }
+
+      .doc-columns section {
+        background: #f8f9ff;
+        border-left: 3px solid #c7d2fe;
+        padding: 1rem 1.25rem;
+        border-radius: 8px;
+      }
+
+      .doc-columns h3 {
+        margin-top: 0;
+        color: #1d4ed8;
+      }
+
+      .doc-columns ul,
+      .doc-columns ol {
+        margin: 0.5rem 0 0 1.25rem;
+      }
+
+      .doc-columns li {
+        margin-bottom: 0.35rem;
+      }
+
+      .diagram h2 {
+        margin: 0;
+        font-size: 1.65rem;
+        color: #111827;
+      }
+
+      .diagram p {
+        margin: 0;
+        font-size: 0.95rem;
+        color: #4b5563;
+      }
+
+      figure {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      figure img {
+        width: 100%;
+        height: auto;
+        border: 1px solid #dfe3eb;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+        border-radius: 10px;
+        background: #fff;
+      }
+
+      figure figcaption {
+        font-size: 0.9rem;
+        color: #6b7280;
+      }
+
+      details.legend {
+        border-left: 3px solid #c7d2fe;
+        padding-left: 1.1rem;
+        margin: 0;
+        background: #f8f9ff;
+        border-radius: 6px;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+      }
+
+      details.legend summary {
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        color: #1d4ed8;
+        outline: none;
+      }
+
+      details.legend summary::-webkit-details-marker {
+        display: none;
+      }
+
+      details.legend summary::before {
+        content: "▾";
+        display: inline-block;
+        margin-right: 0.4rem;
+        transition: transform 0.2s ease;
+      }
+
+      details.legend[open] summary::before {
+        transform: rotate(0deg);
+      }
+
+      details.legend ul {
+        margin: 0.75rem 0 0.5rem 1.1rem;
+        padding: 0;
+        list-style: disc;
+      }
+
+      details.legend li {
+        margin-bottom: 0.35rem;
+        line-height: 1.45;
+        font-size: 0.92rem;
+        color: #374151;
+      }
+
+      @media screen and (min-width: 960px) {
+        .diagram {
+          grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.6fr);
+          grid-auto-flow: row;
+          align-items: start;
+        }
+
+        .diagram h2,
+        .diagram p {
+          grid-column: 1 / -1;
+        }
+
+        .diagram figure {
+          grid-column: 1 / 2;
+        }
+
+        .diagram details.legend {
+          grid-column: 2 / 3;
+        }
+
+        .diagram--fullpage {
+          grid-template-columns: 1fr;
+        }
+
+        .diagram--doc {
+          grid-template-columns: 1fr;
+        }
+
+        .doc-columns {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+
+      @page {
+        size: A4 landscape;
+        margin: 0.5cm;
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+          color: #111827;
+        }
+
+        header {
+          position: static;
+          box-shadow: none;
+          border-bottom: none;
+          padding: 0 0 0.4cm;
+        }
+
+        header nav {
+          display: none;
+        }
+
+        main {
+          padding: 0;
+          width: 100%;
+        }
+
+        .diagram {
+          page-break-before: always;
+          page-break-after: always;
+          break-before: page;
+          break-after: page;
+          margin: 0;
+          border: none;
+          box-shadow: none;
+          padding: 0.6cm 0.6cm 0.3cm;
+          background: #ffffff;
+          display: grid;
+          grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+          grid-template-rows: auto 1fr;
+          gap: 0.6cm;
+          align-items: start;
+        }
+
+        .diagram:first-of-type {
+          page-break-before: auto;
+        }
+
+        .diagram:last-of-type {
+          page-break-after: auto;
+        }
+
+        .diagram h2 {
+          grid-column: 1 / -1;
+          font-size: 20pt;
+          margin-bottom: 0.1cm;
+        }
+
+        .diagram p {
+          grid-column: 1 / -1;
+          font-size: 11pt;
+          color: #111827;
+        }
+
+        .diagram figure {
+          grid-column: 1 / 2;
+          margin: 0;
+        }
+
+        details.legend {
+          grid-column: 2 / 3;
+          border-left-color: #1d4ed8;
+          background: none;
+          padding-left: 0.4cm;
+          padding-right: 0.2cm;
+          margin-top: 0;
+          page-break-inside: avoid;
+        }
+
+        details.legend summary {
+          color: #111827;
+          font-size: 12pt;
+        }
+
+        details.legend summary::before {
+          display: none;
+        }
+
+        details.legend > * {
+          display: block;
+        }
+
+        details.legend ul {
+          columns: 1;
+          column-gap: 0;
+          margin: 0.4cm 0 0;
+        }
+
+        details.legend li {
+          font-size: 10.5pt;
+          break-inside: avoid;
+        }
+
+        figure img {
+          width: 100%;
+          height: auto;
+          max-height: 19cm;
+          border: 1px solid #111827;
+          box-shadow: none;
+        }
+
+        figure figcaption {
+          font-size: 10pt;
+          color: #111827;
+        }
+
+        a[href]::after {
+          content: " (" attr(href) ")";
+          font-size: 8pt;
+        }
+
+        .diagram--fullpage {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto 1fr;
+          padding: 0.4cm;
+        }
+
+        .diagram--fullpage h2 {
+          margin-bottom: 0.2cm;
+        }
+
+        .diagram--fullpage figure img {
+          max-height: 19.5cm;
+        }
+
+        .diagram--doc {
+          grid-template-columns: 1fr;
+          gap: 0.6cm;
+        }
+
+        .doc-columns {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 0.6cm;
+        }
+
+        .doc-columns section {
+          background: none;
+          border-left: 3px solid #1d4ed8;
+          padding: 0 0.4cm 0.2cm 0.4cm;
+          border-radius: 0;
+        }
+      }
     </style>
-    <script type="module">
-      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
-      mermaid.initialize({ startOnLoad: true, theme: 'default' });
-    </script>
+
   </head>
   <body>
     <header>
-      <strong>PQC Drone↔GCS – Architecture Diagrams</strong>
+      <strong>PQC Drone↔GCS – Big Picture</strong>
       <nav>
-  <a href="#big">Big picture</a>
-  <a href="#system">System</a>
-        <a href="#core">Core modules</a>
-        <a href="#data">Data plane</a>
-        <a href="#handshake">Handshake</a>
-        <a href="#rekey">Rekey FSM</a>
-        <a href="#orchestration">Scheduler & Follower</a>
+        <a href="#big">Diagram</a>
+        <a href="#big-doc">Documentation</a>
       </nav>
+      <details class="legend" open>
+        <summary>Legend</summary>
+        <ul>
+          <li><strong>Traffic/Control Apps</strong>: blasters and schedulers driving plaintext UDP into the proxy.</li>
+          <li><strong>core/run_proxy.py</strong>: entry point on both GCS and Drone bridging plaintext ⇄ encrypted networks.</li>
+          <li><strong>TCP Handshake</strong>: PQC handshake coordinating suites before AEAD starts.</li>
+          <li><strong>Encrypted UDP</strong>: data-plane channel sealed via `core/aead` with 22-byte header.</li>
+          <li><strong>Flight/Telemetry Apps</strong>: drone-side consumers such as `drone_follower`, telemetry publishers, power monitors.</li>
+        </ul>
+      </details>
     </header>
 
-      <section id="big" class="diagram">
+    <main>
+      <section id="big" class="diagram diagram--fullpage">
         <h2>Big picture: End-to-end architecture</h2>
-        <p>Open <code>big_picture.md</code> in VS Code for the source, or view this rendered version:</p>
-        <div class="mermaid">
-          %%{init: {'securityLevel': 'loose', 'flowchart': {'htmlLabels': true}}}%%
-          flowchart LR
-            classDef comp fill:#eef,stroke:#447,stroke-width:1px
-            classDef mod fill:#f7faff,stroke:#6699cc,stroke-width:1px
-            classDef io fill:#fffaf0,stroke:#cc9900,stroke-width:1px
-            classDef net fill:#f9f9f9,stroke:#888,stroke-dasharray:3 3
-            classDef warn fill:#ffecec,stroke:#cc6666
-            classDef note fill:#ffffe0,stroke:#999,stroke-dasharray:3 3,color:#333
-
-            subgraph GCS[Ground Control Station]
-              direction TB
-              GCSApps["Traffic/Control Apps<br/>(blasters, tests)"]
-              GCSProxy["core/run_proxy.py"]
-              GCSAsync["core/async_proxy.py<br/>UDP/TCP orchestration"]
-              GCSHS["core/handshake.py<br/>KEM+SIG, HKDF"]
-              GCSAEAD["core/aead.py<br/>Sender/Receiver, replay"]
-              GCSPolicy["core/policy_engine.py<br/>Rekey 2PC FSM"]
-              GCSCfg["core/config.py &amp; suites.py"]
-              GCSLog["core/logging_utils.py"]
-              GCSApps -->|UDP plaintext| GCSProxy
-              GCSProxy --> GCSAsync
-              GCSAsync --> GCSHS
-              GCSAsync --> GCSAEAD
-              GCSAsync --> GCSPolicy
-              GCSHS --> GCSCfg
-              GCSAEAD --> GCSCfg
-              GCSPolicy --> GCSCfg
-              GCSProxy --> GCSLog
-            end
-
-            subgraph DRN[Drone]
-              direction TB
-              DroneApps["Flight/Telemetry Apps<br/>(UdpEcho, Telemetry, Power)"]
-              DroneProxy["core/run_proxy.py"]
-              DroneAsync["core/async_proxy.py<br/>UDP/TCP orchestration"]
-              DroneHS["core/handshake.py<br/>KEM+SIG, HKDF"]
-              DroneAEAD["core/aead.py<br/>Sender/Receiver, replay"]
-              DronePolicy["core/policy_engine.py<br/>Rekey 2PC FSM"]
-              DroneCfg["core/config.py &amp; suites.py"]
-              DroneLog["core/logging_utils.py"]
-              DroneApps <-->|UDP plaintext| DroneProxy
-              DroneProxy --> DroneAsync
-              DroneAsync --> DroneHS
-              DroneAsync --> DroneAEAD
-              DroneAsync --> DronePolicy
-              DroneHS --> DroneCfg
-              DroneAEAD --> DroneCfg
-              DronePolicy --> DroneCfg
-              DroneProxy --> DroneLog
-            end
-
-            subgraph NET[Network]
-              direction LR
-              TCPHS["TCP Handshake<br/>(client&lt;-&gt;server)"]
-              UDPAEAD["UDP Encrypted<br/>AES-GCM frames"]
-              UDPPlain["UDP Plaintext<br/>app-side"]
-            end
-
-            GCSAsync -- Client role --> TCPHS
-            TCPHS -- Server role --> DroneAsync
-            GCSAEAD -- AEAD UDP --> UDPAEAD
-            UDPAEAD -- AEAD UDP --> DroneAEAD
-            GCSApps -. app traffic .-> UDPPlain
-            UDPPlain -. app traffic .-> DroneApps
-
-            NoteTCPHS["KEM Encaps/Decaps + SIG verify<br/>Derive 2x32B keys via HKDF-SHA256"]
-            NoteTCPHS -.-> TCPHS
-            NoteUDPAEAD["Header 22B (!BBBBB8sQB), nonce = epoch || seq(11)<br/>Receiver replay window; silent drops on auth fail"]
-            NoteUDPAEAD -.-> UDPAEAD
-            NoteRekey["Control rekey path:<br/>NEGOTIATING → SWAPPING → RUNNING"]
-            NoteRekey -.-> GCSPolicy
-            NoteRekey -.-> DronePolicy
-
-            subgraph DATAFLOW[Data-plane flow]
-              direction TB
-              AppOut["App Payload"] --> Header["Build 22B header<br/>(epoch, seq, suite ids)"] --> Nonce["epoch||seq(11)"] --> Encrypt["AES-GCM seal"] --> Packet["Header||Ciphertext||Tag"]
-              Packet --> Verify["Header check + replay window"] --> Open["AES-GCM open"] --> AppIn["Deliver plaintext to app"]
-            end
-            GCSApps --> AppOut
-            AppIn --> DroneApps
-
-            subgraph CONTROL[Control-plane rekey]
-              direction LR
-              Propose[Propose new suite IDs]:::mod --> Neg[NEGOTIATING]:::mod --> Swap[SWAPPING (freeze old, set new epoch)]:::mod --> Run[RUNNING (new keys)]:::mod
-            end
-      GCSPolicy --> Propose
-      Run --> DronePolicy
-
-      GCSAEAD -. AeadAuthError on auth fail .-> GCSLog
-      DroneAEAD -. AeadAuthError on auth fail .-> DroneLog
-      GCSHS -. HandshakeVerifyError on decaps/verify fail .-> GCSLog
-      DroneHS -. HandshakeVerifyError on decaps/verify fail .-> DroneLog
-
-      class GCSProxy,DroneProxy comp
-      class GCSAsync,DroneAsync,GCSHS,DroneHS,GCSAEAD,DroneAEAD,GCSPolicy,DronePolicy,GCSCfg,DroneCfg,GCSLog,DroneLog,Header,Nonce,Encrypt,Verify,Open,Propose,Neg,Swap,Run mod
-      class GCSApps,DroneApps,AppOut,Packet,AppIn io
-      class TCPHS,UDPAEAD,UDPPlain net
-      class NoteTCPHS,NoteUDPAEAD,NoteRekey note
-        </div>
+        <figure>
+          <a href="../../tools/images/big_picture-1.svg" target="_blank" rel="noopener">
+            <img src="../../tools/images/big_picture-1.svg" alt="Big picture architecture diagram" />
+          </a>
+          <figcaption>Rendered SVG compiled from <code>big_picture.md</code>. Use the Documentation page for detailed walkthroughs.</figcaption>
+        </figure>
       </section>
-    <section id="system" class="diagram">
-      <h2>System overview</h2>
-      <div class="mermaid">
-        flowchart LR
-          subgraph GCS[Ground Control Station]
-            GCSApp[Traffic/Control Apps]
-            GCSProxy[core/run_proxy.py]
-          end
-
-          subgraph Network
-            UDPPlain[Plaintext UDP]
-            UDPEnc[Encrypted UDP]
-            TCPHS[TCP Handshake]
-          end
-
-          subgraph Drone
-            DroneApp[Flight/Telemetry Apps]
-            DroneProxy[core/run_proxy.py]
-          end
-
-          GCSApp-- UDP plain -->GCSProxy
-          GCSProxy-- TCPHS (KEM+SIG) -->DroneProxy
-          GCSProxy-- AEAD UDP -->DroneProxy
-          DroneProxy-- UDP plain -->DroneApp
-
-          classDef comp fill:#eef,stroke:#447
-          class GCSApp,GCSProxy,DroneApp,DroneProxy comp
+    <section id="big-doc" class="diagram diagram--doc">
+      <h2>Big picture documentation</h2>
+      <p>
+        Source Markdown: <a href="big_picture.md" target="_blank" rel="noopener">big_picture.md</a>. This page accompanies the full-page diagram with a
+        detailed breakdown of every component, flow, and guardrail.
+      </p>
+      <div class="doc-columns">
+        <section>
+          <h3>Ground Control Station</h3>
+          <ul>
+            <li><strong>Traffic Control Apps</strong>: Generators and schedulers in <code>gcs/</code> and <code>tools/auto/gcs_scheduler.py</code> driving plaintext UDP into the proxy.</li>
+            <li><strong>run_proxy</strong> (<code>core/run_proxy.py</code>): Boots the proxy, parses CLI flags, exposes plaintext sockets, configures logging.</li>
+            <li><strong>async_proxy</strong> (<code>core/async_proxy.py</code>): Manages UDP/TCP sockets, initiates PQC handshakes, pumps ciphertext↔plaintext streams.</li>
+            <li><strong>handshake</strong> (<code>core/handshake.py</code>): Executes ML-KEM encapsulation/decapsulation, ML-DSA signature verification, HKDF derivation.</li>
+            <li><strong>aead</strong> (<code>core/aead.py</code>): Builds the 22-byte header, derives nonces, applies AES-256-GCM, enforces replay windows.</li>
+            <li><strong>policy_engine</strong> (<code>core/policy_engine.py</code>): Two-phase rekey FSM (NEGOTIATING → SWAPPING → RUNNING) with manual overrides.</li>
+            <li><strong>config &amp; suites</strong> (<code>core/config.py</code> &amp; <code>core/suites.py</code>): Central configuration validation, suite registry, HKDF salts.</li>
+            <li><strong>logging</strong> (<code>core/logging_utils.py</code>): Structured logging with hashed session identifiers and secret-free output.</li>
+          </ul>
+        </section>
+        <section>
+          <h3>Drone</h3>
+          <ul>
+            <li><strong>Telemetry Apps</strong>: Components started by <code>tools/auto/drone_follower.py</code> (UdpEcho, TelemetryPublisher, PowerCapture) and flight software.</li>
+            <li>Core modules mirror the GCS roles but operate as the TCP server and deliver decrypted payloads to drone consumers.</li>
+          </ul>
+          <h3>Network &amp; flows</h3>
+          <ul>
+            <li><strong>TCP Handshake</strong>: <code>async_proxy._perform_handshake()</code> carries ML-KEM/ML-DSA artifacts before AEAD activation.</li>
+            <li><strong>Encrypted UDP</strong>: AES-GCM frames with fixed header (`core/aead.HEADER_STRUCT`) and deterministic nonce `epoch || seq`.</li>
+            <li><strong>Plaintext UDP</strong>: Loopback sockets (unless <code>ALLOW_NON_LOOPBACK_PLAINTEXT=1</code>) for applications.</li>
+          </ul>
+          <h3>Data-plane pipeline</h3>
+          <ol>
+            <li>Applications produce plaintext payloads.</li>
+            <li><code>core/aead.Sender</code> builds header (wire version, suite IDs, epoch, seq, len).</li>
+            <li>Nonce formed as `epoch || seq(11 bytes)`, AEAD sealed with AES-256-GCM.</li>
+            <li><code>core/aead.Receiver</code> validates header, applies replay window, opens ciphertext, forwards plaintext.</li>
+          </ol>
+        </section>
+        <section>
+          <h3>Control-plane rekey</h3>
+          <ol>
+            <li><strong>Propose</strong>: Policy thresholds or console command issue new suite IDs.</li>
+            <li><strong>NEGOTIATING</strong>: Both sides prep Sender/Receiver instances, freeze old epoch.</li>
+            <li><strong>SWAPPING</strong>: New keys become active; old epoch drains in-flight packets.</li>
+            <li><strong>RUNNING</strong>: Stable state with fresh keys; old state discarded.</li>
+          </ol>
+          <h3>Guardrails &amp; observability</h3>
+          <ul>
+            <li><strong>Constant-time crypto</strong>: No secret-dependent branching or logging inside <code>core/aead</code> / <code>core/handshake</code>.</li>
+            <li><strong>Replay defense</strong>: 1024-packet sliding window with silent drops and <code>AeadAuthError</code> diagnostics.</li>
+            <li><strong>Configuration safety</strong>: <code>core/config.validate_config()</code> enforces loopback defaults, PSK length, suite validity.</li>
+            <li><strong>Logging hooks</strong>: Errors (e.g., <code>HandshakeVerifyError</code>) surface via structured log events for post-run analysis.</li>
+          </ul>
+          <h3>Operational notes</h3>
+          <ul>
+            <li>Use <code>python -m core.run_proxy gcs|drone --suite &lt;id&gt;</code> to launch endpoints with explicit suites.</li>
+            <li><code>tools/compile_diagrams.ps1</code> regenerates SVGs to keep documentation in sync.</li>
+            <li>Runtime switching: enable control channel (<code>ENABLE_PACKET_TYPE=1</code>), trigger rekeys via console <code>rekey&gt;</code> prompt.</li>
+            <li>Field diagnostics: <code>diagnose_handshake.py</code>, <code>diagnose_aead.py</code>, and `logs/auto/gcs/*.csv` insights.</li>
+          </ul>
+        </section>
       </div>
     </section>
-
-    <section id="core" class="diagram">
-      <h2>Core modules wiring</h2>
-      <div class="mermaid">
-        flowchart TB
-          run[run_proxy.py]
-          ap[async_proxy.py]
-          hs[handshake.py]
-          ae[aead.py]
-          su[suites.py]
-          pe[policy_engine.py]
-          cf[config.py]
-          lg[logging_utils.py]
-
-          run --> ap
-          run --> cf
-          run --> lg
-          ap --> hs
-          ap --> ae
-          hs --> su
-          ae --> su
-          ap --> pe
-          ap --> cf
-          pe --> cf
-      </div>
-    </section>
-
-    <section id="data" class="diagram">
-      <h2>Data plane: header and nonce</h2>
-      <div class="mermaid">
-        sequenceDiagram
-          participant S as Sender (core/aead.Sender)
-          participant R as Receiver (core/aead.Receiver)
-          Note over S,R: Header = 22 bytes: !BBBBB8sQB (wire, aeadId, sigId, kemId, infoId, epoch(8), seq(8), payloadLen)
-          S->>S: Nonce = epoch(8) || seq(11 bytes)
-          S->>R: [Header || Ciphertext || Tag]
-          R->>R: Validate header, replay window, derive nonce
-          R->>R: AES-GCM open; drop on auth fail
-      </div>
-      <div class="mermaid">
-        flowchart LR
-          hdr[22-byte Header]
-          nce[Nonce: epoch || seq(11)]
-          kdf[HKDF-SHA256 -> 2x32B keys]
-          aead[AES-256-GCM]
-          hdr --> aead
-          nce --> aead
-          kdf --> aead
-      </div>
-    </section>
-
-    <section id="handshake" class="diagram">
-      <h2>Handshake</h2>
-      <div class="mermaid">
-        sequenceDiagram
-          participant C as GCS (client)
-          participant S as Drone (server)
-          C->>S: ClientHello (suites, nonce, sig)
-          S->>C: ServerHello (sig, KEM pk, params)
-          C->>C: Encapsulate -> ct, K
-          C->>S: ct
-          S->>S: Decapsulate(ct) -> K
-          Note over C,S: HKDF-SHA256(salt, info) => 2x32B keys
-          C-->>S: Move to RUNNING data plane
-      </div>
-    </section>
-
-    <section id="rekey" class="diagram">
-      <h2>Rekey two-phase commit</h2>
-      <div class="mermaid">
-        stateDiagram-v2
-          [*] --> RUNNING
-          RUNNING --> NEGOTIATING: control msg (propose new suite)
-          NEGOTIATING --> SWAPPING: both ready, freeze old
-          SWAPPING --> RUNNING: both confirm new keys
-          NEGOTIATING --> RUNNING: abort/timeout
-      </div>
-    </section>
-
-    <section id="orchestration" class="diagram">
-      <h2>Scheduler and follower</h2>
-      <div class="mermaid">
-        flowchart LR
-          subgraph GCS Orchestration
-            sch[tools/auto/gcs_scheduler.py]
-            gcsProxy[core/run_proxy.py]
-            blaster[traffic drivers]
-          end
-
-          subgraph Drone Orchestration
-            fol[tools/auto/drone_follower.py]
-            droneProxy[core/run_proxy.py]
-            telem[Telemetry/Power monitors]
-          end
-
-          sch --> gcsProxy
-          sch --> blaster
-          fol --> droneProxy
-          fol --> telem
-          gcsProxy <---> droneProxy
-      </div>
-    </section>
+    </main>
   </body>
 </html>

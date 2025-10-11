@@ -16,6 +16,7 @@ pqc_proxy.egg-info/SOURCES.txt
 pqc_proxy.egg-info/dependency_links.txt
 pqc_proxy.egg-info/requires.txt
 pqc_proxy.egg-info/top_level.txt
+pyascon/__init__.py
 tests/test-oqs.py
 tests/test_aead_framing.py
 tests/test_cli_identity.py
