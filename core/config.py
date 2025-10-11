@@ -81,7 +81,8 @@ CONFIG = {
         # Session IDs default to "<prefix>_<unix>" unless DRONE_SESSION_ID env overrides
         "session_prefix": "run",
         # Optional explicit initial suite override (None -> discover from secrets/config)
-        "initial_suite": None,
+        # TEMP: pin follower bootstrap to ASCON baseline so GCS handshake aligns
+        "initial_suite": "cs-mlkem512-ascon128-mldsa44",
         # Enable follower monitors (perf/pidstat/psutil) by default
         "monitors_enabled": True,
         # Apply CPU governor tweaks unless disabled
