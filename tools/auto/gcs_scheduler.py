@@ -20,6 +20,7 @@ import time
 import stat
 import shutil
 import ctypes
+import urllib.request
 from contextlib import contextmanager
 from collections import deque, OrderedDict
 from copy import deepcopy
@@ -529,6 +530,7 @@ AUTO_GCS_DEFAULTS = {
     "telemetry_port": TELEMETRY_PORT,  # override telemetry port
     "export_combined_excel": True,  # write combined Excel workbook
     "power_capture": True,  # request power capture from follower
+    "artifact_fetch_strategy": "auto",  # artifact fetch strategy: auto|sftp|scp|rsync|command|http|smb
     "iperf3": {
         "server_host": None,  # override iperf3 server host or None for default
         "server_port": 5201,  # iperf3 UDP port (1-65535)
@@ -561,6 +563,11 @@ def _coerce_bool(value: object, default: bool) -> bool:
     return default
 
 
+ARTIFACT_FETCH_STRATEGY_RAW = str(
+    AUTO_GCS_CONFIG.get("artifact_fetch_strategy") or os.getenv("ARTIFACT_FETCH_STRATEGY") or "auto"
+).strip().lower()
+SKIP_REMOTE_FETCH = _coerce_bool(os.getenv("SKIP_REMOTE_FETCH"), False)
+
 POWER_FETCH_TARGET = AUTO_GCS_CONFIG.get("power_fetch_target") or os.getenv("DRONE_POWER_SSH") or os.getenv("DRONE_SSH_TARGET")
 if isinstance(POWER_FETCH_TARGET, str):
     POWER_FETCH_TARGET = POWER_FETCH_TARGET.strip() or None
@@ -568,11 +575,23 @@ POWER_FETCH_CMD = (AUTO_GCS_CONFIG.get("power_fetch_scp") or os.getenv("DRONE_PO
 POWER_FETCH_CMD = str(POWER_FETCH_CMD)
 POWER_FETCH_ENABLED = _coerce_bool(AUTO_GCS_CONFIG.get("power_fetch_enabled"), True)
 POWER_FETCH_ENABLED = _coerce_bool(os.getenv("DRONE_POWER_FETCH_ENABLED"), POWER_FETCH_ENABLED)
+if SKIP_REMOTE_FETCH:
+    POWER_FETCH_ENABLED = False
 # Optional password to use for SFTP when POWER_FETCH_TARGET is set. If provided,
 # the SFTP client will prefer password auth and will disable key/agent probing to
 # avoid interactive passphrase prompts. Can be set via AUTO_GCS.power_fetch_password
 # or environment variable DRONE_POWER_PASSWORD.
 POWER_FETCH_PASSWORD = AUTO_GCS_CONFIG.get("power_fetch_password") or os.getenv("DRONE_POWER_PASSWORD") or None
+POWER_FETCH_KEY = AUTO_GCS_CONFIG.get("power_fetch_key") or os.getenv("DRONE_POWER_KEY") or os.getenv("DRONE_FETCH_KEY")
+if isinstance(POWER_FETCH_KEY, str):
+    POWER_FETCH_KEY = POWER_FETCH_KEY.strip() or None
+POWER_FETCH_STRATEGY_RAW = str(
+    os.getenv("POWER_FETCH_STRATEGY") or os.getenv("DRONE_POWER_FETCH_STRATEGY") or ARTIFACT_FETCH_STRATEGY_RAW
+).strip().lower()
+SSH_CONNECT_TIMEOUT = float(os.getenv("DRONE_SSH_TIMEOUT") or 10.0)
+ARTIFACT_FETCH_COMMAND = os.getenv("ARTIFACT_FETCH_COMMAND")
+RSYNC_CMD = os.getenv("DRONE_RSYNC_CMD") or "rsync"
+
 
 
 def _parse_ssh_target(target: str) -> Tuple[str, Optional[str], int]:
@@ -604,43 +623,75 @@ def _parse_ssh_target(target: str) -> Tuple[str, Optional[str], int]:
     return host, username, port
 
 
-def _sftp_fetch(remote_path: str, local_path: Path) -> Optional[str]:
+def _format_ssh_target(host: str, username: Optional[str], port: int) -> str:
+    base_host = host.strip()
+    if ":" in base_host and not base_host.startswith("["):
+        base_host = f"[{base_host}]"
+    if username:
+        target = f"{username}@{base_host}"
+    else:
+        target = base_host
+    if port != 22:
+        target = f"{target}:{port}"
+    return target
+
+
+def _expand_fetch_strategies(raw: str) -> List[str]:
+    tokens = [token.strip().lower() for token in raw.split(",") if token.strip()]
+    if not tokens:
+        return ["sftp", "scp"]
+    result: List[str] = []
+    for token in tokens:
+        if token in {"auto", ""}:
+            result.extend(["sftp", "scp"])
+        else:
+            result.append(token)
+    return result
+
+
+def _fetch_via_sftp(
+    target: Optional[str],
+    remote_path: str,
+    local_path: Path,
+    *,
+    recursive: bool,
+    password: Optional[str],
+    key_path: Optional[str],
+) -> Optional[str]:
     if paramiko is None:  # pragma: no cover - optional dependency
         return "paramiko_unavailable"
-    if not POWER_FETCH_TARGET:
-        return "missing_power_fetch_target"
-    host, username, port = _parse_ssh_target(POWER_FETCH_TARGET)
+    if not target:
+        return "missing_target"
+
+    host, username, port = _parse_ssh_target(target)
+    username = username or os.getenv("DRONE_POWER_USER") or os.getenv("USER") or os.getenv("USERNAME")
+
     client = paramiko.SSHClient()  # type: ignore[attr-defined]
     try:
-        client.load_system_host_keys()
-    except Exception:
-        pass
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # type: ignore[attr-defined]
-    try:
-        # If a password is configured, prefer password auth and avoid looking for
-        # keys or using the SSH agent to prevent passphrase prompts. Otherwise,
-        # allow key/agent lookup as a convenience.
-        if POWER_FETCH_PASSWORD:
-            client.connect(
-                hostname=host,
-                port=port,
-                username=username,
-                password=POWER_FETCH_PASSWORD,
-                look_for_keys=False,
-                allow_agent=False,
-                timeout=10.0,
-            )
-        else:
-            client.connect(
-                hostname=host,
-                port=port,
-                username=username,
-                look_for_keys=True,
-                allow_agent=True,
-                timeout=10.0,
-            )
+        try:
+            client.load_system_host_keys()
+        except Exception:
+            pass
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # type: ignore[attr-defined]
+        client.connect(
+            hostname=host,
+            port=port,
+            username=username,
+            password=password,
+            key_filename=key_path,
+            look_for_keys=True,
+            allow_agent=True,
+            timeout=SSH_CONNECT_TIMEOUT,
+            auth_timeout=SSH_CONNECT_TIMEOUT,
+        )
         with client.open_sftp() as sftp:  # type: ignore[attr-defined]
-            sftp.get(remote_path, str(local_path))
+            remote_norm = _sftp_normalize(sftp, remote_path)
+            if recursive:
+                local_path.mkdir(parents=True, exist_ok=True)
+                _sftp_download_tree(sftp, remote_norm, local_path)
+            else:
+                local_path.parent.mkdir(parents=True, exist_ok=True)
+                sftp.get(remote_norm, str(local_path))
         return None
     except FileNotFoundError as exc:  # pragma: no cover - depends on remote state
         return f"missing_remote:{exc}"
@@ -651,6 +702,181 @@ def _sftp_fetch(remote_path: str, local_path: Path) -> Optional[str]:
             client.close()
         except Exception:
             pass
+
+
+def _fetch_via_scp(
+    target: Optional[str],
+    remote_path: str,
+    local_path: Path,
+    *,
+    recursive: bool,
+    key_path: Optional[str],
+) -> Optional[str]:
+    if not target:
+        return "missing_target"
+    base_cmd = POWER_FETCH_CMD.strip() or "scp"
+    cmd = shlex.split(base_cmd)
+    if "-q" not in cmd:
+        cmd.append("-q")
+    cmd.extend(["-B", "-o", f"ConnectTimeout={int(SSH_CONNECT_TIMEOUT)}", "-o", "BatchMode=yes"])
+    if key_path:
+        cmd.extend(["-i", key_path])
+    if recursive:
+        cmd.append("-r")
+        local_path.mkdir(parents=True, exist_ok=True)
+        remote_spec = f"{target}:{remote_path.rstrip('/')}/."
+    else:
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        remote_spec = f"{target}:{remote_path}"
+    cmd.extend([remote_spec, str(local_path)])
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except FileNotFoundError as exc:  # pragma: no cover - depends on local toolchain
+        return f"{POWER_FETCH_CMD}_missing:{exc}"
+    except Exception as exc:  # pragma: no cover - defensive
+        return f"{POWER_FETCH_CMD}_error:{exc}"
+    if result.returncode != 0:
+        return result.stderr.strip() or result.stdout.strip() or f"exit {result.returncode}"
+    return None
+
+
+def _fetch_via_rsync(
+    target: Optional[str],
+    remote_path: str,
+    local_path: Path,
+    *,
+    recursive: bool,
+    key_path: Optional[str],
+) -> Optional[str]:
+    if not target:
+        return "missing_target"
+    ssh_parts = ["ssh", "-o", f"ConnectTimeout={int(SSH_CONNECT_TIMEOUT)}", "-o", "BatchMode=yes"]
+    if key_path:
+        ssh_parts.extend(["-i", key_path])
+    ssh_cmd = " ".join(shlex.quote(part) for part in ssh_parts)
+    cmd = [RSYNC_CMD, "-a", "--compress"]
+    if recursive:
+        local_path.mkdir(parents=True, exist_ok=True)
+        remote_spec = f"{target}:{remote_path.rstrip('/')}/"
+    else:
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        remote_spec = f"{target}:{remote_path}"
+    cmd.extend(["-e", ssh_cmd, remote_spec, str(local_path)])
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except FileNotFoundError as exc:  # pragma: no cover - depends on local toolchain
+        return f"rsync_missing:{exc}"
+    except Exception as exc:  # pragma: no cover - defensive
+        return f"rsync_error:{exc}"
+    if result.returncode != 0:
+        return result.stderr.strip() or result.stdout.strip() or f"exit {result.returncode}"
+    return None
+
+
+def _fetch_via_command(
+    remote_path: str,
+    local_path: Path,
+    *,
+    recursive: bool,
+    category: str,
+    target: Optional[str],
+) -> Optional[str]:
+    template = ARTIFACT_FETCH_COMMAND
+    if not template:
+        return "missing_command"
+    context = {
+        "remote": remote_path,
+        "local": str(local_path),
+        "target": target or "",
+        "category": category,
+        "recursive": "1" if recursive else "0",
+    }
+    try:
+        formatted = template.format(**context)
+    except Exception as exc:
+        return f"format_error:{exc}"
+    cmd = shlex.split(formatted)
+    if recursive:
+        local_path.mkdir(parents=True, exist_ok=True)
+    else:
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except FileNotFoundError as exc:
+        return f"command_missing:{exc}"
+    except Exception as exc:
+        return f"command_error:{exc}"
+    if result.returncode != 0:
+        return result.stderr.strip() or result.stdout.strip() or f"exit {result.returncode}"
+    return None
+
+
+def _fetch_via_http(remote_path: str, local_path: Path, *, recursive: bool) -> Optional[str]:
+    if recursive:
+        return "http_recursive_unsupported"
+    remote_lower = remote_path.lower()
+    if not remote_lower.startswith("http://") and not remote_lower.startswith("https://"):
+        return "invalid_url"
+    try:
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(remote_path, timeout=SSH_CONNECT_TIMEOUT) as response:  # type: ignore[attr-defined]
+            data = response.read()
+        local_path.write_bytes(data)
+        return None
+    except Exception as exc:  # pragma: no cover - depends on network
+        return f"http_error:{exc}"
+
+
+def _fetch_via_smb(remote_path: str, local_path: Path, *, recursive: bool) -> Optional[str]:
+    try:
+        source = Path(remote_path)
+        if recursive:
+            local_path.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(source, local_path, dirs_exist_ok=True)
+        else:
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, local_path)
+        return None
+    except FileNotFoundError as exc:
+        return f"missing_remote:{exc}"
+    except Exception as exc:
+        return f"smb_error:{exc}"
+
+
+def _fetch_remote_path(
+    remote_path: str,
+    local_path: Path,
+    *,
+    recursive: bool,
+    category: str,
+    target: Optional[str],
+    password: Optional[str],
+    key_path: Optional[str],
+    strategy: Optional[str],
+) -> Optional[str]:
+    strategies = _expand_fetch_strategies(strategy or ARTIFACT_FETCH_STRATEGY_RAW)
+    last_error: Optional[str] = None
+    for candidate in strategies:
+        if candidate == "sftp":
+            err = _fetch_via_sftp(target, remote_path, local_path, recursive=recursive, password=password, key_path=key_path)
+        elif candidate == "scp":
+            err = _fetch_via_scp(target, remote_path, local_path, recursive=recursive, key_path=key_path)
+        elif candidate == "rsync":
+            err = _fetch_via_rsync(target, remote_path, local_path, recursive=recursive, key_path=key_path)
+        elif candidate == "command":
+            err = _fetch_via_command(remote_path, local_path, recursive=recursive, category=category, target=target)
+        elif candidate == "http":
+            err = _fetch_via_http(remote_path, local_path, recursive=recursive)
+        elif candidate == "smb":
+            err = _fetch_via_smb(remote_path, local_path, recursive=recursive)
+        elif candidate in {"skip", "disabled", "none"}:
+            return "power_fetch_disabled"
+        else:
+            err = f"unknown_strategy:{candidate}"
+        if err is None:
+            return None
+        last_error = f"{candidate}:{err}"
+    return last_error
 
 
 def _ensure_local_artifact(suite: str, remote_path: str, category: str) -> Tuple[Optional[Path], Optional[str]]:
@@ -670,7 +896,16 @@ def _ensure_local_artifact(suite: str, remote_path: str, category: str) -> Tuple
 
     if not POWER_FETCH_ENABLED:
         return (None, "power_fetch_disabled")
-    if not POWER_FETCH_TARGET:
+    def _strategy_for_category(cat: str) -> str:
+        if cat == "power":
+            return str(os.getenv("POWER_FETCH_STRATEGY") or os.getenv("DRONE_POWER_FETCH_STRATEGY") or POWER_FETCH_STRATEGY_RAW)
+        return ARTIFACT_FETCH_STRATEGY_RAW
+
+    strategy_raw = _strategy_for_category(category)
+    requires_target = any(
+        strat in {"sftp", "scp", "rsync"} for strat in _expand_fetch_strategies(strategy_raw)
+    )
+    if requires_target and not POWER_FETCH_TARGET:
         return (None, "missing_power_fetch_target")
 
     safe_category = category if category else "artifacts"
@@ -682,53 +917,28 @@ def _ensure_local_artifact(suite: str, remote_path: str, category: str) -> Tuple
         basename = f"artifact_{int(time.time() * 1000)}"
     local_path = dest_dir / basename
 
-    sftp_error: Optional[str] = None
-    if paramiko is not None:
-        sftp_error = _sftp_fetch(remote_str, local_path)
-        if sftp_error is None:
-            try:
-                resolved = local_path.resolve()
-            except Exception:
-                resolved = local_path
-            return (resolved, None)
-        if sftp_error not in {"paramiko_unavailable", "missing_power_fetch_target"} and local_path.exists():
-            try:
-                local_path.unlink()
-            except Exception:
-                pass
-
-    base_cmd = POWER_FETCH_CMD.strip() or "scp"
-    cmd = shlex.split(base_cmd)
-    cmd += ["-q", f"{POWER_FETCH_TARGET}:{remote_str}", str(local_path)]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    except FileNotFoundError as exc:  # pragma: no cover - depends on local toolchain
-        error_text = f"{POWER_FETCH_CMD} unavailable: {exc}"
-        if sftp_error and sftp_error not in {"paramiko_unavailable", "missing_power_fetch_target"}:
-            error_text = f"sftp:{sftp_error}; {error_text}"
-        return (None, error_text)
-    except Exception as exc:  # pragma: no cover - defensive
-        error_text = f"{POWER_FETCH_CMD} failed: {exc}"
-        if sftp_error and sftp_error not in {"paramiko_unavailable", "missing_power_fetch_target"}:
-            error_text = f"sftp:{sftp_error}; {error_text}"
-        return (None, error_text)
-
-    if result.returncode != 0:
-        error_text = result.stderr.strip() or result.stdout.strip() or f"exit {result.returncode}"
-        if local_path.exists():
-            try:
-                local_path.unlink()
-            except Exception:
-                pass
-        if sftp_error and sftp_error not in {"paramiko_unavailable", "missing_power_fetch_target"}:
-            error_text = f"sftp:{sftp_error}; {error_text}"
-        return (None, error_text)
-
-    try:
-        resolved = local_path.resolve()
-    except Exception:
-        resolved = local_path
-    return (resolved, None)
+    fetch_error = _fetch_remote_path(
+        remote_str,
+        local_path,
+        recursive=False,
+        category=category,
+        target=POWER_FETCH_TARGET,
+        password=POWER_FETCH_PASSWORD,
+        key_path=POWER_FETCH_KEY,
+        strategy=strategy_raw,
+    )
+    if fetch_error is None:
+        try:
+            resolved = local_path.resolve()
+        except Exception:
+            resolved = local_path
+        return (resolved, None)
+    if local_path.exists():
+        try:
+            local_path.unlink()
+        except Exception:
+            pass
+    return (None, fetch_error)
 
 
 def _ensure_local_power_artifact(suite: str, remote_path: str) -> Tuple[Optional[Path], Optional[str]]:
@@ -1284,6 +1494,51 @@ def ctl_send(obj: dict, timeout: float = 2.0, retries: int = 4, backoff: float =
     if last_exc:
         raise last_exc
     return {}
+
+
+def _ensure_suite_supported_remote(suite: str, stage: str) -> None:
+    """Best-effort validation that the follower can service a suite."""
+
+    payload = {
+        "cmd": "validate_suite",
+        "suite": suite,
+        "stage": stage,
+    }
+    try:
+        response = ctl_send(payload, timeout=1.2, retries=2, backoff=0.4)
+    except Exception as exc:
+        print(
+            f"[WARN] validate_suite failed for {suite} during {stage}: {exc}",
+            file=sys.stderr,
+        )
+        return
+
+    if response.get("ok"):
+        return
+
+    error = str(response.get("error") or "unknown_error")
+    if error == "unknown_cmd":
+        # Older followers may not implement validation; continue best-effort.
+        return
+
+    detail_text = ""
+    details = response.get("details")
+    if isinstance(details, dict):
+        reasons = details.get("reasons")
+        if isinstance(reasons, (list, tuple, set)):
+            detail_text = "+".join(str(item) for item in reasons if item)
+        elif isinstance(reasons, str):
+            detail_text = reasons
+        hint = details.get("aead_hint") or details.get("hint")
+        if hint:
+            detail_text = f"{detail_text}:{hint}" if detail_text else str(hint)
+    if detail_text:
+        error = f"{error}:{detail_text}"
+
+    if "unsupported" in error:
+        raise SuiteSkipped(suite, f"follower rejects suite during {stage}: {error}")
+
+    raise RuntimeError(f"validate_suite failed during {stage} for suite {suite}: {error}")
 
 
 def request_power_capture(suite: str, duration_s: float, start_ns: Optional[int]) -> dict:
@@ -1981,6 +2236,7 @@ def activate_suite(
             raise RuntimeError(f"Follower did not confirm initial suite {suite}")
 
     else:
+        _ensure_suite_supported_remote(suite, stage="pre_rekey")
 
         assert gcs.stdin is not None
 
@@ -1998,12 +2254,17 @@ def activate_suite(
         baseline = _read_proxy_counters()
 
         mark_ns = time.time_ns()
-        try:
-            ctl_send({"cmd": "mark", "suite": suite, "kind": "rekey"})
-        except Exception as exc:
-            print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
         pending_ack = False
         pending_ack_error: Optional[str] = None
+        try:
+            mark_resp = ctl_send({"cmd": "mark", "suite": suite, "kind": "rekey"})
+            if not mark_resp.get("ok"):
+                mark_error = str(mark_resp.get("error") or "mark_failed")
+                pending_ack_error = mark_error
+                print(f"[WARN] follower mark rejected for {suite}: {mark_error}", file=sys.stderr)
+        except Exception as exc:
+            pending_ack_error = str(exc)
+            print(f"[WARN] control mark failed for {suite}: {exc}", file=sys.stderr)
         try:
             pending_ack = wait_pending_suite(suite, timeout=12.0)
         except Exception as exc:
@@ -2524,6 +2785,20 @@ def run_suite(
     avg_rtt_ms = avg_rtt_ns / 1_000_000
     max_rtt_ms = max_rtt_ns / 1_000_000
 
+    timer_resolution_warning = False
+    if (
+        os.name == "nt"
+        and traffic_engine_resolved == "native"
+        and rate_pps > 0
+        and pps < rate_pps * 0.8
+    ):
+        timer_resolution_warning = True
+        print(
+            f"[WARN] achieved rate {pps:.0f} pps < target {rate_pps} pps; Windows timer granularity may limit throughput. "
+            "Consider setting AUTO_GCS.traffic_engine='iperf3' for higher rates.",
+            file=sys.stderr,
+        )
+
     app_packet_bytes = payload_bytes + SEQ_TS_OVERHEAD_BYTES
     wire_packet_bytes_est = app_packet_bytes + wire_header_bytes
     goodput_mbps = (rcvd_packets * payload_bytes * 8) / (elapsed_s * 1_000_000) if elapsed_s > 0 else 0.0
@@ -2782,6 +3057,7 @@ def run_suite(
         "monitor_remote_map": monitor_remote_map,
         "monitor_fetch_status": monitor_fetch_status,
         "monitor_fetch_error": monitor_fetch_error,
+        "timer_resolution_warning": timer_resolution_warning,
         "blackout_ms": None,
         "gap_max_ms": None,
         "gap_p99_ms": None,
@@ -3611,92 +3887,75 @@ def _post_run_fetch_artifacts(session_id: str) -> None:
     fetch_cfg = AUTO_GCS_CONFIG.get("post_fetch") or {}
     enabled_default = _coerce_bool(fetch_cfg.get("enabled"), False)
     enabled = _coerce_bool(os.getenv("DRONE_FETCH_ENABLED"), enabled_default)
+    if SKIP_REMOTE_FETCH:
+        print(f"[{ts()}] post_fetch skipped via SKIP_REMOTE_FETCH")
+        return
     if not enabled:
         return
-    host = os.getenv("DRONE_FETCH_HOST") or fetch_cfg.get("host") or DRONE_HOST
-    username = os.getenv("DRONE_FETCH_USER") or fetch_cfg.get("username") or "dev"
-    password_raw = os.getenv("DRONE_FETCH_PASSWORD") or fetch_cfg.get("password")
-    password = password_raw or None
+    host = str(os.getenv("DRONE_FETCH_HOST") or fetch_cfg.get("host") or DRONE_HOST).strip()
+    username_raw = os.getenv("DRONE_FETCH_USER") or fetch_cfg.get("username") or "dev"
+    username = (username_raw.strip() or None) if isinstance(username_raw, str) else None
+    password = os.getenv("DRONE_FETCH_PASSWORD") or fetch_cfg.get("password")
+    password = password.strip() if isinstance(password, str) and password.strip() else None
+    key_path = fetch_cfg.get("key") or os.getenv("DRONE_FETCH_KEY") or POWER_FETCH_KEY
+    if isinstance(key_path, str):
+        key_path = key_path.strip() or None
     port_raw = os.getenv("DRONE_FETCH_PORT") or fetch_cfg.get("port") or 22
     try:
         port = int(port_raw)
     except (TypeError, ValueError):
         port = 22
 
-    if not host or not username:
-        print(f"[WARN] post_fetch disabled: missing host/username")
-        return
-    if paramiko is None:
-        print("[WARN] post_fetch disabled: paramiko not available", file=sys.stderr)
-        return
-
     logs_remote = os.getenv("DRONE_FETCH_LOGS_REMOTE") or fetch_cfg.get("logs_remote") or "~/research/logs/auto/drone"
     logs_local_base = os.getenv("DRONE_FETCH_LOGS_LOCAL") or fetch_cfg.get("logs_local") or "logs/auto"
     output_remote_base = os.getenv("DRONE_FETCH_OUTPUT_REMOTE") or fetch_cfg.get("output_remote") or "~/research/output/drone"
     output_local_base = os.getenv("DRONE_FETCH_OUTPUT_LOCAL") or fetch_cfg.get("output_local") or "output/drone"
+    post_strategy = str(os.getenv("POST_FETCH_STRATEGY") or fetch_cfg.get("strategy") or ARTIFACT_FETCH_STRATEGY_RAW).strip().lower()
 
     local_logs_root = resolve_under_root(Path(str(logs_local_base)))
     local_logs_dest = local_logs_root / f"drone_{session_id}"
     local_output_root = resolve_under_root(Path(str(output_local_base)))
     local_output_dest = local_output_root / session_id
 
-    client = paramiko.SSHClient()  # type: ignore[attr-defined]
-    try:
-        try:
-            client.load_system_host_keys()
-        except Exception:
-            pass
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # type: ignore[attr-defined]
-        # If a password is provided, prefer password auth and disable key/agent
-        # probing to avoid interactive passphrase prompts. Otherwise allow key
-        # lookup and agent use as a convenience.
-        if password:
-            client.connect(
-                hostname=host,
-                port=port,
-                username=username,
-                password=password,
-                look_for_keys=False,
-                allow_agent=False,
-                timeout=10.0,
-            )
+    target = None
+    if host:
+        target = _format_ssh_target(host, username, port)
+    elif post_strategy not in {"http", "command", "smb"}:
+        print(f"[WARN] post_fetch disabled: missing host for strategy {post_strategy}")
+        return
+
+    if logs_remote:
+        err = _fetch_remote_path(
+            logs_remote,
+            local_logs_dest,
+            recursive=True,
+            category="post_fetch_logs",
+            target=target,
+            password=password,
+            key_path=key_path,
+            strategy=post_strategy,
+        )
+        if err is None:
+            print(f"[{ts()}] post_fetch logs -> {local_logs_dest}")
         else:
-            client.connect(
-                hostname=host,
-                port=port,
-                username=username,
-                password=password,
-                look_for_keys=True,
-                allow_agent=True,
-                timeout=10.0,
-            )
-        with client.open_sftp() as sftp:  # type: ignore[attr-defined]
-            if logs_remote:
-                try:
-                    remote_logs_path = _sftp_normalize(sftp, logs_remote)
-                    print(f"[{ts()}] post_fetch logs -> {local_logs_dest}")
-                    _sftp_download_tree(sftp, remote_logs_path, local_logs_dest)
-                except FileNotFoundError:
-                    print(f"[WARN] post_fetch logs missing at {logs_remote}")
-                except IOError as exc:
-                    print(f"[WARN] post_fetch logs failed: {exc}")
-            if output_remote_base:
-                try:
-                    remote_output_session = output_remote_base.rstrip("/") + f"/{session_id}"
-                    remote_output_path = _sftp_normalize(sftp, remote_output_session)
-                    print(f"[{ts()}] post_fetch output -> {local_output_dest}")
-                    _sftp_download_tree(sftp, remote_output_path, local_output_dest)
-                except FileNotFoundError:
-                    print(f"[WARN] post_fetch output missing at {output_remote_base}/{session_id}")
-                except IOError as exc:
-                    print(f"[WARN] post_fetch output failed: {exc}")
-    except Exception as exc:
-        print(f"[WARN] post_fetch connection failed: {exc}")
-    finally:
-        try:
-            client.close()
-        except Exception:
-            pass
+            print(f"[WARN] post_fetch logs failed: {err}", file=sys.stderr)
+
+    if output_remote_base:
+        remote_output_session = output_remote_base.rstrip("/") + f"/{session_id}"
+        err = _fetch_remote_path(
+            remote_output_session,
+            local_output_dest,
+            recursive=True,
+            category="post_fetch_output",
+            target=target,
+            password=password,
+            key_path=key_path,
+            strategy=post_strategy,
+        )
+        if err is None:
+            print(f"[{ts()}] post_fetch output -> {local_output_dest}")
+        else:
+            print(f"[WARN] post_fetch output failed: {err}", file=sys.stderr)
 
 
 def _post_run_collect_local(session_id: str, *, gcs_log_path: Optional[Path], combined_workbook: Optional[Path]) -> Path:
@@ -4244,10 +4503,27 @@ def main() -> None:
         for entry in preflight_skips:
             suite_label = entry.get("suite")
             reason_label = entry.get("reason")
+            detail_payload = entry.get("details") or {}
+            detail_hint = ""
+            if isinstance(detail_payload, dict) and detail_payload:
+                parts: List[str] = []
+                hint_text = detail_payload.get("aead_hint")
+                if hint_text:
+                    parts.append(str(hint_text))
+                for key in ("kem_name", "sig_name", "aead_token"):
+                    val = detail_payload.get(key)
+                    if val:
+                        parts.append(f"{key}={val}")
+                if parts:
+                    detail_hint = f" ({'; '.join(parts)})"
             print(
-                f"[WARN] filtering out suite {suite_label}: {reason_label}",
+                f"[WARN] filtering out suite {suite_label}: {reason_label}{detail_hint}",
                 file=sys.stderr,
             )
+        print(
+            "[INFO] Run `python tools/verify_crypto.py` for a full availability report.",
+            file=sys.stderr,
+        )
     if not suites:
         raise RuntimeError("No suites remain after preflight capability filtering")
 
@@ -4321,6 +4597,29 @@ def main() -> None:
                         f"[{ts()}] follower reports {len(follower_capabilities.get('supported_suites') or [])} supported suites",
                         flush=True,
                     )
+                    kem_list = follower_capabilities.get("enabled_kems")
+                    if isinstance(kem_list, (list, tuple, set)):
+                        kem_display = ", ".join(str(item) for item in kem_list)
+                        print(f"[{ts()}] follower KEMs -> {kem_display}")
+                    sig_list = follower_capabilities.get("enabled_sigs")
+                    if isinstance(sig_list, (list, tuple, set)):
+                        sig_display = ", ".join(str(item) for item in sig_list)
+                        print(f"[{ts()}] follower signatures -> {sig_display}")
+                    aead_list = follower_capabilities.get("available_aeads")
+                    if isinstance(aead_list, (list, tuple, set)):
+                        aead_display = ", ".join(str(item) for item in aead_list)
+                        print(f"[{ts()}] follower AEAD tokens -> {aead_display}")
+                    missing_kems = follower_capabilities.get("missing_kems")
+                    if missing_kems:
+                        print(f"[WARN] follower missing KEMs: {missing_kems}", file=sys.stderr)
+                    missing_sigs = follower_capabilities.get("missing_sigs")
+                    if missing_sigs:
+                        print(f"[WARN] follower missing signatures: {missing_sigs}", file=sys.stderr)
+                    missing_aeads = follower_capabilities.get("missing_aead_reasons")
+                    if not missing_aeads:
+                        missing_aeads = follower_capabilities.get("missing_aeads")
+                    if missing_aeads:
+                        print(f"[WARN] follower missing AEADs: {missing_aeads}", file=sys.stderr)
                 else:
                     print(
                         f"[WARN] follower capabilities response malformed: {type(raw_caps).__name__}",

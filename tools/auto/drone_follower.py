@@ -447,6 +447,8 @@ class TelemetryPublisher:
         self._connected_once = False
 
     def start(self) -> None:
+        if self.server is not None:
+            return
         self._start_server()
 
     def publish(self, kind: str, payload: dict) -> None:
@@ -2030,6 +2032,65 @@ class ControlServer(threading.Thread):
                     except Exception:
                         pass
                 return
+            if cmd == "validate_suite":
+                suite_raw = request.get("suite")
+                suite = str(suite_raw or "").strip()
+                if not suite:
+                    self._send(conn, {"ok": False, "error": "missing_suite"})
+                    return
+                stage = str(request.get("stage") or "").strip() or "unspecified"
+                with state_lock:
+                    snapshot = dict(self.state.get("capabilities") or {})
+                    telemetry: Optional[TelemetryPublisher] = self.state.get("telemetry")
+                supported_set = set()
+                supported_list = snapshot.get("supported_suites")
+                if isinstance(supported_list, (list, tuple, set)):
+                    supported_set = {str(item) for item in supported_list if isinstance(item, str)}
+                unsupported_map: Dict[str, dict] = {}
+                raw_unsupported = snapshot.get("unsupported_suites")
+                if isinstance(raw_unsupported, list):
+                    for entry in raw_unsupported:
+                        if isinstance(entry, dict):
+                            suite_name = entry.get("suite")
+                            if isinstance(suite_name, str):
+                                unsupported_map[suite_name] = entry
+                response: Dict[str, object] = {
+                    "ok": True,
+                    "suite": suite,
+                    "stage": stage,
+                    "supported": True,
+                }
+                detail_entry = unsupported_map.get(suite)
+                if supported_set and suite not in supported_set:
+                    response["ok"] = False
+                    response["error"] = "suite_unsupported"
+                    response["supported"] = False
+                    if detail_entry:
+                        response["details"] = detail_entry
+                elif detail_entry and not supported_set:
+                    # When capabilities probing failed, fall back to advertised unsupported map.
+                    response["ok"] = False
+                    response["error"] = "suite_unsupported"
+                    response["supported"] = False
+                    response["details"] = detail_entry
+                elif snapshot.get("timestamp_ns"):
+                    response["capabilities_timestamp_ns"] = snapshot["timestamp_ns"]
+                self._send(conn, response)
+                if telemetry:
+                    publish_payload = {
+                        "timestamp_ns": time.time_ns(),
+                        "event": "validate_suite",
+                        "suite": suite,
+                        "stage": stage,
+                        "result": "ok" if response.get("ok") else "rejected",
+                    }
+                    if not response.get("ok") and detail_entry:
+                        publish_payload["details"] = detail_entry
+                    try:
+                        telemetry.publish("validate_suite", publish_payload)
+                    except Exception:
+                        pass
+                return
             if cmd == "status":
                 with state_lock:
                     proxy = self.state["proxy"]
@@ -2570,6 +2631,16 @@ def main(argv: Optional[list[str]] = None) -> None:
             f"[follower] note: {unavailable_count} suites filtered due to missing KEM/SIG/AEAD",
             flush=True,
         )
+    missing_aeads = capabilities.get("missing_aead_reasons") or {}
+    if isinstance(missing_aeads, dict) and missing_aeads:
+        for token, reason in sorted(missing_aeads.items()):
+            print(f"[follower] missing AEAD {token}: {reason}", flush=True)
+    missing_kems = capabilities.get("missing_kems") or []
+    if missing_kems:
+        print(f"[follower] missing KEMs: {missing_kems}", flush=True)
+    missing_sigs = capabilities.get("missing_sigs") or []
+    if missing_sigs:
+        print(f"[follower] missing signatures: {missing_sigs}", flush=True)
 
     for env_key, env_value in auto.get("power_env", {}).items():
         if env_value is None:

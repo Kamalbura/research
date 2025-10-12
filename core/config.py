@@ -162,7 +162,9 @@ CONFIG = {
                 "enabled": True,  # bool toggling post-run fetch
                 "host": _DEFAULT_DRONE_HOST,  # SSH host for drone follower (use file-level default)
                 "username": "dev",  # SSH username string
-                "password": "kamal123",  # SSH password for password-based auth
+                "password": None,  # SSH password for password-based auth (None -> agent/key)
+                "key": None,  # Optional explicit private key path for fetch operations
+                "strategy": "auto",  # Fetch strategy: auto|sftp|scp|rsync|command|http|smb
                 "port": 22,  # SSH port (1-65535)
                 "logs_remote": "~/research/logs/auto/drone",  # remote logs path
                 "logs_local": "logs/auto",  # local logs directory
@@ -172,6 +174,7 @@ CONFIG = {
             # Enable remote power fetch and set the SCP/SFTP target
         "power_fetch_enabled": True,
         "power_fetch_target": f"dev@{_DEFAULT_DRONE_HOST}",
+        "artifact_fetch_strategy": "auto",  # Default fetch strategy for artifacts (auto selects best available)
         "post_report": {
             "enabled": True,  # bool toggling post-run report generation
             "script": "tools/report_constant_run.py",  # reporting script path
@@ -182,7 +185,9 @@ CONFIG = {
         # Non-interactive SFTP password for POWER fetch (used by gcs_scheduler._sftp_fetch)
         # Set to None to prefer key/agent-based auth. For development convenience we
         # populate it here; in production prefer using an SSH agent or per-run env var.
-        "power_fetch_password": "kamal123",
+        "power_fetch_password": None,
+        # Optional explicit private key for power fetch operations (overrides agent lookup)
+        "power_fetch_key": None,
     },
 }
 

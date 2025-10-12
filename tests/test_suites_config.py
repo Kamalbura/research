@@ -21,6 +21,7 @@ from core.suites import (
     list_suites,
     suite_bytes_for_hkdf,
 )
+from tools.auto import gcs_scheduler as scheduler
 
 
 class TestConfig:
@@ -327,3 +328,32 @@ class TestSuites:
             suite = get_suite(suite_id)
             assert suite["aead"] in allowed_aeads, f"Suite {suite_id} should use allowed AEAD"
             assert suite["kdf"] == "HKDF-SHA256", f"Suite {suite_id} should use HKDF-SHA256"
+
+
+def test_filter_suites_for_follower_details():
+    """filter_suites_for_follower should surface follower reasons."""
+    suites = ["cs-mlkem768-aesgcm-mldsa65", "cs-test-ascon-suite"]
+    capabilities = {
+        "supported_suites": ["cs-mlkem768-aesgcm-mldsa65"],
+        "unsupported_suites": [
+            {
+                "suite": "cs-test-ascon-suite",
+                "reasons": ["aead_unavailable"],
+                "details": {"aead_token": "ascon128", "aead_hint": "pyascon missing"},
+            }
+        ],
+    }
+
+    filtered, skipped = scheduler.filter_suites_for_follower(suites, capabilities)
+    assert filtered == ["cs-mlkem768-aesgcm-mldsa65"]
+    assert skipped and skipped[0]["suite"] == "cs-test-ascon-suite"
+    assert skipped[0]["reason"] == "aead_unavailable"
+    assert skipped[0]["details"]["aead_hint"] == "pyascon missing"
+
+
+def test_expand_fetch_strategies_parsing():
+    """_expand_fetch_strategies normalises comma-separated strategy strings."""
+    expand = scheduler._expand_fetch_strategies
+    assert expand("auto") == ["sftp", "scp"]
+    assert expand("") == ["sftp", "scp"]
+    assert expand("scp, rsync ,command") == ["scp", "rsync", "command"]
