@@ -179,6 +179,10 @@ CONFIG = {
             "table_name": "run_summary_table.md",  # Markdown table filename
             "text_name": "run_suite_summaries.txt",  # narrative summary filename
         },
+        # Non-interactive SFTP password for POWER fetch (used by gcs_scheduler._sftp_fetch)
+        # Set to None to prefer key/agent-based auth. For development convenience we
+        # populate it here; in production prefer using an SSH agent or per-run env var.
+        "power_fetch_password": "kamal123",
     },
 }
 

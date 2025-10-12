@@ -568,6 +568,11 @@ POWER_FETCH_CMD = (AUTO_GCS_CONFIG.get("power_fetch_scp") or os.getenv("DRONE_PO
 POWER_FETCH_CMD = str(POWER_FETCH_CMD)
 POWER_FETCH_ENABLED = _coerce_bool(AUTO_GCS_CONFIG.get("power_fetch_enabled"), True)
 POWER_FETCH_ENABLED = _coerce_bool(os.getenv("DRONE_POWER_FETCH_ENABLED"), POWER_FETCH_ENABLED)
+# Optional password to use for SFTP when POWER_FETCH_TARGET is set. If provided,
+# the SFTP client will prefer password auth and will disable key/agent probing to
+# avoid interactive passphrase prompts. Can be set via AUTO_GCS.power_fetch_password
+# or environment variable DRONE_POWER_PASSWORD.
+POWER_FETCH_PASSWORD = AUTO_GCS_CONFIG.get("power_fetch_password") or os.getenv("DRONE_POWER_PASSWORD") or None
 
 
 def _parse_ssh_target(target: str) -> Tuple[str, Optional[str], int]:
@@ -612,14 +617,28 @@ def _sftp_fetch(remote_path: str, local_path: Path) -> Optional[str]:
         pass
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # type: ignore[attr-defined]
     try:
-        client.connect(
-            hostname=host,
-            port=port,
-            username=username,
-            look_for_keys=True,
-            allow_agent=True,
-            timeout=10.0,
-        )
+        # If a password is configured, prefer password auth and avoid looking for
+        # keys or using the SSH agent to prevent passphrase prompts. Otherwise,
+        # allow key/agent lookup as a convenience.
+        if POWER_FETCH_PASSWORD:
+            client.connect(
+                hostname=host,
+                port=port,
+                username=username,
+                password=POWER_FETCH_PASSWORD,
+                look_for_keys=False,
+                allow_agent=False,
+                timeout=10.0,
+            )
+        else:
+            client.connect(
+                hostname=host,
+                port=port,
+                username=username,
+                look_for_keys=True,
+                allow_agent=True,
+                timeout=10.0,
+            )
         with client.open_sftp() as sftp:  # type: ignore[attr-defined]
             sftp.get(remote_path, str(local_path))
         return None
@@ -3549,7 +3568,20 @@ def _post_run_fetch_artifacts(session_id: str) -> None:
         except Exception:
             pass
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # type: ignore[attr-defined]
-        try:
+        # If a password is provided, prefer password auth and disable key/agent
+        # probing to avoid interactive passphrase prompts. Otherwise allow key
+        # lookup and agent use as a convenience.
+        if password:
+            client.connect(
+                hostname=host,
+                port=port,
+                username=username,
+                password=password,
+                look_for_keys=False,
+                allow_agent=False,
+                timeout=10.0,
+            )
+        else:
             client.connect(
                 hostname=host,
                 port=port,
@@ -3559,25 +3591,6 @@ def _post_run_fetch_artifacts(session_id: str) -> None:
                 allow_agent=True,
                 timeout=10.0,
             )
-        except Exception as exc:
-            requires_passphrase = False
-            if paramiko and hasattr(paramiko, "ssh_exception"):
-                requires_passphrase = isinstance(
-                    exc,
-                    getattr(paramiko.ssh_exception, "PasswordRequiredException"),
-                )
-            if requires_passphrase:
-                client.connect(
-                    hostname=host,
-                    port=port,
-                    username=username,
-                    password=password,
-                    look_for_keys=False,
-                    allow_agent=True,
-                    timeout=10.0,
-                )
-            else:
-                raise
         with client.open_sftp() as sftp:  # type: ignore[attr-defined]
             if logs_remote:
                 try:
