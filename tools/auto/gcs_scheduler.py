@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import bisect
 import csv
 import errno
@@ -31,6 +32,41 @@ try:
     import paramiko  # type: ignore[import]
 except ImportError:  # pragma: no cover - optional dependency
     paramiko = None
+
+
+def _ensure_paramiko() -> Optional[object]:
+    """Ensure paramiko is importable; attempt an on-demand install if missing."""
+
+    global paramiko
+    if paramiko is not None:
+        return paramiko
+
+    installer_cmd = [sys.executable, "-m", "pip", "install", "paramiko"]
+    try:
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        print(f"[{timestamp}] attempting to install paramiko for SFTP support")
+        result = subprocess.run(installer_cmd, capture_output=True, text=True, check=False)
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"[WARN] paramiko auto-install failed to launch: {exc}", file=sys.stderr)
+        return None
+
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        if stderr:
+            print(f"[WARN] paramiko install stderr: {stderr}", file=sys.stderr)
+        stdout = result.stdout.strip()
+        if stdout:
+            print(f"[WARN] paramiko install stdout: {stdout}", file=sys.stderr)
+        return None
+
+    try:
+        import paramiko as _paramiko  # type: ignore[import]
+
+        paramiko = _paramiko
+        return paramiko
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"[WARN] paramiko import still failing after install: {exc}", file=sys.stderr)
+        return None
 
 try:
     from openpyxl import Workbook
@@ -492,6 +528,24 @@ def log_runtime_environment(component: str) -> None:
     print(f"[{ts()}] {component} sys.path_prefix={preview}")
 
 
+def _parse_cli_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Drive GCS automation runs and post-run tasks.")
+    parser.add_argument(
+        "--post-fetch-only",
+        metavar="SESSION_ID",
+        help="Fetch remote drone artifacts for SESSION_ID and exit without scheduling a new run.",
+    )
+    parser.add_argument(
+        "--generate-report",
+        action="store_true",
+        help="After --post-fetch-only completes, regenerate post-run reports.",
+    )
+    parsed = parser.parse_args(list(argv) if argv is not None else None)
+    if parsed.generate_report and not parsed.post_fetch_only:
+        parser.error("--generate-report requires --post-fetch-only")
+    return parsed
+
+
 def _merge_defaults(defaults: dict, override: Optional[dict]) -> dict:
     result = deepcopy(defaults)
     if isinstance(override, dict):
@@ -649,6 +703,50 @@ def _expand_fetch_strategies(raw: str) -> List[str]:
     return result
 
 
+def _normalize_remote_candidate(path: str) -> str:
+    if not path:
+        return path
+    normalized = path.replace("\\", "/")
+    if normalized.startswith("//") and not normalized.startswith("///"):
+        normalized = "/" + normalized.lstrip("/")
+    normalized = normalized.replace("/./", "/")
+    while "//" in normalized and not normalized.startswith("///"):
+        normalized = normalized.replace("//", "/")
+    return normalized
+
+
+def _expand_remote_user_path(path: str, *, target: Optional[str], username_hint: Optional[str]) -> str:
+    if not path or not path.startswith("~"):
+        return _normalize_remote_candidate(path)
+
+    username = username_hint
+    if not username and target:
+        _host, extracted, _port = _parse_ssh_target(target)
+        username = extracted
+    if not username:
+        env_user = (
+            os.getenv("DRONE_FETCH_USER")
+            or os.getenv("DRONE_POWER_USER")
+            or os.getenv("USER")
+            or os.getenv("USERNAME")
+        )
+        if env_user:
+            username = env_user.strip() or None
+    if not username:
+        return _normalize_remote_candidate(path)
+
+    remainder = path[1:]
+    if remainder.startswith(username):
+        remainder = remainder[len(username) :]
+    if remainder.startswith("/"):
+        remainder = remainder[1:]
+
+    base = "/root" if username == "root" else f"/home/{username}"
+    if not remainder:
+        return base
+    return _normalize_remote_candidate(f"{base}/{remainder}")
+
+
 def _fetch_via_sftp(
     target: Optional[str],
     remote_path: str,
@@ -658,7 +756,8 @@ def _fetch_via_sftp(
     password: Optional[str],
     key_path: Optional[str],
 ) -> Optional[str]:
-    if paramiko is None:  # pragma: no cover - optional dependency
+    paramiko_module = _ensure_paramiko()
+    if paramiko_module is None:  # pragma: no cover - optional dependency
         return "paramiko_unavailable"
     if not target:
         return "missing_target"
@@ -666,24 +765,30 @@ def _fetch_via_sftp(
     host, username, port = _parse_ssh_target(target)
     username = username or os.getenv("DRONE_POWER_USER") or os.getenv("USER") or os.getenv("USERNAME")
 
-    client = paramiko.SSHClient()  # type: ignore[attr-defined]
+    client = paramiko_module.SSHClient()  # type: ignore[attr-defined]
     try:
         try:
             client.load_system_host_keys()
         except Exception:
             pass
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # type: ignore[attr-defined]
-        client.connect(
-            hostname=host,
-            port=port,
-            username=username,
-            password=password,
-            key_filename=key_path,
-            look_for_keys=True,
-            allow_agent=True,
-            timeout=SSH_CONNECT_TIMEOUT,
-            auth_timeout=SSH_CONNECT_TIMEOUT,
-        )
+        client.set_missing_host_key_policy(paramiko_module.AutoAddPolicy())  # type: ignore[attr-defined]
+        connect_kwargs = {
+            "hostname": host,
+            "port": port,
+            "username": username,
+            "timeout": SSH_CONNECT_TIMEOUT,
+            "auth_timeout": SSH_CONNECT_TIMEOUT,
+            "allow_agent": False if password else True,
+            "look_for_keys": False if password else True,
+        }
+        if password:
+            connect_kwargs["password"] = password
+        if key_path:
+            connect_kwargs["key_filename"] = key_path
+            # If a key is supplied, allow agent/key probing again in case password also set
+            connect_kwargs["allow_agent"] = True
+            connect_kwargs["look_for_keys"] = True
+        client.connect(**connect_kwargs)
         with client.open_sftp() as sftp:  # type: ignore[attr-defined]
             remote_norm = _sftp_normalize(sftp, remote_path)
             if recursive:
@@ -855,7 +960,7 @@ def _fetch_remote_path(
     strategy: Optional[str],
 ) -> Optional[str]:
     strategies = _expand_fetch_strategies(strategy or ARTIFACT_FETCH_STRATEGY_RAW)
-    last_error: Optional[str] = None
+    errors: List[str] = []
     for candidate in strategies:
         if candidate == "sftp":
             err = _fetch_via_sftp(target, remote_path, local_path, recursive=recursive, password=password, key_path=key_path)
@@ -875,8 +980,12 @@ def _fetch_remote_path(
             err = f"unknown_strategy:{candidate}"
         if err is None:
             return None
-        last_error = f"{candidate}:{err}"
-    return last_error
+        errors.append(f"{candidate}:{err}")
+        if isinstance(err, str) and err.startswith("missing_remote"):
+            break
+    if errors:
+        return " | ".join(errors)
+    return "unknown_fetch_error"
 
 
 def _ensure_local_artifact(suite: str, remote_path: str, category: str) -> Tuple[Optional[Path], Optional[str]]:
@@ -917,8 +1026,10 @@ def _ensure_local_artifact(suite: str, remote_path: str, category: str) -> Tuple
         basename = f"artifact_{int(time.time() * 1000)}"
     local_path = dest_dir / basename
 
+    expanded_remote = _expand_remote_user_path(remote_str, target=POWER_FETCH_TARGET, username_hint=None)
+
     fetch_error = _fetch_remote_path(
-        remote_str,
+        expanded_remote,
         local_path,
         recursive=False,
         category=category,
@@ -3924,9 +4035,13 @@ def _post_run_fetch_artifacts(session_id: str) -> None:
         print(f"[WARN] post_fetch disabled: missing host for strategy {post_strategy}")
         return
 
-    if logs_remote:
+    logs_remote_resolved = None
+    if isinstance(logs_remote, str) and logs_remote.strip():
+        logs_remote_resolved = _expand_remote_user_path(logs_remote, target=target, username_hint=username)
+
+    if logs_remote_resolved:
         err = _fetch_remote_path(
-            logs_remote,
+            logs_remote_resolved,
             local_logs_dest,
             recursive=True,
             category="post_fetch_logs",
@@ -3940,8 +4055,12 @@ def _post_run_fetch_artifacts(session_id: str) -> None:
         else:
             print(f"[WARN] post_fetch logs failed: {err}", file=sys.stderr)
 
-    if output_remote_base:
-        remote_output_session = output_remote_base.rstrip("/") + f"/{session_id}"
+    output_remote_resolved = None
+    if isinstance(output_remote_base, str) and output_remote_base.strip():
+        output_remote_resolved = _expand_remote_user_path(output_remote_base, target=target, username_hint=username)
+
+    if output_remote_resolved:
+        remote_output_session = output_remote_resolved.rstrip("/") + f"/{session_id}"
         err = _fetch_remote_path(
             remote_output_session,
             local_output_dest,
@@ -4420,12 +4539,27 @@ def export_combined_excel(
     return None
 
 
-def main() -> None:
+def main(argv: Optional[Iterable[str]] = None) -> None:
+    args = _parse_cli_args(argv)
     log_runtime_environment("gcs_scheduler")
     OUTDIR.mkdir(parents=True, exist_ok=True)
     SUITES_OUTDIR.mkdir(parents=True, exist_ok=True)
     PROXY_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
     PROXY_SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    if args.post_fetch_only:
+        session_id = args.post_fetch_only.strip()
+        if not session_id:
+            print("[WARN] --post-fetch-only requires a non-empty session id", file=sys.stderr)
+            return
+        print(f"[{ts()}] post_fetch requested for session {session_id}")
+        _post_run_fetch_artifacts(session_id=session_id)
+        if args.generate_report:
+            session_dir = OUTDIR / session_id
+            session_dir.mkdir(parents=True, exist_ok=True)
+            _post_run_generate_reports(session_id=session_id, session_dir=session_dir)
+        print(f"[{ts()}] post_fetch completed for session {session_id}")
+        return
 
     auto = AUTO_GCS_CONFIG
 

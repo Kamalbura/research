@@ -163,7 +163,7 @@ CONFIG = {
                 "host": _DEFAULT_DRONE_HOST,  # SSH host for drone follower (use file-level default)
                 "username": "dev",  # SSH username string
                 # NOTE: hard-coded for research lab convenience; prefer env overrides in production.
-                "password": "passwordkamal123",  # SSH password for password-based auth
+                "password": "uavpi",  # SSH password for password-based auth
                 "key": None,  # Optional explicit private key path for fetch operations
                 "strategy": "auto",  # Fetch strategy: auto|sftp|scp|rsync|command|http|smb
                 "port": 22,  # SSH port (1-65535)
@@ -186,7 +186,7 @@ CONFIG = {
         # Non-interactive SFTP password for POWER fetch (used by gcs_scheduler._sftp_fetch)
         # Set to None to prefer key/agent-based auth. For development convenience we
         # populate it here; in production prefer using an SSH agent or per-run env var.
-        "power_fetch_password": "passwordkamal123",
+    "power_fetch_password": "uavpi",
         # Optional explicit private key for power fetch operations (overrides agent lookup)
         "power_fetch_key": None,
     },
