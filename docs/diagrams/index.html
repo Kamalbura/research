@@ -389,7 +389,10 @@
         }
       }
     </style>
-
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });
+    </script>
   </head>
   <body>
     <header>
@@ -414,10 +417,106 @@
       <section id="big" class="diagram diagram--fullpage">
         <h2>Big picture: End-to-end architecture</h2>
         <figure>
-          <a href="../../tools/images/big_picture-1.svg" target="_blank" rel="noopener">
-            <img src="../../tools/images/big_picture-1.svg" alt="Big picture architecture diagram" />
-          </a>
-          <figcaption>Rendered SVG compiled from <code>big_picture.md</code>. Use the Documentation page for detailed walkthroughs.</figcaption>
+          <div class="mermaid">
+flowchart LR
+  classDef comp fill:#eef,stroke:#447,stroke-width:1px
+  classDef mod fill:#f7faff,stroke:#6699cc,stroke-width:1px
+  classDef io fill:#fffaf0,stroke:#cc9900,stroke-width:1px
+  classDef net fill:#f9f9f9,stroke:#888,stroke-dasharray:3 3
+  classDef warn fill:#ffecec,stroke:#cc6666
+  classDef note fill:#ffffe0,stroke:#999,stroke-dasharray:3 3,color:#333
+
+  subgraph GCS[Ground Control Station]
+  GCSApps[Traffic Control Apps]
+  GCSProxy[run_proxy]
+  GCSAsync[async_proxy]
+  GCSHS[handshake]
+  GCSAEAD[aead]
+  GCSPolicy[policy_engine]
+  GCSCfg[config & suites]
+  GCSLog[logging]
+
+    GCSApps -->|UDP plaintext| GCSProxy
+    GCSProxy --> GCSAsync
+    GCSAsync --> GCSHS
+    GCSAsync --> GCSAEAD
+    GCSAsync --> GCSPolicy
+    GCSHS --> GCSCfg
+    GCSAEAD --> GCSCfg
+    GCSPolicy --> GCSCfg
+    GCSProxy --> GCSLog
+  end
+
+  subgraph DRN[Drone]
+  DroneApps[Telemetry Apps]
+  DroneProxy[run_proxy]
+  DroneAsync[async_proxy]
+  DroneHS[handshake]
+  DroneAEAD[aead]
+  DronePolicy[policy_engine]
+  DroneCfg[config & suites]
+  DroneLog[logging]
+
+    DroneApps <-->|UDP plaintext| DroneProxy
+    DroneProxy --> DroneAsync
+    DroneAsync --> DroneHS
+    DroneAsync --> DroneAEAD
+    DroneAsync --> DronePolicy
+    DroneHS --> DroneCfg
+    DroneAEAD --> DroneCfg
+    DronePolicy --> DroneCfg
+    DroneProxy --> DroneLog
+  end
+
+  subgraph NET[Network]
+  TCPHS[TCP Handshake]
+  UDPAEAD[Encrypted UDP]
+  UDPPlain[Plaintext UDP]
+  end
+
+  GCSAsync -- Client role --> TCPHS
+  TCPHS -- Server role --> DroneAsync
+
+  GCSAEAD -- AEAD UDP --> UDPAEAD
+  UDPAEAD -- AEAD UDP --> DroneAEAD
+
+  GCSApps -. app traffic .-> UDPPlain
+  UDPPlain -. app traffic .-> DroneApps
+
+  NoteTCPHS[KEM verify + HKDF keys]
+  NoteTCPHS -.-> TCPHS
+  NoteUDPAEAD[22-byte header; epoch+seq nonce; replay window]
+  NoteUDPAEAD -.-> UDPAEAD
+  NoteRekey[Rekey FSM: NEGOTIATING -> SWAPPING -> RUNNING]
+  NoteRekey -.-> GCSPolicy
+  NoteRekey -.-> DronePolicy
+
+  subgraph DATAFLOW[Data-plane flow]
+    AppOut[App payload] --> Header[Header build] --> Nonce[Nonce] --> Encrypt[Encrypt] --> Packet[Packet frame]
+    Packet --> Verify[Verify + replay] --> Open[Decrypt] --> AppIn[Deliver plaintext]
+  end
+
+  GCSApps --> AppOut
+  AppIn --> DroneApps
+
+  subgraph CONTROL[Control-plane rekey]
+    Propose[Propose new suite IDs] --> Neg[NEGOTIATING] --> Swap[SWAPPING freeze old set new epoch] --> Run[RUNNING new keys]
+  end
+  GCSPolicy --> Propose
+  Run --> DronePolicy
+
+  GCSAEAD -. AeadAuthError on auth fail .-> GCSLog
+  DroneAEAD -. AeadAuthError on auth fail .-> DroneLog
+  GCSHS -. HandshakeVerifyError on decaps/verify fail .-> GCSLog
+  DroneHS -. HandshakeVerifyError on decaps/verify fail .-> DroneLog
+
+  class GCSProxy,DroneProxy comp
+  class GCSAsync,DroneAsync,GCSHS,DroneHS,GCSAEAD,DroneAEAD,GCSPolicy,DronePolicy,GCSCfg,DroneCfg,GCSLog,DroneLog,Header,Nonce,Encrypt,Verify,Open,Propose,Neg,Swap,Run mod
+  class GCSApps,DroneApps,AppOut,Packet,AppIn io
+  class TCPHS,UDPAEAD,UDPPlain net
+  class NoteTCPHS,NoteUDPAEAD,NoteRekey note
+</div>
+          <figcaption>Inline Mermaid compiled from <code>big_picture.md</code>. Use the Documentation page for detailed walkthroughs.</figcaption>
         </figure>
       </section>
     <section id="big-doc" class="diagram diagram--doc">
@@ -485,6 +584,146 @@
         </section>
       </div>
     </section>
+      <!-- Additional diagrams -->
+      <section id="system-overview" class="diagram diagram--fullpage">
+        <h2>System overview</h2>
+        <figure>
+          <div class="mermaid">
+  flowchart LR
+    subgraph GCS[Ground Control Station]
+      GCSApp[Traffic/Control Apps]
+      GCSProxy[core/run_proxy.py]
+    end
+
+    subgraph Network
+      UDPPlain[Plaintext UDP]
+      UDPEnc[Encrypted UDP]
+      TCPHS[TCP Handshake]
+    end
+
+    subgraph Drone
+      DroneApp[Flight/Telemetry Apps]
+      DroneProxy[core/run_proxy.py]
+    end
+
+    GCSApp-- UDP plain -->GCSProxy
+    GCSProxy-- TCPHS (KEM+SIG) -->DroneProxy
+    GCSProxy-- AEAD UDP -->DroneProxy
+    DroneProxy-- UDP plain -->DroneApp
+
+    classDef comp fill:#eef,stroke:#447
+    class GCSApp,GCSProxy,DroneApp,DroneProxy comp
+          </div>
+          <figcaption>Inline Mermaid from <code>system_overview.md</code>.</figcaption>
+        </figure>
+      </section>
+      <section id="core-modules" class="diagram diagram--fullpage">
+        <h2>Core modules wiring</h2>
+        <figure>
+          <div class="mermaid">
+  flowchart TB
+    run[run_proxy.py]
+    ap[async_proxy.py]
+    hs[handshake.py]
+    ae[aead.py]
+    su[suites.py]
+    pe[policy_engine.py]
+    cf[config.py]
+    lg[logging_utils.py]
+
+    run --> ap
+    run --> cf
+    run --> lg
+    ap --> hs
+    ap --> ae
+    hs --> su
+    ae --> su
+    ap --> pe
+    ap --> cf
+    pe --> cf
+          </div>
+          <figcaption>Inline Mermaid from <code>core_modules.md</code>.</figcaption>
+        </figure>
+      </section>
+      <section id="handshake" class="diagram diagram--fullpage">
+        <h2>Handshake overview</h2>
+        <figure>
+          <div class="mermaid">
+  sequenceDiagram
+    participant C as GCS (client)
+    participant S as Drone (server)
+    C->>S: ClientHello (suites, nonce, sig)
+    S->>C: ServerHello (sig, KEM pk, params)
+    C->>C: Encapsulate -> ct, K
+    C->>S: ct
+    S->>S: Decapsulate(ct) -> K
+    Note over C,S: HKDF-SHA256(salt, info) => 2x32B keys
+    C-->>S: Move to RUNNING data plane
+          </div>
+          <figcaption>Inline Mermaid from <code>handshake.md</code>.</figcaption>
+        </figure>
+      </section>
+      <section id="data-plane" class="diagram diagram--fullpage">
+        <h2>Data plane: header and nonce</h2>
+        <figure>
+          <div class="mermaid">
+  sequenceDiagram
+    participant S as Sender (core/aead.Sender)
+    participant R as Receiver (core/aead.Receiver)
+    Note over S,R: Header = 22 bytes: !BBBBB8sQB (wire, aeadId, sigId, kemId, infoId, epoch(8), seq(8), payloadLen)
+    S->>S: Nonce = epoch (8) and seq (11 bytes)
+    S->>R: Header, ciphertext and tag
+    R->>R: Validate header, replay window and derive nonce
+    R->>R: AES-GCM open, drop on auth fail
+
+  flowchart LR
+    hdr["22-byte Header"]
+    nce["Nonce epoch and seq 11"]
+    kdf["HKDF produces two keys"]
+    aead["AES-256-GCM"]
+    hdr-->aead
+    nce-->aead
+    kdf-->aead
+          </div>
+          <figcaption>Inline Mermaid from <code>data_plane.md</code>.</figcaption>
+        </figure>
+      </section>
+      <section id="scheduler-and-follower" class="diagram diagram--fullpage">
+        <h2>Scheduler and follower</h2>
+        <figure>
+          <div class="mermaid">
+  flowchart LR
+    subgraph GCS Orchestration
+      sch[tools/auto/gcs_scheduler.py]
+      gcsProxy[core/run_proxy.py]
+      blaster[traffic drivers]
+    end
+
+    subgraph Drone Orchestration
+      fol[tools/auto/drone_follower.py]
+      droneProxy[core/run_proxy.py]
+      telem[Telemetry/Power monitors]
+    end
+
+    sch --> gcsProxy
+    sch --> blaster
+    fol --> droneProxy
+    fol --> telem
+    gcsProxy <---> droneProxy
+          </div>
+          <figcaption>Inline Mermaid from <code>scheduler_and_follower.md</code>.</figcaption>
+        </figure>
+      </section>
+      <section id="rekey-fsm" class="diagram diagram--fullpage">
+        <h2>Rekey FSM</h2>
+        <figure>
+          <div class="mermaid">
+  flowchart LR
+    Propose[Propose new suite IDs] --> Neg[NEGOTIATING] --> Swap[SWAPPING freeze old set new epoch] --> Run[RUNNING new keys]
+          </div>
+          <figcaption>Inline Mermaid from <code>rekey_fsm.md</code>.</figcaption>
+        </figure>
+      </section>
     </main>
   </body>
 </html>

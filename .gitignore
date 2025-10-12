@@ -8,6 +8,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 logs/
+logs-legacy/
+output-legacy/
 # Harness outputs
 artifacts/harness/
 legacy/

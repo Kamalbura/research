@@ -74,15 +74,15 @@ CONFIG = {
     "SIMPLE_PACKETS_PER_SUITE": 1,
     "SIMPLE_PACKET_DELAY_S": 0.0,
     "SIMPLE_SUITE_DWELL_S": 0.0,
-    "SIMPLE_INITIAL_SUITE": "cs-mlkem768-aesgcm-mldsa65",
+    "SIMPLE_INITIAL_SUITE": None,
 
     # Automation defaults for tools/auto orchestration scripts
     "AUTO_DRONE": {
         # Session IDs default to "<prefix>_<unix>" unless DRONE_SESSION_ID env overrides
         "session_prefix": "run",
-        # Optional explicit initial suite override (None -> discover from secrets/config)
-        # TEMP: pin follower bootstrap to ASCON baseline so GCS handshake aligns
-        "initial_suite": "cs-mlkem512-ascon128-mldsa44",
+    # Optional explicit initial suite override (None -> discover from secrets/config)
+    # Set to None to allow the follower to pick its bootstrap suite from secrets/config
+    "initial_suite": None,
         # Enable follower monitors (perf/pidstat/psutil) by default
         "monitors_enabled": True,
         # Apply CPU governor tweaks unless disabled
@@ -111,7 +111,7 @@ CONFIG = {
         # Traffic profile: "blast", "constant", "mavproxy", or "saturation"
         "traffic": "constant",  # modes: constant|blast|mavproxy|saturation
         # Traffic engine: "native" (built-in blaster) or "iperf3" (external client)
-        "traffic_engine": "iperf3",  # generator: native|iperf3
+    "traffic_engine": "native",  # generator: native|iperf3
         # Duration for active traffic window per suite (seconds)
         "duration_s": 45.0,  # positive float seconds
         # Delay after rekey before starting traffic (seconds)
@@ -131,24 +131,8 @@ CONFIG = {
         # Max rate explored during saturation sweeps (Mbps)
         "max_rate_mbps": 200.0,  # saturation upper bound Mbps (>0)
         # Optional ordered suite subset (None -> all suites from core.suites, including ChaCha20-Poly1305 and ASCON variants)
-        # TEMP: restrict automation to ASCON-only sweep for focused validation
-        "suites": [
-            "cs-mlkem512-ascon128-mldsa44",
-            "cs-mlkem512-ascon128-falcon512",
-            "cs-mlkem512-ascon128-sphincs128fsha2",
-            "cs-frodokem640aes-ascon128-mldsa44",
-            "cs-classicmceliece348864-ascon128-sphincs128fsha2",
-            "cs-hqc128-ascon128-falcon512",
-            "cs-mlkem768-ascon128-mldsa65",
-            "cs-frodokem976aes-ascon128-mldsa65",
-            "cs-classicmceliece460896-ascon128-mldsa65",
-            "cs-hqc192-ascon128-mldsa65",
-            "cs-mlkem1024-ascon128-mldsa87",
-            "cs-mlkem1024-ascon128-falcon1024",
-            "cs-mlkem1024-ascon128-sphincs256fsha2",
-            "cs-classicmceliece8192128-ascon128-sphincs256fsha2",
-            "cs-hqc256-ascon128-mldsa87",
-        ],
+        # Set to None to run the full suite matrix
+        "suites": None,
         # Launch local GCS proxy under scheduler control
         "launch_proxy": True,  # bool controls local proxy launch
         # Enable local proxy monitors (perf/pidstat/psutil)
@@ -168,18 +152,21 @@ CONFIG = {
             "extra_args": [],  # additional CLI args list
             "force_cli": False,  # bool to force CLI output mode
         },
-        # Optional post-run fetch of drone artifacts (logs, power captures)
-        "post_fetch": {
-            "enabled": True,  # bool toggling post-run fetch
-            "host": None,  # SSH host or None to skip
-            "username": "dev",  # SSH username string
-            "password": "kamal123",  # SSH password or None if key-based
-            "port": 22,  # SSH port (1-65535)
-            "logs_remote": "~/research/logs/auto/drone",  # remote logs path
-            "logs_local": "logs/auto",  # local logs directory
-            "output_remote": "~/research/output/drone",  # remote output path
-            "output_local": "output/drone",  # local output directory
-        },
+            # Optional post-run fetch of drone artifacts (logs, power captures)
+            "post_fetch": {
+                "enabled": True,  # bool toggling post-run fetch
+                "host": _DEFAULT_DRONE_HOST,  # SSH host for drone follower (use file-level default)
+                "username": "dev",  # SSH username string
+                "password": "kamal123",  # SSH password for password-based auth
+                "port": 22,  # SSH port (1-65535)
+                "logs_remote": "~/research/logs/auto/drone",  # remote logs path
+                "logs_local": "logs/auto",  # local logs directory
+                "output_remote": "~/research/output/drone",  # remote output path
+                "output_local": "output/drone",  # local output directory
+            },
+            # Enable remote power fetch and set the SCP/SFTP target
+        "power_fetch_enabled": True,
+        "power_fetch_target": f"dev@{_DEFAULT_DRONE_HOST}",
         "post_report": {
             "enabled": True,  # bool toggling post-run report generation
             "script": "tools/report_constant_run.py",  # reporting script path
