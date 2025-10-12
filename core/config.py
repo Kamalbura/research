@@ -74,7 +74,10 @@ CONFIG = {
     "SIMPLE_PACKETS_PER_SUITE": 1,
     "SIMPLE_PACKET_DELAY_S": 0.0,
     "SIMPLE_SUITE_DWELL_S": 0.0,
-    "SIMPLE_INITIAL_SUITE": None,
+    # Default initial suite used by simple automation drivers and scheduler
+    # Setting this to a stable, L3-grade suite ensures both GCS and Drone
+    # start with the same cryptographic identity for the initial handshake.
+    "SIMPLE_INITIAL_SUITE": "cs-mlkem768-aesgcm-mldsa65",
 
     # Automation defaults for tools/auto orchestration scripts
     "AUTO_DRONE": {
@@ -82,7 +85,9 @@ CONFIG = {
         "session_prefix": "run",
     # Optional explicit initial suite override (None -> discover from secrets/config)
     # Set to None to allow the follower to pick its bootstrap suite from secrets/config
-    "initial_suite": None,
+    # Pin the drone's initial suite to match the scheduler/GCS bootstrap suite.
+    # This ensures the first PQC handshake uses a known-good identity.
+    "initial_suite": "cs-mlkem768-aesgcm-mldsa65",
         # Enable follower monitors (perf/pidstat/psutil) by default
         "monitors_enabled": True,
         # Apply CPU governor tweaks unless disabled
