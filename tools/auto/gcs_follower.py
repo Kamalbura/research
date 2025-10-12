@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from core import suites as suites_mod
+from core.aead import is_aead_available
 from core.config import CONFIG
 
 
@@ -382,6 +383,10 @@ class ControlServer(threading.Thread):
                 t3 = time.time_ns()
                 self._send(conn, {"ok": True, "t1_ns": t1, "t2_ns": t2, "t3_ns": t3})
                 return
+            if cmd == "capabilities":
+                capabilities = self.state.get("oqs_capabilities") or {}
+                self._send(conn, {"ok": True, "oqs_capabilities": capabilities})
+                return
             if cmd == "status":
                 with self.lock:
                     proxy: Optional[subprocess.Popen] = self.state.get("proxy")
@@ -390,6 +395,7 @@ class ControlServer(threading.Thread):
                     pending = self.state.get("pending_suite")
                 counters = read_proxy_counters()
                 status = read_proxy_status()
+                capabilities = self.state.get("oqs_capabilities") or {}
                 self._send(
                     conn,
                     {
@@ -399,6 +405,7 @@ class ControlServer(threading.Thread):
                         "running": running,
                         "counters": counters,
                         "status": status,
+                        "oqs_capabilities": capabilities,
                     },
                 )
                 telemetry: Optional[TelemetryPublisher] = self.state.get("telemetry")
@@ -409,6 +416,9 @@ class ControlServer(threading.Thread):
                             "timestamp_ns": time.time_ns(),
                             "suite": suite,
                             "running": running,
+                            "oqs_enabled_kems": capabilities.get("enabled_kems"),
+                            "oqs_enabled_sigs": capabilities.get("enabled_sigs"),
+                            "supported_aead_tokens": capabilities.get("supported_aead_tokens"),
                         },
                     )
                 return
@@ -622,6 +632,7 @@ def main() -> None:
             "proxy_stdin": proxy.stdin,
             "stop_event": stop_event,
             "telemetry": telemetry,
+            "oqs_capabilities": _detect_oqs_capabilities(),
         }
         lock = threading.RLock()
         control_thread = ControlServer(CONTROL_HOST, CONTROL_PORT, state, lock)
@@ -675,3 +686,48 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+def _canonical_identifier(value: object) -> str:
+    return "".join(ch for ch in str(value or "").lower() if ch.isalnum())
+
+
+def _detect_oqs_capabilities() -> Dict[str, object]:
+    capabilities: Dict[str, object] = {
+        "enabled_kems": [],
+        "enabled_sigs": [],
+        "supported_aead_tokens": [],
+        "oqs_version": None,
+        "liboqs_version": None,
+        "error": None,
+    }
+    try:
+        import oqs  # type: ignore
+    except Exception as exc:  # pragma: no cover - depends on deployment
+        capabilities["error"] = f"{exc.__class__.__name__}: {exc}"
+        return capabilities
+
+    try:
+        kem_mechanisms = sorted(set(oqs.get_enabled_KEM_mechanisms()))  # type: ignore[attr-defined]
+        sig_mechanisms = sorted(set(oqs.get_enabled_sig_mechanisms()))  # type: ignore[attr-defined]
+    except Exception as exc:  # pragma: no cover - defensive
+        capabilities["error"] = f"oqs_query_failed: {exc}"
+        kem_mechanisms = []
+        sig_mechanisms = []
+
+    capabilities["enabled_kems"] = kem_mechanisms
+    capabilities["enabled_sigs"] = sig_mechanisms
+    capabilities["oqs_version"] = getattr(oqs, "__version__", None)
+    if hasattr(oqs, "get_version"):
+        try:
+            capabilities["liboqs_version"] = oqs.get_version()
+        except Exception:
+            capabilities["liboqs_version"] = None
+
+    supported_tokens = []
+    for token in ("aesgcm", "chacha20poly1305", "ascon128"):
+        try:
+            if is_aead_available(token):
+                supported_tokens.append(token)
+        except NotImplementedError:
+            continue
+    capabilities["supported_aead_tokens"] = supported_tokens
+    return capabilities

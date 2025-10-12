@@ -491,14 +491,36 @@ def _notify_gcs_switch(algorithm: str, suite: str, duration_s: float, pre_gap_s:
     print(f"[drone] notify switch failed (no listener on port {M2G_PORT})", flush=True)
 
 
+def _launch_terminal_command(command: str, cwd: Optional[Path] = None) -> subprocess.Popen:
+    if os.name == "nt":
+        return subprocess.Popen(
+            ["powershell", "-NoExit", "-Command", command],
+            cwd=str(cwd) if cwd else None,
+            creationflags=CREATE_NEW_CONSOLE,
+        )
+    return subprocess.Popen(
+        ["bash", "-lc", command],
+        cwd=str(cwd) if cwd else None,
+    )
+
+
 def _start_mavproxy(autostart: bool) -> Optional[subprocess.Popen]:
     if not autostart:
         return None
-    script = Path(__file__).with_name("run_mavproxy.sh")
-    if not script.exists():
-        print("[drone] MAVProxy launcher missing; skipping autostart", flush=True)
-        return None
-    return subprocess.Popen([str(script)], cwd=str(script.parent))
+    cmd_override = os.getenv("DRONE_MAVPROXY_CMD") or CONFIG.get("DRONE_MAVPROXY_CMD")
+    if isinstance(cmd_override, str) and cmd_override.strip():
+        print(f"[drone] launching MAVProxy via override command: {cmd_override}", flush=True)
+        return _launch_terminal_command(cmd_override.strip(), cwd=ROOT / "drone")
+    script_sh = Path(__file__).with_name("run_mavproxy.sh")
+    script_ps = script_sh.with_suffix(".ps1")
+    if os.name == "nt" and script_ps.exists():
+        print(f"[drone] launching MAVProxy via {script_ps}", flush=True)
+        return _launch_terminal_command(f'& "{script_ps}"', cwd=script_ps.parent)
+    if script_sh.exists():
+        print(f"[drone] launching MAVProxy via {script_sh}", flush=True)
+        return subprocess.Popen(["/bin/bash", str(script_sh)], cwd=str(script_sh.parent))
+    print("[drone] MAVProxy launcher not found; skipping autostart", flush=True)
+    return None
 
 
 def _stop_mavproxy(proc: Optional[subprocess.Popen]) -> None:
@@ -616,3 +638,4 @@ def main(argv: Iterable[str] | None = None) -> int:
 
 if __name__ == "__main__":  # pragma: no cover - entry point
     raise SystemExit(main())
+CREATE_NEW_CONSOLE = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)

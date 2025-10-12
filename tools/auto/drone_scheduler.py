@@ -30,6 +30,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from core import suites as suites_mod
+from core.aead import is_aead_available
 from core.config import CONFIG
 
 
@@ -470,6 +471,154 @@ def preferred_initial_suite(candidates: List[str]) -> Optional[str]:
     except NotImplementedError:
         return None
     return suite_id if suite_id in candidates else None
+
+
+def _canonical_identifier(value: object) -> str:
+    return "".join(ch for ch in str(value or "").lower() if ch.isalnum())
+
+
+def _detect_local_capabilities() -> Dict[str, object]:
+    capabilities: Dict[str, object] = {
+        "enabled_kems": [],
+        "enabled_sigs": [],
+        "supported_aead_tokens": [],
+        "oqs_version": None,
+        "liboqs_version": None,
+        "error": None,
+    }
+    try:
+        import oqs  # type: ignore
+    except Exception as exc:  # pragma: no cover - depends on deployment image
+        capabilities["error"] = f"{exc.__class__.__name__}: {exc}"
+        return capabilities
+
+    try:
+        kem_mechanisms = sorted(set(oqs.get_enabled_KEM_mechanisms()))  # type: ignore[attr-defined]
+        sig_mechanisms = sorted(set(oqs.get_enabled_sig_mechanisms()))  # type: ignore[attr-defined]
+    except Exception as exc:  # pragma: no cover - defensive
+        capabilities["error"] = f"oqs_query_failed: {exc}"
+        kem_mechanisms = []
+        sig_mechanisms = []
+
+    capabilities["enabled_kems"] = kem_mechanisms
+    capabilities["enabled_sigs"] = sig_mechanisms
+    capabilities["oqs_version"] = getattr(oqs, "__version__", None)
+    if hasattr(oqs, "get_version"):
+        try:
+            capabilities["liboqs_version"] = oqs.get_version()
+        except Exception:
+            capabilities["liboqs_version"] = None
+
+    supported_tokens = []
+    for token in ("aesgcm", "chacha20poly1305", "ascon128"):
+        try:
+            if is_aead_available(token):
+                supported_tokens.append(token)
+        except NotImplementedError:
+            continue
+    capabilities["supported_aead_tokens"] = supported_tokens
+    return capabilities
+
+
+def _fetch_remote_capabilities() -> Dict[str, object]:
+    try:
+        resp = ctl_send({"cmd": "capabilities"}, timeout=1.5, retries=2, backoff=0.4)
+        caps = resp.get("oqs_capabilities") if isinstance(resp, dict) else None
+        if isinstance(caps, dict) and caps:
+            return caps
+    except Exception:
+        pass
+    try:
+        status = ctl_send({"cmd": "status"}, timeout=1.5, retries=2, backoff=0.4)
+    except Exception as exc:
+        print(f"[{ts()}] warning: failed to fetch remote capabilities: {exc}", flush=True)
+        return {}
+    caps = status.get("oqs_capabilities") if isinstance(status, dict) else None
+    if isinstance(caps, dict):
+        return caps
+    return {}
+
+
+def _filter_plan(
+    plan: Iterable[tuple],
+    local_caps: Dict[str, object],
+    remote_caps: Dict[str, object],
+) -> tuple[List[tuple], List[tuple]]:
+    filtered: List[tuple] = []
+    skipped: List[tuple] = []
+
+    local_kems = {_canonical_identifier(name) for name in local_caps.get("enabled_kems") or []}
+    local_sigs = {_canonical_identifier(name) for name in local_caps.get("enabled_sigs") or []}
+    local_aeads = {_canonical_identifier(name) for name in local_caps.get("supported_aead_tokens") or []}
+
+    remote_kems = {_canonical_identifier(name) for name in remote_caps.get("enabled_kems") or []}
+    remote_sigs = {_canonical_identifier(name) for name in remote_caps.get("enabled_sigs") or []}
+    remote_aeads = {_canonical_identifier(name) for name in remote_caps.get("supported_aead_tokens") or []}
+
+    for entry in plan:
+        if len(entry) != 3:
+            skipped.append((entry, ["invalid_entry"]))
+            continue
+        algorithm, suite_name, duration_s = entry
+        try:
+            suite_info = suites_mod.get_suite(suite_name)
+        except NotImplementedError:
+            skipped.append((entry, ["unknown_suite"]))
+            continue
+        suite_id = suite_info["suite_id"]
+        kem_name = suite_info.get("kem_name")
+        sig_name = suite_info.get("sig_name")
+        aead_token = suite_info.get("aead_token")
+
+        reasons: List[str] = []
+        canon_kem = _canonical_identifier(kem_name)
+        canon_sig = _canonical_identifier(sig_name)
+        canon_aead = _canonical_identifier(aead_token)
+
+        if local_kems and canon_kem not in local_kems:
+            reasons.append("local_kem")
+        if remote_kems and canon_kem not in remote_kems:
+            reasons.append("remote_kem")
+
+        if local_sigs and canon_sig not in local_sigs:
+            reasons.append("local_sig")
+        if remote_sigs and canon_sig not in remote_sigs:
+            reasons.append("remote_sig")
+
+        if local_aeads and canon_aead not in local_aeads:
+            reasons.append("local_aead")
+        if remote_aeads and canon_aead not in remote_aeads:
+            reasons.append("remote_aead")
+
+        if reasons:
+            skipped.append(((algorithm, suite_id, duration_s), reasons))
+            continue
+
+        filtered.append((algorithm, suite_id, duration_s))
+
+    return filtered, skipped
+
+
+def _log_skipped_plan(skipped_entries: List[tuple]) -> None:
+    if not skipped_entries:
+        return
+    reason_map = {
+        "invalid_entry": "invalid plan entry",
+        "unknown_suite": "suite not present in registry",
+        "local_kem": "local host lacks required KEM",
+        "remote_kem": "GCS lacks required KEM",
+        "local_sig": "local host lacks required signature",
+        "remote_sig": "GCS lacks required signature",
+        "local_aead": "local host lacks required AEAD",
+        "remote_aead": "GCS lacks required AEAD",
+    }
+    for (algorithm, suite, duration_s), reasons in skipped_entries:
+        human_reasons = [reason_map.get(reason, reason) for reason in reasons]
+        detail = "; ".join(human_reasons)
+        print(
+            f"[{ts()}] skipping plan entry algo={algorithm} suite={suite} duration={duration_s:.1f}s ({detail})",
+            flush=True,
+        )
 
 
 def ctl_send(obj: dict, timeout: float = 2.0, retries: int = 4, backoff: float = 0.5) -> dict:
@@ -1104,12 +1253,20 @@ def main() -> None:
     if not suites:
         raise RuntimeError("No suites selected for execution")
 
-    session_id = args.session_id or f"session_{int(time.time())}"
+    local_caps = _detect_local_capabilities()
+    if local_caps.get("error"):
+        print(f"[{ts()}] warning: local oqs probe failed ({local_caps['error']})", flush=True)
+    else:
+        supported_aead = ",".join(local_caps.get("supported_aead_tokens") or []) or "none"
+        print(
+            f"[{ts()}] local capabilities kem={len(local_caps.get('enabled_kems', []))} "
+            f"sig={len(local_caps.get('enabled_sigs', []))} aead={supported_aead}",
+            flush=True,
+        )
 
-    initial_suite = preferred_initial_suite(suites)
-    if initial_suite and suites[0] != initial_suite:
-        suites = [initial_suite] + [s for s in suites if s != initial_suite]
-        print(f"[{ts()}] reordered suites to start with {initial_suite}")
+    plan_entries: List[tuple] = [("auto", suite, args.duration) for suite in suites]
+
+    session_id = args.session_id or f"session_{int(time.time())}"
 
     telemetry_collector = TelemetryCollector(TELEMETRY_BIND_HOST, TELEMETRY_PORT)
     telemetry_collector.start()
@@ -1120,6 +1277,30 @@ def main() -> None:
     drone_log = None
 
     try:
+        remote_caps = _fetch_remote_capabilities()
+        if remote_caps.get("error"):
+            print(f"[{ts()}] warning: remote capability probe reported {remote_caps['error']}", flush=True)
+        elif remote_caps:
+            supported_remote_aead = ",".join(remote_caps.get("supported_aead_tokens") or []) or "none"
+            print(
+                f"[{ts()}] remote capabilities kem={len(remote_caps.get('enabled_kems', []))} "
+                f"sig={len(remote_caps.get('enabled_sigs', []))} aead={supported_remote_aead}",
+                flush=True,
+            )
+        filtered_plan, skipped_entries = _filter_plan(plan_entries, local_caps, remote_caps)
+        _log_skipped_plan(skipped_entries)
+        plan_entries = filtered_plan
+        suites = [suite for _algo, suite, _duration in plan_entries] or suites
+        if not suites:
+            print(f"[{ts()}] no suites remain after capability negotiation; aborting", flush=True)
+            return
+
+        initial_suite = preferred_initial_suite(suites)
+        if initial_suite and suites[0] != initial_suite:
+            suites = [initial_suite] + [s for s in suites if s != initial_suite]
+            plan_entries = [("auto", suite, args.duration) for suite in suites]
+            print(f"[{ts()}] reordered suites to start with {initial_suite}", flush=True)
+
         if not args.no_local_proxy:
             drone_proc, drone_log = start_drone_proxy(suites[0])
             time.sleep(1.0)
