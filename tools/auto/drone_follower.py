@@ -170,6 +170,112 @@ AUTO_DRONE_DEFAULTS = {
 AUTO_DRONE_CONFIG = _merge_defaults(AUTO_DRONE_DEFAULTS, CONFIG.get("AUTO_DRONE"))
 
 
+def _collect_capabilities_snapshot() -> dict:
+    """Probe local crypto/telemetry capabilities for scheduler negotiation."""
+
+    timestamp_ns = time.time_ns()
+
+    try:
+        enabled_kems = {name for name in suites_mod.enabled_kems()}
+        kem_probe_error = ""
+    except Exception as exc:  # pragma: no cover - depends on oqs installation
+        enabled_kems = set()
+        kem_probe_error = str(exc)
+
+    try:
+        enabled_sigs = {name for name in suites_mod.enabled_sigs()}
+        sig_probe_error = ""
+    except Exception as exc:  # pragma: no cover - depends on oqs installation
+        enabled_sigs = set()
+        sig_probe_error = str(exc)
+
+    available_aeads = set(suites_mod.available_aead_tokens())
+    missing_aead_reasons = suites_mod.unavailable_aead_reasons()
+
+    suite_map = suites_mod.list_suites()
+    supported_suites: list[str] = []
+    unsupported_suites: list[dict[str, object]] = []
+
+    all_kems = set()
+    all_sigs = set()
+
+    for suite_id, info in sorted(suite_map.items()):
+        kem_name = info.get("kem_name")
+        sig_name = info.get("sig_name")
+        aead_token = info.get("aead_token")
+
+        if kem_name:
+            all_kems.add(kem_name)
+        if sig_name:
+            all_sigs.add(sig_name)
+
+        reasons: list[str] = []
+        details: dict[str, object] = {
+            "kem_name": kem_name,
+            "sig_name": sig_name,
+            "aead_token": aead_token,
+        }
+
+        if enabled_kems and kem_name not in enabled_kems:
+            reasons.append("kem_unavailable")
+        if enabled_sigs and sig_name not in enabled_sigs:
+            reasons.append("sig_unavailable")
+        if available_aeads and aead_token not in available_aeads:
+            reasons.append("aead_unavailable")
+            hint = missing_aead_reasons.get(str(aead_token))
+            if hint:
+                details["aead_hint"] = hint
+
+        if reasons:
+            unsupported_suites.append(
+                {
+                    "suite": suite_id,
+                    "reasons": reasons,
+                    "details": details,
+                }
+            )
+            continue
+
+        supported_suites.append(suite_id)
+
+    missing_kems = sorted(kem for kem in (all_kems - enabled_kems)) if enabled_kems else sorted(all_kems)
+    missing_sigs = sorted(sig for sig in (all_sigs - enabled_sigs)) if enabled_sigs else sorted(all_sigs)
+
+    oqs_info: dict[str, object] = {}
+    try:  # pragma: no cover - depends on oqs availability
+        import oqs  # type: ignore
+
+        oqs_info["python_version"] = getattr(oqs, "__version__", "unknown")
+        get_version = getattr(oqs, "get_version", None)
+        if callable(get_version):
+            oqs_info["library_version"] = get_version()
+        get_build_config = getattr(oqs, "get_build_config", None)
+        if callable(get_build_config):
+            try:
+                build_cfg = get_build_config()
+                oqs_info["build_config"] = build_cfg if isinstance(build_cfg, dict) else repr(build_cfg)
+            except Exception as exc:  # pragma: no cover - defensive path
+                oqs_info["build_config_error"] = str(exc)
+    except Exception as exc:  # pragma: no cover - oqs missing
+        oqs_info["error"] = str(exc)
+
+    return {
+        "timestamp_ns": timestamp_ns,
+        "supported_suites": supported_suites,
+        "unsupported_suites": unsupported_suites,
+        "enabled_kems": sorted(enabled_kems),
+        "enabled_sigs": sorted(enabled_sigs),
+        "available_aeads": sorted(available_aeads),
+        "missing_aead_reasons": missing_aead_reasons,
+        "missing_kems": missing_kems,
+        "missing_sigs": missing_sigs,
+        "kem_probe_error": kem_probe_error,
+        "sig_probe_error": sig_probe_error,
+        "suite_registry_size": len(suite_map),
+        "oqs": oqs_info,
+    }
+
+
 def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Drone follower controller")
     parser.add_argument(
@@ -1907,6 +2013,23 @@ class ControlServer(threading.Thread):
             if state_lock is None:
                 state_lock = threading.Lock()
                 self.state["lock"] = state_lock
+            if cmd == "capabilities":
+                with state_lock:
+                    snapshot = dict(self.state.get("capabilities") or {})
+                    telemetry: Optional[TelemetryPublisher] = self.state.get("telemetry")
+                self._send(conn, {"ok": True, "capabilities": snapshot})
+                if telemetry and snapshot:
+                    try:
+                        telemetry.publish(
+                            "capabilities_response",
+                            {
+                                "timestamp_ns": time.time_ns(),
+                                "capabilities": snapshot,
+                            },
+                        )
+                    except Exception:
+                        pass
+                return
             if cmd == "status":
                 with state_lock:
                     proxy = self.state["proxy"]
@@ -2069,6 +2192,10 @@ class ControlServer(threading.Thread):
                     if not suite:
                         self._send(conn, {"ok": False, "error": "missing suite"})
                         return
+                    supported = list((self.state.get("capabilities") or {}).get("supported_suites", []))
+                    if supported and suite not in supported:
+                        self._send(conn, {"ok": False, "error": "suite unsupported"})
+                        return
                     proxy = self.state["proxy"]
                     proxy_running = bool(proxy and proxy.poll() is None)
                     if not proxy_running:
@@ -2190,6 +2317,11 @@ class ControlServer(threading.Thread):
                 t0_ns = int(request.get("t0_ns", 0))
                 if not suite or not t0_ns:
                     self._send(conn, {"ok": False, "error": "missing suite or t0_ns"})
+                    return
+                with state_lock:
+                    supported = list((self.state.get("capabilities") or {}).get("supported_suites", []))
+                if supported and suite not in supported:
+                    self._send(conn, {"ok": False, "error": "suite unsupported"})
                     return
 
                 def _do_mark() -> None:
@@ -2421,6 +2553,24 @@ def main(argv: Optional[list[str]] = None) -> None:
     print(f"[follower] monitor output -> {session_dir}")
     print(f"[follower] device generation={device_generation}")
 
+    capabilities = _collect_capabilities_snapshot()
+    supported_suites = list(capabilities.get("supported_suites", []))
+    if not supported_suites:
+        print(
+            "[follower] ERROR: no cryptographic suites available; check oqs/AEAD dependencies",
+            file=sys.stderr,
+            flush=True,
+        )
+        sys.exit(3)
+
+    print(f"[follower] supported suites={supported_suites}")
+    unavailable_count = len(capabilities.get("unsupported_suites", []))
+    if unavailable_count:
+        print(
+            f"[follower] note: {unavailable_count} suites filtered due to missing KEM/SIG/AEAD",
+            flush=True,
+        )
+
     for env_key, env_value in auto.get("power_env", {}).items():
         if env_value is None:
             continue
@@ -2434,14 +2584,22 @@ def main(argv: Optional[list[str]] = None) -> None:
     telemetry_port_cfg = auto.get("telemetry_port")
     telemetry_port = TELEMETRY_DEFAULT_PORT if telemetry_port_cfg in (None, "") else int(telemetry_port_cfg)
 
-    print(f"[follower] telemetry listening on {telemetry_host}:{telemetry_port}")
-
     if telemetry_enabled:
         telemetry = TelemetryPublisher(telemetry_host, telemetry_port, session_id)
         telemetry.start()
         print(f"[follower] telemetry publisher started (session={session_id})")
         telemetry_status_path = session_dir / "telemetry_status.json"
         telemetry.configure_status_sink(telemetry_status_path)
+        try:
+            telemetry.publish(
+                "capabilities_snapshot",
+                {
+                    "sent_timestamp_ns": time.time_ns(),
+                    "capabilities": capabilities,
+                },
+            )
+        except Exception:
+            pass
     else:
         print("[follower] telemetry disabled via AUTO_DRONE configuration")
 
@@ -2464,7 +2622,15 @@ def main(argv: Optional[list[str]] = None) -> None:
     high_speed_monitor = HighSpeedMonitor(session_dir, session_id, telemetry)
     high_speed_monitor.start()
 
-    initial_suite = auto.get("initial_suite") or default_suite
+    candidate_initial = auto.get("initial_suite") or default_suite
+    if candidate_initial not in supported_suites:
+        fallback_suite = supported_suites[0]
+        print(
+            f"[follower] initial suite {candidate_initial} unsupported; falling back to {fallback_suite}",
+            flush=True,
+        )
+        candidate_initial = fallback_suite
+    initial_suite = candidate_initial
     proxy, proxy_log = start_drone_proxy(initial_suite)
     monitors_enabled = bool(auto.get("monitors_enabled", True))
     if not monitors_enabled:
@@ -2513,6 +2679,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         "session_dir": session_dir,
         "telemetry_status_path": telemetry_status_path,
         "log_path": Path(getattr(proxy_log, "name", "")) if proxy_log else None,
+        "capabilities": capabilities,
     }
     control = ControlServer(CONTROL_HOST, CONTROL_PORT, state)
     control.start()

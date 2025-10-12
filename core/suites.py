@@ -307,6 +307,64 @@ _AEAD_REGISTRY = {
 }
 
 
+def _probe_aead_support() -> Tuple[Tuple[str, ...], Dict[str, str]]:
+    """Detect AEAD algorithm support available in the current runtime.
+
+    Returns a tuple of (available_tokens, missing_reason_map). The reason map
+    records a human-readable explanation for algorithms that are unavailable.
+    """
+
+    available: list[str] = ["aesgcm"]
+    missing: Dict[str, str] = {}
+
+    # ChaCha20-Poly1305 is optional in older cryptography builds
+    try:  # pragma: no cover - depends on local cryptography build
+        from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # type: ignore
+
+        if ChaCha20Poly1305 is None:  # type: ignore[truthy-bool]
+            raise ImportError("ChaCha20Poly1305 unavailable in cryptography")
+    except Exception as exc:  # pragma: no cover - optional path
+        missing["chacha20poly1305"] = str(exc)
+    else:
+        available.append("chacha20poly1305")
+
+    # ASCON requires either pyascon or ascon modules. Attempt pyascon first.
+    ascon_errors: list[str] = []
+    try:  # pragma: no cover - optional dependency
+        import pyascon  # type: ignore  # noqa: F401
+
+        available.append("ascon128")
+    except ImportError as exc_py:  # pragma: no cover - optional path
+        ascon_errors.append(f"pyascon missing: {exc_py}")
+
+    if "ascon128" not in available:
+        try:  # pragma: no cover - optional dependency
+            import ascon  # type: ignore  # noqa: F401
+
+            available.append("ascon128")
+        except ImportError as exc_ascon:  # pragma: no cover - optional path
+            ascon_errors.append(f"ascon missing: {exc_ascon}")
+
+    if "ascon128" not in available and ascon_errors:
+        missing["ascon128"] = "; ".join(ascon_errors)
+
+    return tuple(available), missing
+
+
+def available_aead_tokens() -> Tuple[str, ...]:
+    """Return the AEAD tokens supported by this runtime."""
+
+    supported, _ = _probe_aead_support()
+    return supported
+
+
+def unavailable_aead_reasons() -> Dict[str, str]:
+    """Return descriptive reasons for AEAD algorithms that are unavailable."""
+
+    _, missing = _probe_aead_support()
+    return dict(missing)
+
+
 def _build_alias_map(registry: Dict[str, Dict]) -> Dict[str, str]:
     alias_map: Dict[str, str] = {}
     for key, entry in registry.items():

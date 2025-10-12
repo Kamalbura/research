@@ -1131,6 +1131,9 @@ def preflight_filter_suites(candidates: List[str]) -> Tuple[List[str], List[Dict
         print(f"[WARN] suite capability probe failed (signature list): {exc}", file=sys.stderr)
         return list(candidates), []
 
+    available_aeads = set(suites_mod.available_aead_tokens())
+    missing_aead_reasons = suites_mod.unavailable_aead_reasons()
+
     filtered: List[str] = []
     skipped: List[Dict[str, object]] = []
 
@@ -1151,27 +1154,103 @@ def preflight_filter_suites(candidates: List[str]) -> Tuple[List[str], List[Dict
         missing_reasons: List[str] = []
         kem_name = suite_info.get("kem_name")
         sig_name = suite_info.get("sig_name")
+        aead_token = suite_info.get("aead_token")
 
         if enabled_kems and kem_name not in enabled_kems:
             missing_reasons.append("kem_unavailable")
         if enabled_sigs and sig_name not in enabled_sigs:
             missing_reasons.append("sig_unavailable")
+        if available_aeads and aead_token not in available_aeads:
+            missing_reasons.append("aead_unavailable")
 
         if missing_reasons:
+            detail_payload: Dict[str, object] = {
+                "kem_name": kem_name,
+                "sig_name": sig_name,
+            }
+            if aead_token:
+                detail_payload["aead_token"] = aead_token
+                hint = missing_aead_reasons.get(str(aead_token))
+                if hint:
+                    detail_payload["aead_hint"] = hint
             skipped.append(
                 {
                     "suite": suite_info.get("suite_id", suite_id),
                     "reason": "+".join(missing_reasons),
-                    "details": {
-                        "kem_name": kem_name,
-                        "sig_name": sig_name,
-                    },
+                    "details": detail_payload,
                     "stage": "preflight",
                 }
             )
             continue
 
         filtered.append(suite_info["suite_id"])
+
+    return filtered, skipped
+
+
+def filter_suites_for_follower(
+    candidates: List[str], capabilities: Dict[str, object]
+) -> Tuple[List[str], List[Dict[str, object]]]:
+    """Intersect scheduler suite plan with follower-reported capabilities."""
+
+    if not capabilities:
+        return list(candidates), []
+
+    supported = set()
+    supported_list = capabilities.get("supported_suites")
+    if isinstance(supported_list, (list, tuple, set)):
+        supported = {str(item) for item in supported_list if isinstance(item, str)}
+
+    unsupported_entries: Dict[str, dict] = {}
+    raw_unsupported = capabilities.get("unsupported_suites")
+    if isinstance(raw_unsupported, list):
+        for entry in raw_unsupported:
+            if isinstance(entry, dict):
+                suite_name = entry.get("suite")
+                if isinstance(suite_name, str):
+                    unsupported_entries[suite_name] = entry
+
+    filtered: List[str] = []
+    skipped: List[Dict[str, object]] = []
+
+    if not supported:
+        for suite_id in candidates:
+            skipped.append(
+                {
+                    "suite": suite_id,
+                    "reason": "drone_no_supported_suites",
+                    "details": {},
+                    "stage": "follower",
+                }
+            )
+        return [], skipped
+
+    for suite_id in candidates:
+        if suite_id in supported:
+            filtered.append(suite_id)
+            continue
+
+        detail_entry = unsupported_entries.get(suite_id)
+        reason_tokens: List[str] = []
+        details: Dict[str, object] = {}
+        if detail_entry:
+            raw_reasons = detail_entry.get("reasons")
+            if isinstance(raw_reasons, (list, tuple, set)):
+                reason_tokens = [str(item) for item in raw_reasons if item]
+            elif raw_reasons:
+                reason_tokens = [str(raw_reasons)]
+            detail_details = detail_entry.get("details")
+            if isinstance(detail_details, dict):
+                details = detail_details
+
+        skipped.append(
+            {
+                "suite": suite_id,
+                "reason": "+".join(reason_tokens) if reason_tokens else "suite_not_supported",
+                "details": details,
+                "stage": "follower",
+            }
+        )
 
     return filtered, skipped
 
@@ -3802,6 +3881,8 @@ def export_combined_excel(
     saturation_samples: List[dict],
     telemetry_samples: List[dict],
     drone_session_dir: Optional[Path] = None,
+    follower_capabilities: Optional[Dict[str, object]] = None,
+    follower_capabilities_path: Optional[Path] = None,
     *,
     traffic_mode: str,
     payload_bytes: int,
@@ -3824,11 +3905,43 @@ def export_combined_excel(
     info_sheet.title = "run_info"
     info_sheet.append(["generated_utc", ts()])
     info_sheet.append(["session_id", session_id])
+    if follower_capabilities_path:
+        info_sheet.append(["follower_capabilities_path", str(follower_capabilities_path)])
 
     append_dict_sheet(workbook, "gcs_summary", summary_rows)
     append_dict_sheet(workbook, "saturation_overview", saturation_overview)
     append_dict_sheet(workbook, "saturation_samples", saturation_samples)
     append_dict_sheet(workbook, "telemetry_samples", telemetry_samples)
+
+    if follower_capabilities:
+        append_dict_sheet(workbook, "follower_capabilities_meta", [follower_capabilities])
+        supported = follower_capabilities.get("supported_suites")
+        if isinstance(supported, (list, tuple, set)):
+            supported_rows = [{"suite": str(name)} for name in supported if isinstance(name, str)]
+            append_dict_sheet(workbook, "follower_supported_suites", supported_rows)
+        unsupported = follower_capabilities.get("unsupported_suites")
+        if isinstance(unsupported, list):
+            rows: List[dict] = []
+            for entry in unsupported:
+                if not isinstance(entry, dict):
+                    continue
+                row: Dict[str, object] = {}
+                suite_name = entry.get("suite")
+                if isinstance(suite_name, str):
+                    row["suite"] = suite_name
+                raw_reasons = entry.get("reasons")
+                if isinstance(raw_reasons, (list, tuple, set)):
+                    row["reasons"] = ",".join(str(item) for item in raw_reasons if item)
+                elif raw_reasons:
+                    row["reasons"] = str(raw_reasons)
+                details = entry.get("details")
+                if isinstance(details, dict):
+                    for key, value in details.items():
+                        if key not in row:
+                            row[key] = value
+                if row:
+                    rows.append(row)
+            append_dict_sheet(workbook, "follower_unsupported_suites", rows)
 
     def _summarize_kinematics(samples: List[dict]) -> List[dict]:
         aggregates: dict[str, dict[str, float]] = {}
@@ -4138,15 +4251,14 @@ def main() -> None:
     if not suites:
         raise RuntimeError("No suites remain after preflight capability filtering")
 
+    follower_capabilities: Dict[str, object] = {}
+    follower_capability_skips: List[Dict[str, object]] = []
+    follower_capabilities_path: Optional[Path] = None
+
     session_prefix = str(auto.get("session_prefix") or "session")
     env_session_id = os.environ.get("GCS_SESSION_ID")
     session_id = env_session_id or f"{session_prefix}_{int(time.time())}"
     session_source = "env" if env_session_id else "generated"
-
-    initial_suite = preferred_initial_suite(suites)
-    if initial_suite and suites[0] != initial_suite:
-        suites = [initial_suite] + [s for s in suites if s != initial_suite]
-        print(f"[{ts()}] reordered suites to start with {initial_suite} (from CONFIG)")
 
     power_capture_enabled = bool(auto.get("power_capture", True))
 
@@ -4197,6 +4309,27 @@ def main() -> None:
                     follower_session_id = candidate
         except Exception as exc:
             print(f"[WARN] session_info fetch failed: {exc}", file=sys.stderr)
+        try:
+            caps_resp = ctl_send({"cmd": "capabilities"}, timeout=1.5, retries=2, backoff=0.4)
+            if caps_resp.get("ok"):
+                raw_caps = caps_resp.get("capabilities") or {}
+                if isinstance(raw_caps, dict):
+                    follower_capabilities = dict(raw_caps)
+                    suites_filtered, follower_capability_skips = filter_suites_for_follower(suites, follower_capabilities)
+                    suites = suites_filtered
+                    print(
+                        f"[{ts()}] follower reports {len(follower_capabilities.get('supported_suites') or [])} supported suites",
+                        flush=True,
+                    )
+                else:
+                    print(
+                        f"[WARN] follower capabilities response malformed: {type(raw_caps).__name__}",
+                        file=sys.stderr,
+                    )
+            else:
+                print("[WARN] follower capabilities request failed (no ok flag)", file=sys.stderr)
+        except Exception as exc:
+            print(f"[WARN] capabilities fetch failed: {exc}", file=sys.stderr)
     else:
         print(f"[WARN] follower not reachable at {DRONE_HOST}:{CONTROL_PORT}", file=sys.stderr)
 
@@ -4212,6 +4345,34 @@ def main() -> None:
 
     print(f"[{ts()}] session_id={session_id} (source={session_source})")
     os.environ["GCS_SESSION_ID"] = session_id
+
+    if follower_capability_skips:
+        for entry in follower_capability_skips:
+            suite_label = entry.get("suite")
+            reason_label = entry.get("reason")
+            print(
+                f"[WARN] follower rejects suite {suite_label}: {reason_label}",
+                file=sys.stderr,
+            )
+    if follower_capabilities:
+        try:
+            session_cap_dir = OUTDIR / session_id
+            session_cap_dir.mkdir(parents=True, exist_ok=True)
+            follower_capabilities_path = session_cap_dir / "follower_capabilities.json"
+            data_bytes = json.dumps(follower_capabilities, indent=2, sort_keys=True).encode("utf-8")
+            _atomic_write_bytes(follower_capabilities_path, data_bytes)
+            print(f"[{ts()}] follower capabilities snapshot -> {follower_capabilities_path}")
+        except Exception as exc:
+            follower_capabilities_path = None
+            print(f"[WARN] failed to persist follower capabilities: {exc}", file=sys.stderr)
+
+    if not suites:
+        raise RuntimeError("No suites remain after follower capability filtering")
+
+    initial_suite = preferred_initial_suite(suites)
+    if initial_suite and suites[0] != initial_suite:
+        suites = [initial_suite] + [s for s in suites if s != initial_suite]
+        print(f"[{ts()}] reordered suites to start with {initial_suite} (from CONFIG)")
 
     drone_session_dir = locate_drone_session_dir(session_id)
     if drone_session_dir:
@@ -4382,6 +4543,8 @@ def main() -> None:
                 saturation_samples=all_rate_samples,
                 telemetry_samples=telemetry_samples,
                 drone_session_dir=drone_session_dir,
+                follower_capabilities=follower_capabilities,
+                follower_capabilities_path=follower_capabilities_path,
                 traffic_mode=traffic_mode,
                 payload_bytes=payload_bytes,
                 event_sample=event_sample,
