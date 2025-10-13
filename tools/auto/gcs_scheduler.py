@@ -592,6 +592,7 @@ AUTO_GCS_DEFAULTS = {
         "extra_args": [],  # additional CLI args list for iperf3
         "force_cli": False,  # force CLI even if JSON parsing fails
     },
+    "aead_exclude_tokens": [],  # list of AEAD tokens to skip (e.g., ["ascon128"])
 }
 
 AUTO_GCS_CONFIG = _merge_defaults(AUTO_GCS_DEFAULTS, CONFIG.get("AUTO_GCS"))
@@ -3191,11 +3192,19 @@ def run_suite(
         "ciphertext_size_bytes": _metric_int("ciphertext_size_bytes"),
         "sig_size_bytes": _metric_int("sig_size_bytes"),
         "shared_secret_size_bytes": _metric_int("shared_secret_size_bytes"),
-        "kem_keygen_mJ": 0.0,
-        "kem_encaps_mJ": 0.0,
-        "kem_decap_mJ": 0.0,
-        "sig_sign_mJ": 0.0,
-        "sig_verify_mJ": 0.0,
+    "kem_keygen_mJ": 0.0,
+    "kem_encaps_mJ": 0.0,
+    "kem_decap_mJ": 0.0,
+    "sig_sign_mJ": 0.0,
+    "sig_verify_mJ": 0.0,
+    # Add handshake-prefixed per-primitive energy fields so downstream consumers
+    # always see these columns even when the scheduler distributes handshake energy
+    # across primitive timings.
+    "handshake_kem_keygen_mJ": 0.0,
+    "handshake_kem_encap_mJ": 0.0,
+    "handshake_kem_decap_mJ": 0.0,
+    "handshake_sig_sign_mJ": 0.0,
+    "handshake_sig_verify_mJ": 0.0,
     }
 
     row.update(handshake_fields)
@@ -4629,6 +4638,40 @@ def main(argv: Optional[Iterable[str]] = None) -> None:
 
     suites_override = auto.get("suites")
     suites = resolve_suites(suites_override)
+    exclude_tokens_raw = auto.get("aead_exclude_tokens") or []
+    exclude_tokens: Set[str] = set()
+    if isinstance(exclude_tokens_raw, str):
+        candidate_iter = [exclude_tokens_raw]
+    elif isinstance(exclude_tokens_raw, (list, tuple, set)):
+        candidate_iter = exclude_tokens_raw
+    else:
+        candidate_iter = []
+    for token in candidate_iter:
+        if not isinstance(token, str):
+            continue
+        token_norm = token.strip().lower()
+        if token_norm:
+            exclude_tokens.add(token_norm)
+    if exclude_tokens:
+        filtered_suites: List[str] = []
+        excluded_records: List[Tuple[str, str]] = []
+        for suite_id in suites:
+            try:
+                suite_info = suites_mod.get_suite(suite_id)
+                token = str(suite_info.get("aead_token") or "").strip().lower()
+            except Exception:
+                token = ""
+            if token and token in exclude_tokens:
+                excluded_records.append((suite_id, token))
+                continue
+            filtered_suites.append(suite_id)
+        if excluded_records:
+            for suite_id, token in excluded_records:
+                print(
+                    f"[WARN] excluding suite {suite_id}: AEAD token '{token}' blocked via AUTO_GCS.aead_exclude_tokens",
+                    file=sys.stderr,
+                )
+        suites = filtered_suites
     if not suites:
         raise RuntimeError("No suites selected for execution")
 

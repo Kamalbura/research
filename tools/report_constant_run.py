@@ -8,6 +8,7 @@ import csv
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Optional
+import json
 
 
 @dataclass
@@ -127,6 +128,11 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="run_suite_summaries.txt",
         help="Filename for the per-suite narrative summary",
+    )
+    parser.add_argument(
+        "--allow-power-only",
+        action="store_true",
+        help="When no rows are found for --run-id, build summaries from local power JSONs under output/drone/<run-id>/power",
     )
     return parser.parse_args()
 
@@ -259,11 +265,232 @@ def _filter_by_run(rows: List[dict], run_id: Optional[str]) -> List[dict]:
     if not run_id:
         return rows
     filtered: List[dict] = []
+    candidate_fields = [
+        "power_csv_path",
+        "power_summary_path",
+        "monitor_manifest_path",
+        "monitor_artifact_paths",
+        "monitor_remote_map",
+        "telemetry_status_path",
+        "monitor_fetch_error",
+        "power_note",
+    ]
     for row in rows:
-        path = row.get("power_csv_path", "")
-        if run_id and run_id in path:
+        match_found = False
+        for field in candidate_fields:
+            value = row.get(field)
+            if isinstance(value, str) and run_id in value:
+                filtered.append(row)
+                match_found = True
+                break
+        if match_found:
+            continue
+        # As a last resort, search the entire row representation. This is
+        # slower but ensures we catch nested JSON or repr-encoded paths.
+        row_repr = str(row)
+        if run_id in row_repr:
             filtered.append(row)
     return filtered
+
+
+def _records_from_local_power(run_id: str) -> List[SuiteRecord]:
+    """Build minimal SuiteRecord objects from local power JSON files for a run.
+
+    This populates power-related fields and leaves network/handshake metrics as defaults.
+    """
+    records: List[SuiteRecord] = []
+    power_dir = Path("output/drone") / run_id / "power"
+    if not power_dir.exists():
+        return records
+    for p in sorted(power_dir.iterdir()):
+        name = p.name
+        if p.suffix.lower() == ".json" and name.startswith("power_"):
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            # Derive suite name from filename: power_<suite>_<timestamp>.json
+            base = name[len("power_") : -len(".json")]
+            parts = base.rsplit("_", 1)
+            suite = parts[0] if parts else base
+            rec = SuiteRecord(
+                suite=suite,
+                status="PASS",
+                duration_s=0.0,
+                sent=0,
+                received=0,
+                throughput_mbps=0.0,
+                target_mbps=0.0,
+                delivered_ratio=0.0,
+                loss_pct=0.0,
+                loss_low_pct=0.0,
+                loss_high_pct=0.0,
+                pps=0.0,
+                target_pps=0.0,
+                goodput_mbps=0.0,
+                wire_throughput_mbps=0.0,
+                rtt_avg_ms=0.0,
+                rtt_p50_ms=0.0,
+                rtt_p95_ms=0.0,
+                rtt_max_ms=0.0,
+                owd_p50_ms=None,
+                owd_p95_ms=None,
+                rekey_ms=None,
+                enc_out=0,
+                enc_in=0,
+                drops=0,
+                rekeys_ok=0,
+                rekeys_fail=0,
+                power_ok=True,
+                power_request_ok=True,
+                power_avg_w=_float(data.get("power_avg_w") if isinstance(data, dict) else None),
+                power_energy_j=_float(data.get("power_energy_j") if isinstance(data, dict) else None),
+                power_samples=_int(data.get("power_samples") if isinstance(data, dict) else None),
+                power_sample_rate=_float(data.get("power_sample_rate_hz") if isinstance(data, dict) else None),
+                power_duration_s=_float(data.get("power_duration_s") if isinstance(data, dict) else None),
+                power_avg_current_a=_float(data.get("power_avg_current_a") if isinstance(data, dict) else None),
+                power_avg_voltage_v=_float(data.get("power_avg_voltage_v") if isinstance(data, dict) else None),
+                power_csv_path=str((power_dir / (name[:-5] + ".csv")).as_posix()),
+                power_note=None,
+                power_error=None,
+                power_fetch_status="local",
+                monitor_fetch_status=None,
+                cpu_max_percent=None,
+                max_rss_bytes=None,
+                pfc_watts=None,
+                kinematics_vh=None,
+                kinematics_vv=None,
+                rekey_energy_mj=None,
+                rekey_energy_error=None,
+                handshake_role=None,
+                handshake_total_ms=None,
+                handshake_energy_mj=None,
+                handshake_energy_error=None,
+                kem_keygen_ms=None,
+                kem_encaps_ms=None,
+                kem_decap_ms=None,
+                sig_sign_ms=None,
+                sig_verify_ms=None,
+                primitive_total_ms=None,
+                timing_guard_ms=None,
+                timing_guard_violation=False,
+                clock_offset_ns=None,
+                blackout_ms=None,
+                gap_p99_ms=None,
+                gap_max_ms=None,
+                steady_gap_ms=None,
+                traffic_engine=None,
+                iperf3_jitter_ms=None,
+                iperf3_lost_pct=None,
+                iperf3_lost_packets=None,
+                iperf3_report_path=None,
+            )
+            records.append(rec)
+    return records
+
+
+def _map_rows_by_power_timestamps(run_id: str, rows: List[dict]) -> List[dict]:
+    """Try to map CSV rows to a run by scanning local power filenames for timestamps
+    and suite names. Returns a list of matched rows (possibly empty).
+    """
+    power_dir = Path("output/drone") / run_id / "power"
+    if not power_dir.exists():
+        return []
+    timestamps = set()
+    suites = set()
+    for p in sorted(power_dir.iterdir()):
+        if p.suffix.lower() == ".json" and p.name.startswith("power_"):
+            base = p.name[len("power_") : -len(".json")]
+            parts = base.rsplit("_", 1)
+            suite = parts[0] if parts else base
+            suites.add(suite)
+            if len(parts) > 1:
+                timestamps.add(parts[1])
+
+    if not timestamps and not suites:
+        return []
+
+    candidate_fields = [
+        "power_csv_path",
+        "power_summary_path",
+        "monitor_manifest_path",
+        "monitor_artifact_paths",
+        "monitor_remote_map",
+        "telemetry_status_path",
+        "monitor_fetch_error",
+        "power_note",
+    ]
+
+    matched: List[dict] = []
+    for row in rows:
+        if row in matched:
+            continue
+        row_repr = str(row)
+        # Check timestamp presence first (exact substring match)
+        found = False
+        for ts in timestamps:
+            if ts in row_repr:
+                matched.append(row)
+                found = True
+                break
+        if found:
+            continue
+        # Check suite name matches in candidate fields or suite column
+        suite_field = (row.get("suite") or "")
+        for s in suites:
+            if s and (s in suite_field or s in row_repr):
+                matched.append(row)
+                break
+    return matched
+
+
+def _estimate_handshake_and_rekey_energy(row: dict, record: SuiteRecord) -> None:
+    """Conservative fallback: estimate handshake/rekey energy from average power × duration
+
+    This mutates the provided SuiteRecord when power metrics are available but the
+    handshake/rekey energy fields are missing or zero. Estimated values are marked
+    by setting the corresponding *_energy_error to 'estimated_from_power'.
+    """
+    # Derive average power (W) from record fields if possible
+    avg_power_w = None
+    if record.power_avg_w is not None and record.power_avg_w > 0:
+        avg_power_w = record.power_avg_w
+    elif record.power_energy_j is not None and record.power_duration_s is not None and record.power_duration_s > 0:
+        try:
+            avg_power_w = float(record.power_energy_j) / float(record.power_duration_s)
+        except Exception:
+            avg_power_w = None
+
+    if avg_power_w is None:
+        return
+
+    # Handshake: use handshake_wall_start_ns / handshake_wall_end_ns when present
+    try:
+        hs_start = _int(row.get("handshake_wall_start_ns"), 0) or 0
+        hs_end = _int(row.get("handshake_wall_end_ns"), 0) or 0
+    except Exception:
+        hs_start = hs_end = 0
+
+    if hs_start and hs_end and (record.handshake_energy_mj is None or record.handshake_energy_mj <= 0):
+        dur_s = (hs_end - hs_start) / 1_000_000_000.0
+        if dur_s > 0:
+            energy_j = avg_power_w * dur_s
+            record.handshake_energy_mj = energy_j * 1000.0
+            record.handshake_energy_error = "estimated_from_power"
+
+    # Rekey: use rekey_mark_ns / rekey_ok_ns when present
+    try:
+        rk_start = _int(row.get("rekey_mark_ns"), 0) or 0
+        rk_end = _int(row.get("rekey_ok_ns"), 0) or 0
+    except Exception:
+        rk_start = rk_end = 0
+
+    if rk_start and rk_end and (record.rekey_energy_mj is None or record.rekey_energy_mj <= 0):
+        dur_s = (rk_end - rk_start) / 1_000_000_000.0
+        if dur_s > 0:
+            energy_j = avg_power_w * dur_s
+            record.rekey_energy_mj = energy_j * 1000.0
+            record.rekey_energy_error = "estimated_from_power"
 
 
 def _format_summary(record: SuiteRecord) -> str:
@@ -623,10 +850,27 @@ def main() -> None:
 
     run_id = args.run_id or _detect_run_id(rows)
     filtered_rows = _filter_by_run(rows, run_id)
+    records: List[SuiteRecord]
     if not filtered_rows:
-        raise SystemExit("No rows matched the requested run")
-
-    records = sorted((_row_to_record(row) for row in filtered_rows), key=lambda item: item.suite)
+        if args.allow_power_only and run_id:
+            # Try to build minimal records from local power artifacts
+            records = _records_from_local_power(run_id)
+            if not records:
+                raise SystemExit("No rows matched the requested run and no local power artifacts found")
+        else:
+            raise SystemExit("No rows matched the requested run")
+    else:
+        # Build records from rows and run conservative estimation to fill missing
+        # handshake/rekey energy when power metrics are available locally.
+        records = [_row_to_record(row) for row in filtered_rows]
+        # Apply estimation per-row to preserve any row-specific timestamps
+        for row, rec in zip(filtered_rows, records):
+            try:
+                _estimate_handshake_and_rekey_energy(row, rec)
+            except Exception:
+                # Non-fatal: continue with the record as-is
+                pass
+        records = sorted(records, key=lambda item: item.suite)
 
     if args.output_dir is not None:
         output_dir = args.output_dir

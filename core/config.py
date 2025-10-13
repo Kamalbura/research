@@ -157,6 +157,8 @@ CONFIG = {
             "extra_args": [],  # additional CLI args list
             "force_cli": False,  # bool to force CLI output mode
         },
+        # Blocklist of AEAD tokens to exclude from automation runs (case-insensitive)
+        "aead_exclude_tokens": ["ascon128"],
             # Optional post-run fetch of drone artifacts (logs, power captures)
             "post_fetch": {
                 "enabled": True,  # bool toggling post-run fetch
