@@ -16,12 +16,7 @@ except ImportError:  # pragma: no cover - ChaCha unavailable on very old crypto 
     ChaCha20Poly1305 = None
 from cryptography.exceptions import InvalidTag
 
-try:  # Prefer pyascon if available for updated reference implementation
-    import pyascon  # type: ignore
-except ImportError:  # pragma: no cover - optional dependency
-    pyascon = None
-
-try:  # Fallback to legacy ascon module when pyascon is missing
+try:  # Optional dependency installed in gcs-env for PQC evaluation
     import ascon  # type: ignore
 except ImportError:  # pragma: no cover - ASCON not installed
     ascon = None
@@ -59,22 +54,6 @@ HEADER_LEN = 22
 IV_LEN = 0  # length of IV bytes present on wire (0 after optimization)
 
 
-def _ascon_encrypt(key: bytes, nonce: bytes, aad: bytes, data: bytes) -> bytes:
-    if pyascon is not None:
-        return pyascon.ascon_encrypt(key, nonce, aad, data, variant="Ascon-AEAD128")  # type: ignore[attr-defined]
-    if ascon is not None:
-        return ascon.encrypt(key, nonce, aad, data)  # type: ignore[attr-defined]
-    raise NotImplementedError("ASCON support requires the pyascon or ascon module")
-
-
-def _ascon_decrypt(key: bytes, nonce: bytes, aad: bytes, data: bytes) -> Optional[bytes]:
-    if pyascon is not None:
-        return pyascon.ascon_decrypt(key, nonce, aad, data, variant="Ascon-AEAD128")  # type: ignore[attr-defined]
-    if ascon is not None:
-        return ascon.decrypt(key, nonce, aad, data)  # type: ignore[attr-defined]
-    raise NotImplementedError("ASCON support requires the pyascon or ascon module")
-
-
 class _AsconCipher:
     """Wrapper to present ASCON-128 with the cryptography AEAD interface."""
 
@@ -84,10 +63,10 @@ class _AsconCipher:
         self._key = key
 
     def encrypt(self, nonce: bytes, data: bytes, aad: bytes) -> bytes:
-        return _ascon_encrypt(self._key, nonce, aad, data)
+        return ascon.encrypt(self._key, nonce, aad, data)  # type: ignore[arg-type]
 
     def decrypt(self, nonce: bytes, data: bytes, aad: bytes) -> bytes:
-        plaintext = _ascon_decrypt(self._key, nonce, aad, data)
+        plaintext = ascon.decrypt(self._key, nonce, aad, data)  # type: ignore[arg-type]
         if plaintext is None:
             raise InvalidTag("ascon authentication failed")
         return plaintext
@@ -118,8 +97,8 @@ def _instantiate_aead(token: str, key: bytes) -> Tuple[object, int]:
         return ChaCha20Poly1305(key), 12
 
     if normalized == "ascon128":
-        if pyascon is None and ascon is None:
-            raise NotImplementedError("ASCON requires the pyascon or ascon module")
+        if ascon is None:
+            raise NotImplementedError("ascon module not installed")
         if len(key) < 16:
             raise NotImplementedError("ASCON-128 requires at least 16 bytes of key material")
         return _AsconCipher(key[:16]), 16
@@ -225,9 +204,8 @@ class Sender:
 
         try:
             ciphertext = self._cipher.encrypt(iv, plaintext, header)
-        except Exception as exc:
-            # Surface operational failures with a domain-specific exception
-            raise AeadAuthError(f"encryption failure: {exc}") from exc
+        except Exception as e:
+            raise NotImplementedError(f"AEAD encryption failed: {e}")
         
         # Increment sequence on success
         self._seq += 1
@@ -378,12 +356,8 @@ class Receiver:
             if self.strict_mode:
                 raise AeadAuthError("AEAD authentication failed")
             return None
-        except Exception as exc:
-            # Uncommon backend/primitive errors should also be reported consistently
-            self._last_error = "auth"
-            if self.strict_mode:
-                raise AeadAuthError(f"AEAD decryption failed: {exc}") from exc
-            return None
+        except Exception as e:
+            raise NotImplementedError(f"AEAD decryption failed: {e}")
         self._last_error = None
         return plaintext
 
