@@ -1,23 +1,3 @@
-# Architecture diagrams – how to view
-
-There are two easy ways to view these Mermaid diagrams:
-
-- In VS Code
-    - Open any .md file here and press Ctrl+Shift+V (Open Preview) or use the split preview.
-    - VS Code’s built-in Markdown preview renders Mermaid. If not, install the “Markdown Preview Mermaid Support” extension.
-- In a browser
-    - Open index.html in your browser. It uses the Mermaid CDN to render all diagrams on one page.
-
-Files in this folder:
-- system_overview.md – end-to-end drone↔GCS↔security plane
-- core_modules.md – how core/* modules wire together
-- data_plane.md – AEAD framing, header layout, nonce and ports
-- handshake.md – KEM+SIG handshake and HKDF flow
-- rekey_fsm.md – control-plane 2PC state machine
-- scheduler_and_follower.md – orchestration on both sides
-- index.html – one-page viewer with all diagrams
-
-Tip: GitHub also renders Mermaid in Markdown directly if you browse the repo online.
 # Diagrams Index
 
 This directory contains all visual documentation for the Post-Quantum Cryptographic Framework, organized by category with individual files for each diagram type.
