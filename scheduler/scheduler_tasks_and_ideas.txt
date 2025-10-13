@@ -1,0 +1,66 @@
+Scheduler Responsibilities
+==========================
+
+Core Tasks Performed by the SD-Scheduler
+----------------------------------------
+1. **State Acquisition**
+   - Collect telemetry from Raspberry Pi companion (CPU, memory, thermal).
+   - Pull flight status from Pixhawk via MAVLink (battery SoC, mission phase).
+   - Monitor link quality metrics (SNR, RSSI, retransmission counts).
+   - Record PQC suite performance (latency, energy, rekey success).
+
+2. **Suitability Assessment**
+   - Compute security index for each available PQC suite.
+   - Estimate per-suite latency and energy cost using measured tables.
+   - Detect constraint violations (CPU saturation, latency overrun, battery alarms).
+   - Evaluate graceful degradation logic when resources become scarce.
+
+3. **Decision Making**
+   - Select optimal PQC suite according to scheduler policy (RL, LUT, or hybrid).
+   - Trigger fallback or emergency modes when thresholds exceeded.
+   - Maintain hysteresis/hold timers to avoid frequent reconfiguration.
+
+4. **Execution & Control**
+   - Apply selected PQC suite by reconfiguring liboqs on companion and GCS.
+   - Coordinate rekey sequences; ensure command/ack timings are respected.
+   - Log decisions and metrics for transparency and learning updates.
+
+5. **Learning & Adaptation**
+   - Update RL/Q-learning policies with reward feedback.
+   - Refresh lookup table entries as new synthetic or real data arrive.
+   - Adjust supervisor thresholds based on observed performance.
+
+
+Scheduler Design Ideas Captured
+-------------------------------
+1. **RL-Based Scheduler**
+   - State: battery %, CPU %, SNR, mission phase, queue latency.
+   - Action: choose among 30 PQC suites.
+   - Reward: α·security_index − β·latency_penalty − γ·energy_penalty − δ·constraint_violation.
+   - Implementation options: tabular Q-learning (discrete bins) → DQN (continuous).
+
+2. **Lookup-Table Scheduler**
+   - Precompute best suite for discretized state bins (battery/CPU/SNR/phase).
+   - Store expected latency, energy, security in table; update via simulations.
+   - Fast and deterministic; responsive even on limited hardware.
+
+3. **Hierarchical Meta-Scheduler**
+   - Supervisor classifies regime (normal, degraded link, emergency battery/CPU).
+   - Delegates to RL policy, LUT, or fixed fallback accordingly.
+   - Ensures graceful degradation and quick recovery after disturbances.
+
+4. **Graceful Degradation Strategy**
+   - Define thresholds for resource exhaustion (B < 20%, CPU > 85%, SNR drop).
+   - Downgrade to lighter suites that still meet minimum security.
+   - Maintain session integrity while preserving mission objectives.
+
+5. **Synthetic Evaluation Harness**
+   - Simulation using measured stats to compare RL vs LUT vs hybrid policies.
+   - Monte Carlo trajectories for mission phases, environmental conditions.
+   - Generate publication-ready metrics and plots without live flights.
+
+6. **Telemetry & Dataset Pipeline**
+   - Aggregate summary.csv/JSONL into master dataset for training/analysis.
+   - Publish metrics catalog for reproducibility and external validation.
+   - Provide tools (`verify_crypto.py`, `smoke_negotiation.py`) for capability checks.
+
