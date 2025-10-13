@@ -1,0 +1,3 @@
+[] Draft scheduler reference doc comparing Linux, Windows, Pixhawk, and edge-Orion approaches for this project.
+[] Review current schedulers to assess suitability for power-constrained drone follower workloads.
+[] Create component/explanations/ directory with per-scheduler teaching notes and populate initial files.

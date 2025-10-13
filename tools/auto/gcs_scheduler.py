@@ -98,6 +98,7 @@ from core.config import CONFIG
 from tools.blackout_metrics import compute_blackout
 from tools.merge_power import extract_power_fields
 from tools.power_utils import PowerSample, align_gcs_to_drone, integrate_energy_mj, load_power_trace
+from tools.auto.fetch_manager import fetch_artifacts
 
 
 DRONE_HOST = CONFIG["DRONE_HOST"]
@@ -1039,6 +1040,15 @@ def _ensure_local_artifact(suite: str, remote_path: str, category: str) -> Tuple
         key_path=POWER_FETCH_KEY,
         strategy=strategy_raw,
     )
+    # Try the centralized fetch manager as a robust fallback or primary method
+    if fetch_error and POWER_FETCH_ENABLED:
+        try:
+            mgr_res = fetch_artifacts(session_id=str(os.getenv("GCS_SESSION_ID") or ""), remote_path=expanded_remote, local_target=str(local_path), retry=2, timeout=30)
+            if isinstance(mgr_res, dict) and mgr_res.get("status") == "ok":
+                fetch_error = None
+        except Exception as exc:
+            # preserve previous fetch_error
+            pass
     if fetch_error is None:
         try:
             resolved = local_path.resolve()
