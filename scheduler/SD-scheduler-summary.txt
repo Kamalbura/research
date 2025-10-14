@@ -1,0 +1,72 @@
+SD-Scheduler Project Overview
+==============================
+
+Current Implementation Baseline
+-------------------------------
+* PQC-enabled communication stack linking GCS ↔ Raspberry Pi companion ↔ Pixhawk FCU using liboqs suites (Kyber, Dilithium, Falcon, BIKE, SABER) integrated with MAVLink.
+* Automated orchestration via `tools/auto/gcs_scheduler.py` and `tools/auto/drone_follower.py`, producing per-suite telemetry:
+  - Latency, RTT/OWD statistics, packet loss, blackout gaps.
+  - CPU cycles, perf/pidstat samples, psutil system metrics.
+  - 1 kHz power traces and energy summaries per suite.
+  - Rekey timing, handshake metrics, and fetch status.
+* Dataset generation ready for all 30 PQC combinations; ASCON suites currently filtered out while implementation is stabilized.
+
+Scheduler Design Tracks
+-----------------------
+1. Reinforcement Learning Scheduler
+   - State: [battery %, CPU load, SNR/link quality, mission phase, queue delay].
+   - Action: select PQC suite.
+   - Reward: α·security_index − β·latency_penalty − γ·energy_penalty − δ·constraint_violation.
+   - Implementation plan: start with tabular Q-learning on discretized bins; upgrade to DQN once synthetic data stream is validated.
+
+2. Lookup-Table Scheduler
+   - Offline grid search using Monte Carlo simulation over state bins (battery/CPU/SNR/mission).
+   - Table entry: {best suite, expected latency/energy, security score, recommended sub-scheduler}.
+   - Runtime: nearest-match lookup with hysteresis and graceful fallback.
+
+3. Hierarchical Meta-Scheduler
+   - Supervisor monitors regime (normal, degraded link, emergency battery/CPU).
+   - Chooses RL, LUT, or deterministic fallback at runtime.
+   - Flow: regime detector → sub-scheduler decision → apply suite, monitor success.
+
+Modeling & Simulation
+---------------------
+* Latency model: T_total = T_crypto + T_link + T_queue.
+* CPU utilization: U = (T_crypto · λ_msg) / (1 − T_crypto · λ_msg).
+* Power model: P_sys = P_idle + P_dyn · U; energy per message = P_sys · T_total.
+* Flight-time impact: Δt_f = E_battery/(P_baseline + P_sys) − E_battery/P_baseline.
+* Synthetic data generation:
+  - Use measured means/variances from summary logs.
+  - Introduce Gaussian noise for environment variations (thermal, SNR).
+  - SimPy or custom discrete-event loop to evolve state trajectories.
+
+Graceful Degradation Strategy
+-----------------------------
+* Thresholds: battery < 20%, CPU > 85%, SNR < limit → downgrade to lower-cost suites while maintaining security ≥ mission minimum.
+* Mathematical guard: choose highest-security suite satisfying latency/energy/CPU constraints; enforce hysteresis to avoid thrashing.
+
+Evaluation Plan
+---------------
+* Metrics: latency overhead, energy per message, CPU saturation, packet loss, security index, mission flight-time reduction, RL convergence.
+* Experiments:
+  - Baseline vs static suite vs RL vs LUT vs hybrid on synthetic missions.
+  - Case study of resource drop to demonstrate graceful degradation.
+  - Statistical tests (paired t-test/Wilcoxon) on simulated results.
+* Visuals: security vs latency scatter, energy vs flight-time line, RL reward over episodes, heatmaps of suite selection, degradation timeline plots.
+
+Integration Roadmap
+-------------------
+1. Collect state metrics continuously on Raspberry Pi (battery via MAVLink, CPU via psutil, SNR from telemetry).
+2. Implement scheduler service exposing `choose_suite(state)` API.
+3. Wrap liboqs layer to accept live suite switches; ensure safe fallbacks.
+4. Add CLI flow `python -m tools.auto.gcs_scheduler --post-fetch-only <run_id>` for reproducible dataset updates (already implemented).
+5. Build master CSV/JSON dataset combining summary metrics for publication and training.
+
+Research Deliverables
+---------------------
+* Publish open dataset of PQC suite metrics (CSV/JSON) and synthetic simulator code.
+* Paper structure:
+  - Introduction, background, system model, scheduler design, simulation methodology, results, discussion, conclusion.
+  - Emphasize novelty: PQC-aware scheduling on real UAV hardware, three complementary schedulers, rich telemetry dataset.
+* Future steps: ASCON suite stabilization, real-flight validation, multi-UAV coordination.
+

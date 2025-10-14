@@ -1,0 +1,50 @@
+Metric,Category,Description,Primary Source,Units/Sampling,Notes
+timestamp,Meta,Monotonic time stamp for metric sample,GCS/Drone logs,ns or ms resolution,Use as unified timeline for fusion
+suite_id,PQC,Active PQC suite identifier (e.g., cs-mlkem768-aesgcm-mldsa65),GCS summary/logs,string,Key for joining metrics
+security_index,PQC,"Composite score from KEM, SIG, AEAD strength (bits)",Derived,float,Define weighting per mission policy
+kem_name,PQC,KEM algorithm label (Kyber, BIKE, etc.),Config/logs,string,Track availability per host
+sig_name,PQC,Signature algorithm label (Dilithium, Falcon…),Config/logs,string,Maps to signature performance profiles
+aead_token,PQC,Authenticated encryption primitive in use,Config/logs,string,Identifies AESGCM/ChaCha/ASCON
+handshake_duration_ms,Performance,Total PQC handshake time,GCS summary,float,Include wall-clock start/end for energy calc
+handshake_kem_keygen_us,Performance,KEM key generation latency,GCS summary,float,Use perf/pidstat to cross-validate
+handshake_kem_encap_us,Performance,KEM encapsulation latency,GCS summary,float,Impacts initial session setup
+handshake_kem_decap_us,Performance,KEM decapsulation latency,GCS summary,float,Bound by Pi compute budget
+handshake_sig_sign_us,Performance,Signature signing latency,GCS summary,float,Matters for command authentication
+handshake_sig_verify_us,Performance,Signature verification latency,GCS summary,float,Monitor FCU verification overhead
+crypto_cpu_cycles,Performance,"CPU cycles per message (perf stat)",Drone logs,count,Normalize by CPU frequency
+crypto_instructions,Performance,"Retired instructions per message",Drone logs,count,Indicator of algorithm complexity
+crypto_cache_misses,Performance,L1/L2 cache miss counts per message,Drone logs,count,Use to gauge memory pressure
+latency_mean_ms,Link,Average end-to-end latency per suite,GCS summary,float,Primary QoS signal
+latency_p95_ms,Link,95th percentile latency,GCS summary,float,Measure tail performance for deadlines
+rtt_avg_ms,Link,Round-trip time average,GCS summary,float,Combine with queue delay
+owd_p50_ms,Link,One-way delay median,GCS summary,float,Sensitive to link asymmetry
+packet_loss_pct,Link,Packet loss percentage,GCS summary,float,Assess reliability per suite
+blackout_duration_ms,Link,Longest blackout window,GCS blackout log,float,Trigger degradation thresholds
+message_rate_hz,Link,"Actual MAVLink throughput",Derived,float,Compare to target rate
+rekey_latency_ms,Security,Time between rekey command and success,GCS summary,float,Monitor security handover cost
+rekey_success_flag,Security,"Binary success indicator (1/0)",GCS summary,int,Feed reliability penalty
+rekey_energy_mJ,Security,"Energy consumed during rekey window",Derived,float,Integrate power trace between marks
+power_avg_w,Energy,Average power draw per suite,GCS summary,float,Used for flight time estimation
+power_peak_w,Energy,Maximum instantaneous power (1 kHz trace),Drone power csv,float,Check thermal limits
+energy_per_message_mJ,Energy,Energy cost per encrypted packet,Derived,float = total_energy/messages
+flight_time_estimate_min,Energy,Predicted residual flight time,Derived,float,Function of battery SOC and power
+battery_soc_pct,Platform,State-of-charge from MAVLink,Pixhawk telemetry,float,Core input to scheduling policy
+battery_voltage_v,Platform,Battery voltage,Pixhawk telemetry,float,Watch for sag under load
+battery_current_a,Platform,Current draw,Pixhawk telemetry,float,Combine with voltage for power validation
+cpu_usage_pct,Platform,"Total CPU utilization on companion",psutil,float,Resource availability measure
+cpu_proxy_pct,Platform,CPU usage of cryptographic process,psutil,float,Direct crypto load indicator
+cpu_temp_c,Platform,Companion CPU temperature,psutil or vcgencmd,float,Prevent thermal throttling
+gpu_usage_pct,Platform,If Jetson present—GPU load,nvidia-smi/tegrastats,float,Account for ML co-processing
+memory_used_mb,Platform,RAM usage on companion,psutil,float,Ensure no swap-induced latency
+snr_db,Platform,Signal-to-noise ratio for link,Telemetry radio metrics,float,Correlates with retransmissions
+rssi_dbm,Platform,Received signal strength indicator,Telemetry radio metrics,float,Additional link quality cue
+link_type,Platform,Active transport (SiK, Wi-Fi, LTE),Runtime config,string,Allows transport-specific policies
+mission_phase,Context,Discrete phase (takeoff, cruise, landing),GCS mission planner,string,Drives priority weights
+mission_priority,Context,"Numeric priority (0-1) for command timeliness",Planner,float,Used in reward tuning
+wind_speed_mps,Context,Environmental wind speed (if available),Telemetry,float,Influences energy budgeting
+temperature_ambient_c,Context,Ambient temperature,Environmental sensor,float,Affects battery performance
+reward_rl,Scheduler,Instantaneous RL reward,RL engine,float,Log for convergence tracking
+q_value,state-action,Rl,Estimated Q-value for state/action,RL engine,float,Optional diagnostic
+lut_decision_id,Scheduler,Lookup table entry chosen,LUT output,string,For audit and tuning
+regime_class,Scheduler,"Supervisor regime (normal, degraded, emergency)",Meta,string,For hierarchical scheduler logging
+fallback_trigger_reason,Scheduler,Reason codes when fallback suite selected,Meta,string,Correlate to thresholds
