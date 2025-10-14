@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Drone Follower Telemetry Schema",
+  "description": "Canonical listing of telemetry 'kinds' emitted by the drone follower and consumed by the GCS scheduler.",
+  "type": "object",
+  "properties": {
+    "kinds": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {"type": "string"},
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string"},
+                "type": {"type": "string"},
+                "unit": {"type": ["string", "null"]},
+                "description": {"type": ["string", "null"]},
+                "required": {"type": "boolean"}
+              },
+              "required": ["name", "type"]
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": ["kinds"],
+  "kinds": {
+    "hardware_context": {
+      "description": "Static hardware/build/runtime context JSON (diagnostics)",
+      "fields": [
+        {"name":"timestamp_ns","type":"integer","unit":"ns","description":"event timestamp (ns)","required":true},
+        {"name":"platform","type":"string","unit":null,"description":"platform string","required":false},
+        {"name":"python_version","type":"string","unit":null,"description":"python version","required":false}
+      ]
+    },
+    "system_sample": {
+      "description": "Periodic system/resource sample from follower HighSpeedMonitor",
+      "fields": [
+        {"name":"timestamp_ns","type":"integer","unit":"ns","required":true},
+        {"name":"suite","type":"string","unit":null,"required":false},
+        {"name":"cpu_percent","type":"number","unit":"%","required":false},
+        {"name":"cpu_freq_mhz","type":"number","unit":"MHz","required":false},
+        {"name":"cpu_temp_c","type":"number","unit":"C","required":false},
+        {"name":"mem_used_mb","type":"number","unit":"MB","required":false},
+        {"name":"mem_percent","type":"number","unit":"%","required":false},
+        {"name":"rekey_elapsed_ms","type":"number","unit":"ms","required":false}
+      ]
+    },
+    "psutil_sample": {
+      "description": "Lower-rate psutil sample",
+      "fields": [
+        {"name":"timestamp_ns","type":"integer","unit":"ns","required":true},
+        {"name":"suite","type":"string","unit":null,"required":false},
+        {"name":"cpu_percent","type":"number","unit":"%","required":false},
+        {"name":"rss_bytes","type":"integer","unit":"bytes","required":false},
+        {"name":"num_threads","type":"integer","unit":null,"required":false}
+      ]
+    },
+    "perf_sample": {
+      "description": "Perf-stat derived sample (task-clock, cycles, instructions, cache-misses)",
+      "fields": [
+        {"name":"ts_unix_ns","type":"integer","unit":"ns","required":true},
+        {"name":"task-clock","type":"number","unit":"ms","required":false},
+        {"name":"instructions","type":"integer","unit":null,"required":false},
+        {"name":"cycles","type":"integer","unit":null,"required":false},
+        {"name":"cache-misses","type":"integer","unit":null,"required":false},
+        {"name":"branch-misses","type":"integer","unit":null,"required":false}
+      ]
+    },
+    "thermal_sample": {
+      "description": "Thermal/clock throttling sample via vcgencmd",
+      "fields": [
+        {"name":"ts_unix_ns","type":"integer","unit":"ns","required":true},
+        {"name":"temp_c","type":"number","unit":"C","required":false},
+        {"name":"freq_hz","type":"integer","unit":"Hz","required":false},
+        {"name":"throttled_hex","type":"string","unit":null,"required":false}
+      ]
+    },
+    "kinematics": {
+      "description": "Synthetic or real kinematics model output (PFC estimation)",
+      "fields": [
+        {"name":"timestamp_ns","type":"integer","unit":"ns","required":true},
+        {"name":"sequence","type":"integer","unit":null,"required":false},
+        {"name":"velocity_horizontal_mps","type":"number","unit":"m/s","required":false},
+        {"name":"velocity_vertical_mps","type":"number","unit":"m/s","required":false},
+        {"name":"speed_mps","type":"number","unit":"m/s","required":false},
+        {"name":"predicted_flight_constraint_w","type":"number","unit":"W","required":false},
+        {"name":"altitude_m","type":"number","unit":"m","required":false}
+      ]
+    },
+    "udp_echo_sample": {
+      "description": "Per-packet follower echo timing",
+      "fields": [
+        {"name":"recv_timestamp_ns","type":"integer","unit":"ns","required":true},
+        {"name":"send_timestamp_ns","type":"integer","unit":"ns","required":false},
+        {"name":"processing_ns","type":"integer","unit":"ns","required":false},
+        {"name":"processing_ms","type":"number","unit":"ms","required":false},
+        {"name":"sequence","type":"integer","unit":null,"required":false},
+        {"name":"payload_len","type":"integer","unit":"bytes","required":false}
+      ]
+    },
+    "power_summary": {
+      "description": "Aggregate power capture summary (from INA219 / hwmon / synthetic)",
+      "fields": [
+        {"name":"timestamp_ns","type":"integer","unit":"ns","required":true},
+        {"name":"suite","type":"string","unit":null,"required":false},
+        {"name":"duration_s","type":"number","unit":"s","required":true},
+        {"name":"samples","type":"integer","unit":null,"required":true},
+        {"name":"avg_current_a","type":"number","unit":"A","required":false},
+        {"name":"avg_voltage_v","type":"number","unit":"V","required":false},
+        {"name":"avg_power_w","type":"number","unit":"W","required":true},
+        {"name":"energy_j","type":"number","unit":"J","required":true},
+        {"name":"sample_rate_hz","type":"number","unit":"Hz","required":false},
+        {"name":"csv_path","type":"string","unit":null,"required":false},
+        {"name":"summary_json_path","type":"string","unit":null,"required":false},
+        {"name":"start_ns","type":"integer","unit":"ns","required":false},
+        {"name":"end_ns","type":"integer","unit":"ns","required":false}
+      ]
+    },
+    "rekey_transition_start": {
+      "description": "Start of rekey transition",
+      "fields": [
+        {"name":"timestamp_ns","type":"integer","unit":"ns","required":true},
+        {"name":"old_suite","type":"string","unit":null,"required":false},
+        {"name":"new_suite","type":"string","unit":null,"required":false}
+      ]
+    },
+    "rekey_transition_end": {
+      "description": "End of rekey transition",
+      "fields": [
+        {"name":"timestamp_ns","type":"integer","unit":"ns","required":true},
+        {"name":"suite","type":"string","unit":null,"required":false},
+        {"name":"duration_ms","type":"number","unit":"ms","required":false},
+        {"name":"success","type":"boolean","unit":null,"required":false}
+      ]
+    },
+    "monitors_started": {"description":"Monitors lifecycle event","fields":[{"name":"timestamp_ns","type":"integer","unit":"ns","required":true},{"name":"suite","type":"string","unit":null,"required":false}]},
+    "monitors_stopped": {"description":"Monitors lifecycle event","fields":[{"name":"timestamp_ns","type":"integer","unit":"ns","required":true},{"name":"suite","type":"string","unit":null,"required":false}]},
+    "power_capture_request": {"description":"Request metadata for power capture","fields":[{"name":"timestamp_ns","type":"integer","unit":"ns","required":true},{"name":"suite","type":"string","unit":null,"required":false},{"name":"duration_s","type":"number","unit":"s","required":true}]}
+  }
+}
