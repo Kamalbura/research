@@ -24,8 +24,9 @@ import time
 import json
 import threading
 import logging
+from collections import deque
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional, Any, Callable
+from typing import Deque, Dict, List, Optional, Any, Callable
 from pathlib import Path
 from enum import Enum
 
@@ -38,7 +39,11 @@ from .components.thermal_guard import (
     ThermalGuard, TemperatureSample, ThermalAnalysis, ThermalState
 )
 from .components.security_advisor import (
-    SecurityAdvisor, NetworkMetrics, SecurityPosture, ThreatLevel
+    SecurityAdvisor,
+    NetworkMetrics,
+    SecurityPosture,
+    ThreatLevel,
+    DDOSPrediction,
 )
 from .components.ipc_bridge import (
     IPCBridge, create_pqc_suite_bridge, create_ddos_model_bridge
@@ -47,7 +52,13 @@ from .components.ipc_bridge import (
 # Import existing scheduler strategies
 import sys
 sys.path.append(str(Path(__file__).parents[3]))
-from schedulers.common.state import SchedulerContext, SchedulerDecision, DdosMode
+from schedulers.common.state import (
+    SchedulerContext,
+    SchedulerDecision,
+    DdosMode,
+    SuiteTelemetry,
+    TelemetryWindow,
+)
 from schedulers.nextgen_expert.strategy import NextGenExpertStrategy
 from schedulers.nextgen_rl.strategy import NextGenRlStrategy
 
@@ -204,6 +215,9 @@ class UnifiedUAVScheduler:
             ipc_performance={},
         )
         
+        # RL telemetry window
+        self._rl_snapshots: Deque[SuiteTelemetry] = deque(maxlen=6)
+        
         # Threading and control
         self.running = False
         self.scheduler_thread: Optional[threading.Thread] = None
@@ -317,6 +331,7 @@ class UnifiedUAVScheduler:
         self._last_security_posture = security_posture
         self._last_network_metrics = network_metrics
         self._last_telemetry = telemetry
+        self._record_rl_snapshot(telemetry, battery_prediction, thermal_analysis, network_metrics, ddos_prediction)
 
         # Update internal state
         self.current_state.battery_soc_percent = battery_prediction.soc_percent
@@ -349,6 +364,45 @@ class UnifiedUAVScheduler:
             "threat_level": ddos_prediction.threat_level.value,
             "emergency_mode": self.current_state.emergency_mode,
         })
+    
+    def _record_rl_snapshot(
+        self,
+        telemetry: SystemTelemetry,
+        battery_prediction: BatteryPrediction,
+        thermal_analysis: ThermalAnalysis,
+        network_metrics: Optional[NetworkMetrics],
+        ddos_prediction: DDOSPrediction,
+    ) -> None:
+        """Record telemetry snapshot for RL / expert strategies."""
+        
+        ddos_alert = ddos_prediction.threat_level in {
+            ThreatLevel.CONFIRMED,
+            ThreatLevel.CRITICAL,
+        }
+
+        counters: Dict[str, float] = {
+            "thermal_trend_c_per_s": float(thermal_analysis.trend_c_per_s),
+            "battery_remaining_s": float(battery_prediction.remaining_time_s),
+        }
+
+        snapshot = SuiteTelemetry(
+            suite_id=self.current_state.active_suite,
+            timestamp_ns=telemetry.timestamp_ns,
+            battery_pct=battery_prediction.soc_percent,
+            battery_voltage_v=telemetry.battery_voltage_v,
+            battery_current_a=telemetry.battery_current_a,
+            cpu_percent=telemetry.cpu_percent,
+            cpu_temp_c=telemetry.cpu_temp_c,
+            power_w=telemetry.battery_power_w,
+            throughput_mbps=telemetry.throughput_mbps,
+            goodput_mbps=telemetry.goodput_mbps,
+            packet_loss_pct=network_metrics.packet_loss_pct if network_metrics else None,
+            rtt_ms=network_metrics.rtt_p95_ms if network_metrics else None,
+            ddos_alert=ddos_alert,
+            counters=counters,
+        )
+
+        self._rl_snapshots.append(snapshot)
     
     def _scheduler_loop(self) -> None:
         """Main scheduler decision loop."""
@@ -661,9 +715,37 @@ class UnifiedUAVScheduler:
     
     def _make_rl_decision(self) -> Optional[SchedulerDecision]:
         """Make decision using reinforcement learning strategy."""
-        # Placeholder for RL integration
-        # Would use actual RL model predictions here
-        return None
+        snapshots = list(self._rl_snapshots)
+        if len(snapshots) < 2:
+            return None
+
+        window = TelemetryWindow(
+            snapshots=snapshots,
+            window_start_ns=snapshots[0].timestamp_ns,
+            window_end_ns=snapshots[-1].timestamp_ns,
+        )
+
+        try:
+            decision = self.rl_scheduler.decide(
+                context=self.context,
+                telemetry=window,
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging
+            self.logger.error("RL decision failed: %s", exc, exc_info=True)
+            return None
+
+        if decision is None:
+            return None
+
+        notes = dict(decision.notes or {})
+        notes.setdefault("strategy", "rl")
+
+        return SchedulerDecision(
+            target_suite=decision.target_suite,
+            ddos_mode=decision.ddos_mode,
+            traffic_rate_mbps=decision.traffic_rate_mbps,
+            notes=notes,
+        )
     
     def _make_emergency_decision(self) -> SchedulerDecision:
         """Make emergency safe decision."""
@@ -686,6 +768,7 @@ class UnifiedUAVScheduler:
             success = self.pqc_bridge.switch_algorithm(decision.target_suite)
             if success:
                 self.current_state.active_suite = decision.target_suite
+                self.context.initial_suite = decision.target_suite
                 self.metrics.suite_switches += 1
                 self._last_suite_change_ns = time.time_ns()
                 self.logger.info(f"Switched to PQC suite: {decision.target_suite}")

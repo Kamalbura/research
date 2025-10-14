@@ -52,6 +52,7 @@ class NetworkMetrics:
 @dataclass 
 class DDOSPrediction:
     """DDOS detection prediction with confidence and metadata."""
+    timestamp_ns: int
     threat_level: ThreatLevel
     confidence_score: float         # 0.0-1.0 prediction confidence
     detection_tier: DDOSDetectionTier
@@ -152,6 +153,8 @@ class SecurityAdvisor:
         start_time = time.time()
         
         # If heavyweight score available, use it with high confidence
+        metrics_ts = metrics.timestamp_ns
+
         if heavyweight_score is not None:
             threat_level = (
                 ThreatLevel.CRITICAL if heavyweight_score > 0.95 else
@@ -161,6 +164,7 @@ class SecurityAdvisor:
             )
             
             prediction = DDOSPrediction(
+                timestamp_ns=metrics_ts,
                 threat_level=threat_level,
                 confidence_score=heavyweight_score,
                 detection_tier=DDOSDetectionTier.HEAVYWEIGHT,
@@ -178,6 +182,7 @@ class SecurityAdvisor:
             )
             
             prediction = DDOSPrediction(
+                timestamp_ns=metrics_ts,
                 threat_level=threat_level,
                 confidence_score=lightweight_score,
                 detection_tier=DDOSDetectionTier.LIGHTWEIGHT,
@@ -189,11 +194,11 @@ class SecurityAdvisor:
             
         else:
             # Fallback to heuristic-based detection
-            prediction = self._heuristic_prediction(metrics, start_time)
+            prediction = self._heuristic_prediction(metrics, start_time, metrics_ts)
         
         return prediction
     
-    def _heuristic_prediction(self, metrics: NetworkMetrics, start_time: float) -> DDOSPrediction:
+    def _heuristic_prediction(self, metrics: NetworkMetrics, start_time: float, timestamp_ns: int) -> DDOSPrediction:
         """Fallback heuristic DDOS detection when ML models unavailable."""
         
         # Calculate composite anomaly score from network metrics
@@ -233,6 +238,7 @@ class SecurityAdvisor:
             threat_level = ThreatLevel.NONE
         
         return DDOSPrediction(
+            timestamp_ns=timestamp_ns,
             threat_level=threat_level,
             confidence_score=composite_score,
             detection_tier=DDOSDetectionTier.LIGHTWEIGHT,
@@ -393,9 +399,7 @@ class SecurityAdvisor:
         # Keep last 10 minutes of data
         cutoff_ns = current_time_ns - int(600 * 1e9)
         
-        while (self.prediction_history and 
-               self.prediction_history[0].timestamp_ns is not None and
-               getattr(self.prediction_history[0], 'timestamp_ns', current_time_ns) < cutoff_ns):
+        while self.prediction_history and self.prediction_history[0].timestamp_ns < cutoff_ns:
             self.prediction_history.popleft()
         
         while (self.network_history and 
