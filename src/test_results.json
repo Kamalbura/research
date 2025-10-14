@@ -1,0 +1,18 @@
+{
+  "timestamp": 1760399089.1517875,
+  "total_duration": 0.2997591495513916,
+  "unit_tests": {},
+  "integration_tests": {
+    "status": "FAILED",
+    "execution_time": 0.09531545639038086
+  },
+  "performance_tests": {
+    "status": "FAILED",
+    "execution_time": 0.06817460060119629
+  },
+  "hardware_simulation": {
+    "status": "FAILED",
+    "execution_time": 0.10486865043640137
+  },
+  "overall_status": "PARTIAL_FAILURE"
+}

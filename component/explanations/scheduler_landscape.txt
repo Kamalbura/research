@@ -1,0 +1,50 @@
+PQC Drone↔GCS Secure Proxy – Scheduler Landscape
+=================================================
+
+Context
+-------
+Our repository already houses multiple scheduler families under the `schedulers/` package: rule-based experts (`schedulers/expert_policy`), reinforcement-learning (`schedulers/rl`), and hybrid orchestrators (`schedulers/hybrid`, `schedulers/nextgen_*`). Each strategy consumes normalized telemetry (`schedulers/common/telemetry.py`) and issues suite/traffic decisions through the shared `SchedulerStrategy` interface. The notes below anchor those implementations to well-known scheduling paradigms so future contributors can reason about trade-offs when adapting or extending the code.
+
+Classic Linux Scheduler
+-----------------------
+The Linux kernel’s Completely Fair Scheduler (CFS) models an “ideal multitasking processor” by tracking per-task virtual runtimes and placing runnable entities in a red-black tree. Key takeaways:
+- **Fairness via vruntime**: Heavier tasks accumulate vruntime faster, throttling their future share; lightweight tasks get catch-up time. In our project, similar fairness knobs appear in `ExpertPolicyStrategy._select_suite`, where power/CPU caps prevent long-running ML-KEM suites from starving lower-power options.
+- **Latency vs throughput tunables**: CFS slices adjust with `sched_latency_ns` and `sched_min_granularity_ns`. Our schedulers mirror this via decision cadence (`--interval`, `--window` flags in `schedulers/expert_policy/drone.py`), effectively balancing reactivity against telemetry stability.
+- **Cgroups & deadline classes**: Linux integrates bandwidth controllers (CPU, blkio) and EDF/RT queues. We echo that layering by separating “traffic rate” decisions (see `SchedulerDecision.traffic_rate_mbps`) from cryptographic suite posture, allowing future bandwidth governors similar to cgroup quotas.
+
+Windows Scheduler
+-----------------
+Windows uses a priority-driven, dynamic quantum system with feedback from I/O wait and GUI responsiveness. Notable parallels:
+- **Priority boosting for I/O-bound tasks**: Windows temporarily elevates threads that frequently await I/O. Our DDOS posture logic (`ExpertPolicyStrategy._select_ddos_mode`) plays an analogous role, boosting inspection depth when packet loss spikes (akin to I/O wait anomalies).
+- **Deferred ready lists**: Windows partitions run queues per priority class. We emulate that by ranking `PolicyBand` entries—eco/balanced/resilient—essentially maintaining priority tiers chosen through telemetry-driven predicates.
+- **Heterogeneous core awareness**: Modern Windows versions bias workloads toward P-cores/E-cores. In this repo, the RL linear policy (`schedulers/rl/model.py`) learns to bias suites toward hardware energy envelopes by weighting temperature and power features, echoing heterogeneous scheduling heuristics.
+
+Pixhawk / NuttX Flight Stack
+-----------------------------
+Pixhawk autopilots rely on the NuttX RTOS, mixing fixed-rate work queues with time-critical ISR loops. Lessons applied here:
+- **Fixed work queues**: PX4 runs attitude, navigator, and logger loops at deterministic rates (e.g., 250 Hz). Our telemetry subscriber (`TelemetrySubscriber.start`) keeps a bounded deque to resemble a real-time ring buffer, ensuring recent windows are always available for deterministic decision cycles.
+- **Failsafe heartbeat**: Autopilot scheduling guards against missed heartbeats. Likewise, `ControlClient.ping` and `TelemetrySubscriber._run` incorporate reconnect backoff and health checks, so schedulers degrade gracefully if data drops, mirroring Pixhawk failsafe modes.
+- **Energy budget awareness**: Pixhawk missions enforce battery failsafes; we codify that ethos through `NextGenExpertStrategy` battery/temperature bands, preventing cryptographic upgrades when propulsion energy dips.
+
+Modern Edge AI / Cluster Managers
+----------------------------------
+Systems like Kubernetes with device plugins or NVIDIA’s Jetson inference schedulers focus on heterogeneous accelerators and power envelopes.
+- **Feature extraction pipelines**: Kubernetes relies on metrics-server and custom resource metrics. Our `normalize_message` (`schedulers/common/telemetry_adapter.py`) and `aggregate_metrics` functions serve the same role, yielding consistent telemetry vectors for policy engines.
+- **Policy-driven rebalancing**: K8s controllers reconcile desired vs observed state. Hybrid strategies (`schedulers/hybrid/strategy.py`, `schedulers/nextgen_hybrid/strategy.py`) blend rule-based and RL recommendations with confidence thresholds—effectively a reconciliation loop that trusts ML guidance only when sure.
+- **Energy-aware placement**: Edge schedulers often integrate power forecasting. `NextGenExpertStrategy.default_expert_config()` adds `battery_pct` slopes and `power_w` caps to mimic placement decisions that keep workloads within thermal and battery budgets.
+
+Implications for Our Codebase
+-----------------------------
+1. **Fairness vs Reactivity**: Linux CFS reminds us to watch decision intervals. For volatile RF environments, shrink `--interval` but keep `--window` large enough (≥3× telemetry cadence) to avoid oscillations.
+2. **Priority Boosting**: Consider augmenting `SchedulerDecision.notes` with “latency debt” metrics, enabling future agents to replicate Windows-style priority boosts when QoS deteriorates.
+3. **Failsafe Modes**: Align `ControlClient.stop` and telemetry heartbeat thresholds with Pixhawk-style failsafe triggers; if `_queue` drains, fall back to a safe suite (e.g., `cs-mlkem512-…`).
+4. **Energy Forecasting**: Extend `NextGenExpertStrategy.aggregate_metrics` to compute rolling integrals (Wh) so RL policies can forecast energy exhaustion like edge AI schedulers predicting GPU throttling.
+5. **Composability**: The hybrid orchestrators should expose their confidence/notes upstream so an external orchestration layer (akin to Kubernetes controllers) can override or validate decisions before pushing to control servers.
+
+Next Steps
+----------
+- Integrate telemetry counters (e.g., `cpu_freq_mhz`, `kinematics_speed_mps`) into RL feature vectors to emulate heterogeneous-core awareness.
+- Prototype a Pixhawk-inspired failsafe: if heartbeat lapse >2 intervals, command `ControlClient.schedule_suite` with conservative suite and request `stop()`.
+- Document the decision cadence assumptions directly in `schedulers/common/strategy.py` to guide contributors adjusting lookback windows.
+
+Mapping these scheduler traditions to our PQC proxy ensures future enhancements remain grounded in proven OS and flight-control paradigms while respecting energy and security constraints inherent to drone missions.

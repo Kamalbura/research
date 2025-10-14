@@ -1,0 +1,629 @@
+Suite cs-classicmceliece348864-aesgcm-sphincs128fsha2 — PASS
+  • throughput 7.932 Mb/s (99.2% of target), goodput 7.932 Mb/s, wire 9.171 Mb/s
+  • pps 3876.7 (target 3906.0)
+  • delivered ratio 0.999, loss 0.099% (95% CI 0.085-0.115)
+  • RTT avg 12.570 ms (p50 10.496 ms, p95 28.193 ms, max 80.904 ms)
+  • one-way delay p50 2.796 ms, p95 24.817 ms
+  • rekey window 5215.90 ms (energy error: estimated_from_power)
+  • packets sent 175,447 / received 175,273; encoded 1,791,577 / 1,790,440; drops 7,777
+  • rekeys ok 9 / fail 0
+  • handshake gcs 253.695 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 99.681 ms, kem decap 24.909 ms, sig sign 49.984 ms, primitives total 174.574 ms
+  • resources CPU max 85.0%, RSS 605.2 MiB, PFC 734.019 W, kinematics vh -0.078, vv -0.394
+  • traffic engine native
+  • timing guard 56257.0 ms (clear)
+  • power 4.354 W avg over 45.0 s (195.910 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.858650 A, voltage 5.072545 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-classicmceliece348864-aesgcm-sphincs128fsha2\power\power_cs-classicmceliece348864-aesgcm-sphincs128fsha2_20251013-200600.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2 — PASS
+  • throughput 7.937 Mb/s (99.2% of target), goodput 7.937 Mb/s, wire 9.177 Mb/s
+  • pps 3880.0 (target 3906.0)
+  • delivered ratio 0.999, loss 0.120% (95% CI 0.105-0.137)
+  • RTT avg 12.020 ms (p50 9.920 ms, p95 25.016 ms, max 78.084 ms)
+  • one-way delay p50 2.507 ms, p95 24.846 ms
+  • rekey window 5132.26 ms (energy error: estimated_from_power)
+  • packets sent 175,611 / received 175,400; encoded 1,971,436 / 1,970,966; drops 8,619
+  • rekeys ok 10 / fail 0
+  • handshake gcs 318.404 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 159.723 ms, kem decap 30.512 ms, sig sign 58.793 ms, primitives total 249.029 ms
+  • resources CPU max 77.5%, RSS 604.7 MiB, PFC 733.324 W, kinematics vh -1.370, vv -0.395
+  • traffic engine native
+  • timing guard 56260.0 ms (clear)
+  • power 4.323 W avg over 45.0 s (194.527 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.852419 A, voltage 5.073668 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2\power\power_cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2_20251013-200750.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-classicmceliece460896-aesgcm-mldsa65 — PASS
+  • throughput 7.915 Mb/s (98.9% of target), goodput 7.915 Mb/s, wire 9.152 Mb/s
+  • pps 3875.6 (target 3906.0)
+  • delivered ratio 0.997, loss 0.279% (95% CI 0.256-0.305)
+  • RTT avg 16.154 ms (p50 12.384 ms, p95 54.085 ms, max 86.402 ms)
+  • one-way delay p50 5.988 ms, p95 32.184 ms
+  • rekey window 4930.14 ms (energy error: estimated_from_power)
+  • packets sent 175,414 / received 174,924; encoded 3,046,051 / 3,046,772; drops 11,849
+  • rekeys ok 16 / fail 0
+  • handshake gcs 641.085 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 442.547 ms, kem decap 69.117 ms, sig sign 2.268 ms, primitives total 513.931 ms
+  • resources CPU max 76.9%, RSS 607.1 MiB, PFC 733.953 W, kinematics vh -0.252, vv -0.414
+  • traffic engine native
+  • timing guard 56261.0 ms (clear)
+  • power 4.303 W avg over 45.0 s (193.629 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.848489 A, voltage 5.073942 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-classicmceliece460896-aesgcm-mldsa65\power\power_cs-classicmceliece460896-aesgcm-mldsa65_20251013-202006.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-classicmceliece460896-chacha20poly1305-mldsa65 — PASS
+  • throughput 7.926 Mb/s (99.1% of target), goodput 7.926 Mb/s, wire 9.164 Mb/s
+  • pps 3878.7 (target 3906.0)
+  • delivered ratio 0.998, loss 0.224% (95% CI 0.203-0.248)
+  • RTT avg 15.334 ms (p50 11.681 ms, p95 43.594 ms, max 118.003 ms)
+  • one-way delay p50 6.041 ms, p95 33.891 ms
+  • rekey window 5278.35 ms (energy error: estimated_from_power)
+  • packets sent 175,570 / received 175,176; encoded 3,227,157 / 3,228,414; drops 12,789
+  • rekeys ok 17 / fail 0
+  • handshake gcs 421.094 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 240.408 ms, kem decap 56.153 ms, sig sign 1.898 ms, primitives total 298.459 ms
+  • resources CPU max 78.9%, RSS 607.2 MiB, PFC 733.506 W, kinematics vh 1.643, vv 0.259
+  • traffic engine native
+  • timing guard 56265.0 ms (clear)
+  • power 4.281 W avg over 45.0 s (192.627 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.844072 A, voltage 5.074301 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-classicmceliece460896-chacha20poly1305-mldsa65\power\power_cs-classicmceliece460896-chacha20poly1305-mldsa65_20251013-202225.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-classicmceliece8192128-aesgcm-sphincs256fsha2 — PASS
+  • throughput 7.877 Mb/s (98.5% of target), goodput 7.877 Mb/s, wire 9.108 Mb/s
+  • pps 3867.9 (target 3906.0)
+  • delivered ratio 0.994, loss 0.556% (95% CI 0.523-0.592)
+  • RTT avg 14.272 ms (p50 10.962 ms, p95 43.846 ms, max 106.384 ms)
+  • one-way delay p50 16.735 ms, p95 45.426 ms
+  • rekey window 5122.95 ms (energy error: estimated_from_power)
+  • packets sent 175,089 / received 174,115; encoded 4,836,553 / 4,837,080; drops 23,820
+  • rekeys ok 26 / fail 0
+  • handshake gcs 913.077 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 289.443 ms, kem decap 120.738 ms, sig sign 145.670 ms, primitives total 555.850 ms
+  • resources CPU max 75.6%, RSS 612.9 MiB, PFC 733.561 W, kinematics vh -1.605, vv -0.134
+  • traffic engine native
+  • timing guard 56267.0 ms (clear)
+  • power 4.329 W avg over 45.0 s (194.788 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.853626 A, voltage 5.073288 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-classicmceliece8192128-aesgcm-sphincs256fsha2\power\power_cs-classicmceliece8192128-aesgcm-sphincs256fsha2_20251013-204559.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2 — PASS
+  • throughput 7.906 Mb/s (98.8% of target), goodput 7.906 Mb/s, wire 9.141 Mb/s
+  • pps 3863.5 (target 3906.0)
+  • delivered ratio 0.999, loss 0.086% (95% CI 0.073-0.101)
+  • RTT avg 16.698 ms (p50 13.132 ms, p95 44.845 ms, max 93.118 ms)
+  • one-way delay p50 19.338 ms, p95 46.712 ms
+  • rekey window 4800.66 ms (energy error: estimated_from_power)
+  • packets sent 174,896 / received 174,746; encoded 5,018,012 / 5,019,576; drops 25,102
+  • rekeys ok 27 / fail 0
+  • handshake gcs 867.973 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 297.969 ms, kem decap 113.696 ms, sig sign 126.515 ms, primitives total 538.180 ms
+  • resources CPU max 78.9%, RSS 614.0 MiB, PFC 734.135 W, kinematics vh -0.144, vv -0.401
+  • traffic engine native
+  • timing guard 56269.0 ms (clear)
+  • power 4.270 W avg over 45.0 s (192.158 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.841913 A, voltage 5.074918 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2\power\power_cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2_20251013-204854.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-frodokem640aes-aesgcm-mldsa44 — PASS
+  • throughput 7.914 Mb/s (98.9% of target), goodput 7.914 Mb/s, wire 9.151 Mb/s
+  • pps 3871.2 (target 3906.0)
+  • delivered ratio 0.998, loss 0.179% (95% CI 0.160-0.200)
+  • RTT avg 15.201 ms (p50 12.388 ms, p95 60.376 ms, max 77.031 ms)
+  • one-way delay p50 3.775 ms, p95 31.973 ms
+  • rekey window 2819.17 ms (energy error: estimated_from_power)
+  • packets sent 175,208 / received 174,895; encoded 1,433,206 / 1,435,103; drops 6,279
+  • rekeys ok 7 / fail 0
+  • handshake gcs 33.576 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 4.283 ms, kem decap 1.052 ms, sig sign 0.345 ms, primitives total 5.680 ms
+  • resources CPU max 79.5%, RSS 602.4 MiB, PFC 734.024 W, kinematics vh -1.096, vv 0.137
+  • traffic engine native
+  • timing guard 56260.0 ms (clear)
+  • power 4.345 W avg over 45.0 s (195.525 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.857010 A, voltage 5.072357 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-frodokem640aes-aesgcm-mldsa44\power\power_cs-frodokem640aes-aesgcm-mldsa44_20251013-200231.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-frodokem640aes-chacha20poly1305-mldsa44 — PASS
+  • throughput 7.746 Mb/s (96.8% of target), goodput 7.746 Mb/s, wire 8.956 Mb/s
+  • pps 3877.6 (target 3906.0)
+  • delivered ratio 0.975, loss 2.459% (95% CI 2.388-2.533)
+  • RTT avg 17.454 ms (p50 9.956 ms, p95 59.051 ms, max 97.854 ms)
+  • one-way delay p50 9.384 ms, p95 41.587 ms
+  • rekey window 2410.63 ms (energy error: estimated_from_power)
+  • packets sent 175,525 / received 171,208; encoded 1,611,223 / 1,609,483; drops 6,999
+  • rekeys ok 8 / fail 0
+  • handshake gcs 33.047 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 1.231 ms, kem decap 1.183 ms, sig sign 0.593 ms, primitives total 3.007 ms
+  • resources CPU max 77.5%, RSS 604.9 MiB, PFC 734.055 W, kinematics vh -0.254, vv -0.413
+  • traffic engine native
+  • timing guard 56267.0 ms (clear)
+  • power 4.310 W avg over 45.0 s (193.934 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.849912 A, voltage 5.073511 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-frodokem640aes-chacha20poly1305-mldsa44\power\power_cs-frodokem640aes-chacha20poly1305-mldsa44_20251013-200412.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-frodokem976aes-aesgcm-mldsa65 — PASS
+  • throughput 7.939 Mb/s (99.2% of target), goodput 7.939 Mb/s, wire 9.179 Mb/s
+  • pps 3880.2 (target 3906.0)
+  • delivered ratio 0.999, loss 0.101% (95% CI 0.087-0.117)
+  • RTT avg 12.748 ms (p50 10.305 ms, p95 30.387 ms, max 76.133 ms)
+  • one-way delay p50 4.536 ms, p95 21.377 ms
+  • rekey window 2909.98 ms (energy error: estimated_from_power)
+  • packets sent 175,624 / received 175,447; encoded 2,686,939 / 2,687,609; drops 10,693
+  • rekeys ok 14 / fail 0
+  • handshake gcs 59.695 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 5.887 ms, kem decap 1.011 ms, sig sign 0.254 ms, primitives total 7.152 ms
+  • resources CPU max 84.2%, RSS 607.1 MiB, PFC 733.779 W, kinematics vh -1.374, vv 0.026
+  • traffic engine native
+  • timing guard 56262.0 ms (clear)
+  • power 4.333 W avg over 45.0 s (195.002 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.854610 A, voltage 5.072990 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-frodokem976aes-aesgcm-mldsa65\power\power_cs-frodokem976aes-aesgcm-mldsa65_20251013-201542.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-frodokem976aes-chacha20poly1305-mldsa65 — PASS
+  • throughput 7.907 Mb/s (98.8% of target), goodput 7.907 Mb/s, wire 9.143 Mb/s
+  • pps 3874.8 (target 3906.0)
+  • delivered ratio 0.996, loss 0.356% (95% CI 0.330-0.385)
+  • RTT avg 15.234 ms (p50 11.751 ms, p95 36.641 ms, max 111.923 ms)
+  • one-way delay p50 5.237 ms, p95 25.172 ms
+  • rekey window 4777.19 ms (energy error: estimated_from_power)
+  • packets sent 175,386 / received 174,761; encoded 2,868,822 / 2,869,498; drops 11,287
+  • rekeys ok 15 / fail 0
+  • handshake gcs 54.463 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 2.376 ms, kem decap 0.889 ms, sig sign 0.595 ms, primitives total 3.860 ms
+  • resources CPU max 79.5%, RSS 605.1 MiB, PFC 733.513 W, kinematics vh 0.833, vv 0.442
+  • traffic engine native
+  • timing guard 56263.0 ms (clear)
+  • power 4.272 W avg over 45.0 s (192.238 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.842224 A, voltage 5.075168 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-frodokem976aes-chacha20poly1305-mldsa65\power\power_cs-frodokem976aes-chacha20poly1305-mldsa65_20251013-201752.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-hqc128-aesgcm-falcon512 — PASS
+  • throughput 7.941 Mb/s (99.3% of target), goodput 7.941 Mb/s, wire 9.182 Mb/s
+  • pps 3880.3 (target 3906.0)
+  • delivered ratio 0.999, loss 0.071% (95% CI 0.060-0.085)
+  • RTT avg 12.539 ms (p50 9.895 ms, p95 29.974 ms, max 69.862 ms)
+  • one-way delay p50 2.393 ms, p95 23.472 ms
+  • rekey window 2701.50 ms (energy error: estimated_from_power)
+  • packets sent 175,639 / received 175,514; encoded 2,148,292 / 2,148,225; drops 9,214
+  • rekeys ok 11 / fail 0
+  • handshake gcs 65.504 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 5.425 ms, kem decap 6.026 ms, sig sign 0.305 ms, primitives total 11.756 ms
+  • resources CPU max 73.7%, RSS 606.1 MiB, PFC 734.225 W, kinematics vh -0.779, vv 0.232
+  • traffic engine native
+  • timing guard 56264.0 ms (clear)
+  • power 4.372 W avg over 45.0 s (196.736 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.862314 A, voltage 5.072200 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-hqc128-aesgcm-falcon512\power\power_cs-hqc128-aesgcm-falcon512_20251013-200943.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-hqc128-chacha20poly1305-falcon512 — PASS
+  • throughput 7.932 Mb/s (99.2% of target), goodput 7.932 Mb/s, wire 9.171 Mb/s
+  • pps 3879.8 (target 3906.0)
+  • delivered ratio 0.998, loss 0.175% (95% CI 0.157-0.196)
+  • RTT avg 11.404 ms (p50 9.159 ms, p95 21.785 ms, max 104.797 ms)
+  • one-way delay p50 2.425 ms, p95 14.706 ms
+  • rekey window 2753.43 ms (energy error: estimated_from_power)
+  • packets sent 175,638 / received 175,330; encoded 2,329,547 / 2,329,796; drops 9,821
+  • rekeys ok 12 / fail 0
+  • handshake gcs 58.068 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 1.527 ms, kem decap 4.920 ms, sig sign 0.245 ms, primitives total 6.692 ms
+  • resources CPU max 81.6%, RSS 606.2 MiB, PFC 733.835 W, kinematics vh 1.323, vv -0.049
+  • traffic engine native
+  • timing guard 56270.0 ms (clear)
+  • power 4.325 W avg over 45.0 s (194.644 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.852940 A, voltage 5.073550 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-hqc128-chacha20poly1305-falcon512\power\power_cs-hqc128-chacha20poly1305-falcon512_20251013-201139.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-hqc192-aesgcm-mldsa65 — PASS
+  • throughput 7.869 Mb/s (98.4% of target), goodput 7.869 Mb/s, wire 9.098 Mb/s
+  • pps 3878.5 (target 3906.0)
+  • delivered ratio 0.991, loss 0.941% (95% CI 0.896-0.987)
+  • RTT avg 26.206 ms (p50 14.920 ms, p95 86.747 ms, max 342.265 ms)
+  • one-way delay p50 9.878 ms, p95 78.553 ms
+  • rekey window 5012.38 ms (energy error: estimated_from_power)
+  • packets sent 175,539 / received 173,888; encoded 3,404,473 / 3,405,148; drops 13,857
+  • rekeys ok 18 / fail 0
+  • handshake gcs 291.921 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 10.204 ms, kem decap 133.583 ms, sig sign 1.327 ms, primitives total 145.115 ms
+  • resources CPU max 80.6%, RSS 607.3 MiB, PFC 733.391 W, kinematics vh 1.118, vv 0.431
+  • traffic engine native
+  • timing guard 56259.0 ms (clear)
+  • power 4.285 W avg over 45.0 s (192.831 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.844939 A, voltage 5.074514 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-hqc192-aesgcm-mldsa65\power\power_cs-hqc192-aesgcm-mldsa65_20251013-202447.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-hqc192-chacha20poly1305-mldsa65 — PASS
+  • throughput 7.935 Mb/s (99.2% of target), goodput 7.935 Mb/s, wire 9.175 Mb/s
+  • pps 3875.9 (target 3906.0)
+  • delivered ratio 1.000, loss 0.038% (95% CI 0.030-0.048)
+  • RTT avg 15.269 ms (p50 13.312 ms, p95 32.758 ms, max 64.673 ms)
+  • one-way delay p50 9.127 ms, p95 25.652 ms
+  • rekey window 2924.30 ms (energy error: estimated_from_power)
+  • packets sent 175,425 / received 175,358; encoded 3,584,228 / 3,586,161; drops 15,181
+  • rekeys ok 19 / fail 0
+  • handshake gcs 174.713 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 4.863 ms, kem decap 23.139 ms, sig sign 0.433 ms, primitives total 28.435 ms
+  • resources CPU max 76.9%, RSS 608.4 MiB, PFC 733.350 W, kinematics vh 1.525, vv 0.349
+  • traffic engine native
+  • timing guard 56261.0 ms (clear)
+  • power 4.264 W avg over 45.0 s (191.892 J)
+  • samples 44,997 @ 999.9 Hz
+  • avg current 0.840721 A, voltage 5.075000 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-hqc192-chacha20poly1305-mldsa65\power\power_cs-hqc192-chacha20poly1305-mldsa65_20251013-202712.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-hqc256-aesgcm-mldsa87 — PASS
+  • throughput 7.663 Mb/s (95.8% of target), goodput 7.663 Mb/s, wire 8.860 Mb/s
+  • pps 3866.3 (target 3906.0)
+  • delivered ratio 0.968, loss 3.226% (95% CI 3.144-3.309)
+  • RTT avg 61.155 ms (p50 22.687 ms, p95 286.684 ms, max 705.453 ms)
+  • one-way delay p50 26.690 ms, p95 304.585 ms
+  • rekey window 3083.14 ms (energy error: estimated_from_power)
+  • packets sent 175,011 / received 169,366; encoded 5,194,504 / 5,190,619; drops 26,258
+  • rekeys ok 28 / fail 0
+  • handshake gcs 345.277 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 18.943 ms, kem decap 40.664 ms, sig sign 1.712 ms, primitives total 61.320 ms
+  • resources CPU max 64.9%, RSS 612.3 MiB, PFC 733.477 W, kinematics vh -0.897, vv -0.442
+  • traffic engine native
+  • timing guard 56266.0 ms (clear)
+  • power 4.243 W avg over 45.0 s (190.952 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.836489 A, voltage 5.076099 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-hqc256-aesgcm-mldsa87\power\power_cs-hqc256-aesgcm-mldsa87_20251013-205155.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-hqc256-chacha20poly1305-mldsa87 — PASS
+  • throughput 7.909 Mb/s (98.9% of target), goodput 7.909 Mb/s, wire 9.145 Mb/s
+  • pps 3866.2 (target 3906.0)
+  • delivered ratio 0.999, loss 0.116% (95% CI 0.101-0.133)
+  • RTT avg 16.231 ms (p50 12.639 ms, p95 39.207 ms, max 115.482 ms)
+  • one-way delay p50 17.911 ms, p95 40.101 ms
+  • rekey window 5344.17 ms (energy error: estimated_from_power)
+  • packets sent 175,031 / received 174,828; encoded 5,373,609 / 5,371,067; drops 27,836
+  • rekeys ok 29 / fail 0
+  • handshake gcs 317.562 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 14.608 ms, kem decap 41.028 ms, sig sign 0.383 ms, primitives total 56.018 ms
+  • resources CPU max 79.5%, RSS 614.4 MiB, PFC 733.458 W, kinematics vh -1.643, vv -0.225
+  • traffic engine native
+  • timing guard 56272.0 ms (clear)
+  • power 4.287 W avg over 45.0 s (192.911 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.845249 A, voltage 5.074560 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-hqc256-chacha20poly1305-mldsa87\power\power_cs-hqc256-chacha20poly1305-mldsa87_20251013-205458.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem1024-aesgcm-falcon1024 — PASS
+  • throughput 7.858 Mb/s (98.2% of target), goodput 7.858 Mb/s, wire 9.085 Mb/s
+  • pps 3876.1 (target 3906.0)
+  • delivered ratio 0.990, loss 1.015% (95% CI 0.969-1.063)
+  • RTT avg 25.045 ms (p50 13.001 ms, p95 38.998 ms, max 476.001 ms)
+  • one-way delay p50 12.659 ms, p95 37.098 ms
+  • rekey window 2583.76 ms (energy error: estimated_from_power)
+  • packets sent 175,424 / received 173,643; encoded 4,121,545 / 4,120,984; drops 18,219
+  • rekeys ok 22 / fail 0
+  • handshake gcs 10.961 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.116 ms, kem decap 0.098 ms, sig sign 1.861 ms, primitives total 2.076 ms
+  • resources CPU max 85.4%, RSS 610.4 MiB, PFC 733.383 W, kinematics vh -1.587, vv -0.314
+  • traffic engine native
+  • timing guard 56258.0 ms (clear)
+  • power 4.314 W avg over 45.0 s (194.112 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.850556 A, voltage 5.074177 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem1024-aesgcm-falcon1024\power\power_cs-mlkem1024-aesgcm-falcon1024_20251013-203451.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem1024-aesgcm-mldsa87 — PASS
+  • throughput 7.775 Mb/s (97.2% of target), goodput 7.775 Mb/s, wire 8.990 Mb/s
+  • pps 3874.9 (target 3906.0)
+  • delivered ratio 0.980, loss 2.021% (95% CI 1.956-2.088)
+  • RTT avg 21.728 ms (p50 15.935 ms, p95 67.624 ms, max 118.323 ms)
+  • one-way delay p50 11.562 ms, p95 61.218 ms
+  • rekey window 5232.56 ms (energy error: estimated_from_power)
+  • packets sent 175,391 / received 171,846; encoded 3,763,308 / 3,762,618; drops 16,134
+  • rekeys ok 20 / fail 0
+  • handshake gcs 15.668 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 3.233 ms, kem decap 0.099 ms, sig sign 0.657 ms, primitives total 3.989 ms
+  • resources CPU max 70.3%, RSS 606.9 MiB, PFC 733.851 W, kinematics vh -0.490, vv -0.432
+  • traffic engine native
+  • timing guard 56263.0 ms (clear)
+  • power 4.287 W avg over 45.0 s (192.925 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.845329 A, voltage 5.074601 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem1024-aesgcm-mldsa87\power\power_cs-mlkem1024-aesgcm-mldsa87_20251013-202942.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem1024-aesgcm-sphincs256fsha2 — PASS
+  • throughput 7.758 Mb/s (97.0% of target), goodput 7.758 Mb/s, wire 8.971 Mb/s
+  • pps 3860.0 (target 3906.0)
+  • delivered ratio 0.981, loss 1.860% (95% CI 1.798-1.925)
+  • RTT avg 23.361 ms (p50 18.416 ms, p95 65.232 ms, max 99.797 ms)
+  • one-way delay p50 18.654 ms, p95 61.863 ms
+  • rekey window 4975.43 ms (energy error: estimated_from_power)
+  • packets sent 174,710 / received 171,460; encoded 4,479,277 / 4,477,991; drops 20,994
+  • rekeys ok 24 / fail 0
+  • handshake gcs 165.439 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.184 ms, kem decap 0.535 ms, sig sign 132.280 ms, primitives total 132.999 ms
+  • resources CPU max 74.4%, RSS 609.6 MiB, PFC 733.916 W, kinematics vh -1.210, vv 0.097
+  • traffic engine native
+  • timing guard 56261.0 ms (clear)
+  • power 4.285 W avg over 45.0 s (192.811 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.844785 A, voltage 5.074946 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem1024-aesgcm-sphincs256fsha2\power\power_cs-mlkem1024-aesgcm-sphincs256fsha2_20251013-204018.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem1024-chacha20poly1305-falcon1024 — PASS
+  • throughput 7.896 Mb/s (98.7% of target), goodput 7.896 Mb/s, wire 9.130 Mb/s
+  • pps 3860.1 (target 3906.0)
+  • delivered ratio 0.999, loss 0.117% (95% CI 0.102-0.134)
+  • RTT avg 18.540 ms (p50 17.001 ms, p95 41.908 ms, max 82.444 ms)
+  • one-way delay p50 12.524 ms, p95 30.617 ms
+  • rekey window 5232.37 ms (energy error: estimated_from_power)
+  • packets sent 174,745 / received 174,540; encoded 4,302,588 / 4,303,455; drops 19,971
+  • rekeys ok 23 / fail 0
+  • handshake gcs 9.673 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.203 ms, kem decap 0.271 ms, sig sign 0.876 ms, primitives total 1.350 ms
+  • resources CPU max 77.8%, RSS 610.7 MiB, PFC 733.460 W, kinematics vh -0.881, vv -0.442
+  • traffic engine native
+  • timing guard 56270.0 ms (clear)
+  • power 4.279 W avg over 45.0 s (192.536 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.843545 A, voltage 5.074890 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem1024-chacha20poly1305-falcon1024\power\power_cs-mlkem1024-chacha20poly1305-falcon1024_20251013-203731.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem1024-chacha20poly1305-mldsa87 — PASS
+  • throughput 7.929 Mb/s (99.1% of target), goodput 7.929 Mb/s, wire 9.167 Mb/s
+  • pps 3875.7 (target 3906.0)
+  • delivered ratio 0.999, loss 0.112% (95% CI 0.098-0.129)
+  • RTT avg 14.739 ms (p50 11.935 ms, p95 33.618 ms, max 74.780 ms)
+  • one-way delay p50 10.146 ms, p95 26.139 ms
+  • rekey window 2516.82 ms (energy error: estimated_from_power)
+  • packets sent 175,420 / received 175,223; encoded 3,944,473 / 3,944,624; drops 17,192
+  • rekeys ok 21 / fail 0
+  • handshake gcs 10.786 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.126 ms, kem decap 0.094 ms, sig sign 0.556 ms, primitives total 0.775 ms
+  • resources CPU max 81.0%, RSS 609.5 MiB, PFC 734.222 W, kinematics vh -0.742, vv 0.242
+  • traffic engine native
+  • timing guard 56261.0 ms (clear)
+  • power 4.282 W avg over 45.0 s (192.678 J)
+  • samples 45,000 @ 999.9 Hz
+  • avg current 0.844208 A, voltage 5.074460 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem1024-chacha20poly1305-mldsa87\power\power_cs-mlkem1024-chacha20poly1305-mldsa87_20251013-203213.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem1024-chacha20poly1305-sphincs256fsha2 — PASS
+  • throughput 7.915 Mb/s (98.9% of target), goodput 7.915 Mb/s, wire 9.152 Mb/s
+  • pps 3865.8 (target 3906.0)
+  • delivered ratio 1.000, loss 0.024% (95% CI 0.018-0.032)
+  • RTT avg 12.763 ms (p50 10.190 ms, p95 31.293 ms, max 65.405 ms)
+  • one-way delay p50 14.763 ms, p95 31.278 ms
+  • rekey window 2772.77 ms (energy error: estimated_from_power)
+  • packets sent 175,007 / received 174,965; encoded 4,658,793 / 4,658,822; drops 22,343
+  • rekeys ok 25 / fail 0
+  • handshake gcs 161.065 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.261 ms, kem decap 0.106 ms, sig sign 134.188 ms, primitives total 134.555 ms
+  • resources CPU max 80.0%, RSS 612.6 MiB, PFC 733.396 W, kinematics vh 1.101, vv 0.433
+  • traffic engine native
+  • timing guard 56270.0 ms (clear)
+  • power 4.279 W avg over 45.0 s (192.538 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.843581 A, voltage 5.074689 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem1024-chacha20poly1305-sphincs256fsha2\power\power_cs-mlkem1024-chacha20poly1305-sphincs256fsha2_20251013-204305.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem512-aesgcm-falcon512 — PASS
+  • throughput 7.899 Mb/s (98.7% of target), goodput 7.899 Mb/s, wire 9.133 Mb/s
+  • pps 3866.5 (target 3906.0)
+  • delivered ratio 0.997, loss 0.254% (95% CI 0.231-0.278)
+  • RTT avg 15.138 ms (p50 11.633 ms, p95 39.128 ms, max 74.232 ms)
+  • one-way delay p50 4.060 ms, p95 34.873 ms
+  • rekey window 4824.90 ms (energy error: estimated_from_power)
+  • packets sent 174,990 / received 174,546; encoded 714,660 / 716,067; drops 3,123
+  • rekeys ok 3 / fail 0
+  • handshake gcs 13.321 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.084 ms, kem decap 0.093 ms, sig sign 4.423 ms, primitives total 4.600 ms
+  • resources CPU max 76.9%, RSS 601.8 MiB, PFC 733.557 W, kinematics vh 0.762, vv 0.442
+  • traffic engine native
+  • timing guard 56258.0 ms (clear)
+  • power 4.343 W avg over 45.0 s (195.451 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.856626 A, voltage 5.072552 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem512-aesgcm-falcon512\power\power_cs-mlkem512-aesgcm-falcon512_20251013-195616.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem512-aesgcm-mldsa44 — PASS
+  • throughput 7.904 Mb/s (98.8% of target), goodput 7.904 Mb/s, wire 9.138 Mb/s
+  • pps 3879.5 (target 3906.0)
+  • delivered ratio 0.995, loss 0.525% (95% CI 0.492-0.560)
+  • RTT avg 17.345 ms (p50 11.106 ms, p95 55.472 ms, max 181.721 ms)
+  • one-way delay p50 6.275 ms, p95 78.096 ms
+  • rekey window 2698.22 ms (energy error: estimated_from_power)
+  • packets sent 175,586 / received 174,664; encoded 357,195 / 357,445; drops 1,337
+  • rekeys ok 1 / fail 0
+  • handshake gcs 14.293 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 3.333 ms, kem decap 0.334 ms, sig sign 1.663 ms, primitives total 5.331 ms
+  • resources CPU max 76.3%, RSS 601.8 MiB, PFC 733.477 W, kinematics vh -1.644, vv -0.209
+  • traffic engine native
+  • timing guard 56260.0 ms (clear)
+  • power 4.321 W avg over 45.0 s (194.462 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.852203 A, voltage 5.073216 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem512-aesgcm-mldsa44\power\power_cs-mlkem512-aesgcm-mldsa44_20251013-195328.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem512-aesgcm-sphincs128fsha2 — PASS
+  • throughput 7.926 Mb/s (99.1% of target), goodput 7.926 Mb/s, wire 9.165 Mb/s
+  • pps 3877.8 (target 3906.0)
+  • delivered ratio 0.998, loss 0.195% (95% CI 0.176-0.217)
+  • RTT avg 12.612 ms (p50 10.105 ms, p95 35.021 ms, max 82.142 ms)
+  • one-way delay p50 3.119 ms, p95 24.682 ms
+  • rekey window 4798.51 ms (energy error: estimated_from_power)
+  • packets sent 175,536 / received 175,193; encoded 1,075,193 / 1,075,814; drops 4,607
+  • rekeys ok 5 / fail 0
+  • handshake gcs 62.766 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.208 ms, kem decap 0.184 ms, sig sign 43.710 ms, primitives total 44.102 ms
+  • resources CPU max 80.6%, RSS 603.1 MiB, PFC 734.012 W, kinematics vh 0.322, vv 0.420
+  • traffic engine native
+  • timing guard 56267.0 ms (clear)
+  • power 4.340 W avg over 45.0 s (195.297 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.855904 A, voltage 5.072761 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem512-aesgcm-sphincs128fsha2\power\power_cs-mlkem512-aesgcm-sphincs128fsha2_20251013-195915.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem512-chacha20poly1305-falcon512 — PASS
+  • throughput 7.856 Mb/s (98.2% of target), goodput 7.856 Mb/s, wire 9.084 Mb/s
+  • pps 3877.6 (target 3906.0)
+  • delivered ratio 0.989, loss 1.070% (95% CI 1.022-1.119)
+  • RTT avg 17.786 ms (p50 11.351 ms, p95 64.656 ms, max 99.622 ms)
+  • one-way delay p50 8.228 ms, p95 47.469 ms
+  • rekey window 2425.73 ms (energy error: estimated_from_power)
+  • packets sent 175,493 / received 173,616; encoded 895,055 / 895,314; drops 3,903
+  • rekeys ok 4 / fail 0
+  • handshake gcs 9.271 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.089 ms, kem decap 0.065 ms, sig sign 0.218 ms, primitives total 0.372 ms
+  • resources CPU max 77.8%, RSS 603.4 MiB, PFC 733.994 W, kinematics vh -1.102, vv 0.137
+  • traffic engine native
+  • timing guard 56258.0 ms (clear)
+  • power 4.281 W avg over 45.0 s (192.663 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.844151 A, voltage 5.074730 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem512-chacha20poly1305-falcon512\power\power_cs-mlkem512-chacha20poly1305-falcon512_20251013-195743.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem512-chacha20poly1305-mldsa44 — PASS
+  • throughput 7.941 Mb/s (99.3% of target), goodput 7.941 Mb/s, wire 9.181 Mb/s
+  • pps 3880.9 (target 3906.0)
+  • delivered ratio 0.999, loss 0.092% (95% CI 0.079-0.108)
+  • RTT avg 12.887 ms (p50 9.846 ms, p95 31.579 ms, max 70.425 ms)
+  • one-way delay p50 4.391 ms, p95 30.104 ms
+  • rekey window 5027.35 ms (energy error: estimated_from_power)
+  • packets sent 175,648 / received 175,486; encoded 538,532 / 539,224; drops 1,914
+  • rekeys ok 2 / fail 0
+  • handshake gcs 8.088 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.098 ms, kem decap 0.085 ms, sig sign 0.203 ms, primitives total 0.385 ms
+  • resources CPU max 89.7%, RSS 600.6 MiB, PFC 733.700 W, kinematics vh 1.481, vv 0.034
+  • traffic engine native
+  • timing guard 56260.0 ms (clear)
+  • power 4.302 W avg over 45.0 s (193.583 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.848276 A, voltage 5.073742 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem512-chacha20poly1305-mldsa44\power\power_cs-mlkem512-chacha20poly1305-mldsa44_20251013-195450.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem512-chacha20poly1305-sphincs128fsha2 — PASS
+  • throughput 7.867 Mb/s (98.3% of target), goodput 7.867 Mb/s, wire 9.097 Mb/s
+  • pps 3844.0 (target 3906.0)
+  • delivered ratio 0.999, loss 0.064% (95% CI 0.054-0.077)
+  • RTT avg 13.395 ms (p50 11.059 ms, p95 30.724 ms, max 67.393 ms)
+  • one-way delay p50 2.803 ms, p95 37.956 ms
+  • rekey window 2658.01 ms (energy error: estimated_from_power)
+  • packets sent 173,964 / received 173,852; encoded 1,252,403 / 1,253,607; drops 5,285
+  • rekeys ok 6 / fail 0
+  • handshake gcs 57.738 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.079 ms, kem decap 0.068 ms, sig sign 33.445 ms, primitives total 33.591 ms
+  • resources CPU max 76.9%, RSS 602.6 MiB, PFC 733.494 W, kinematics vh 1.643, vv 0.211
+  • traffic engine native
+  • timing guard 56256.0 ms (clear)
+  • power 4.310 W avg over 45.0 s (193.940 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.849857 A, voltage 5.073629 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem512-chacha20poly1305-sphincs128fsha2\power\power_cs-mlkem512-chacha20poly1305-sphincs128fsha2_20251013-200049.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem768-aesgcm-mldsa65 — PASS
+  • throughput 7.946 Mb/s (99.3% of target), goodput 7.946 Mb/s, wire 9.187 Mb/s
+  • pps 3880.8 (target 3906.0)
+  • delivered ratio 1.000, loss 0.025% (95% CI 0.019-0.034)
+  • RTT avg 12.170 ms (p50 10.050 ms, p95 36.206 ms, max 62.622 ms)
+  • one-way delay p50 3.730 ms, p95 22.313 ms
+  • rekey window 455.85 ms
+  • packets sent 175,627 / received 175,583; encoded 179,417 / 180,042; drops 741
+  • rekeys ok 0 / fail 0
+  • handshake gcs 35.504 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 1.146 ms, kem decap 0.205 ms, sig sign 0.642 ms, primitives total 1.993 ms
+  • resources CPU max 73.7%, RSS 598.6 MiB, PFC 734.019 W, kinematics vh -0.284, vv -0.416
+  • traffic engine native
+  • timing guard 56256.0 ms (clear)
+  • power 4.307 W avg over 45.0 s (193.821 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.849249 A, voltage 5.074035 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem768-aesgcm-mldsa65\power\power_cs-mlkem768-aesgcm-mldsa65_20251013-195212.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
+
+Suite cs-mlkem768-chacha20poly1305-mldsa65 — PASS
+  • throughput 7.936 Mb/s (99.2% of target), goodput 7.936 Mb/s, wire 9.177 Mb/s
+  • pps 3881.1 (target 3906.0)
+  • delivered ratio 0.998, loss 0.151% (95% CI 0.134-0.170)
+  • RTT avg 12.490 ms (p50 9.787 ms, p95 37.644 ms, max 83.894 ms)
+  • one-way delay p50 4.025 ms, p95 25.643 ms
+  • rekey window 2769.76 ms (energy error: estimated_from_power)
+  • packets sent 175,663 / received 175,398; encoded 2,507,189 / 2,507,516; drops 10,164
+  • rekeys ok 13 / fail 0
+  • handshake gcs 19.890 ms (energy error: estimated_from_power)
+  • crypto breakdown kem keygen 0.259 ms, kem decap 0.220 ms, sig sign 3.175 ms, primitives total 3.654 ms
+  • resources CPU max 83.8%, RSS 608.6 MiB, PFC 734.213 W, kinematics vh 0.014, vv 0.385
+  • traffic engine native
+  • timing guard 56261.0 ms (clear)
+  • power 4.340 W avg over 45.0 s (195.300 J)
+  • samples 45,000 @ 1000.0 Hz
+  • avg current 0.855963 A, voltage 5.072758 V
+  • power trace: C:\Users\burak\Desktop\research\logs\auto\gcs\suites\cs-mlkem768-chacha20poly1305-mldsa65\power\power_cs-mlkem768-chacha20poly1305-mldsa65_20251013-201339.csv
+  • monitor fetch: ok
+  • clock offset 1077.745 ms
