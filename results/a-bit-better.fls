@@ -1,0 +1,573 @@
+PWD c:\Users\burak\Desktop\research\results
+INPUT C:\Users\burak\AppData\Local\MiKTeX\miktex\data\le\pdftex\pdflatex.fmt
+INPUT c:\Users\burak\Desktop\research\results\a-bit-better.tex
+OUTPUT a-bit-better.log
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmart.cls
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmart.cls
+INPUT C:\Program Files\MiKTeX\tex\latex\xkeyval\xkeyval.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\xkeyval\xkeyval.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\xkeyval\xkeyval.tex
+INPUT C:\Program Files\MiKTeX\tex\generic\xkeyval\xkvutils.tex
+INPUT C:\Program Files\MiKTeX\tex\generic\xkeyval\keyval.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\xstring\xstring.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\xstring\xstring.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\xstring\xstring.tex
+INPUT C:\Program Files\MiKTeX\tex\generic\iftex\iftex.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\iftex\iftex.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\amscls\amsart.cls
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\amscls\amsart.cls
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amsmath.sty
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\cm\cmr9.tfm
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amsmath.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amsopn.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amstext.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amstext.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amsgen.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amsgen.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amsbsy.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amsbsy.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsmath\amsopn.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\umsa.fd
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\umsa.fd
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\umsa.fd
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\amsfonts.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\amsfonts.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\microtype.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\microtype.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\keyval.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\etoolbox\etoolbox.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\etoolbox\etoolbox.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\microtype-pdftex.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\microtype-pdftex.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\microtype-pdftex.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\microtype.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\microtype.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\microtype.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\booktabs\booktabs.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\booktabs\booktabs.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\refcount\refcount.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\refcount\refcount.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\ltxcmds\ltxcmds.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\ltxcmds\ltxcmds.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\infwarerr\infwarerr.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\infwarerr\infwarerr.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\totpages\totpages.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\totpages\totpages.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\everyshi\everyshi.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\everyshi\everyshi.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\environ\environ.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\environ\environ.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\trimspaces\trimspaces.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\trimspaces\trimspaces.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\hyperref.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\hyperref.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\kvsetkeys\kvsetkeys.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\kvsetkeys\kvsetkeys.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\kvdefinekeys\kvdefinekeys.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\kvdefinekeys\kvdefinekeys.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\pdfescape\pdfescape.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\pdfescape\pdfescape.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\pdftexcmds\pdftexcmds.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\pdftexcmds\pdftexcmds.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\hycolor\hycolor.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\hycolor\hycolor.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\nameref.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\nameref.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\gettitlestring\gettitlestring.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\gettitlestring\gettitlestring.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\kvoptions\kvoptions.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\kvoptions\kvoptions.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\stringenc\stringenc.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\stringenc\stringenc.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\pd1enc.def
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\pd1enc.def
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\pd1enc.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\intcalc\intcalc.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\intcalc\intcalc.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\puenc.def
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\puenc.def
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\puenc.def
+INPUT C:\Program Files\MiKTeX\tex\latex\url\url.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\url\url.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\bitset\bitset.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\bitset\bitset.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\bigintcalc\bigintcalc.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\bigintcalc\bigintcalc.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\hpdftex.def
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\hpdftex.def
+INPUT C:\Program Files\MiKTeX\tex\latex\hyperref\hpdftex.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\rerunfilecheck\rerunfilecheck.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\rerunfilecheck\rerunfilecheck.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\uniquecounter\uniquecounter.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\uniquecounter\uniquecounter.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\hyperxmp\hyperxmp.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\hyperxmp\hyperxmp.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\ifmtarg\ifmtarg.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\ifmtarg\ifmtarg.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\base\ifthen.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\base\ifthen.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\oberdiek\ifdraft.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\oberdiek\ifdraft.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\iftex\ifluatex.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\iftex\ifluatex.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\graphicx.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\graphicx.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\graphics.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\graphics.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\trig.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\trig.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics-cfg\graphics.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics-cfg\graphics.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics-cfg\graphics.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics-def\pdftex.def
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics-def\pdftex.def
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics-def\pdftex.def
+INPUT C:\Program Files\MiKTeX\tex\latex\xcolor\xcolor.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\xcolor\xcolor.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics-cfg\color.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics-cfg\color.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics-cfg\color.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\mathcolor.ltx
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\mathcolor.ltx
+INPUT C:\Program Files\MiKTeX\tex\latex\graphics\mathcolor.ltx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\geometry\geometry.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\geometry\geometry.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\iftex\ifvtex.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\iftex\ifvtex.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\geometry\geometry.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\geometry\geometry.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\geometry\geometry.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\ncctools\manyfoot.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\ncctools\manyfoot.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\ncctools\nccfoots.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\ncctools\nccfoots.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\pdftex\glyphtounicode.tex
+INPUT C:\Program Files\MiKTeX\tex\generic\pdftex\glyphtounicode.tex
+INPUT C:\Program Files\MiKTeX\tex\generic\pdftex\glyphtounicode.tex
+INPUT C:\Program Files\MiKTeX\tex\generic\pdftex\glyphtounicode.tex
+INPUT C:\Program Files\MiKTeX\tex\generic\pdftex\glyphtounicode.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\cmap\cmap.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\cmap\cmap.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\libertine.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\libertine.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\inconsolata\zi4.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\inconsolata\zi4.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\newtxmath.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\newtxmath.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\base\fontenc.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\base\fontenc.sty
+INPUT C:\Program Files\MiKTeX\fonts\tfm\jknappen\ec\ecrm0900.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\cmap\t1.cmap
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\cmap\t1.cmap
+OUTPUT a-bit-better.pdf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\cmap\t1.cmap
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\libertine.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\iftex\ifxetex.sty
+INPUT C:\Program Files\MiKTeX\tex\generic\iftex\ifxetex.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\base\textcomp.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\base\textcomp.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\mweights\mweights.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\base\fontenc.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\fontaxes\fontaxes.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\fontaxes\fontaxes.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\figureversions\figureversions.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\figureversions\figureversions.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\LinLibertine_I.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\LinLibertine_I.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\LinLibertine_I.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\LinLibertine_I.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\LinLibertine_I.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\inconsolata\zi4.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\newtxmath.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\oberdiek\centernot.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\oberdiek\centernot.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\binhex\binhex.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\binhex\binhex.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\binhex\binhex.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\binhex\binhex.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\binhex\binhex.tex
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\caption\caption.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\caption\caption.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\caption\caption3.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\caption\caption3.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\caption\caption-ams-smf.sto
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\caption\caption-ams-smf.sto
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\caption\caption-ams-smf.sto
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\float\float.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\float\float.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\comment\comment.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\comment\comment.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\fancyhdr\fancyhdr.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\fancyhdr\fancyhdr.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\t1linuxlibertinet-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\t1linuxlibertinet-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\t1linuxlibertinet-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\filecontents\filecontents.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\filecontents\filecontents.sty
+INPUT .\sample-base.bib
+INPUT sample-base.bib
+INPUT .\software.bib
+INPUT software.bib
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\biblatex.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\biblatex.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\logreq\logreq.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\logreq\logreq.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\logreq\logreq.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\logreq\logreq.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\logreq\logreq.def
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\blx-dm.def
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\blx-dm.def
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\blx-dm.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmdatamodel.dbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmdatamodel.dbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmdatamodel.dbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\software.dbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\software.dbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\software.dbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\blx-compat.def
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\blx-compat.def
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\blx-compat.def
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\biblatex.def
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\biblatex.def
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\biblatex.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmnumeric.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmnumeric.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmnumeric.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-trad\trad-plain.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-trad\trad-plain.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-trad\trad-plain.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-trad\trad-standard.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-trad\trad-standard.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-trad\trad-standard.bbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\bbx\standard.bbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\bbx\standard.bbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\bbx\standard.bbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\lbx\american.lbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\lbx\american.lbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\software.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\software.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\software.bbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\xurl\xurl.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\xurl\xurl.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmnumeric.cbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmnumeric.cbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\acmart\acmnumeric.cbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\cbx\numeric.cbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\cbx\numeric.cbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\cbx\numeric.cbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\biblatex.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\biblatex.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\biblatex.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\l3kernel\expl3.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\l3kernel\expl3.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\l3backend\l3backend-pdftex.def
+INPUT C:\Program Files\MiKTeX\tex\latex\l3backend\l3backend-pdftex.def
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\blx-case-expl3.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\blx-case-expl3.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\l3packages\xparse\xparse.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\l3packages\xparse\xparse.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\preprint\balance.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\preprint\balance.sty
+INPUT .\a-bit-better.aux
+INPUT .\a-bit-better.aux
+INPUT a-bit-better.aux
+OUTPUT a-bit-better.aux
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\omlnxlmi.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\omlnxlmi.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\omlnxlmi.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxexa.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxexa.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxexa.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\lmsntxsy.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\lmsntxsy.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\lmsntxsy.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\lmxntxexx.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\lmxntxexx.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\lmxntxexx.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\ot1linuxlibertinet-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\ot1linuxlibertinet-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\ot1linuxlibertinet-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ot1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\cmap\ot1.cmap
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\cmap\ot1.cmap
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\cmap\ot1.cmap
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ot1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmi7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\mmap\oml.cmap
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\mmap\oml.cmap
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\mmap\oml.cmap
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmi5.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsy7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsy5.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexx.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexx.tfm
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\umsa.fd
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\umsa.fd
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\umsa.fd
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam7.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam5.tfm
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\umsb.fd
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\umsb.fd
+INPUT C:\Program Files\MiKTeX\tex\latex\amsfonts\umsb.fd
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm7.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm5.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxmia.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxmia.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxmia.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmia.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmia.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxsym.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxsym.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxsym.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsym.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsym.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxsyc.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxsyc.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\newtx\untxsyc.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsyc.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsyc.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexa.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexa.tfm
+INPUT .\a-bit-better.out
+INPUT .\a-bit-better.out
+INPUT a-bit-better.out
+INPUT a-bit-better.out
+INPUT .\a-bit-better.out
+INPUT .\a-bit-better.out
+OUTPUT a-bit-better.out
+INPUT C:\Program Files\MiKTeX\tex\context\base\mkii\supp-pdf.mkii
+INPUT C:\Program Files\MiKTeX\tex\context\base\mkii\supp-pdf.mkii
+INPUT C:\Program Files\MiKTeX\tex\context\base\mkii\supp-pdf.mkii
+INPUT C:\Program Files\MiKTeX\tex\latex\epstopdf-pkg\epstopdf-base.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\epstopdf-pkg\epstopdf-base.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\00miktex\epstopdf-sys.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\00miktex\epstopdf-sys.cfg
+INPUT C:\Program Files\MiKTeX\tex\latex\00miktex\epstopdf-sys.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\upquote\upquote.sty
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\upquote\upquote.sty
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\lbx\american.lbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\english-software.lbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\english-software.lbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\english-software.lbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\lbx\english.lbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\lbx\english.lbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\lbx\english.lbx
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\biblatex-software\english-software.lbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\lbx\english.lbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\lbx\english.lbx
+INPUT C:\Program Files\MiKTeX\tex\latex\biblatex\lbx\english.lbx
+OUTPUT a-bit-better.bcf
+INPUT a-bit-better.bbl
+INPUT .\a-bit-better.bbl
+INPUT .\a-bit-better.bbl
+INPUT .\a-bit-better.bbl
+INPUT a-bit-better.bbl
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\t1linuxbiolinumt-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\t1linuxbiolinumt-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\t1linuxbiolinumt-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinBiolinumT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinBiolinumTB-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ot1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ot1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ot1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmi.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmi.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmi7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsy.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsy.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsy7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexx.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexx.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexx.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam10.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\mt-msa.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\mt-msa.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\mt-msa.cfg
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam10.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam7.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm10.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\mt-msb.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\mt-msb.cfg
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\microtype\mt-msb.cfg
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm10.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmia.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmia.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmia.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsym.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsym.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsym.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsyc.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsyc.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsyc.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexa.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexa.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexa.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\ts1linuxlibertinet-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\ts1linuxlibertinet-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\libertine\ts1linuxlibertinet-tlf.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ts1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ot1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmi.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsy.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexx.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam10.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm10.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmia.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsym.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsyc.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexa.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ts1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTI-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ts1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTB-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTB-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ot1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmi.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsy.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexx.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam10.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm10.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmia.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsym.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsyc.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexa.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ts1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTI-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTB-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTI-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ot1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ot1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmi7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmi5.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsy7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsy5.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexx.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexx.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam10.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam7.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm10.tfm
+INPUT C:\Program Files\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmia.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\nxlmia.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsym.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsym.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsyc.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxsyc.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexa.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\ntxexa.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\inconsolata\t1zi4.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\inconsolata\t1zi4.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\latex\inconsolata\t1zi4.fd
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\inconsolata\t1-zi4r-4.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinBiolinumTB-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinBiolinumTB-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Local\MiKTeX\fonts\map\pdftex\pdftex.map
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\enc\dvips\libertine\lbtn_25tcsq.enc
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineT-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\enc\dvips\libertine\lbtn_76gpa5.enc
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineT-tlf-ts1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ts1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\enc\dvips\libertine\lbtn_naooyc.enc
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineT-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineTB-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTB-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\enc\dvips\libertine\lbtn_nh77jq.enc
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineT-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\newtx\ntxsy.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\txsys.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\txex-bar.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\newtx\ntxsy7.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\txsys.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\txex-bar.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineT-tlf-ts1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ts1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineT-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineTI-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTI-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\enc\dvips\libertine\lbtn_7grukw.enc
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineT-tlf-ts1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ts1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineT-tlf-ts1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-ts1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineTB-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTB-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineTI-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTI-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineTB-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTB-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineT-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineTI-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTI-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\enc\dvips\inconsolata\i4-t1-4.enc
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinBiolinumT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinBiolinumT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinBiolinumT-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinBiolinumT-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\newtx\ntxsy5.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\txsys.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\txex-bar.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTB-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinBiolinumTI-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinLibertineTB-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineTB-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\libertine\LinBiolinumTI-tlf-t1.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinBiolinumTI-tlf-t1--base.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\newtx\nxlmi.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\LibertineMathMI.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\NewTXMI.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\stxscr.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\newtx\nxlmia.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\LibertineMathRM.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\txmiaSTbb.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\txmiaX.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\vf\public\newtx\nxlmi7.vf
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\LibertineMathMI7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\NewTXMI7.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\newtx\stxscr.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\tfm\public\libertine\LinLibertineT-tlf-t1.tfm
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\stringenc\se-pdfdoc.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\stringenc\se-pdfdoc.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\stringenc\se-pdfdoc.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\stringenc\se-utf8.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\stringenc\se-utf8.def
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\tex\generic\stringenc\se-utf8.def
+INPUT a-bit-better.aux
+INPUT .\a-bit-better.out
+INPUT .\a-bit-better.out
+INPUT a-bit-better.run.xml
+OUTPUT a-bit-better.run.xml
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\inconsolata\Inconsolata-zi4r.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\inconsolata\Inconsolata-zi4r.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\newtx\LibertineMathMI.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\newtx\LibertineMathMI.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\newtx\LibertineMathMI7.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\newtx\LibertineMathMI7.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinBiolinumT.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinBiolinumT.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinBiolinumTB.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinBiolinumTB.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinBiolinumTI.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinBiolinumTI.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinLibertineT.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinLibertineT.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinLibertineTB.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinLibertineTB.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinLibertineTI.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\libertine\LinLibertineTI.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\newtx\txmiaX.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\newtx\txmiaX.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\newtx\txsys.pfb
+INPUT C:\Users\burak\AppData\Roaming\MiKTeX\fonts\type1\public\newtx\txsys.pfb

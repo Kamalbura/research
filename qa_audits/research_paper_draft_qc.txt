@@ -1,0 +1,75 @@
+QA Audit: research/results/research-paper-draft.md
+Date: 2025-10-16
+Prepared by: GitHub Copilot (QA pass)
+Scope: Cross-check paper narrative against implementation and log evidence in the repo, with focus on sections covering architecture, adaptive scheduling, experimental setup, and reported results.
+
+0. Structural Observations
+- The markdown file currently concatenates two overlapping drafts ("A Post-Quantum Secure Command and Control Stack..." and "A Resilient Post-Quantum Command and Control Stack..."). Section numbering restarts mid-file (two separate 1.0 Introductions, 2.0 System Architecture blocks). Action: pick the up-to-date outline, remove the duplicate draft, and reconcile section numbering before publication.
+- Tables/lists are embedded as plain text with minimal labeling. Action: convert repeated metrics into consistently captioned tables and cross-reference log sources.
+
+1. Section 1.0 Introduction & Contributions
+Claim summary: Paper asserts delivery of a full PQC-secured C2 stack, an adaptive scheduler, and an empirical evaluation of 30 suites under a lightweight DDOS load.
+Evidence:
+  • Implementation for handshake/AEAD exists (`core/handshake.py`, `core/aead.py`).
+  • Adaptive scheduler code is present but rule-based; no ML inference integrated (`src/scheduler/unified_scheduler.py`, `_calculate_lightweight_ddos_score`).
+  • Results folders contain three scenario logs, each covering 21 suites (baseline, lightweight, heavyweight) rather than 30 (`results/benchmarks without-ddos detectetion.txt`, `results/results with ddos detection (lightweight).txt`, `results/results benchmarks with ddos detectetion time series trandssformer heavy.txt`).
+QA judgement: Partially accurate. Update text to either limit claimed suite count to the 21 actually exercised or add missing runs. Clarify that the current scheduler uses heuristic scoring (ML models not yet integrated).
+
+2. Section 2.1 PQC Handshake Protocol
+Claim summary: TCP handshake sends ServerHello with signed suite IDs, session ID, KEM public key, and challenge; drone verifies, encapsulates KEM, and returns ciphertext plus HMAC using DRONE_PSK; both derive AEAD keys via HKDF.
+Evidence:
+  • `core/handshake.py` functions `server_gcs_handshake()` / `client_drone_handshake()` implement the described flow, including signature verification and HMAC validation (`_drone_psk_bytes`, `hmac.new(..., hashlib.sha256)`).
+  • HKDF derivation uses `salt=b"pq-drone-gcs|hkdf|v1"` and yields send/recv keys + nonce seeds as documented.
+QA judgement: Accurate. No action needed beyond possibly referencing section numbers in the paper to these functions.
+
+3. Section 2.1.2 AEAD Framing & Replay
+Claim summary: 22-byte header (`!BBBBB8sQB`) used as AAD, deterministic nonce derived from epoch||seq, replay window of 1024.
+Evidence:
+  • `core/aead.py` declares `HEADER_STRUCT = "!BBBBB8sQB"` and builds nonces via epoch/sequence without sending IV.
+  • `Receiver` enforces replay bitmap sized from config (default 1024) and drops duplicates silently (`Receiver._accept_seq`).
+QA judgement: Accurate. Consider citing `core/aead.py` lines 45-340 in manuscript footnotes for reproducibility.
+
+4. Section 2.2 Adaptive Scheduler
+Claim summary: Scheduler probes link capacity (SaturationTester), leverages heuristics (OWD spikes, loss), and adapts via expert/ML policies.
+Evidence:
+  • `tools/auto/gcs_scheduler.py` includes `SaturationTester` with stop causes such as `owd_p95_spike`, `delivery_degraded`, `loss_excess`, matching narrative triggers.
+  • `src/scheduler/unified_scheduler.py` integrates heuristic `_calculate_lightweight_ddos_score`; no XGBoost/Transformer inference paths invoked by default.
+  • `src/scheduler/components/security_advisor.py` escalates threats based on heuristics when ML scores absent.
+QA judgement: Partially accurate. Need to revise text to make clear that ML references describe intended architecture; current build uses heuristics meant to approximate XGBoost/Transformer load rather than calling real models.
+
+5. Section 3.0 Methodology & Testbed
+Claim summary: Experiments run on 45-second windows, 1000 Hz power sampling, IPs 192.168.1.207/.139, constant traffic generator, telemetry capture.
+Evidence:
+  • Each results log shows "samples 45,000 @ 1000.0 Hz" and power traces under `logs/auto/gcs/suites/...` (e.g., `power_cs-mlkem1024-aesgcm-falcon1024_20251013-101318.csv`).
+  • `tools/auto` scripts configure auto runs with constant packet rates; logs include `pps` lines verifying constant send rate near 3906 packets/s.
+  • IP addresses are not embedded in the repo configs; if they are part of experimental notes only, mention they are illustrative.
+QA judgement: Mostly accurate. Document should clarify whether fixed IPs are illustrative or part of the reproducibility package.
+
+6. Section 4/5 Results Narrative
+Baseline (no DDOS): Stats in the manuscript match entries from `benchmarks without-ddos detectetion.txt` (e.g., handshake 521.902 ms for `cs-mlkem512-aesgcm-mldsa44`).
+Lightweight (XGBoost load): Table values align with `results with ddos detection (lightweight).txt` (e.g., `cs-mlkem1024-aesgcm-mldsa87` RTT avg 21.728 ms, loss 2.021%).
+Heavyweight (Transformer load): Manuscript currently lacks dedicated summary, though heavy log shows higher loss/RTT (e.g., `cs-mlkem1024-aesgcm-falcon1024` loss 6.406%, power 4.671 W).
+QA judgement: Baseline and lightweight commentary are supported; heavyweight scenario needs to be explicitly incorporated to justify claims about transformer penalties.
+Action: Add tables/paragraphs referencing `results results benchmarks with ddos detection time series trandssformer heavy.txt` and highlight consistent ~0.35 W power increase and 3–6% loss.
+
+7. Scheduler & ML Capability Claims
+Claim summary: Paper states "Multi-tier DDOS detection (XGBoost + Transformer)" and "adaptive scheduler designed for graceful degradation via expert+RL fusion".
+Evidence:
+  • `src/scheduler/components/security_advisor.py` defaults to heuristic `_heuristic_prediction` when no ML scores passed.
+  • `schedulers/nextgen_rl/strategy.py` loads static rule tables; no RL inference or model files provided.
+QA judgement: Needs correction. Update manuscript wording to reflect heuristic implementation, or deliver the model artifacts/integration to align with claims.
+
+8. Results Coverage & Counts
+Claim summary: "Comprehensive evaluation of 30 distinct PQC suites." Actual data files list 21 suites across the runs; chacha variants are present, but total unique suite IDs observed = 21.
+QA judgement: Needs correction—either add missing suites to experiments or adjust claim to 21 (42 if counting cipher variants). Include explicit suite list in appendix and cross-check with `results/report_run_1759787312.txt` which enumerates 21 suite workbooks.
+
+9. Logging & Reproducibility
+Observation: Every result block cites a `power trace` CSV path; good reproducibility practice. Ensure paper references a dedicated appendix or repository path (e.g., "See `logs/auto/gcs/suites/<suite>/power_*.csv`").
+Action: Document instructions for running `python -m core.run_proxy` and the saturation tool to regenerate logs.
+
+10. Outstanding Verification Items
+- Confirm whether "traffic engine native" vs other options needs explanation in paper.
+- Provide definition of "kinematics vh/vv" or remove if not analyzed; logs include these metrics but manuscript omits discussion.
+- Ensure mention of policy engine two-phase commit references `core/policy_engine.py` state machine (currently accurate but not cited).
+
+End of QA report.

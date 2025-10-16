@@ -1,0 +1,881 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nty/global//global/global/global}
+    \entry{bernstein2019sphincsplus}{inproceedings}{}{}
+      \name{author}{8}{}{%
+        {{hash=cc77f8b5fa3840f90938819e591aae07}{%
+           family={Bernstein},
+           familyi={B\bibinitperiod},
+           given={Daniel\bibnamedelima J.},
+           giveni={D\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+        {{hash=ecc70db449d64bf9ff52f2423872647e}{%
+           family={Dang},
+           familyi={D\bibinitperiod},
+           given={Tung},
+           giveni={T\bibinitperiod}}}%
+        {{hash=a4dc6667c099aecf7098821fbc935287}{%
+           family={Hopwood},
+           familyi={H\bibinitperiod},
+           given={Hal},
+           giveni={H\bibinitperiod}}}%
+        {{hash=ee405d47f11937af04026bd50c3d95eb}{%
+           family={Hu},
+           familyi={H\bibinitperiod},
+           given={Andreas},
+           giveni={A\bibinitperiod}}}%
+        {{hash=2c76d81f56d9dce0a910572140690325}{%
+           family={Lange},
+           familyi={L\bibinitperiod},
+           given={Tanja},
+           giveni={T\bibinitperiod}}}%
+        {{hash=bb5b512ed728a3c1bb3aa19834ddc78c}{%
+           family={Niederhagen},
+           familyi={N\bibinitperiod},
+           given={Ruben},
+           giveni={R\bibinitperiod}}}%
+        {{hash=d6f75ddbdff08e1eec9c16d5ae70e952}{%
+           family={Vredendaal},
+           familyi={V\bibinitperiod},
+           given={Christine},
+           giveni={C\bibinitperiod},
+           prefix={van},
+           prefixi={v\bibinitperiod}}}%
+        {{hash=abd71820d1e83216b134cbbed4a43666}{%
+           family={Wilcox-O'Hearn},
+           familyi={W\bibinithyphendelim O\bibinitperiod},
+           given={Zooko},
+           giveni={Z\bibinitperiod}}}%
+      }
+      \strng{namehash}{ad63d5a879ce705516adb9af26e5193b}
+      \strng{fullhash}{6080e5dace4b475e53d09b863e9ba503}
+      \strng{fullhashraw}{6080e5dace4b475e53d09b863e9ba503}
+      \strng{bibnamehash}{6080e5dace4b475e53d09b863e9ba503}
+      \strng{authorbibnamehash}{6080e5dace4b475e53d09b863e9ba503}
+      \strng{authornamehash}{ad63d5a879ce705516adb9af26e5193b}
+      \strng{authorfullhash}{6080e5dace4b475e53d09b863e9ba503}
+      \strng{authorfullhashraw}{6080e5dace4b475e53d09b863e9ba503}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{NIST PQC Standardization Workshop}
+      \field{title}{{SPHINCS+}: Submission to the NIST Post-Quantum Standardization Project}
+      \field{year}{2019}
+    \endentry
+    \entry{bos2018kyber}{inproceedings}{}{}
+      \name{author}{8}{}{%
+        {{hash=b98fdf377c34c4c151c50323b854be4e}{%
+           family={Bos},
+           familyi={B\bibinitperiod},
+           given={Joppe\bibnamedelima W.},
+           giveni={J\bibinitperiod\bibinitdelim W\bibinitperiod}}}%
+        {{hash=af45937f5146427dab90d717c0274a3b}{%
+           family={Ducas},
+           familyi={D\bibinitperiod},
+           given={Leo},
+           giveni={L\bibinitperiod}}}%
+        {{hash=3a691fc6ff884507edcdc40d4048c61a}{%
+           family={Kiltz},
+           familyi={K\bibinitperiod},
+           given={Eike},
+           giveni={E\bibinitperiod}}}%
+        {{hash=d03670ea34cfab3cc04211f1605dc6e3}{%
+           family={Lepoint},
+           familyi={L\bibinitperiod},
+           given={Tancrede},
+           giveni={T\bibinitperiod}}}%
+        {{hash=928bcadb00050adca6148fe4cbefc5d7}{%
+           family={Lyubashevsky},
+           familyi={L\bibinitperiod},
+           given={Vadim},
+           giveni={V\bibinitperiod}}}%
+        {{hash=d73f5269a295977070bf92d05cf9415e}{%
+           family={Schwabe},
+           familyi={S\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+        {{hash=6ad6aaf85bcdaa083e71211a4c9cd987}{%
+           family={Seiler},
+           familyi={S\bibinitperiod},
+           given={Gregor},
+           giveni={G\bibinitperiod}}}%
+        {{hash=589d33cc0094d51211bef3b93ec84fcd}{%
+           family={Stehle},
+           familyi={S\bibinitperiod},
+           given={Damien},
+           giveni={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{a26db4d258ac5205e9dca293b56dcac1}
+      \strng{fullhash}{be576dc7b3e08851008702de960fc410}
+      \strng{fullhashraw}{be576dc7b3e08851008702de960fc410}
+      \strng{bibnamehash}{be576dc7b3e08851008702de960fc410}
+      \strng{authorbibnamehash}{be576dc7b3e08851008702de960fc410}
+      \strng{authornamehash}{a26db4d258ac5205e9dca293b56dcac1}
+      \strng{authorfullhash}{be576dc7b3e08851008702de960fc410}
+      \strng{authorfullhashraw}{be576dc7b3e08851008702de960fc410}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{2018 IEEE European Symposium on Security and Privacy}
+      \field{title}{CRYSTALS-{Kyber}: A {CCA}-Secure Module-Lattice-Based KEM}
+      \field{year}{2018}
+      \field{pages}{353\bibrangedash 367}
+      \range{pages}{15}
+    \endentry
+    \entry{xgboost_2016}{inproceedings}{}{}
+      \name{author}{2}{}{%
+        {{hash=48461ccdf50ba5a54e29a354aa734c0b}{%
+           family={Chen},
+           familyi={C\bibinitperiod},
+           given={Tianqi},
+           giveni={T\bibinitperiod}}}%
+        {{hash=c9ab8ac486d7f85ac914b1a8e51e512b}{%
+           family={Guestrin},
+           familyi={G\bibinitperiod},
+           given={Carlos},
+           giveni={C\bibinitperiod}}}%
+      }
+      \strng{namehash}{f79ceb030bcf791e5521f87ac6ada03b}
+      \strng{fullhash}{f79ceb030bcf791e5521f87ac6ada03b}
+      \strng{fullhashraw}{f79ceb030bcf791e5521f87ac6ada03b}
+      \strng{bibnamehash}{f79ceb030bcf791e5521f87ac6ada03b}
+      \strng{authorbibnamehash}{f79ceb030bcf791e5521f87ac6ada03b}
+      \strng{authornamehash}{f79ceb030bcf791e5521f87ac6ada03b}
+      \strng{authorfullhash}{f79ceb030bcf791e5521f87ac6ada03b}
+      \strng{authorfullhashraw}{f79ceb030bcf791e5521f87ac6ada03b}
+      \field{sortinit}{C}
+      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining}
+      \field{title}{{XGBoost}: A Scalable Tree Boosting System}
+      \field{year}{2016}
+      \field{pages}{785\bibrangedash 794}
+      \range{pages}{10}
+    \endentry
+    \entry{ducas2018dilithium}{inproceedings}{}{}
+      \name{author}{3}{}{%
+        {{hash=af45937f5146427dab90d717c0274a3b}{%
+           family={Ducas},
+           familyi={D\bibinitperiod},
+           given={Leo},
+           giveni={L\bibinitperiod}}}%
+        {{hash=928bcadb00050adca6148fe4cbefc5d7}{%
+           family={Lyubashevsky},
+           familyi={L\bibinitperiod},
+           given={Vadim},
+           giveni={V\bibinitperiod}}}%
+        {{hash=d73f5269a295977070bf92d05cf9415e}{%
+           family={Schwabe},
+           familyi={S\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{0837eac54a2470045d24014a32c09cc8}
+      \strng{fullhash}{5fa67940606a23c84e326b47e916ce9f}
+      \strng{fullhashraw}{5fa67940606a23c84e326b47e916ce9f}
+      \strng{bibnamehash}{5fa67940606a23c84e326b47e916ce9f}
+      \strng{authorbibnamehash}{5fa67940606a23c84e326b47e916ce9f}
+      \strng{authornamehash}{0837eac54a2470045d24014a32c09cc8}
+      \strng{authorfullhash}{5fa67940606a23c84e326b47e916ce9f}
+      \strng{authorfullhashraw}{5fa67940606a23c84e326b47e916ce9f}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{2018 IEEE European Symposium on Security and Privacy}
+      \field{title}{CRYSTALS-{Dilithium}: A Lattice-Based Digital Signature Scheme}
+      \field{year}{2018}
+      \field{pages}{356\bibrangedash 374}
+      \range{pages}{19}
+    \endentry
+    \entry{hortelano_rl_edge_survey_2023}{article}{}{}
+      \name{author}{2}{}{%
+        {{hash=7154ff65080eb14463b1ccb8f3b361a1}{%
+           family={Hortelano},
+           familyi={H\bibinitperiod},
+           given={Jarle},
+           giveni={J\bibinitperiod}}}%
+        {{hash=2ec2c63522fad2b646dc912c8941d03e}{%
+           family={Sayed-Mouchaweh},
+           familyi={S\bibinithyphendelim M\bibinitperiod},
+           given={Moamar},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{3d4b5466c5efde14ccd75cb329cd6908}
+      \strng{fullhash}{3d4b5466c5efde14ccd75cb329cd6908}
+      \strng{fullhashraw}{3d4b5466c5efde14ccd75cb329cd6908}
+      \strng{bibnamehash}{3d4b5466c5efde14ccd75cb329cd6908}
+      \strng{authorbibnamehash}{3d4b5466c5efde14ccd75cb329cd6908}
+      \strng{authornamehash}{3d4b5466c5efde14ccd75cb329cd6908}
+      \strng{authorfullhash}{3d4b5466c5efde14ccd75cb329cd6908}
+      \strng{authorfullhashraw}{3d4b5466c5efde14ccd75cb329cd6908}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+   \field{journaltitle}{IEEE Communications Surveys \& Tutorials}
+      \field{number}{3}
+      \field{title}{Reinforcement Learning for Edge and Fog Computing: A Survey}
+      \field{volume}{25}
+      \field{year}{2023}
+      \field{pages}{1453\bibrangedash 1485}
+      \range{pages}{33}
+    \endentry
+    \entry{pqm4_2019}{inproceedings}{}{}
+      \name{author}{4}{}{%
+        {{hash=67275e7b022681c6e557b583fe9825e9}{%
+           family={Keller},
+           familyi={K\bibinitperiod},
+           given={Nina},
+           giveni={N\bibinitperiod}}}%
+        {{hash=3854d3e210d104a96c863d8f693fda54}{%
+           family={Oder},
+           familyi={O\bibinitperiod},
+           given={Tobias},
+           giveni={T\bibinitperiod}}}%
+        {{hash=409b1fd131d474e94de6c512284e3d71}{%
+           family={Poeppelmann},
+           familyi={P\bibinitperiod},
+           given={Thomas},
+           giveni={T\bibinitperiod}}}%
+        {{hash=d73f5269a295977070bf92d05cf9415e}{%
+           family={Schwabe},
+           familyi={S\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{18c166e5380b62bb7d22e3c7cdca037a}
+      \strng{fullhash}{397743528dc38ef6bd9c50e6b1ef6b52}
+      \strng{fullhashraw}{397743528dc38ef6bd9c50e6b1ef6b52}
+      \strng{bibnamehash}{397743528dc38ef6bd9c50e6b1ef6b52}
+      \strng{authorbibnamehash}{397743528dc38ef6bd9c50e6b1ef6b52}
+      \strng{authornamehash}{18c166e5380b62bb7d22e3c7cdca037a}
+      \strng{authorfullhash}{397743528dc38ef6bd9c50e6b1ef6b52}
+      \strng{authorfullhashraw}{397743528dc38ef6bd9c50e6b1ef6b52}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 10th International Conference on Post-Quantum Cryptography}
+      \field{title}{{PQM4}: Post-Quantum Cryptography on the {ARM} Cortex-M4}
+      \field{year}{2019}
+      \field{pages}{172\bibrangedash 195}
+      \range{pages}{24}
+    \endentry
+    \entry{faster_kyber_dilithium_m4_2022}{inproceedings}{}{}
+      \name{author}{3}{}{%
+        {{hash=011d378c67c3b32c5cdd3aae8f75a39a}{%
+           family={Koelbl},
+           familyi={K\bibinitperiod},
+           given={Stefan},
+           giveni={S\bibinitperiod}}}%
+        {{hash=f5f77a4c17fd1e518068a422978e9a2f}{%
+           family={Procter},
+           familyi={P\bibinitperiod},
+           given={Sam\bibnamedelima Scott},
+           giveni={S\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+        {{hash=d73f5269a295977070bf92d05cf9415e}{%
+           family={Schwabe},
+           familyi={S\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{0701f950916695414896a0134d8565f6}
+      \strng{fullhash}{1d057e1956e77ad9aafbd9db5383524f}
+      \strng{fullhashraw}{1d057e1956e77ad9aafbd9db5383524f}
+      \strng{bibnamehash}{1d057e1956e77ad9aafbd9db5383524f}
+      \strng{authorbibnamehash}{1d057e1956e77ad9aafbd9db5383524f}
+      \strng{authornamehash}{0701f950916695414896a0134d8565f6}
+      \strng{authorfullhash}{1d057e1956e77ad9aafbd9db5383524f}
+      \strng{authorfullhashraw}{1d057e1956e77ad9aafbd9db5383524f}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 29th ACM Conference on Computer and Communications Security}
+      \field{title}{Faster Kyber and Dilithium on the {ARM} Cortex-M4}
+      \field{year}{2022}
+      \field{pages}{2329\bibrangedash 2343}
+      \range{pages}{15}
+    \endentry
+    \entry{mavlink_signing_mavlinkio}{manual}{}{}
+      \name{author}{1}{}{%
+        {{hash=064e5723b786627483d345a99909d5b6}{%
+           family={{MAVLink Development Team}},
+           familyi={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{064e5723b786627483d345a99909d5b6}
+      \strng{fullhash}{064e5723b786627483d345a99909d5b6}
+      \strng{fullhashraw}{064e5723b786627483d345a99909d5b6}
+      \strng{bibnamehash}{064e5723b786627483d345a99909d5b6}
+      \strng{authorbibnamehash}{064e5723b786627483d345a99909d5b6}
+      \strng{authornamehash}{064e5723b786627483d345a99909d5b6}
+      \strng{authorfullhash}{064e5723b786627483d345a99909d5b6}
+      \strng{authorfullhashraw}{064e5723b786627483d345a99909d5b6}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{note}{Accessed October 16, 2025}
+      \field{title}{MAVLink 2 Message Signing}
+      \field{year}{2024}
+      \verb{urlraw}
+      \verb https://mavlink.io/en/guide/message_signing.html
+      \endverb
+      \verb{url}
+      \verb https://mavlink.io/en/guide/message_signing.html
+      \endverb
+    \endentry
+    \entry{meier2011pixhawk}{inproceedings}{}{}
+      \name{author}{4}{}{%
+        {{hash=9c8a122e3af5eff832a3515e7c7185e3}{%
+           family={Meier},
+           familyi={M\bibinitperiod},
+           given={Lorenz},
+           giveni={L\bibinitperiod}}}%
+        {{hash=3d7e7ef2cda81e0d7581b15cd568fd82}{%
+           family={Tanskanen},
+           familyi={T\bibinitperiod},
+           given={Petri},
+           giveni={P\bibinitperiod}}}%
+        {{hash=ea987af098c553e56730615d244f1dd6}{%
+           family={Fraundorfer},
+           familyi={F\bibinitperiod},
+           given={Friedrich},
+           giveni={F\bibinitperiod}}}%
+        {{hash=501629493a5ead2d23ee597103478ce8}{%
+           family={Pollefeys},
+           familyi={P\bibinitperiod},
+           given={Marc},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{5aafbec6e0609cf93eb3c594ed3b6bc2}
+      \strng{fullhash}{565665529e51ecdfb35c8ce6cd0887b9}
+      \strng{fullhashraw}{565665529e51ecdfb35c8ce6cd0887b9}
+      \strng{bibnamehash}{565665529e51ecdfb35c8ce6cd0887b9}
+      \strng{authorbibnamehash}{565665529e51ecdfb35c8ce6cd0887b9}
+      \strng{authornamehash}{5aafbec6e0609cf93eb3c594ed3b6bc2}
+      \strng{authorfullhash}{565665529e51ecdfb35c8ce6cd0887b9}
+      \strng{authorfullhashraw}{565665529e51ecdfb35c8ce6cd0887b9}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the IEEE International Conference on Robotics and Automation Workshops}
+      \field{title}{PX4: A Micro Aerial Vehicle Design for Autonomous Flight}
+      \field{year}{2011}
+    \endentry
+    \entry{nist_fips_203_2024}{report}{}{}
+      \name{author}{1}{}{%
+        {{hash=ef9cb61878e61d434507444346b29d1a}{%
+           family={{National Institute of Standards and Technology}},
+           familyi={N\bibinitperiod}}}%
+      }
+      \list{institution}{1}{%
+        {U.S. Department of Commerce}%
+      }
+      \strng{namehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \strng{bibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorbibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authornamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \field{extraname}{1}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{FIPS 203: Module {Lattice} {Key}-Encapsulation Mechanism (ML-KEM)}
+      \field{type}{techreport}
+      \field{year}{2024}
+    \endentry
+    \entry{nist_fips_204_2024}{report}{}{}
+      \name{author}{1}{}{%
+        {{hash=ef9cb61878e61d434507444346b29d1a}{%
+           family={{National Institute of Standards and Technology}},
+           familyi={N\bibinitperiod}}}%
+      }
+      \list{institution}{1}{%
+        {U.S. Department of Commerce}%
+      }
+      \strng{namehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \strng{bibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorbibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authornamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \field{extraname}{2}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{FIPS 204: Module {Lattice} {Digital} Signature Algorithm (ML-DSA)}
+      \field{type}{techreport}
+      \field{year}{2024}
+    \endentry
+    \entry{nist_fips_205_2024}{report}{}{}
+      \name{author}{1}{}{%
+        {{hash=ef9cb61878e61d434507444346b29d1a}{%
+           family={{National Institute of Standards and Technology}},
+           familyi={N\bibinitperiod}}}%
+      }
+      \list{institution}{1}{%
+        {U.S. Department of Commerce}%
+      }
+      \strng{namehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \strng{bibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorbibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authornamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \field{extraname}{3}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{FIPS 205: Stateless {Hash}-based {Digital} Signature Algorithm (SLH-DSA)}
+      \field{type}{techreport}
+      \field{year}{2024}
+    \endentry
+    \entry{nist_pqc_news_2024}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=ef9cb61878e61d434507444346b29d1a}{%
+           family={{National Institute of Standards and Technology}},
+           familyi={N\bibinitperiod}}}%
+      }
+      \strng{namehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \strng{bibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorbibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authornamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \field{extraname}{4}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{Press Release}
+      \field{note}{Accessed October 16, 2025}
+      \field{title}{NIST Announces First Post-Quantum Cryptography Standards}
+      \field{year}{2024}
+      \verb{urlraw}
+      \verb https://www.nist.gov/news-events/news/2024/07/nist-announces-first-post-quantum-cryptography-standards
+      \endverb
+      \verb{url}
+      \verb https://www.nist.gov/news-events/news/2024/07/nist-announces-first-post-quantum-cryptography-standards
+      \endverb
+    \endentry
+    \entry{nist_sp800_232_2025}{report}{}{}
+      \name{author}{1}{}{%
+        {{hash=ef9cb61878e61d434507444346b29d1a}{%
+           family={{National Institute of Standards and Technology}},
+           familyi={N\bibinitperiod}}}%
+      }
+      \list{institution}{1}{%
+        {U.S. Department of Commerce}%
+      }
+      \strng{namehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \strng{bibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorbibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authornamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \field{extraname}{5}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{NIST SP 800-232: Guidance for Using Authenticated Encryption with Associated Data}
+      \field{type}{techreport}
+      \field{year}{2025}
+    \endentry
+    \entry{fips206_status_2025}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=ef9cb61878e61d434507444346b29d1a}{%
+           family={{National Institute of Standards and Technology}},
+           familyi={N\bibinitperiod}}}%
+      }
+      \strng{namehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \strng{bibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorbibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authornamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \field{extraname}{6}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{Project Status Update}
+      \field{note}{Accessed October 16, 2025}
+      \field{title}{Status of Draft FIPS 206: Fast {Fourier}-Lattice Based Digital Signature Algorithm (FN-DSA)}
+      \field{year}{2025}
+      \verb{urlraw}
+      \verb https://csrc.nist.gov/projects/post-quantum-cryptography/workshops-and-timeline
+      \endverb
+      \verb{url}
+      \verb https://csrc.nist.gov/projects/post-quantum-cryptography/workshops-and-timeline
+      \endverb
+    \endentry
+    \entry{dilithium_cortexm_tches2021}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=3854d3e210d104a96c863d8f693fda54}{%
+           family={Oder},
+           familyi={O\bibinitperiod},
+           given={Tobias},
+           giveni={T\bibinitperiod}}}%
+        {{hash=409b1fd131d474e94de6c512284e3d71}{%
+           family={Poeppelmann},
+           familyi={P\bibinitperiod},
+           given={Thomas},
+           giveni={T\bibinitperiod}}}%
+        {{hash=d73f5269a295977070bf92d05cf9415e}{%
+           family={Schwabe},
+           familyi={S\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{ead4701517e045e0400b0af39da48c15}
+      \strng{fullhash}{4675c750c52d34d0fce58b684d469f74}
+      \strng{fullhashraw}{4675c750c52d34d0fce58b684d469f74}
+      \strng{bibnamehash}{4675c750c52d34d0fce58b684d469f74}
+      \strng{authorbibnamehash}{4675c750c52d34d0fce58b684d469f74}
+      \strng{authornamehash}{ead4701517e045e0400b0af39da48c15}
+      \strng{authorfullhash}{4675c750c52d34d0fce58b684d469f74}
+      \strng{authorfullhashraw}{4675c750c52d34d0fce58b684d469f74}
+      \field{sortinit}{O}
+      \field{sortinithash}{2cd7140a07aea5341f9e2771efe90aae}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IACR Transactions on Cryptographic Hardware and Embedded Systems}
+      \field{number}{1}
+      \field{title}{SABER and Kyber on {ARM} Cortex-M4}
+      \field{year}{2021}
+      \field{pages}{44\bibrangedash 68}
+      \range{pages}{25}
+    \endentry
+    \entry{prest2019falcon}{inproceedings}{}{}
+      \name{author}{9}{}{%
+        {{hash=7f74eaf398880014f7a22cd94302c8ca}{%
+           family={Prest},
+           familyi={P\bibinitperiod},
+           given={Thomas},
+           giveni={T\bibinitperiod}}}%
+        {{hash=af45937f5146427dab90d717c0274a3b}{%
+           family={Ducas},
+           familyi={D\bibinitperiod},
+           given={Leo},
+           giveni={L\bibinitperiod}}}%
+        {{hash=52b1d5cf71b1a5f3f05e8f3cbf2770c4}{%
+           family={Fouque},
+           familyi={F\bibinitperiod},
+           given={Pierre-Alain},
+           giveni={P\bibinithyphendelim A\bibinitperiod}}}%
+        {{hash=3a691fc6ff884507edcdc40d4048c61a}{%
+           family={Kiltz},
+           familyi={K\bibinitperiod},
+           given={Eike},
+           giveni={E\bibinitperiod}}}%
+        {{hash=d03670ea34cfab3cc04211f1605dc6e3}{%
+           family={Lepoint},
+           familyi={L\bibinitperiod},
+           given={Tancrede},
+           giveni={T\bibinitperiod}}}%
+        {{hash=928bcadb00050adca6148fe4cbefc5d7}{%
+           family={Lyubashevsky},
+           familyi={L\bibinitperiod},
+           given={Vadim},
+           giveni={V\bibinitperiod}}}%
+        {{hash=d73f5269a295977070bf92d05cf9415e}{%
+           family={Schwabe},
+           familyi={S\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+        {{hash=6ad6aaf85bcdaa083e71211a4c9cd987}{%
+           family={Seiler},
+           familyi={S\bibinitperiod},
+           given={Gregor},
+           giveni={G\bibinitperiod}}}%
+        {{hash=589d33cc0094d51211bef3b93ec84fcd}{%
+           family={Stehle},
+           familyi={S\bibinitperiod},
+           given={Damien},
+           giveni={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{d9b38115f6d1bb5a2c5e896ddecfd394}
+      \strng{fullhash}{d4e7b5abdb77fcec2345177ba4a16293}
+      \strng{fullhashraw}{d4e7b5abdb77fcec2345177ba4a16293}
+      \strng{bibnamehash}{d4e7b5abdb77fcec2345177ba4a16293}
+      \strng{authorbibnamehash}{d4e7b5abdb77fcec2345177ba4a16293}
+      \strng{authornamehash}{d9b38115f6d1bb5a2c5e896ddecfd394}
+      \strng{authorfullhash}{d4e7b5abdb77fcec2345177ba4a16293}
+      \strng{authorfullhashraw}{d4e7b5abdb77fcec2345177ba4a16293}
+      \field{sortinit}{P}
+      \field{sortinithash}{ff3bcf24f47321b42cb156c2cc8a8422}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{2019 IEEE European Symposium on Security and Privacy}
+      \field{title}{{Falcon}: Fast-Fourier Lattice-Based Compact Signatures over NTRU}
+      \field{year}{2019}
+      \field{pages}{708\bibrangedash 723}
+      \range{pages}{16}
+    \endentry
+    \entry{raspi4_specs}{manual}{}{}
+      \name{author}{1}{}{%
+        {{hash=abdff8c3bc7ac1a29e4f7edc008fe26b}{%
+           family={{Raspberry Pi Ltd.}},
+           familyi={R\bibinitperiod}}}%
+      }
+      \strng{namehash}{abdff8c3bc7ac1a29e4f7edc008fe26b}
+      \strng{fullhash}{abdff8c3bc7ac1a29e4f7edc008fe26b}
+      \strng{fullhashraw}{abdff8c3bc7ac1a29e4f7edc008fe26b}
+      \strng{bibnamehash}{abdff8c3bc7ac1a29e4f7edc008fe26b}
+      \strng{authorbibnamehash}{abdff8c3bc7ac1a29e4f7edc008fe26b}
+      \strng{authornamehash}{abdff8c3bc7ac1a29e4f7edc008fe26b}
+      \strng{authorfullhash}{abdff8c3bc7ac1a29e4f7edc008fe26b}
+      \strng{authorfullhashraw}{abdff8c3bc7ac1a29e4f7edc008fe26b}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{note}{Accessed October 16, 2025}
+      \field{title}{Raspberry Pi 4 Model B Datasheet}
+      \field{year}{2023}
+      \verb{urlraw}
+      \verb https://datasheets.raspberrypi.com/rpi4/raspberry-pi-4-datasheet.pdf
+      \endverb
+      \verb{url}
+      \verb https://datasheets.raspberrypi.com/rpi4/raspberry-pi-4-datasheet.pdf
+      \endverb
+    \endentry
+    \entry{iot_pqtls_2023}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=ad898f7d81301227e7813cecea03921b}{%
+           family={Raza},
+           familyi={R\bibinitperiod},
+           given={Syed\bibnamedelima Hassan},
+           giveni={S\bibinitperiod\bibinitdelim H\bibinitperiod}}}%
+        {{hash=beca40069b33c139a0b980e3513bafa6}{%
+           family={Abbas},
+           familyi={A\bibinitperiod},
+           given={Zahid},
+           giveni={Z\bibinitperiod}}}%
+        {{hash=1d7245084633f5c181b0ded0b8e42acb}{%
+           family={Kim},
+           familyi={K\bibinitperiod},
+           given={Hyung\bibnamedelima Seok},
+           giveni={H\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+      }
+      \strng{namehash}{2da096510306d6ffd85be914ff531985}
+      \strng{fullhash}{d7c91bf8d1e41eb4bcc8df77ec3a6177}
+      \strng{fullhashraw}{d7c91bf8d1e41eb4bcc8df77ec3a6177}
+      \strng{bibnamehash}{d7c91bf8d1e41eb4bcc8df77ec3a6177}
+      \strng{authorbibnamehash}{d7c91bf8d1e41eb4bcc8df77ec3a6177}
+      \strng{authornamehash}{2da096510306d6ffd85be914ff531985}
+      \strng{authorfullhash}{d7c91bf8d1e41eb4bcc8df77ec3a6177}
+      \strng{authorfullhashraw}{d7c91bf8d1e41eb4bcc8df77ec3a6177}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE Internet of Things Journal}
+      \field{number}{5}
+      \field{title}{Performance Evaluation of Post-Quantum {TLS} for Internet of Things Devices}
+      \field{volume}{10}
+      \field{year}{2023}
+      \field{pages}{4109\bibrangedash 4119}
+      \range{pages}{11}
+    \endentry
+    \entry{watkins1992qlearning}{article}{}{}
+      \name{author}{2}{}{%
+        {{hash=6522b6087fe013d303faca6da91596ca}{%
+           family={Watkins},
+           familyi={W\bibinitperiod},
+           given={Christopher\bibnamedelimb J.\bibnamedelimi C.\bibnamedelimi H.},
+           giveni={C\bibinitperiod\bibinitdelim J\bibinitperiod\bibinitdelim C\bibinitperiod\bibinitdelim H\bibinitperiod}}}%
+        {{hash=ef0afbe0b4e15059c963e026fe213c34}{%
+           family={Dayan},
+           familyi={D\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{1f776b9a46cb729efd9599e3af8beeef}
+      \strng{fullhash}{1f776b9a46cb729efd9599e3af8beeef}
+      \strng{fullhashraw}{1f776b9a46cb729efd9599e3af8beeef}
+      \strng{bibnamehash}{1f776b9a46cb729efd9599e3af8beeef}
+      \strng{authorbibnamehash}{1f776b9a46cb729efd9599e3af8beeef}
+      \strng{authornamehash}{1f776b9a46cb729efd9599e3af8beeef}
+      \strng{authorfullhash}{1f776b9a46cb729efd9599e3af8beeef}
+      \strng{authorfullhashraw}{1f776b9a46cb729efd9599e3af8beeef}
+      \field{sortinit}{W}
+      \field{sortinithash}{4315d78024d0cea9b57a0c6f0e35ed0d}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Machine Learning}
+      \field{number}{3--4}
+      \field{title}{Q-Learning}
+      \field{volume}{8}
+      \field{year}{1992}
+      \field{pages}{279\bibrangedash 292}
+      \range{pages}{14}
+    \endentry
+    \entry{uav_rl_energy_2023}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=ab696ba1908fd9d2cf2e248950750d9c}{%
+           family={Yang},
+           familyi={Y\bibinitperiod},
+           given={Jianyu},
+           giveni={J\bibinitperiod}}}%
+        {{hash=ad121cba1cde2b79c8d23a74371907b5}{%
+           family={Chen},
+           familyi={C\bibinitperiod},
+           given={Keke},
+           giveni={K\bibinitperiod}}}%
+        {{hash=a1b9a0343d778c1ce923d6141084e194}{%
+           family={Gao},
+           familyi={G\bibinitperiod},
+           given={Hongwei},
+           giveni={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{52ce1048baed6f20a87f3aec781cc979}
+      \strng{fullhash}{20a1e035918760e5df4a2e770643be06}
+      \strng{fullhashraw}{20a1e035918760e5df4a2e770643be06}
+      \strng{bibnamehash}{20a1e035918760e5df4a2e770643be06}
+      \strng{authorbibnamehash}{20a1e035918760e5df4a2e770643be06}
+      \strng{authornamehash}{52ce1048baed6f20a87f3aec781cc979}
+      \strng{authorfullhash}{20a1e035918760e5df4a2e770643be06}
+      \strng{authorfullhashraw}{20a1e035918760e5df4a2e770643be06}
+      \field{sortinit}{Y}
+      \field{sortinithash}{fd67ad5a9ef0f7456bdd9aab10fe1495}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE Transactions on Vehicular Technology}
+      \field{number}{9}
+      \field{title}{Reinforcement Learning Based Energy Optimization for UAV Communication Networks}
+      \field{volume}{72}
+      \field{year}{2023}
+      \field{pages}{11345\bibrangedash 11357}
+      \range{pages}{13}
+    \endentry
+    \entry{zerveas_tst_2021}{inproceedings}{}{}
+      \name{author}{5}{}{%
+        {{hash=e62aac7d1b9a3ba68a65adff324a72c5}{%
+           family={Zerveas},
+           familyi={Z\bibinitperiod},
+           given={George},
+           giveni={G\bibinitperiod}}}%
+        {{hash=1a284bab8c4785aff5031c36064eb28a}{%
+           family={Jayaraman},
+           familyi={J\bibinitperiod},
+           given={Sridevi},
+           giveni={S\bibinitperiod}}}%
+        {{hash=574c293f21bc0fd67ae74e0f7f060779}{%
+           family={Patel},
+           familyi={P\bibinitperiod},
+           given={Dhaval},
+           giveni={D\bibinitperiod}}}%
+        {{hash=5e7f7ab2768fd21f72b6e62ca6338ec6}{%
+           family={Bhamidipaty},
+           familyi={B\bibinitperiod},
+           given={Anuradha},
+           giveni={A\bibinitperiod}}}%
+        {{hash=58de468240e30c9310974f0474a16450}{%
+           family={Eickhoff},
+           familyi={E\bibinitperiod},
+           given={Carsten},
+           giveni={C\bibinitperiod}}}%
+      }
+      \strng{namehash}{622c299bd872ef01560b96df7d00ec56}
+      \strng{fullhash}{8890b45962730a4738158dddea4fdae5}
+      \strng{fullhashraw}{8890b45962730a4738158dddea4fdae5}
+      \strng{bibnamehash}{8890b45962730a4738158dddea4fdae5}
+      \strng{authorbibnamehash}{8890b45962730a4738158dddea4fdae5}
+      \strng{authornamehash}{622c299bd872ef01560b96df7d00ec56}
+      \strng{authorfullhash}{8890b45962730a4738158dddea4fdae5}
+      \strng{authorfullhashraw}{8890b45962730a4738158dddea4fdae5}
+      \field{sortinit}{Z}
+      \field{sortinithash}{96892c0b0a36bb8557c40c49813d48b3}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 27th ACM SIGKDD Conference on Knowledge Discovery and Data Mining}
+      \field{title}{A Transformer-Based Framework for Multivariate Time Series Representation Learning}
+      \field{year}{2021}
+      \field{pages}{2114\bibrangedash 2124}
+      \range{pages}{11}
+    \endentry
+    \entry{zhou_drl_resource_edge_2024}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=b0419548a59924dfc1f89b9eaced8908}{%
+           family={Zhou},
+           familyi={Z\bibinitperiod},
+           given={Yifan},
+           giveni={Y\bibinitperiod}}}%
+        {{hash=cb18f339ec0f0d63c013d093bd6a8bf2}{%
+           family={Shi},
+           familyi={S\bibinitperiod},
+           given={Yunchan},
+           giveni={Y\bibinitperiod}}}%
+        {{hash=25bbf4047d900f3760c65b01ee899dba}{%
+           family={Zhang},
+           familyi={Z\bibinitperiod},
+           given={Wei},
+           giveni={W\bibinitperiod}}}%
+      }
+      \strng{namehash}{79a2173a6f011f76299acd41913e0480}
+      \strng{fullhash}{c5132aee72498a97ea42a0f125af5327}
+      \strng{fullhashraw}{c5132aee72498a97ea42a0f125af5327}
+      \strng{bibnamehash}{c5132aee72498a97ea42a0f125af5327}
+      \strng{authorbibnamehash}{c5132aee72498a97ea42a0f125af5327}
+      \strng{authornamehash}{79a2173a6f011f76299acd41913e0480}
+      \strng{authorfullhash}{c5132aee72498a97ea42a0f125af5327}
+      \strng{authorfullhashraw}{c5132aee72498a97ea42a0f125af5327}
+      \field{sortinit}{Z}
+      \field{sortinithash}{96892c0b0a36bb8557c40c49813d48b3}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{ACM Transactions on Internet Technology}
+      \field{number}{2}
+      \field{title}{Deep Reinforcement Learning for Adaptive Resource Allocation in Edge Computing}
+      \field{volume}{24}
+      \field{year}{2024}
+      \field{pages}{1\bibrangedash 25}
+      \range{pages}{25}
+    \endentry
+  \enddatalist
+  \missing{fang_rl_key_rotation_zigbee_2024}
+  \missing{futureinternet_transformer_iiot_2025}
+\endrefsection
+\endinput
+

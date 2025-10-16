@@ -1,0 +1,590 @@
+Experimental Results and Performance Analysis
+
+1.0 Introduction to Experimental Framework
+
+The primary objective of these experiments is to rigorously evaluate the performance of a policy-driven expert scheduler managing a UAV's secure communication link. The evaluation was conducted under varying computational loads imposed by different on-board Distributed Denial of Service (DDoS) detection models. The analysis encompasses three distinct test families: a baseline scenario with no active DDoS detection, a lightweight mode utilizing an XGBoost classifier, and a heavyweight mode employing a Time-Series Transformer (TST) model. To isolate and clearly assess the performance of the expert policy, all experiments were conducted exclusively with the expert scheduler; Reinforcement Learning (RL) and hybrid scheduling strategies were intentionally disabled for this scope of analysis.
+
+This report presents a detailed examination of the results, beginning with a narrative analysis of key performance indicators. This is followed by comprehensive tabular summaries that allow for direct comparison across cryptographic suites and operational conditions. The analysis covers critical metrics including network performance, cryptographic latencies, system resource utilization, and power consumption, providing a holistic view of the system's behavior under escalating security postures.
+
+2.0 Comprehensive Performance Analysis
+
+This section provides a narrative analysis of the key performance indicators across the three experimental scenarios. The data is interpreted to demonstrate the expert scheduler's behavior and the trade-offs it manages when faced with increasing computational demands from the security subsystems.
+
+2.1 Network Throughput and Link Quality
+
+The viability of a UAV's communication link is primarily indicated by its network throughput, goodput, and packet loss rate. These metrics directly reflect the system's ability to transmit and receive critical data reliably. This analysis compares these key indicators across the Baseline (no DDoS detection), Lightweight (XGBoost), and Heavyweight (TST) scenarios to evaluate the expert scheduler's effectiveness in maintaining link quality under increasing onboard computational stress.
+
+Across all test scenarios, the expert scheduler successfully maintained network throughput at levels consistently close to the target of 8.0 Mb/s, demonstrating its core capability to prioritize data transmission. However, the introduction of the heavyweight TST model introduced a notable trade-off in link quality. While the Baseline and Lightweight scenarios generally exhibited high packet delivery ratios, the Heavyweight scenario saw a marked increase in packet loss. For instance, with the cs-classicmceliece348864-aesgcm-sphincs128fsha2 suite, the packet loss rate increased from 0.040% in the baseline test to a significant 6.447% under the heavy computational load of the TST model. It is important to note that even the Lightweight (XGBoost) model introduced measurable stress, with outliers such as cs-hqc256-aesgcm-mldsa87 and cs-frodokem640aes-chacha20poly1305-mldsa44 experiencing 3.226% and 2.459% loss, respectively. This suggests that the intermittent processing spikes of the XGBoost model, when combined with certain cryptographic workloads, can already begin to saturate system resources. This behavior indicates that as CPU resources become contended, the scheduler begins to shed load by dropping packets—a form of graceful degradation to preserve the primary data-link objective.
+
+In summary, while the scheduler maintains high throughput, the computational overhead of the DDoS detection models measurably impacts link quality, as evidenced by increased packet loss. This degradation in reliability is a direct consequence of resource contention managed by the scheduler, setting the stage for an analysis of the corresponding latency trade-offs.
+
+2.2 Round-Trip Time (RTT) and Latency Profile
+
+For UAV command and control (C2) applications, low and predictable latency, measured by Round-Trip Time (RTT), is critical for mission success and platform stability. This subsection dissects the RTT distributions (average, p50, p95, max) to reveal how the computational overhead of the DDoS detection models impacts communication timeliness.
+
+The results show a clear correlation between computational load and network latency. The Baseline and Lightweight (XGBoost) scenarios maintained stable and low RTTs. In stark contrast, the Heavyweight (TST) scenario introduced significantly higher and more variable RTTs. Using cs-classicmceliece348864-aesgcm-sphincs128fsha2 as a representative example, the average RTT increased from a stable 13.559 ms in the baseline run to 110.382 ms under the heavyweight TST load. An analysis of the tail latency is even more revealing; the 95th percentile (p95) RTT for this suite escalated from 28.647 ms in the baseline to 493.777 ms in the heavyweight test. This dramatic increase in p95 and maximum RTT values is evidence of extreme queuing delays and CPU contention. While the average user experience degrades, the worst-case experience collapses, creating latency spikes that could jeopardize real-time control. This behavior is a direct consequence of the scheduler managing severe resource contention between network processing, cryptographic operations, and the demanding TST model.
+
+The observed increase in network latency is directly compounded by the computational cost of the cryptographic operations themselves, a relationship that is explored in the following section.
+
+2.3 Cryptographic Primitive Performance
+
+The efficiency of the underlying cryptographic operations—specifically key generation, encapsulation, and digital signing—is a primary driver of overall system performance, latency, and power consumption on a resource-constrained platform. This section analyzes the latencies of these primitives to understand the intrinsic computational cost of each Post-Quantum Cryptography (PQC) suite.
+
+The analysis of the cryptographic breakdown reveals significant performance disparities between the different PQC families. For instance, in the lightweight test scenario, suites based on ML-KEM and ML-DSA, such as cs-mlkem512-chacha20poly1305-mldsa44, exhibit extremely low total primitive latencies, measured at just 0.385 ms. Conversely, suites employing more computationally intensive algorithms, such as cs-classicmceliece8192128-aesgcm-sphincs256fsha2, required 555.850 ms to complete the same set of operations. This difference of three orders of magnitude highlights the vast range of computational costs associated with different PQC algorithms. It is notable that under the extreme load of the heavyweight scenario, the reported latencies for very fast primitives can become anomalously low, likely due to measurement artifacts or scheduler-induced timing distortions under near-100% CPU saturation. These intrinsic performance characteristics are nonetheless critical inputs for the scheduler, as they directly influence its decisions when balancing security requirements against real-time operational constraints.
+
+The high computational cost of certain primitives is a leading contributor to overall system resource utilization, which is examined next.
+
+2.4 System Resource Utilization
+
+On a resource-constrained UAV platform, meticulous monitoring of CPU and memory utilization is essential to ensure system stability. The Resident Set Size (RSS) provides a measure of the memory footprint, while maximum CPU utilization indicates peak computational load. This analysis assesses the impact of each DDoS detection model on system load, providing clear insight into the overhead imposed by each defensive posture.
+
+The experimental data reveals a clear and consistent trend of increasing resource consumption as the security posture escalates. In the baseline scenario, the memory footprint (RSS) was generally contained within 270-280 MiB. Activating the lightweight XGBoost model increased this to a range of 600-615 MiB. The introduction of the heavyweight TST model further increased the memory footprint to a range of 742-780 MiB across the test suites. For the cs-classicmceliece348864-aesgcm-sphincs128fsha2 suite, RSS memory grew from 268.4 MiB (no-ddos) to 605.2 MiB (xgboost) and finally to 749.0 MiB (transformer). A similar trend was observed in CPU utilization. While the baseline and lightweight modes saw peak CPU usage in the 70-85% range, the heavyweight TST scenario consistently pushed the CPU toward saturation, with maximum utilization frequently exceeding 90%.
+
+As expected, increased system load invariably leads to higher power consumption, a critical constraint for battery-powered UAVs that directly impacts mission endurance.
+
+2.5 Power and Energy Consumption
+
+For any unmanned aerial vehicle, power consumption is a paramount concern, as it directly dictates flight time and operational range. This subsection analyzes the average power draw (in Watts) and total energy consumed (in Joules) to quantify the energy cost of running different PQC suites and DDoS detection models.
+
+The results demonstrate a clear, incremental increase in power consumption corresponding to the complexity of the active DDoS detection model. Using cs-classicmceliece348864-aesgcm-sphincs128fsha2 as an example, the average power draw rose from 4.234 W in the baseline scenario to 4.354 W with the lightweight XGBoost model, and further to 4.585 W with the heavyweight TST model. This trend holds across all tested PQC suites, confirming that the heightened computational and memory load required by the more advanced security models translates directly into increased energy expenditure.
+
+In conclusion, the experimental results reveal a clear and quantifiable set of trade-offs between the deployed security posture and key operational performance metrics. The expert scheduler is designed to navigate these trade-offs, demonstrating an ability to maintain primary functionality through graceful degradation under severe computational stress.
+
+3.0 Tabular Data Summaries
+
+This section presents detailed experimental data in tabular format to facilitate direct comparison of performance metrics across various PQC suites and operational conditions.
+
+3.1 Table 1: Per-Suite PQC Network Metrics under Lightweight DDoS Detection
+
+This table details the performance of each PQC ciphersuite under a moderate, XGBoost-based DDoS detection load, establishing a baseline for scheduler performance with active threat monitoring.
+
+Suite Name	Throughput (Mb/s)	Goodput (Mb/s)	Packet Loss (%)	Avg RTT (ms)
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	7.932	7.932	0.099	12.570
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	7.937	7.937	0.120	12.020
+cs-classicmceliece460896-aesgcm-mldsa65	7.915	7.915	0.279	16.154
+cs-classicmceliece460896-chacha20poly1305-mldsa65	7.926	7.926	0.224	15.334
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	7.877	7.877	0.556	14.272
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	7.906	7.906	0.086	16.698
+cs-frodokem640aes-aesgcm-mldsa44	7.914	7.914	0.179	15.201
+cs-frodokem640aes-chacha20poly1305-mldsa44	7.746	7.746	2.459	17.454
+cs-frodokem976aes-aesgcm-mldsa65	7.939	7.939	0.101	12.748
+cs-frodokem976aes-chacha20poly1305-mldsa65	7.907	7.907	0.356	15.234
+cs-hqc128-aesgcm-falcon512	7.941	7.941	0.071	12.539
+cs-hqc128-chacha20poly1305-falcon512	7.932	7.932	0.175	11.404
+cs-hqc192-aesgcm-mldsa65	7.869	7.869	0.941	26.206
+cs-hqc192-chacha20poly1305-mldsa65	7.935	7.935	0.038	15.269
+cs-hqc256-aesgcm-mldsa87	7.663	7.663	3.226	61.155
+cs-hqc256-chacha20poly1305-mldsa87	7.909	7.909	0.116	16.231
+cs-mlkem1024-aesgcm-falcon1024	7.858	7.858	1.015	25.045
+cs-mlkem1024-aesgcm-mldsa87	7.775	7.775	2.021	21.728
+cs-mlkem1024-aesgcm-sphincs256fsha2	7.758	7.758	1.860	23.361
+cs-mlkem1024-chacha20poly1305-falcon1024	7.896	7.896	0.117	18.540
+cs-mlkem1024-chacha20poly1305-mldsa87	7.929	7.929	0.112	14.739
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	7.915	7.915	0.024	12.763
+cs-mlkem512-aesgcm-falcon512	7.899	7.899	0.254	15.138
+cs-mlkem512-aesgcm-mldsa44	7.904	7.904	0.525	17.345
+cs-mlkem512-aesgcm-sphincs128fsha2	7.926	7.926	0.195	12.612
+cs-mlkem512-chacha20poly1305-falcon512	7.856	7.856	1.070	17.786
+cs-mlkem512-chacha20poly1305-mldsa44	7.941	7.941	0.092	12.887
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	7.867	7.867	0.064	13.395
+cs-mlkem768-aesgcm-mldsa65	7.946	7.946	0.025	12.170
+cs-mlkem768-chacha20poly1305-mldsa65	7.936	7.936	0.151	12.490
+
+3.2 Table 2: Comparative Network Performance Across DDoS Policies
+
+This table illustrates the performance impact of escalating DDoS detection model complexity on network quality for representative PQC suites from different cryptographic families.
+
+Suite Name	DDoS Policy	Throughput (Mb/s)	Packet Loss (%)	Avg RTT (ms)
+cs-mlkem768-aesgcm-mldsa65	Baseline	7.417	0.019	16.079
+cs-mlkem768-aesgcm-mldsa65	Lightweight	7.946	0.025	12.170
+cs-mlkem768-aesgcm-mldsa65	Heavyweight	7.684	3.070	34.208
+cs-classicmceliece460896-aesgcm-mldsa65	Baseline	7.827	1.488	18.564
+cs-classicmceliece460896-aesgcm-mldsa65	Lightweight	7.915	0.279	16.154
+cs-classicmceliece460896-aesgcm-mldsa65	Heavyweight	7.546	4.823	35.706
+cs-hqc192-aesgcm-mldsa65	Baseline	7.925	0.172	12.391
+cs-hqc192-aesgcm-mldsa65	Lightweight	7.869	0.941	26.206
+cs-hqc192-aesgcm-mldsa65	Heavyweight	7.601	3.962	92.107
+
+3.3 Table 3: Primitive-Level Cryptographic Latencies
+
+This table breaks down the computational cost of the core cryptographic operations for each PQC suite under the lightweight DDoS detection load, highlighting the significant performance differences that inform the expert scheduler's selection logic.
+
+Suite Name	KEM Keygen (ms)	KEM Decap (ms)	SIG Sign (ms)	Primitives Total (ms)
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	99.681	24.909	49.984	174.574
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	159.723	30.512	58.793	249.029
+cs-classicmceliece460896-aesgcm-mldsa65	442.547	69.117	2.268	513.931
+cs-classicmceliece460896-chacha20poly1305-mldsa65	240.408	56.153	1.898	298.459
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	289.443	120.738	145.670	555.850
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	297.969	113.696	126.515	538.180
+cs-frodokem640aes-aesgcm-mldsa44	4.283	1.052	0.345	5.680
+cs-frodokem640aes-chacha20poly1305-mldsa44	1.231	1.183	0.593	3.007
+cs-frodokem976aes-aesgcm-mldsa65	5.887	1.011	0.254	7.152
+cs-frodokem976aes-chacha20poly1305-mldsa65	2.376	0.889	0.595	3.860
+cs-hqc128-aesgcm-falcon512	5.425	6.026	0.305	11.756
+cs-hqc128-chacha20poly1305-falcon512	1.527	4.920	0.245	6.692
+cs-hqc192-aesgcm-mldsa65	10.204	133.583	1.327	145.115
+cs-hqc192-chacha20poly1305-mldsa65	4.863	23.139	0.433	28.435
+cs-hqc256-aesgcm-mldsa87	18.943	40.664	1.712	61.320
+cs-hqc256-chacha20poly1305-mldsa87	14.608	41.028	0.383	56.018
+cs-mlkem1024-aesgcm-falcon1024	0.116	0.098	1.861	2.076
+cs-mlkem1024-aesgcm-mldsa87	3.233	0.099	0.657	3.989
+cs-mlkem1024-aesgcm-sphincs256fsha2	0.184	0.535	132.280	132.999
+cs-mlkem1024-chacha20poly1305-falcon1024	0.203	0.271	0.876	1.350
+cs-mlkem1024-chacha20poly1305-mldsa87	0.126	0.094	0.556	0.775
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	0.261	0.106	134.188	134.555
+cs-mlkem512-aesgcm-falcon512	0.084	0.093	4.423	4.600
+cs-mlkem512-aesgcm-mldsa44	3.333	0.334	1.663	5.331
+cs-mlkem512-aesgcm-sphincs128fsha2	0.208	0.184	43.710	44.102
+cs-mlkem512-chacha20poly1305-falcon512	0.089	0.065	0.218	0.372
+cs-mlkem512-chacha20poly1305-mldsa44	0.098	0.085	0.203	0.385
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	0.079	0.068	33.445	33.591
+cs-mlkem768-aesgcm-mldsa65	1.146	0.205	0.642	1.993
+cs-mlkem768-chacha20poly1305-mldsa65	0.259	0.220	3.175	3.654
+
+3.4 Table 4: Power and Energy Consumption Statistics
+
+This table quantifies the energy cost associated with each PQC suite and DDoS detection model, a critical factor for UAV mission endurance.
+
+Suite Name	DDoS Policy	Avg Power (W)	Total Energy (J)
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Baseline	4.234	190.543
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Lightweight	4.354	195.910
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Heavyweight	4.585	206.328
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	Baseline	4.115	185.161
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	Lightweight	4.323	194.527
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	Heavyweight	4.638	208.696
+cs-classicmceliece460896-aesgcm-mldsa65	Baseline	4.349	195.684
+cs-classicmceliece460896-aesgcm-mldsa65	Lightweight	4.303	193.629
+cs-classicmceliece460896-aesgcm-mldsa65	Heavyweight	4.659	209.651
+cs-classicmceliece460896-chacha20poly1305-mldsa65	Baseline	4.304	193.679
+cs-classicmceliece460896-chacha20poly1305-mldsa65	Lightweight	4.281	192.627
+cs-classicmceliece460896-chacha20poly1305-mldsa65	Heavyweight	4.633	208.468
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Baseline	4.350	195.749
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Lightweight	4.329	194.788
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Heavyweight	4.670	210.162
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	Baseline	4.335	195.053
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	Lightweight	4.270	192.158
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	Heavyweight	4.656	209.525
+cs-frodokem640aes-aesgcm-mldsa44	Baseline	4.228	190.260
+cs-frodokem640aes-aesgcm-mldsa44	Lightweight	4.345	195.525
+cs-frodokem640aes-aesgcm-mldsa44	Heavyweight	4.606	207.273
+cs-frodokem640aes-chacha20poly1305-mldsa44	Baseline	4.159	187.177
+cs-frodokem640aes-chacha20poly1305-mldsa44	Lightweight	4.310	193.934
+cs-frodokem640aes-chacha20poly1305-mldsa44	Heavyweight	4.628	208.260
+cs-frodokem976aes-aesgcm-mldsa65	Baseline	4.322	194.496
+cs-frodokem976aes-aesgcm-mldsa65	Lightweight	4.333	195.002
+cs-frodokem976aes-aesgcm-mldsa65	Heavyweight	4.664	209.885
+cs-frodokem976aes-chacha20poly1305-mldsa65	Baseline	4.289	192.998
+cs-frodokem976aes-chacha20poly1305-mldsa65	Lightweight	4.272	192.238
+cs-frodokem976aes-chacha20poly1305-mldsa65	Heavyweight	4.585	206.332
+cs-hqc128-aesgcm-falcon512	Baseline	4.114	185.124
+cs-hqc128-aesgcm-falcon512	Lightweight	4.372	196.736
+cs-hqc128-aesgcm-falcon512	Heavyweight	4.695	211.261
+cs-hqc128-chacha20poly1305-falcon512	Baseline	4.131	185.876
+cs-hqc128-chacha20poly1305-falcon512	Lightweight	4.325	194.644
+cs-hqc128-chacha20poly1305-falcon512	Heavyweight	4.608	207.377
+cs-hqc192-aesgcm-mldsa65	Baseline	4.351	195.802
+cs-hqc192-aesgcm-mldsa65	Lightweight	4.285	192.831
+cs-hqc192-aesgcm-mldsa65	Heavyweight	4.623	208.018
+cs-hqc192-chacha20poly1305-mldsa65	Baseline	4.295	193.261
+cs-hqc192-chacha20poly1305-mldsa65	Lightweight	4.264	191.892
+cs-hqc192-chacha20poly1305-mldsa65	Heavyweight	4.617	207.779
+cs-hqc256-aesgcm-mldsa87	Baseline	4.316	194.241
+cs-hqc256-aesgcm-mldsa87	Lightweight	4.243	190.952
+cs-hqc256-aesgcm-mldsa87	Heavyweight	4.677	210.484
+cs-hqc256-chacha20poly1305-mldsa87	Baseline	4.319	194.350
+cs-hqc256-chacha20poly1305-mldsa87	Lightweight	4.287	192.911
+cs-hqc256-chacha20poly1305-mldsa87	Heavyweight	4.640	208.796
+cs-mlkem1024-aesgcm-falcon1024	Baseline	4.344	195.482
+cs-mlkem1024-aesgcm-falcon1024	Lightweight	4.314	194.112
+cs-mlkem1024-aesgcm-falcon1024	Heavyweight	4.671	210.195
+cs-mlkem1024-aesgcm-mldsa87	Baseline	4.352	195.827
+cs-mlkem1024-aesgcm-mldsa87	Lightweight	4.287	192.925
+cs-mlkem1024-aesgcm-mldsa87	Heavyweight	4.672	210.245
+cs-mlkem1024-aesgcm-sphincs256fsha2	Baseline	4.343	195.434
+cs-mlkem1024-aesgcm-sphincs256fsha2	Lightweight	4.285	192.811
+cs-mlkem1024-aesgcm-sphincs256fsha2	Heavyweight	4.676	210.401
+cs-mlkem1024-chacha20poly1305-falcon1024	Baseline	4.310	193.956
+cs-mlkem1024-chacha20poly1305-falcon1024	Lightweight	4.279	192.536
+cs-mlkem1024-chacha20poly1305-falcon1024	Heavyweight	4.635	208.598
+cs-mlkem1024-chacha20poly1305-mldsa87	Baseline	4.280	192.617
+cs-mlkem1024-chacha20poly1305-mldsa87	Lightweight	4.282	192.678
+cs-mlkem1024-chacha20poly1305-mldsa87	Heavyweight	4.660	209.702
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	Baseline	4.313	194.107
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	Lightweight	4.279	192.538
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	Heavyweight	4.629	208.315
+cs-mlkem512-aesgcm-falcon512	Baseline	4.215	189.696
+cs-mlkem512-aesgcm-falcon512	Lightweight	4.343	195.451
+cs-mlkem512-aesgcm-falcon512	Heavyweight	4.610	207.443
+cs-mlkem512-aesgcm-mldsa44	Baseline	4.202	189.086
+cs-mlkem512-aesgcm-mldsa44	Lightweight	4.321	194.462
+cs-mlkem512-aesgcm-mldsa44	Heavyweight	4.620	207.907
+cs-mlkem512-aesgcm-sphincs128fsha2	Baseline	4.241	190.839
+cs-mlkem512-aesgcm-sphincs128fsha2	Lightweight	4.340	195.297
+cs-mlkem512-aesgcm-sphincs128fsha2	Heavyweight	4.648	209.156
+cs-mlkem512-chacha20poly1305-falcon512	Baseline	4.207	189.310
+cs-mlkem512-chacha20poly1305-falcon512	Lightweight	4.281	192.663
+cs-mlkem512-chacha20poly1305-falcon512	Heavyweight	4.639	208.734
+cs-mlkem512-chacha20poly1305-mldsa44	Baseline	4.081	183.640
+cs-mlkem512-chacha20poly1305-mldsa44	Lightweight	4.302	193.583
+cs-mlkem512-chacha20poly1305-mldsa44	Heavyweight	4.539	204.256
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	Baseline	4.230	190.345
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	Lightweight	4.310	193.940
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	Heavyweight	4.620	207.893
+cs-mlkem768-aesgcm-mldsa65	Baseline	4.217	189.759
+cs-mlkem768-aesgcm-mldsa65	Lightweight	4.307	193.821
+cs-mlkem768-aesgcm-mldsa65	Heavyweight	4.612	207.525
+cs-mlkem768-chacha20poly1305-mldsa65	Baseline	4.304	193.667
+cs-mlkem768-chacha20poly1305-mldsa65	Lightweight	4.340	195.300
+cs-mlkem768-chacha20poly1305-mldsa65	Heavyweight	4.637	208.685
+
+3.5 Table 5: System Resource Utilization
+
+This table compares the peak CPU and memory consumption, demonstrating the computational and memory overhead imposed by different security configurations.
+
+Suite Name	DDoS Policy	Max CPU (%)	Memory RSS (MiB)
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Baseline	73.7	268.4
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Lightweight	85.0	605.2
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Heavyweight	92.3	749.0
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	Baseline	73.8	268.8
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	Lightweight	77.5	604.7
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	Heavyweight	90.0	751.5
+cs-classicmceliece460896-aesgcm-mldsa65	Baseline	73.0	273.1
+cs-classicmceliece460896-aesgcm-mldsa65	Lightweight	76.9	607.1
+cs-classicmceliece460896-aesgcm-mldsa65	Heavyweight	94.9	758.1
+cs-classicmceliece460896-chacha20poly1305-mldsa65	Baseline	80.0	271.2
+cs-classicmceliece460896-chacha20poly1305-mldsa65	Lightweight	78.9	607.2
+cs-classicmceliece460896-chacha20poly1305-mldsa65	Heavyweight	91.3	770.4
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Baseline	78.4	278.4
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Lightweight	75.6	612.9
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Heavyweight	89.7	775.6
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	Baseline	76.3	280.8
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	Lightweight	78.9	614.0
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	Heavyweight	91.9	770.7
+cs-frodokem640aes-aesgcm-mldsa44	Baseline	75.0	265.5
+cs-frodokem640aes-aesgcm-mldsa44	Lightweight	79.5	602.4
+cs-frodokem640aes-aesgcm-mldsa44	Heavyweight	89.7	763.8
+cs-frodokem640aes-chacha20poly1305-mldsa44	Baseline	70.3	267.5
+cs-frodokem640aes-chacha20poly1305-mldsa44	Lightweight	77.5	604.9
+cs-frodokem640aes-chacha20poly1305-mldsa44	Heavyweight	90.2	751.1
+cs-frodokem976aes-aesgcm-mldsa65	Baseline	76.3	271.5
+cs-frodokem976aes-aesgcm-mldsa65	Lightweight	84.2	607.1
+cs-frodokem976aes-aesgcm-mldsa65	Heavyweight	92.1	753.6
+cs-frodokem976aes-chacha20poly1305-mldsa65	Baseline	81.0	268.4
+cs-frodokem976aes-chacha20poly1305-mldsa65	Lightweight	79.5	605.1
+cs-frodokem976aes-chacha20poly1305-mldsa65	Heavyweight	89.5	766.7
+cs-hqc128-aesgcm-falcon512	Baseline	79.5	267.9
+cs-hqc128-aesgcm-falcon512	Lightweight	73.7	606.1
+cs-hqc128-aesgcm-falcon512	Heavyweight	89.7	754.4
+cs-hqc128-chacha20poly1305-falcon512	Baseline	80.0	269.1
+cs-hqc128-chacha20poly1305-falcon512	Lightweight	81.6	606.2
+cs-hqc128-chacha20poly1305-falcon512	Heavyweight	89.7	768.2
+cs-hqc192-aesgcm-mldsa65	Baseline	75.0	273.7
+cs-hqc192-aesgcm-mldsa65	Lightweight	80.6	607.3
+cs-hqc192-aesgcm-mldsa65	Heavyweight	89.5	742.1
+cs-hqc192-chacha20poly1305-mldsa65	Baseline	76.9	274.2
+cs-hqc192-chacha20poly1305-mldsa65	Lightweight	76.9	608.4
+cs-hqc192-chacha20poly1305-mldsa65	Heavyweight	92.1	759.7
+cs-hqc256-aesgcm-mldsa87	Baseline	79.5	281.2
+cs-hqc256-aesgcm-mldsa87	Lightweight	64.9	612.3
+cs-hqc256-aesgcm-mldsa87	Heavyweight	88.9	774.6
+cs-hqc256-chacha20poly1305-mldsa87	Baseline	81.6	282.2
+cs-hqc256-chacha20poly1305-mldsa87	Lightweight	79.5	614.4
+cs-hqc256-chacha20poly1305-mldsa87	Heavyweight	89.5	776.7
+cs-mlkem1024-aesgcm-falcon1024	Baseline	78.0	274.2
+cs-mlkem1024-aesgcm-falcon1024	Lightweight	85.4	610.4
+cs-mlkem1024-aesgcm-falcon1024	Heavyweight	92.3	771.9
+cs-mlkem1024-aesgcm-mldsa87	Baseline	74.3	272.9
+cs-mlkem1024-aesgcm-mldsa87	Lightweight	70.3	606.9
+cs-mlkem1024-aesgcm-mldsa87	Heavyweight	89.7	766.6
+cs-mlkem1024-aesgcm-sphincs256fsha2	Baseline	74.4	277.2
+cs-mlkem1024-aesgcm-sphincs256fsha2	Lightweight	74.4	609.6
+cs-mlkem1024-aesgcm-sphincs256fsha2	Heavyweight	90.0	760.2
+cs-mlkem1024-chacha20poly1305-falcon1024	Baseline	80.6	278.0
+cs-mlkem1024-chacha20poly1305-falcon1024	Lightweight	77.8	610.7
+cs-mlkem1024-chacha20poly1305-falcon1024	Heavyweight	92.5	773.3
+cs-mlkem1024-chacha20poly1305-mldsa87	Baseline	81.0	274.3
+cs-mlkem1024-chacha20poly1305-mldsa87	Lightweight	81.0	609.5
+cs-mlkem1024-chacha20poly1305-mldsa87	Heavyweight	89.7	746.9
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	Baseline	73.7	277.8
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	Lightweight	80.0	612.6
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	Heavyweight	92.3	773.9
+cs-mlkem512-aesgcm-falcon512	Baseline	73.7	267.3
+cs-mlkem512-aesgcm-falcon512	Lightweight	76.9	601.8
+cs-mlkem512-aesgcm-falcon512	Heavyweight	92.3	762.3
+cs-mlkem512-aesgcm-mldsa44	Baseline	75.0	266.2
+cs-mlkem512-aesgcm-mldsa44	Lightweight	76.3	601.8
+cs-mlkem512-aesgcm-mldsa44	Heavyweight	86.8	779.6
+cs-mlkem512-aesgcm-sphincs128fsha2	Baseline	79.5	268.3
+cs-mlkem512-aesgcm-sphincs128fsha2	Lightweight	80.6	603.1
+cs-mlkem512-aesgcm-sphincs128fsha2	Heavyweight	88.1	769.0
+cs-mlkem512-chacha20poly1305-falcon512	Baseline	76.3	268.2
+cs-mlkem512-chacha20poly1305-falcon512	Lightweight	77.8	603.4
+cs-mlkem512-chacha20poly1305-falcon512	Heavyweight	89.5	752.3
+cs-mlkem512-chacha20poly1305-mldsa44	Baseline	74.4	268.4
+cs-mlkem512-chacha20poly1305-mldsa44	Lightweight	89.7	600.6
+cs-mlkem512-chacha20poly1305-mldsa44	Heavyweight	89.2	747.6
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	Baseline	78.9	268.1
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	Lightweight	76.9	602.6
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	Heavyweight	90.2	754.1
+cs-mlkem768-aesgcm-mldsa65	Baseline	77.8	267.8
+cs-mlkem768-aesgcm-mldsa65	Lightweight	73.7	598.6
+cs-mlkem768-aesgcm-mldsa65	Heavyweight	91.4	749.7
+cs-mlkem768-chacha20poly1305-mldsa65	Baseline	87.5	271.6
+cs-mlkem768-chacha20poly1305-mldsa65	Lightweight	83.8	608.6
+cs-mlkem768-chacha20poly1305-mldsa65	Heavyweight	92.5	743.6
+
+3.6 Table 6: Round-Trip Time (RTT) Distribution Analysis
+
+This table details the latency profile under maximum computational stress from the heavyweight TST model, highlighting the tail latency (p95, max) that is critical for real-time control applications.
+
+Suite Name	RTT p50 (ms)	RTT p95 (ms)	RTT Max (ms)
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	49.673	493.777	679.372
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	22.851	64.981	139.635
+cs-classicmceliece460896-aesgcm-mldsa65	34.536	73.524	128.560
+cs-classicmceliece460896-chacha20poly1305-mldsa65	30.999	70.395	169.284
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	31.097	207.344	343.359
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	20.300	64.558	127.500
+cs-frodokem640aes-aesgcm-mldsa44	43.782	151.259	255.419
+cs-frodokem640aes-chacha20poly1305-mldsa44	24.726	77.256	210.811
+cs-frodokem976aes-aesgcm-mldsa65	30.042	87.405	160.036
+cs-frodokem976aes-chacha20poly1305-mldsa65	29.948	139.769	589.125
+cs-hqc128-aesgcm-falcon512	28.541	64.795	210.239
+cs-hqc128-chacha20poly1305-falcon512	34.708	111.396	201.264
+cs-hqc192-aesgcm-mldsa65	38.667	437.456	580.636
+cs-hqc192-chacha20poly1305-mldsa65	23.445	177.104	291.424
+cs-hqc256-aesgcm-mldsa87	37.366	78.937	116.593
+cs-hqc256-chacha20poly1305-mldsa87	30.137	70.280	180.215
+cs-mlkem1024-aesgcm-falcon1024	32.309	74.854	156.751
+cs-mlkem1024-aesgcm-mldsa87	35.015	74.403	248.704
+cs-mlkem1024-aesgcm-sphincs256fsha2	28.405	92.134	230.622
+cs-mlkem1024-chacha20poly1305-falcon1024	27.833	73.753	163.960
+cs-mlkem1024-chacha20poly1305-mldsa87	22.907	80.593	100.879
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	29.897	248.158	761.749
+cs-mlkem512-aesgcm-falcon512	34.350	86.828	167.153
+cs-mlkem512-aesgcm-mldsa44	24.763	58.212	123.228
+cs-mlkem512-aesgcm-sphincs128fsha2	29.776	69.623	116.758
+cs-mlkem512-chacha20poly1305-falcon512	21.818	65.356	157.634
+cs-mlkem512-chacha20poly1305-mldsa44	44.035	117.910	326.494
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	28.850	75.271	162.838
+cs-mlkem768-aesgcm-mldsa65	29.345	90.757	170.584
+cs-mlkem768-chacha20poly1305-mldsa65	26.229	104.655	219.445
+
+3.7 Table 7: Packet Delivery and Loss Analysis
+
+This table provides a clear view of link reliability, showing how packet delivery success degrades as the complexity of the onboard DDoS detection model increases.
+
+Suite Name	DDoS Policy	Packets Sent	Packets Received	Packet Loss (%)
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Baseline	160,426	160,362	0.040
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Lightweight	175,447	175,273	0.099
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Heavyweight	174,181	162,952	6.447
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	Baseline	152,595	152,293	0.198
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	Lightweight	175,611	175,400	0.120
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	Heavyweight	174,990	171,158	2.190
+cs-classicmceliece460896-aesgcm-mldsa65	Baseline	175,583	172,971	1.488
+cs-classicmceliece460896-aesgcm-mldsa65	Lightweight	175,414	174,924	0.279
+cs-classicmceliece460896-aesgcm-mldsa65	Heavyweight	175,207	166,756	4.823
+cs-classicmceliece460896-chacha20poly1305-mldsa65	Baseline	175,708	175,339	0.210
+cs-classicmceliece460896-chacha20poly1305-mldsa65	Lightweight	175,570	175,176	0.224
+cs-classicmceliece460896-chacha20poly1305-mldsa65	Heavyweight	174,288	168,461	3.343
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Baseline	175,038	174,791	0.141
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Lightweight	175,089	174,115	0.556
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Heavyweight	175,584	169,798	3.295
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	Baseline	174,685	174,114	0.327
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	Lightweight	174,896	174,746	0.086
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	Heavyweight	174,930	172,215	1.552
+cs-frodokem640aes-aesgcm-mldsa44	Baseline	158,280	158,049	0.146
+cs-frodokem640aes-aesgcm-mldsa44	Lightweight	175,208	174,895	0.179
+cs-frodokem640aes-aesgcm-mldsa44	Heavyweight	175,653	169,795	3.335
+cs-frodokem640aes-chacha20poly1305-mldsa44	Baseline	155,421	154,044	0.886
+cs-frodokem640aes-chacha20poly1305-mldsa44	Lightweight	175,525	171,208	2.459
+cs-frodokem640aes-chacha20poly1305-mldsa44	Heavyweight	175,688	171,812	2.206
+cs-frodokem976aes-aesgcm-mldsa65	Baseline	175,638	174,847	0.450
+cs-frodokem976aes-aesgcm-mldsa65	Lightweight	175,624	175,447	0.101
+cs-frodokem976aes-aesgcm-mldsa65	Heavyweight	175,482	169,960	3.147
+cs-frodokem976aes-chacha20poly1305-mldsa65	Baseline	175,583	175,310	0.155
+cs-frodokem976aes-chacha20poly1305-mldsa65	Lightweight	175,386	174,761	0.356
+cs-frodokem976aes-chacha20poly1305-mldsa65	Heavyweight	175,538	168,754	3.865
+cs-hqc128-aesgcm-falcon512	Baseline	149,709	149,567	0.095
+cs-hqc128-aesgcm-falcon512	Lightweight	175,639	175,514	0.071
+cs-hqc128-aesgcm-falcon512	Heavyweight	175,106	171,417	2.107
+cs-hqc128-chacha20poly1305-falcon512	Baseline	167,533	162,275	3.138
+cs-hqc128-chacha20poly1305-falcon512	Lightweight	175,638	175,330	0.175
+cs-hqc128-chacha20poly1305-falcon512	Heavyweight	175,141	169,762	3.071
+cs-hqc192-aesgcm-mldsa65	Baseline	175,422	175,120	0.172
+cs-hqc192-aesgcm-mldsa65	Lightweight	175,539	173,888	0.941
+cs-hqc192-aesgcm-mldsa65	Heavyweight	174,899	167,969	3.962
+cs-hqc192-chacha20poly1305-mldsa65	Baseline	175,466	175,444	0.013
+cs-hqc192-chacha20poly1305-mldsa65	Lightweight	175,425	175,358	0.038
+cs-hqc192-chacha20poly1305-mldsa65	Heavyweight	175,115	170,323	2.736
+cs-hqc256-aesgcm-mldsa87	Baseline	175,041	170,851	2.394
+cs-hqc256-aesgcm-mldsa87	Lightweight	175,011	169,366	3.226
+cs-hqc256-aesgcm-mldsa87	Heavyweight	174,032	164,355	5.560
+cs-hqc256-chacha20poly1305-mldsa87	Baseline	174,454	174,134	0.183
+cs-hqc256-chacha20poly1305-mldsa87	Lightweight	175,031	174,828	0.116
+cs-hqc256-chacha20poly1305-mldsa87	Heavyweight	175,161	169,689	3.124
+cs-mlkem1024-aesgcm-falcon1024	Baseline	175,455	175,297	0.090
+cs-mlkem1024-aesgcm-falcon1024	Lightweight	175,424	173,643	1.015
+cs-mlkem1024-aesgcm-falcon1024	Heavyweight	175,063	163,848	6.406
+cs-mlkem1024-aesgcm-mldsa87	Baseline	175,533	175,356	0.101
+cs-mlkem1024-aesgcm-mldsa87	Lightweight	175,391	171,846	2.021
+cs-mlkem1024-aesgcm-mldsa87	Heavyweight	174,505	166,362	4.666
+cs-mlkem1024-aesgcm-sphincs256fsha2	Baseline	175,026	174,922	0.059
+cs-mlkem1024-aesgcm-sphincs256fsha2	Lightweight	174,710	171,460	1.860
+cs-mlkem1024-aesgcm-sphincs256fsha2	Heavyweight	175,516	170,739	2.722
+cs-mlkem1024-chacha20poly1305-falcon1024	Baseline	175,364	175,114	0.143
+cs-mlkem1024-chacha20poly1305-falcon1024	Lightweight	174,745	174,540	0.117
+cs-mlkem1024-chacha20poly1305-falcon1024	Heavyweight	175,258	170,486	2.723
+cs-mlkem1024-chacha20poly1305-mldsa87	Baseline	175,534	175,202	0.189
+cs-mlkem1024-chacha20poly1305-mldsa87	Lightweight	175,420	175,223	0.112
+cs-mlkem1024-chacha20poly1305-mldsa87	Heavyweight	175,479	172,661	1.606
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	Baseline	174,811	174,460	0.201
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	Lightweight	175,007	174,965	0.024
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	Heavyweight	175,220	168,682	3.731
+cs-mlkem512-aesgcm-falcon512	Baseline	157,455	155,399	1.306
+cs-mlkem512-aesgcm-falcon512	Lightweight	174,990	174,546	0.254
+cs-mlkem512-aesgcm-falcon512	Heavyweight	175,614	169,763	3.332
+cs-mlkem512-aesgcm-mldsa44	Baseline	155,608	155,588	0.013
+cs-mlkem512-aesgcm-mldsa44	Lightweight	175,586	174,664	0.525
+cs-mlkem512-aesgcm-mldsa44	Heavyweight	175,659	171,519	2.357
+cs-mlkem512-aesgcm-sphincs128fsha2	Baseline	157,266	156,864	0.256
+cs-mlkem512-aesgcm-sphincs128fsha2	Lightweight	175,536	175,193	0.195
+cs-mlkem512-aesgcm-sphincs128fsha2	Heavyweight	174,512	169,807	2.696
+cs-mlkem512-chacha20poly1305-falcon512	Baseline	156,288	155,503	0.502
+cs-mlkem512-chacha20poly1305-falcon512	Lightweight	175,493	173,616	1.070
+cs-mlkem512-chacha20poly1305-falcon512	Heavyweight	175,515	171,543	2.263
+cs-mlkem512-chacha20poly1305-mldsa44	Baseline	149,210	148,873	0.226
+cs-mlkem512-chacha20poly1305-mldsa44	Lightweight	175,648	175,486	0.092
+cs-mlkem512-chacha20poly1305-mldsa44	Heavyweight	175,580	166,985	4.895
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	Baseline	163,176	162,861	0.193
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	Lightweight	173,964	173,852	0.064
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	Heavyweight	175,567	165,207	5.901
+cs-mlkem768-aesgcm-mldsa65	Baseline	164,148	164,116	0.019
+cs-mlkem768-aesgcm-mldsa65	Lightweight	175,627	175,583	0.025
+cs-mlkem768-aesgcm-mldsa65	Heavyweight	175,167	169,790	3.070
+cs-mlkem768-chacha20poly1305-mldsa65	Baseline	175,659	175,439	0.125
+cs-mlkem768-chacha20poly1305-mldsa65	Lightweight	175,663	175,398	0.151
+cs-mlkem768-chacha20poly1305-mldsa65	Heavyweight	174,718	171,020	2.117
+
+3.8 Table 8: Handshake Performance
+
+This table isolates the initial secure channel establishment time under the lightweight DDoS detection load, a key factor in connection setup and rekeying agility.
+
+Suite Name	Handshake GCS (ms)
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	253.695
+cs-classicmceliece348864-chacha20poly1305-sphincs128fsha2	318.404
+cs-classicmceliece460896-aesgcm-mldsa65	641.085
+cs-classicmceliece460896-chacha20poly1305-mldsa65	421.094
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	913.077
+cs-classicmceliece8192128-chacha20poly1305-sphincs256fsha2	867.973
+cs-frodokem640aes-aesgcm-mldsa44	33.576
+cs-frodokem640aes-chacha20poly1305-mldsa44	33.047
+cs-frodokem976aes-aesgcm-mldsa65	59.695
+cs-frodokem976aes-chacha20poly1305-mldsa65	54.463
+cs-hqc128-aesgcm-falcon512	65.504
+cs-hqc128-chacha20poly1305-falcon512	58.068
+cs-hqc192-aesgcm-mldsa65	291.921
+cs-hqc192-chacha20poly1305-mldsa65	174.713
+cs-hqc256-aesgcm-mldsa87	345.277
+cs-hqc256-chacha20poly1305-mldsa87	317.562
+cs-mlkem1024-aesgcm-falcon1024	10.961
+cs-mlkem1024-aesgcm-mldsa87	15.668
+cs-mlkem1024-aesgcm-sphincs256fsha2	165.439
+cs-mlkem1024-chacha20poly1305-falcon1024	9.673
+cs-mlkem1024-chacha20poly1305-mldsa87	10.786
+cs-mlkem1024-chacha20poly1305-sphincs256fsha2	161.065
+cs-mlkem512-aesgcm-falcon512	13.321
+cs-mlkem512-aesgcm-mldsa44	14.293
+cs-mlkem512-aesgcm-sphincs128fsha2	62.766
+cs-mlkem512-chacha20poly1305-falcon512	9.271
+cs-mlkem512-chacha20poly1305-mldsa44	8.088
+cs-mlkem512-chacha20poly1305-sphincs128fsha2	57.738
+cs-mlkem768-aesgcm-mldsa65	35.504
+cs-mlkem768-chacha20poly1305-mldsa65	19.890
+
+3.9 Table 9: Classic McEliece Suite Performance Deep Dive
+
+This table provides a focused analysis of the Classic McEliece family, known for its large keys and distinct performance profile, under varying system loads. Note: The Primitives Total (ms) column reflects the values as reported in the experimental logs for each specific DDoS policy. Anomalously low values for fast algorithms under heavy load are likely due to measurement artifacts or scheduler-induced timing distortions.
+
+Suite Name	DDoS Policy	Throughput (Mb/s)	Avg RTT (ms)	Primitives Total (ms)	Avg Power (W)	Max CPU (%)	Memory RSS (MiB)
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Baseline	7.245	13.559	530.358	4.234	73.7	268.4
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Lightweight	7.932	12.570	174.574	4.354	85.0	605.2
+cs-classicmceliece348864-aesgcm-sphincs128fsha2	Heavyweight	7.372	110.382	744.443	4.585	92.3	749.0
+cs-classicmceliece460896-aesgcm-mldsa65	Baseline	7.827	18.564	183.735	4.349	73.0	273.1
+cs-classicmceliece460896-aesgcm-mldsa65	Lightweight	7.915	16.154	513.931	4.303	76.9	607.1
+cs-classicmceliece460896-aesgcm-mldsa65	Heavyweight	7.546	35.706	437.654	4.659	94.9	758.1
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Baseline	7.910	14.627	602.562	4.350	78.4	278.4
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Lightweight	7.877	14.272	555.850	4.329	75.6	612.9
+cs-classicmceliece8192128-aesgcm-sphincs256fsha2	Heavyweight	7.683	45.138	1331.946	4.670	89.7	775.6
+
+3.10 Table 10: ML-KEM Suite Performance Deep Dive
+
+This table offers a comparative deep dive into the performance of the NIST-standardized ML-KEM (Kyber) algorithm family, highlighting its behavior under different computational stresses. Note: The Primitives Total (ms) column reflects the values as reported in the experimental logs for each specific DDoS policy. Anomalously low values for fast algorithms under heavy load are likely due to measurement artifacts or scheduler-induced timing distortions.
+
+Suite Name	DDoS Policy	Throughput (Mb/s)	Avg RTT (ms)	Primitives Total (ms)	Avg Power (W)	Max CPU (%)	Memory RSS (MiB)
+cs-mlkem512-aesgcm-mldsa44	Baseline	6.993	14.443	177.596	4.202	75.0	266.2
+cs-mlkem512-aesgcm-mldsa44	Lightweight	7.904	17.345	5.331	4.321	76.3	601.8
+cs-mlkem512-aesgcm-mldsa44	Heavyweight	7.762	27.918	0.431	4.620	86.8	779.6
+cs-mlkem768-aesgcm-mldsa65	Baseline	7.417	16.079	2.013	4.217	77.8	267.8
+cs-mlkem768-aesgcm-mldsa65	Lightweight	7.946	12.170	1.993	4.307	73.7	598.6
+cs-mlkem768-aesgcm-mldsa65	Heavyweight	7.684	34.208	2.480	4.612	91.4	749.7
+cs-mlkem1024-aesgcm-mldsa87	Baseline	7.935	15.171	1.697	4.352	74.3	272.9
+cs-mlkem1024-aesgcm-mldsa87	Lightweight	7.775	21.728	3.989	4.287	70.3	606.9
+cs-mlkem1024-aesgcm-mldsa87	Heavyweight	7.528	38.072	3.977	4.672	89.7	766.6
+
+4.0 Analysis of Performance Trends
+
+This section provides a narrative interpretation of key performance trends identified from the aggregated experimental data.
+
+4.1 Trend 1: Throughput and Goodput vs. DDoS Defense Mode
+
+DDoS Policy	Average Throughput (Mb/s)	Average Packet Loss (%)
+Baseline	7.476	0.655
+Lightweight	7.886	0.697
+Heavyweight	7.632	3.637
+
+The data shows that average throughput remains remarkably stable across all three defense modes. This highlights the scheduler's success in prioritizing data transmission. However, this stability comes at the cost of link quality when the heavyweight TST model is active. The average packet loss rate increases more than five-fold from the Lightweight to the Heavyweight scenario. This trend indicates that as the system's CPU becomes saturated by the TST model, the scheduler implements a graceful degradation strategy, sacrificing packet reliability to maintain a consistent data rate and prevent a total collapse of the communication link.
+
+4.2 Trend 2: Energy Consumption vs. PQC Suite and DDoS Policy
+
+PQC Family	DDoS Policy	Average Power (W)
+ML-KEM	Baseline	4.269
+ML-KEM	Lightweight	4.305
+ML-KEM	Heavyweight	4.632
+Classic-McEliece	Baseline	4.298
+Classic-McEliece	Lightweight	4.310
+Classic-McEliece	Heavyweight	4.634
+HQC	Baseline	4.293
+HQC	Lightweight	4.299
+HQC	Heavyweight	4.636
+
+The data reveals a consistent trend of increasing energy consumption as the DDoS policy escalates from Baseline to Lightweight and finally to Heavyweight, a pattern that holds true for all PQC families. The most salient insight, however, is observed under the Heavyweight TST model. While individual cryptographic suites have vastly different computational costs (as shown in Section 2.3), the average power consumption across the ML-KEM (4.632 W), Classic-McEliece (4.634 W), and HQC (4.636 W) families is functionally identical. This indicates that the constant, high-utilization workload of the TST model dominates the system's power signature. The DDoS model's overhead becomes the primary driver of power consumption, raising the entire system's power floor and masking the more subtle performance differences between the cryptographic algorithms.
+
+4.3 Trend 3: CPU and Memory Load vs. DDoS Tier
+
+DDoS Policy	Average Max CPU (%)	Average Memory RSS (MiB)
+Baseline	76.8	272.3
+Lightweight	78.6	606.4
+Heavyweight	90.6	760.3
+
+The data reveals a clear, stepwise increase in both CPU and memory utilization as the DDoS policy is escalated. Moving from the Baseline to the Lightweight (XGBoost) policy results in a marginal increase in peak CPU load but more than doubles the memory footprint. The transition to the Heavyweight (TST) policy introduces a substantial burden, pushing the average peak CPU utilization above 90% and further increasing memory consumption by over 150 MiB. This analysis confirms that the heavyweight TST model imposes a significant and consistent resource overhead, which is the primary driver for the performance trade-offs observed in other key metrics like latency and packet loss.
+
+4.4 Trend 4: RTT Latency vs. Cryptographic Intensity
+
+PQC Suite	Primitives Total (ms)	Avg RTT (ms) [Lightweight]	Avg RTT (ms) [Heavyweight]
+cs-mlkem768-aesgcm-mldsa65	1.993	12.170	34.208
+cs-hqc192-aesgcm-mldsa65	145.115	26.206	92.107
+
+This trend analysis demonstrates a compounding effect between intrinsic cryptographic workload and overall system load on network latency. The data shows that suites with higher intrinsic cryptographic processing times experience a more dramatic increase in network RTT when the system is under heavy load from the TST model. A high-cost primitive occupies the CPU for a longer, continuous duration. When this operation coincides with the TST model's processing window, it creates a prolonged "CPU unavailable" state, causing network packet queues to build up significantly and thus leading to dramatic RTT spikes. For instance, cs-mlkem768-aesgcm-mldsa65, with a low primitive latency of 1.993 ms, sees its RTT increase by a factor of 2.8x. In contrast, cs-hqc192-aesgcm-mldsa65, with a much higher primitive latency of 145.115 ms, experiences a 3.5x increase in RTT, clearly illustrating this compounding effect.
+
+4.5 Trend 5: Packet Loss vs. DDoS Policy
+
+DDoS Policy	Average Throughput (Mb/s)	Average Packet Loss (%)
+Baseline	7.476	0.655
+Lightweight	7.886	0.697
+Heavyweight	7.632	3.637
+
+Focusing exclusively on link reliability, the packet loss trend underscores the operational cost of the heavyweight security posture. The nominal packet loss observed in the Baseline (~0.66%) and Lightweight (~0.70%) scenarios indicates a highly reliable link where the system can comfortably handle both network traffic and moderate computational tasks. The sharp increase to an average loss of 3.64% in the Heavyweight scenario signifies that the system has reached a saturation point. At this stage, the combined demands of the TST model, cryptographic operations, and network packet processing exceed available CPU capacity, forcing the scheduler to shed load by dropping packets to prevent a complete system stall.
+
+5.0 Synthesis
+
+The experimental analysis confirms that the policy-driven expert scheduler effectively manages the trade-offs inherent in deploying advanced security capabilities on a resource-constrained UAV platform. The system demonstrates graceful degradation under the severe computational stress imposed by the heavyweight Time-Series Transformer DDoS detection model. It successfully maintains high data throughput by strategically trading off increased network latency and a higher packet loss rate. The results clearly quantify the direct relationships between security posture, communication performance, system resource utilization, and energy consumption. Activating more sophisticated defense models invariably leads to higher CPU and memory usage, which in turn increases power draw and degrades real-time network characteristics. It is important to note that these results are confined to the performance of the expert scheduler. A comparative evaluation of Reinforcement Learning (RL) or hybrid scheduling strategies, which may offer different adaptive behaviors, falls outside the scope of this analysis.

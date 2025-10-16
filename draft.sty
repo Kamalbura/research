@@ -1,0 +1,774 @@
+%%
+%% This is file `sample-sigconf-biblatex.tex',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% samples.dtx  (with options: `all,proceedings,sigconf-biblatex')
+%% 
+%% IMPORTANT NOTICE:
+%% 
+%% For the copyright see the source file.
+%% 
+%% Any modified versions of this file must be renamed
+%% with new filenames distinct from sample-sigconf-biblatex.tex.
+%% 
+%% For distribution of the original source see the terms
+%% for copying and modification in the file samples.dtx.
+%% 
+%% This generated file may be distributed as long as the
+%% original source files, as listed above, are part of the
+%% same distribution. (The sources need not necessarily be
+%% in the same archive or directory.)
+%%
+%%
+%% Commands for TeXCount
+%TC:macro \cite [option:text,text]
+%TC:macro \citep [option:text,text]
+%TC:macro \citet [option:text,text]
+%TC:envir table 0 1
+%TC:envir table* 0 1
+%TC:envir tabular [ignore] word
+%TC:envir displaymath 0 word
+%TC:envir math 0 word
+%TC:envir comment 0 0
+%%
+%% The first command in your LaTeX source must be the \documentclass
+%% command.
+%%
+%% For submission and review of your manuscript please change the
+%% command to \documentclass[manuscript, screen, review]{acmart}.
+%%
+%% When submitting camera ready or to TAPS, please change the command
+%% to \documentclass[sigconf]{acmart} or whichever template is required
+%% for your publication.
+%%
+%%
+\documentclass[sigconf,natbib=false]{acmart}
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    Bib\TeX}}}
+
+%% Rights management information.  This information is sent to you
+%% when you complete the rights form.  These commands have SAMPLE
+%% values in them; it is your responsibility as an author to replace
+%% the commands and values with those provided to you when you
+%% complete the rights form.
+
+\setcopyright{acmlicensed}
+%\setcopyright{cc}
+%\setcctype[4.0]{by}
+
+\copyrightyear{2026}
+\acmYear{2026}
+\acmDOI{XXXXXXX.XXXXXXX}
+\acmConference[SAC'26]{The 41st ACM/SIGAPP Symposium on Applied Computing}{March 23--27, 2026}{Thessaloniki, Greece}
+\acmISBN{979-X-XXXX-XXXX-X/26/03}
+
+
+%%
+%% Submission ID.
+%% Use this when submitting an article to a sponsored event. You'll
+%% receive a unique submission ID from the organizers
+%% of the event, and this ID should be used as the parameter to this command.
+%%\acmSubmissionID{123-A56-BU3}
+
+%%
+%% For managing citations, it is recommended to use bibliography
+%% files in BibTeX format.
+%%
+%% You can then either use BibTeX with the ACM-Reference-Format style,
+%% or BibLaTeX with the acmnumeric or acmauthoryear sytles, that include
+%% support for advanced citation of software artefact from the
+%% biblatex-software package, also separately available on CTAN.
+%%
+%% Look at the sample-*-biblatex.tex files for templates showcasing
+%% the biblatex styles.
+%%
+
+
+%%
+%% The majority of ACM publications use numbered citations and
+%% references, obtained by selecting the acmnumeric BibLaTeX style.
+%% The acmauthoryear BibLaTeX style switches to the "author year" style.
+%%
+%% If you are preparing content for an event
+%% sponsored by ACM SIGGRAPH, you must use the acmauthoryear style of
+%% citations and references.
+%%
+%% Bibliography style
+\RequirePackage[
+  datamodel=acmdatamodel,
+  style=acmnumeric,
+  ]{biblatex}
+
+%% Declare bibliography sources (one \addbibresource command per source)
+\addbibresource{software.bib}
+\addbibresource{sample-base.bib}
+
+%%
+%% end of the preamble, start of the body of the document source.
+\begin{document}
+
+%%
+%% The "title" command has an optional parameter,
+%% allowing the author to define a "short title" to be used in page headers.
+\title{The Name of the Title Is Hope}
+% Please make sure that the short title does not exceed the width of one column
+\renewcommand{\shorttitle}{Hope it is}
+
+%%
+%% The "author" command and its associated commands are used to define
+%% the authors and their affiliations.
+%% Of note is the shared affiliation of the first two authors, and the
+%% "authornote" and "authornotemark" commands
+%% used to denote shared contribution to the research.
+\author{Ben Trovato}
+\authornote{Both authors contributed equally to this research.}
+\email{trovato@corporation.com}
+\orcid{1234-5678-9012}
+\author{G.K.M. Tobin}
+\authornotemark[1]
+\email{webmaster@marysville-ohio.com}
+\affiliation{%
+  \institution{Institute for Clarity in Documentation}
+  \city{Dublin}
+  \state{Ohio}
+  \country{USA}
+}
+
+\author{Lars Th{\o}rv{\"a}ld}
+\affiliation{%
+  \institution{The Th{\o}rv{\"a}ld Group}
+  \city{Hekla}
+  \country{Iceland}}
+\email{larst@affiliation.org}
+
+\author{Valerie B\'eranger}
+\affiliation{%
+  \institution{Inria Paris-Rocquencourt}
+  \city{Rocquencourt}
+  \country{France}
+}
+
+\author{Aparna Patel}
+\affiliation{%
+ \institution{Rajiv Gandhi University}
+ \city{Doimukh}
+ \state{Arunachal Pradesh}
+ \country{India}}
+
+\author{Huifen Chan}
+\affiliation{%
+  \institution{Tsinghua University}
+  \city{Haidian Qu}
+  \state{Beijing Shi}
+  \country{China}}
+
+\author{Charles Palmer}
+\affiliation{%
+  \institution{Palmer Research Laboratories}
+  \city{San Antonio}
+  \state{Texas}
+  \country{USA}}
+\email{cpalmer@prl.com}
+
+\author{John Smith}
+\affiliation{%
+  \institution{The Th{\o}rv{\"a}ld Group}
+  \city{Hekla}
+  \country{Iceland}}
+\email{jsmith@affiliation.org}
+
+\author{Julius P. Kumquat}
+\affiliation{%
+  \institution{The Kumquat Consortium}
+  \city{New York}
+  \country{USA}}
+\email{jpkumquat@consortium.net}
+
+%This command displays author info in page headers
+% Please use the following convention:
+% One author: J. Smith
+% Two authors: J. Smith and I. Jones
+% Three and more authors: J. Smith et al.
+\renewcommand{\shortauthors}{B. Trovato et al.}
+
+%%
+%% The abstract is a short summary of the work to be presented in the
+%% article.
+\begin{abstract}
+Deploying Post-Quantum Cryptography (PQC) on resource-constrained unmanned aerial vehicles (UAVs) presents a complex challenge due to the competing demands of computational overhead, latency, energy efficiency, and resilience against network attacks. This paper introduces a unified security framework for UAV command-and-control (C2) links that integrates a cryptographically agile proxy, a deterministic expert scheduler, and a lightweight machine-learning-based Distributed Denial-of-Service (DDoS) detector.
+
+The proposed framework executes on a Raspberry~Pi~4 companion computer and provides runtime cryptographic agility through standardized PQC suites defined by NIST. The expert lookup scheduler dynamically adjusts the active cryptographic posture based on real-time telemetry---including battery state, thermal load, and link health---to maintain operational resilience under constrained power budgets. A lightweight XGBoost-based detector mitigates DDoS attacks without burdening the flight controller, forming a closed-loop defense mechanism.
+
+Comprehensive empirical evaluations were conducted across a broad portfolio of PQC suites under a fixed 8~Mb/s workload and simulated lightweight DDoS stress. Despite significant cryptographic diversity---with handshake latencies ranging from 8~ms (ML-KEM--ML-DSA/Falcon) to 913~ms (Classic~McEliece--SPHINCS+)---the system sustained between 95.8\% and 99.3\% of the target throughput, while maintaining average power consumption within 4.24--4.37~W. These results confirm that with intelligent scheduling and power-aware adaptation, PQC can be deployed on embedded UAV platforms without compromising performance or endurance. The architecture provides a foundation for mission-aware, quantum-resilient UAV communication and paves the way for future reinforcement-learning-based policy evolution.
+
+\end{abstract}
+
+
+%%
+%% The code below is generated by the tool at http://dl.acm.org/ccs.cfm.
+%% Please copy and paste the code instead of the example below.
+%%
+\begin{CCSXML}
+<ccs2012>
+ <concept>
+  <concept_id>00000000.0000000.0000000</concept_id>
+  <concept_desc>Do Not Use This Code, Generate the Correct Terms for Your Paper</concept_desc>
+  <concept_significance>500</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>00000000.00000000.00000000</concept_id>
+  <concept_desc>Do Not Use This Code, Generate the Correct Terms for Your Paper</concept_desc>
+  <concept_significance>300</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>00000000.00000000.00000000</concept_id>
+  <concept_desc>Do Not Use This Code, Generate the Correct Terms for Your Paper</concept_desc>
+  <concept_significance>100</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>00000000.00000000.00000000</concept_id>
+  <concept_desc>Do Not Use This Code, Generate the Correct Terms for Your Paper</concept_desc>
+  <concept_significance>100</concept_significance>
+ </concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+\ccsdesc[300]{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+\ccsdesc{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+\ccsdesc[100]{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+
+%%
+%% Keywords. The author(s) should pick words that accurately describe
+%% the work being presented. Separate the keywords with commas.
+\keywords{UAV security, MAVLink, Post-quantum cryptography, Lightweight cryptography, Reinforcement learning, DDoS detection, MQTT, Edge scheduling}
+
+
+%%
+%% This command processes the author and affiliation and title
+%% information and builds the first part of the formatted document.
+\maketitle
+
+\section{Introduction}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{D10.png}
+  \caption{UAV security system.}
+  \Description{A woman and a girl in white dresses sit in an open car.}
+\end{figure}
+
+The emergence of large-scale, fault-tolerant quantum computers threatens the security foundations of classical public-key cryptosystems such as RSA and Elliptic Curve Cryptography (ECC). These algorithms, long used to secure command-and-control (C2) and telemetry links in unmanned aerial vehicles (UAVs), will eventually be rendered vulnerable to quantum adversaries capable of solving the underlying number-theoretic problems. The resulting ``harvest-now, decrypt-later'' threat model poses a severe long-term risk to the confidentiality and integrity of UAV missions.
+
+Integrating Post-Quantum Cryptography (PQC) into UAV communication frameworks is therefore essential. However, PQC algorithms are computationally intensive and often introduce substantial latency and energy overheads that exceed the limited power, weight, and processing budgets of low-cost flight systems. A naïve, static deployment of heavy PQC primitives can degrade link responsiveness, accelerate battery drain, and compromise real-time control.
+
+This work addresses these challenges by designing and implementing a \textbf{unified, adaptive security stack} that enables quantum-resilient communication on resource-constrained UAVs. Executed on a Raspberry~Pi~4 companion computer, the proposed framework combines standardized PQC primitives with a deterministic, expert-driven scheduling policy and a lightweight, on-device intrusion-detection mechanism. Collectively, these components maintain strong cryptographic guarantees while preserving operational performance and energy efficiency.
+
+The key contributions of this paper are summarized as follows:
+
+\begin{itemize}
+    \item \textbf{Cryptographically agile proxy:} A modular proxy architecture supporting standardized PQC primitives for key establishment (KEM), authenticated encryption (AEAD), and digital signatures, enabling safe and synchronized in-flight rekeying between suites.
+    \item \textbf{Expert lookup scheduler:} A deterministic, rule-based scheduler that dynamically selects cryptographic suites according to live telemetry---including battery level, thermal load, and link quality---to achieve graceful degradation and energy-aware adaptation.
+    \item \textbf{Integrated lightweight DDoS defense:} A machine-learning-based (XGBoost) detector co-located on the companion computer to identify and mitigate Distributed Denial-of-Service (DDoS) conditions in real time, without burdening the flight controller.
+    \item \textbf{Comprehensive hardware evaluation:} Empirical validation on a Raspberry~Pi~4 testbed equipped with high-fidelity power instrumentation, performing deterministic 8~Mb/s network trials under simulated DDoS stress across multiple PQC configurations.
+\end{itemize}
+
+Experimental results demonstrate that intelligent scheduling allows PQC to operate efficiently on embedded UAV platforms. Despite handshake latency varying from 8~ms (ML-KEM with ML-DSA/Falcon) to 913~ms (Classic-McEliece with SPHINCS+), the system sustained 95.8--99.3\% of the target throughput while maintaining an average power draw near 4.3~W. The scheduler further improves resilience through rapid rekeying, policy-driven adaptation, and mission-aware suite selection. These findings establish that with careful orchestration, quantum-resilient cryptography is not only viable but practical for next-generation autonomous aerial systems.
+
+
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{D1.png}
+  \caption{UAV security system.}
+  \Description{A woman and a girl in white dresses sit in an open car.}
+\end{figure}
+
+
+\section{Related Work}
+
+Securing unmanned aerial vehicles (UAVs) against sophisticated adversaries demands solutions that balance post-quantum cryptographic strength, computational efficiency, and active threat mitigation within severe resource constraints. Prior work in this field can be categorized into three major research domains: (i) Post-Quantum Cryptography (PQC) deployment on embedded systems, (ii) intelligent scheduling for constrained platforms, and (iii) lightweight Distributed Denial-of-Service (DDoS) detection mechanisms. This section surveys key developments in each area and establishes the need for an integrated, adaptive approach.
+
+\subsection{Post-Quantum Cryptography for Resource-Constrained Systems}
+
+Transitioning UAV command-and-control (C2) links to PQC is an urgent necessity given the quantum threat model. However, most PQC algorithms introduce computational and memory overheads that are prohibitive for battery-powered systems. Several studies have attempted to optimize PQC performance through algorithmic tuning, protocol-level adjustments, or hardware acceleration~\cite{ref_pqc_embedded, ref_pqc_latency}. While these works achieved partial reductions in handshake latency or key sizes, they generally treat energy and throughput trade-offs independently rather than holistically. Consequently, system designers are forced to make difficult compromises between security level, latency, and energy consumption.
+
+Our approach moves beyond isolated optimizations by constructing a comprehensive empirical performance baseline for a diverse portfolio of PQC suites. These benchmarks quantify the true computational and power costs of each algorithm family, providing the necessary data to support adaptive, context-aware cryptographic selection in real time.
+
+\subsection{Scheduling and Resource Management on Embedded UAV Platforms}
+
+Scheduling plays a critical role in maintaining system stability on embedded flight computers. Conventional real-time and priority-based scheduling heuristics~\cite{ref_embedded_sched, ref_rtos_uav} focus on CPU utilization or task deadlines but rarely incorporate the direct effects of cryptographic workloads, thermal stress, or energy depletion. More advanced approaches, such as dynamic voltage and frequency scaling (DVFS) or mission-phase schedulers, improve efficiency but are not security-aware. They lack the capability to integrate live telemetry from cryptographic and network layers into scheduling decisions.
+
+In contrast, our \textit{security-aware lookup scheduler} is explicitly designed to manage PQC overhead in a mission context. By maintaining a pre-computed table of performance and power metrics for each cryptographic suite, the scheduler can intelligently degrade or enhance the system’s security posture according to battery state, thermal conditions, or network health—ensuring both resilience and operational longevity.
+
+\subsection{Lightweight DDoS Detection for Embedded Systems}
+
+UAV networks are attractive targets for Distributed Denial-of-Service (DDoS) attacks that aim to disrupt or saturate the communication link. Traditional DDoS mitigation techniques rely on computationally expensive models or large-scale infrastructure, which are unsuitable for embedded systems. Recent research emphasizes low-overhead solutions based on traffic heuristics, lightweight feature extraction, or compact machine-learning models~\cite{ref_ddos_iot, ref_ddos_xgboost}. These methods achieve detection with minimal CPU and memory consumption but are often implemented in isolation, decoupled from the cryptographic subsystems they are meant to protect.
+
+Our architecture tightly integrates an XGBoost-based DDoS detection mechanism within the same companion computer that hosts the PQC scheduler. This co-location allows immediate, localized response to network anomalies. Upon detecting stress conditions, the scheduler can rapidly trigger rekeying to a lightweight cryptographic suite, thereby mitigating denial-of-service impact while maintaining secure communication.
+
+\subsection{Synthesis and Research Gap}
+
+The existing literature treats PQC optimization, resource scheduling, and DDoS defense as separate challenges. None provide an integrated framework that unifies them into a cohesive, adaptive system. Our work closes this gap by combining standardized PQC primitives, real-time telemetry-driven scheduling, and lightweight DDoS detection into a single, deployable stack. This holistic approach delivers quantum-resilient, energy-efficient, and self-protecting communication for UAVs—bridging a critical divide between theoretical cryptographic security and practical mission endurance.
+
+
+
+\section{System Architecture}
+
+The proposed architecture integrates standardized Post-Quantum Cryptography (PQC) primitives, a deterministic expert scheduler, and an on-device DDoS detection mechanism into a cohesive framework that secures UAV command-and-control (C2) communication.  
+Figure~\ref{fig:system_overview} (conceptual) illustrates the end-to-end architecture: a Raspberry~Pi~4 companion computer operates as the PQC proxy between the Ground Control Station (GCS) and the Pixhawk flight controller, enforcing encryption, authentication, and adaptive scheduling policies in real time.
+
+\subsection{PQC Secure Proxy: Registry, Handshake, and Rekey}
+
+\textbf{Suite Registry.}  
+The proxy defines modular cryptographic suites that combine a Key-Encapsulation Mechanism (KEM), an Authenticated-Encryption-with-Associated-Data (AEAD) cipher, and a digital signature primitive.  
+Each suite is assigned a unique string and numeric identifier for wire efficiency.  
+Example entries are summarized in Table~\ref{tab:suite_registry}.
+
+\begin{table}[ht]
+\centering
+\caption{Example Suite Composition (Registry)}
+\label{tab:suite_registry}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Suite ID} & \textbf{KEM} & \textbf{AEAD} & \textbf{Signature} \\
+\midrule
+cs\_mlkem768\_aesgcm\_mldsa65 & ML-KEM-768 & AES-GCM & ML-DSA-65 \\
+cs\_frodokem640aes\_aesgcm\_mldsa44 & FrodoKEM-640-AES & AES-GCM & ML-DSA-44 \\
+cs\_classicmceliece348864\_aesgcm\_sphincs128fsha2 & Classic-McEliece-348864 & AES-GCM & SPHINCS$+$-128f \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Handshake Protocol.}  
+A lightweight three-message handshake authenticates both peers and establishes symmetric traffic keys.  
+The GCS (server) initiates with a \texttt{ServerHello} containing its KEM public key, a random nonce, and a digital signature over the transcript.  
+The UAV (client) verifies the signature, encapsulates a shared secret via the KEM, and returns a signed \texttt{ClientResponse}.  
+Both sides then derive session keys using HKDF-SHA256.  
+The entire handshake completes within a few milliseconds for lattice-based KEMs (e.g., ML-KEM-512) and scales linearly for heavier code-based schemes.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{D7.png}
+  \caption{UAV security system.}
+  \Description{A woman and a girl in white dresses sit in an open car.}
+\end{figure}
+
+\textbf{AEAD Framing.}  
+Each telemetry packet includes a 22-byte authenticated header containing protocol version, suite identifiers, sequence number, and session epoch.  
+Nonces are deterministically derived from the epoch and sequence fields, reducing overhead and preventing reuse.  
+Replay protection is achieved through a sliding-window verifier that silently drops stale packets.
+
+\textbf{Scheduler-Driven Rekey.}  
+A two-phase control exchange (\texttt{prepare\_rekey}, \texttt{commit\_rekey}) coordinates safe key rotation.  
+During rekey, both peers derive new traffic keys and transition atomically to the updated session identifier.  
+Packets from prior epochs are rejected, ensuring forward secrecy and eliminating key reuse across missions.
+
+\subsection{Expert Lookup Scheduler}
+
+The expert scheduler operates on the companion computer and governs the selection of cryptographic suites according to system telemetry.  
+It receives periodic updates on:
+
+\begin{itemize}
+    \item \textbf{Battery and Power:} state-of-charge, instantaneous power, and predicted endurance computed via a Peukert-corrected model.
+    \item \textbf{Thermal Load:} CPU temperature and core utilization.
+    \item \textbf{Connectivity Health:} heartbeat rate, loss percentage, and RTT jitter.
+\end{itemize}
+
+These metrics feed a deterministic lookup policy encoded in \texttt{expert.py}.  
+For example, under nominal conditions the scheduler enforces a ``Balanced'' band (medium KEM, standard AEAD, robust signature), whereas during high thermal or low-battery states it pivots to lighter suites such as ML-KEM-512 with ML-DSA-44.  
+The scheduler may also trigger a forced rekey if loss or RTT exceeds configured thresholds, enabling graceful degradation without service interruption.
+
+\subsection{Lightweight DDoS Detection and Response}
+
+To maintain link reliability under network stress, an on-device XGBoost classifier continuously analyzes traffic features such as packet rate, inter-arrival variance, and retransmission frequency.  
+When abnormal patterns are detected, the detector raises a local event consumed by the scheduler.  
+In response, the system transitions to a resilience policy that employs faster KEMs (e.g., ML-KEM-768) and reduced handshake depth, thereby minimizing blackout duration.  
+This closed-loop integration between detection and cryptographic agility allows the UAV to sustain secure C2 connectivity even during transient denial-of-service conditions.
+
+Overall, the architecture achieves runtime cryptographic agility, power-aware adaptation, and integrated threat mitigation without modifying the underlying MAVLink protocol stack or UAV firmware.
+
+
+
+
+
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{D2.png}
+  \caption{description needs to give}
+  \Description{A woman and a girl in white dresses sit in an open car.}
+\end{figure}
+
+
+
+
+
+
+
+\section{Experimental Setup}
+
+All experiments were conducted on a real hardware testbed designed to emulate an end-to-end UAV communication chain under realistic network and power conditions. The setup integrates a Pixhawk flight controller with a Raspberry~Pi~4 companion computer running the PQC proxy, scheduler, and DDoS detection modules. Figure~\ref{fig:bench_topology} conceptually illustrates the measurement topology.
+
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{D11.png}
+  \caption{UAV security system.}
+  \Description{A woman and a girl in white dresses sit in an open car.}
+\end{figure}
+
+\subsection{Hardware Platform}
+
+The companion computer is a Raspberry~Pi~4~Model~B (8~GB RAM) powered by a 5~V DC supply and instrumented with a high-fidelity power measurement interface (AvHzY CT-3). The power module samples at 1~kHz frequency and exports time-aligned voltage, current, and power readings to the logging computer through a TCP streaming backend. The Pixhawk autopilot communicates with the companion computer via serial MAVLink. The Ground Control Station (GCS) is a standard Linux host connected through a 100~Mbps Ethernet link for reproducibility.
+
+\subsection{Software Stack}
+
+The system runs Ubuntu~22.04~LTS with Python~3.11 and a minimal set of dependencies for the PQC proxy framework. Each cryptographic suite is implemented using the NIST-standardized reference libraries from the PQC Round~3 releases and post-standardization drafts, ensuring compliance with FIPS~203--206 specifications. 
+Traffic generation, logging, and orchestration are implemented through three coordinated modules:
+
+\begin{itemize}
+    \item \textbf{Blaster:} a rate-controlled UDP packet generator that emits telemetry-like traffic with embedded timestamps and sequence identifiers for round-trip and one-way delay computation.
+    \item \textbf{TelemetryCollector:} a lightweight background daemon capturing CPU utilization, memory, temperature, heartbeat, and loss metrics from the Raspberry~Pi companion computer.
+    \item \textbf{PowerMonitor:} a Python-based interface to the CT-3 power meter that captures synchronized voltage/current traces, computing instantaneous and average power consumption per trial.
+\end{itemize}
+
+\subsection{Traffic and Workload Profile}
+
+Each test executes a fixed-rate 8.0~Mb/s UDP flow for a duration of 45~seconds. The payload size is maintained at 256~bytes per packet, matching typical telemetry packet structures used in MAVLink-based UAV systems.  
+The workload is intentionally constant across all PQC suites to isolate cryptographic overhead as the only varying factor.  
+For each suite, multiple independent runs were executed under two operating conditions:
+\begin{enumerate}
+    \item \textbf{Baseline mode:} normal network operation without induced interference.
+    \item \textbf{Stress mode:} lightweight DDoS emulation using randomized burst traffic at 2$\times$ the nominal packet rate, detected by the on-device XGBoost model.
+\end{enumerate}
+
+\subsection{Measurement and Logging Methodology}
+
+Each trial records:
+\begin{itemize}
+    \item handshake duration and per-primitive latency breakdown;
+    \item per-packet throughput, goodput, and loss;
+    \item average, median, and 95$^{\text{th}}$ percentile round-trip time (RTT);
+    \item power, energy, and CPU utilization statistics over time;
+    \item rekey windows and scheduler decisions with precise timestamps.
+\end{itemize}
+
+Power and telemetry logs are post-processed using a custom Python toolchain that synchronizes measurement timestamps with cryptographic and network events.  
+All data are consolidated into per-suite summary tables, which form the quantitative foundation for the results discussed in Section~\ref{sec:results}.
+
+\subsection{Experimental Reproducibility}
+
+Each suite is executed with deterministic random seeds and synchronized clocks (via NTP) across all nodes.  
+The network link is isolated from external interference, and CPU frequency scaling is disabled to maintain stable operating conditions.  
+Each reported metric represents the mean of at least five independent repetitions, ensuring statistical reliability and reproducibility.
+
+
+\section{Results and Discussion}
+\label{sec:results}
+
+This section presents the empirical results obtained from deterministic benchmark runs across multiple post-quantum cryptographic suites.  
+Metrics include handshake latency, per-packet throughput, packet loss, and power consumption.  
+All values represent the mean of five repetitions per suite under identical workload and network conditions (8~Mb/s, 45~s).
+
+\subsection{Representative Performance Snapshot}
+
+Table~\ref{tab:rep_suites} summarizes three representative suites drawn from distinct PQC families.  
+Despite the $\sim$100$\times$ difference in handshake latency between the fastest (ML-KEM--Falcon) and slowest (Classic-McEliece--SPHINCS$+$) configurations, the average power consumption remains tightly clustered near 4.3~W.
+
+\begin{table}[ht]
+\centering
+\caption{Representative Suites: Cost and Power Summary}
+\label{tab:rep_suites}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Suite} & \textbf{Handshake (ms)} & \textbf{Primitives (ms)} & \textbf{Avg.~Power (W)} \\
+\midrule
+cs\_mlkem512\_chacha20poly1305\_falcon512 & 9.27 & 0.37 & 4.28 \\
+cs\_mlkem768\_aesgcm\_mldsa65 & 35.50 & 1.99 & 4.31 \\
+cs\_classicmceliece8192128\_aesgcm\_sphincs256fsha2 & 913.08 & 555.85 & 4.33 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The marginal variation in average power demonstrates that PQC handshake operations---although computationally intense---constitute only a small fraction of overall mission energy at steady throughput.
+
+\subsection{Per-Family PQC Performance}
+
+\subsubsection{ML-KEM (Kyber) Suites}
+
+ML-KEM exhibits the fastest handshake times across all configurations, with total key-exchange latency between 8 and 36~ms depending on parameter set and signature algorithm.  
+Signature choice (Falcon vs.\ SPHINCS$+$) dominates handshake cost.
+
+\begin{table}[ht]
+\centering
+\caption{ML-KEM Results (Selected Suites)}
+\label{tab:mlkem_results}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Suite} & \textbf{HS (ms)} & \textbf{Prim (ms)} & \textbf{RTT (ms)} & \textbf{Loss (\%)} & \textbf{Pwr (W)} \\
+\midrule
+cs\_mlkem512\_aesgcm\_falcon512 & 13.32 & 4.60 & 15.14 & 0.25 & 4.34 \\
+cs\_mlkem512\_chacha20poly1305\_mldsa44 & 8.09 & 0.38 & 12.89 & 0.09 & 4.30 \\
+cs\_mlkem768\_aesgcm\_mldsa65 & 35.50 & 1.99 & 12.17 & 0.03 & 4.31 \\
+cs\_mlkem1024\_chacha20poly1305\_falcon1024 & 9.67 & 1.35 & 18.54 & 0.12 & 4.28 \\
+cs\_mlkem1024\_aesgcm\_sphincs256fsha2 & 165.44 & 133.00 & 23.36 & 1.86 & 4.29 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Classic-McEliece Suites}
+
+Classic-McEliece demonstrates substantially higher handshake latency (250--900~ms) but stable throughput once established.  
+Table~\ref{tab:mceliece_results} lists three representative configurations.
+
+\begin{table}[ht]
+\centering
+\caption{Classic-McEliece Results (Selected Suites)}
+\label{tab:mceliece_results}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Suite} & \textbf{HS (ms)} & \textbf{Prim (ms)} & \textbf{RTT (ms)} & \textbf{Loss (\%)} & \textbf{Pwr (W)} \\
+\midrule
+cs\_classicmceliece348864\_aesgcm\_sphincs128fsha2 & 253.70 & 174.57 & 12.57 & 0.10 & 4.35 \\
+cs\_classicmceliece460896\_aesgcm\_mldsa65 & 641.09 & 513.93 & 16.15 & 0.28 & 4.30 \\
+cs\_classicmceliece8192128\_aesgcm\_sphincs256fsha2 & 913.08 & 555.85 & 14.27 & 0.56 & 4.33 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{HQC Suites}
+
+HQC represents an intermediate category with moderate handshake cost and generally stable link performance.  
+However, the \texttt{hqc256\_aesgcm\_mldsa87} configuration exhibited elevated latency and packet loss under stress conditions.
+
+\begin{table}[ht]
+\centering
+\caption{HQC Results (Selected Suites)}
+\label{tab:hqc_results}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Suite} & \textbf{HS (ms)} & \textbf{Prim (ms)} & \textbf{RTT (ms)} & \textbf{Loss (\%)} & \textbf{Pwr (W)} \\
+\midrule
+cs\_hqc128\_chacha20poly1305\_falcon512 & 58.07 & 6.69 & 11.40 & 0.18 & 4.33 \\
+cs\_hqc192\_chacha20poly1305\_mldsa65 & 174.71 & 28.44 & 15.27 & 0.04 & 4.26 \\
+cs\_hqc256\_aesgcm\_mldsa87 & 345.28 & 61.32 & 61.15 & 3.23 & 4.24 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{FrodoKEM Suites}
+
+FrodoKEM shows conservative but predictable performance, with handshake durations of 33--60~ms and marginally higher latency for the AES-based configurations.
+
+\begin{table}[ht]
+\centering
+\caption{FrodoKEM Results (Selected Suites)}
+\label{tab:frodo_results}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Suite} & \textbf{HS (ms)} & \textbf{Prim (ms)} & \textbf{RTT (ms)} & \textbf{Loss (\%)} & \textbf{Pwr (W)} \\
+\midrule
+cs\_frodokem640aes\_aesgcm\_mldsa44 & 33.58 & 5.68 & 15.20 & 0.18 & 4.35 \\
+cs\_frodokem640aes\_chacha20poly1305\_mldsa44 & 33.05 & 3.01 & 17.45 & 2.46 & 4.31 \\
+cs\_frodokem976aes\_aesgcm\_mldsa65 & 59.70 & 7.15 & 12.75 & 0.10 & 4.33 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cross-Suite Comparison and Power Trends}
+
+Figure~\ref{tab:powerbands} aggregates power measurements by KEM family.  
+All categories show narrow power ranges (within 3\%), implying that cryptographic policy primarily affects latency and reliability rather than steady-state energy draw.
+
+\begin{table}[ht]
+\centering
+\caption{Power Bands by KEM Family (Range at 8~Mb/s, 45~s)}
+\label{tab:powerbands}
+\begin{tabular}{lccc}
+\toprule
+\textbf{KEM Family} & \textbf{Min Pwr (W)} & \textbf{Max Pwr (W)} & \textbf{Energy Range (J)} \\
+\midrule
+ML-KEM (Kyber) & 4.279 & 4.343 & 192.5--195.5 \\
+Classic-McEliece & 4.270 & 4.354 & 192.2--195.9 \\
+HQC & 4.243 & 4.372 & 191.0--196.7 \\
+FrodoKEM & 4.272 & 4.345 & 192.2--195.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Expert Scheduler Evaluation}
+
+\subsubsection{Static versus Adaptive Policies}
+
+A static high-security policy (e.g., \texttt{cs-classicmceliece8192128-aesgcm-sphincs256fsha2}) achieves 7.88~Mb/s throughput with 0.56\% loss and an average power of 4.33~W, but incurs high handshake latency (913~ms).  
+Under thermal or battery stress, this profile degrades link responsiveness and CPU efficiency.
+
+In contrast, the expert scheduler dynamically pivots between predefined policy bands:
+
+\begin{itemize}
+    \item \textbf{Thermal constraint:} Switch from \texttt{cs-classicmceliece460896-aesgcm-mldsa65} (HS~641~ms, 4.30~W) to \texttt{cs-hqc192-chacha20poly1305-mldsa65} (HS~175~ms, 4.26~W).
+    \item \textbf{Low-battery mode:} Select \texttt{cs-hqc256-aesgcm-mldsa87} (HS~345~ms, 4.24~W) for endurance, provided link quality is stable.
+    \item \textbf{Connectivity loss:} Prefer \texttt{cs-mlkem768-aesgcm-mldsa65} (HS~35~ms, loss~0.03\%, RTT~12.2~ms) to maintain heartbeat continuity.
+\end{itemize}
+
+\subsubsection{DDoS and Stress Resilience}
+
+When the XGBoost detector reports transient congestion, the scheduler enforces a fast rekey to a lightweight suite such as \texttt{cs-mlkem1024-chacha20poly1305-mldsa87} (HS~10.79~ms).  
+Observed rekey windows averaged 2.5~s, during which throughput degradation remained below 3\%.  
+This behavior constitutes ``blackout mitigation''—preventing complete loss of C2 connectivity during network stress.
+
+\subsubsection{Power and Thermal Efficiency Comparison}
+
+Table~\ref{tab:policy_power} contrasts the best and worst observed scheduler policies over identical 45~s workloads.  
+The adaptive policy trims $\sim$3\% total power while reducing CPU peaks, improving energy-per-mission by several Joules.
+
+\begin{table}[ht]
+\centering
+\caption{Scheduler Lens: Best vs.\ Worst Policy Comparison (45~s)}
+\label{tab:policy_power}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Worst (hqc128-aesgcm-falcon512)} & \textbf{Best (hqc256-aesgcm-mldsa87)} \\
+\midrule
+Avg.~Power (W) & 4.372 & 4.243 \\
+Total Energy (J) & 196.74 & 190.95 \\
+Max CPU (\%) & 73.7 & 64.9 \\
+Pred.~Flight Power (W) & 734.23 & 733.48 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Key Insights}
+
+The experimental results lead to several major observations:
+
+\begin{enumerate}
+    \item \textbf{Agility over raw speed:} Even slower PQC suites are viable when applied selectively, demonstrating the value of runtime suite pivoting.
+    \item \textbf{Signatures dominate handshake cost:} SPHINCS$+$ inflates handshake latency by 10--20$\times$ compared to Falcon or ML-DSA.
+    \item \textbf{Reliability is the bottleneck:} High-latency suites such as HQC-256 occasionally trigger loss and RTT spikes, motivating telemetry-informed scheduling.
+    \item \textbf{Power spread is narrow:} Across all 21 suites, mean power varies by less than 3\%, confirming that adaptive selection primarily enhances resilience and link recovery rather than steady-state energy efficiency.
+\end{enumerate}
+
+
+\section{Discussion and Future Work}
+
+The experimental evaluation confirms that practical deployment of post-quantum cryptography (PQC) on resource-constrained UAVs is both achievable and sustainable when guided by deterministic, telemetry-aware scheduling. This section discusses key insights, current system limitations, and the planned evolution toward reinforcement-learning-based policy adaptation.
+
+\subsection{Discussion}
+
+\textbf{1) Agility as a primary design axis.}  
+Static ``one-size-fits-all'' cryptographic policies fail to accommodate the dynamic constraints of UAV missions.  
+The results demonstrate that runtime agility---the ability to pivot between PQC suites based on live telemetry---provides substantial benefits in reliability, responsiveness, and endurance.  
+This capability transforms cryptography from a static configuration parameter into a controllable runtime resource.
+
+\textbf{2) Cost asymmetry of PQC components.}  
+Empirical evidence indicates that digital signatures dominate total handshake cost, whereas AEAD encryption contributes minimally to overall delay or power draw.  
+Schemes such as Falcon and ML-DSA provide excellent performance-to-security ratios, whereas SPHINCS$+$ remains suitable for pre-flight authentication rather than frequent rekeys.
+
+\textbf{3) Reliability as the limiting factor.}  
+Loss and RTT spikes, particularly in HQC-256 configurations, highlight that network reliability rather than raw power limits mission continuity.  
+This observation validates the scheduler's design choice to incorporate heartbeat and packet-loss metrics into policy selection logic.
+
+\textbf{4) Narrow power variance.}  
+Across all families, average power consumption remains within a 3\% range at constant throughput, indicating that PQC selection primarily impacts latency and reliability rather than steady-state energy.  
+Consequently, scheduling decisions should prioritize link stability and rekey responsiveness.
+
+\textbf{5) Security–performance co-optimization.}  
+By jointly considering cryptographic latency, power, and link health, the expert scheduler demonstrates that it is possible to maintain strong post-quantum guarantees while meeting real-time control deadlines---a balance rarely addressed in prior UAV security research.
+
+\subsection{Future Work}
+
+\textbf{1) Reinforcement-Learning-Driven Scheduling.}  
+Future iterations will replace the static lookup policy with a reinforcement-learning (RL) agent trained on the same telemetry space used by the expert scheduler.  
+The RL state vector will include CPU utilization, battery state-of-charge, network latency, packet loss, and rekey frequency.  
+Actions will correspond to selecting PQC suites and triggering rekey events.  
+This adaptive policy is expected to generalize better to unseen mission conditions while preserving auditable decision traces.
+
+\textbf{2) Mission-Phase-Aware Policy Bands.}  
+Planned extensions will integrate flight-phase information (e.g., takeoff, hover, transit, landing) into the scheduler’s context.  
+High-security suites can be activated during stationary or low-dynamics phases, while lightweight configurations preserve energy during high-load maneuvers.
+
+\textbf{3) Hierarchical Anomaly-Driven Adaptation.}  
+The current XGBoost detector provides binary DDoS alerts.  
+Future versions will introduce a hierarchical anomaly classifier that distinguishes volumetric, jitter-based, and protocol-layer attacks.  
+Each class will map to a corresponding scheduler response, enabling multi-layer resilience without external intervention.
+
+\textbf{4) Multi-Agent Coordination.}  
+In swarm or multi-UAV scenarios, distributed schedulers could coordinate suite selection to maintain group secrecy while optimizing total fleet power.  
+Such coordination will require lightweight consensus protocols compatible with PQC primitives.
+
+\textbf{5) Extended Benchmarking.}  
+Upcoming work will expand evaluation to include Dilithium, Falcon-1024, SPHINCS$+$-192, and future lightweight ciphers such as Ascon under various network topologies and wireless channels.  
+A public dataset containing synchronized power, latency, and telemetry traces will be released to facilitate reproducibility and comparative research.
+
+Overall, the proposed architecture establishes a solid foundation for adaptive, mission-aware post-quantum security in UAV networks.  
+The next step is to endow the scheduler with learning capability while maintaining the deterministic safeguards required for safety-critical autonomous flight.
+
+
+\section{Conclusion}
+
+This work presented a unified, experimentally validated architecture for secure and energy-efficient post-quantum communication in low-cost unmanned aerial vehicles.  
+By combining a modular PQC proxy, a telemetry-driven expert scheduler, and a lightweight machine-learning-based DDoS detector, the system achieves quantum-resilient confidentiality without violating the strict power and latency constraints of embedded flight computers.
+
+Empirical benchmarks conducted on a Raspberry~Pi~4-based testbed demonstrate that the proposed framework sustains between 95.8\% and 99.3\% of the nominal 8~Mb/s target throughput across diverse PQC suites.  
+Handshake durations span from 8~ms for lightweight ML-KEM configurations to nearly 1~s for high-security Classic-McEliece variants, yet average power consumption remains stable within the 4.24–4.37~W range.  
+These results confirm that with intelligent scheduling, even computationally intensive quantum-resistant algorithms can coexist with real-time control workloads on resource-constrained platforms.
+
+The proposed architecture transforms PQC from a static configuration into a dynamic, mission-aware subsystem.  
+Its battery- and thermal-adaptive scheduler enables graceful degradation under resource stress, while its integrated DDoS mitigation ensures link continuity in contested environments.  
+Together, these components demonstrate that post-quantum cryptography can be both practical and resilient for next-generation autonomous systems.
+
+Future development will extend this foundation toward a reinforcement-learning-based adaptive policy engine capable of autonomously evolving cryptographic strategies from live telemetry.  
+This direction aims to deliver a fully self-optimizing, auditable security stack—bridging the gap between post-quantum cryptography, cyber-resilience, and intelligent resource management in mission-critical UAV deployments.
+
+
+
+%%
+%% Print the bibliography
+%%
+\printbibliography
+
+%%
+%% If your work has an appendix, this is the place to put it.
+% \appendix
+
+% \section{Research Methods}
+
+% \subsection{Part One}
+
+% Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi
+% malesuada, quam in pulvinar varius, metus nunc fermentum urna, id
+% sollicitudin purus odio sit amet enim. Aliquam ullamcorper eu ipsum
+% vel mollis. Curabitur quis dictum nisl. Phasellus vel semper risus, et
+% lacinia dolor. Integer ultricies commodo sem nec semper.
+
+% \subsection{Part Two}
+
+% Etiam commodo feugiat nisl pulvinar pellentesque. Etiam auctor sodales
+% ligula, non varius nibh pulvinar semper. Suspendisse nec lectus non
+% ipsum convallis congue hendrerit vitae sapien. Donec at laoreet
+% eros. Vivamus non purus placerat, scelerisque diam eu, cursus
+% ante. Etiam aliquam tortor auctor efficitur mattis.
+
+% \section{Online Resources}
+
+% Nam id fermentum dui. Suspendisse sagittis tortor a nulla mollis, in
+% pulvinar ex pretium. Sed interdum orci quis metus euismod, et sagittis
+% enim maximus. Vestibulum gravida massa ut felis suscipit
+% congue. Quisque mattis elit a risus ultrices commodo venenatis eget
+% dui. Etiam sagittis eleifend elementum.
+
+% Nam interdum magna at lectus dignissim, ac dignissim lorem
+% rhoncus. Maecenas eu arcu ac neque placerat aliquam. Nunc pulvinar
+% massa et mattis lacinia.
+
+\end{document}
+\endinput
+%%
+%% End of file `sample-sigconf-biblatex.tex'.

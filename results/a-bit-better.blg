@@ -1,0 +1,21 @@
+[0] Config.pm:328> INFO - This is Biber 2.21
+[0] Config.pm:331> INFO - Logfile is 'a-bit-better.blg'
+[122] biber-MSWIN64:342> INFO - === 
+[169] Biber.pm:421> INFO - Reading 'a-bit-better.bcf'
+[307] Biber.pm:1002> INFO - Found 25 citekeys in bib section 0
+[321] Biber.pm:4487> INFO - Processing section 0
+[333] Biber.pm:4678> INFO - Looking for bibtex file 'software.bib' for section 0
+[404] bibtex.pm:1713> INFO - LaTeX decoding ...
+[414] bibtex.pm:1519> INFO - Found BibTeX data source 'software.bib'
+[431] Biber.pm:4678> INFO - Looking for bibtex file 'sample-base.bib' for section 0
+[506] bibtex.pm:1713> INFO - LaTeX decoding ...
+[531] bibtex.pm:1519> INFO - Found BibTeX data source 'sample-base.bib'
+[767] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[767] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[767] Biber.pm:4307> INFO - Sorting list 'nty/global//global/global/global' of type 'entry' with template 'nty' and locale 'en-US'
+[767] Biber.pm:4313> INFO - No sort tailoring available for locale 'en-US'
+[812] bbl.pm:676> INFO - Writing 'a-bit-better.bbl' with encoding 'UTF-8'
+[831] bbl.pm:779> INFO - Output to a-bit-better.bbl
+[832] Biber.pm:132> WARN - I didn't find a database entry for 'futureinternet_transformer_iiot_2025' (section 0)
+[832] Biber.pm:132> WARN - I didn't find a database entry for 'fang_rl_key_rotation_zigbee_2024' (section 0)
+[832] Biber.pm:134> INFO - WARNINGS: 2
