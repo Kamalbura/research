@@ -1,0 +1,29 @@
+\begin{table}[htbp]
+\centering
+\caption{Handshake Cryptographic Primitive Breakdown (Baseline Mode)}
+\label{tab:handshake_breakdown}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Suite} & \textbf{KEM Keygen} & \textbf{KEM Decap} & \textbf{Sig Sign} & \textbf{Primitives} & \textbf{Total} \\
+ & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \textbf{Total (ms)} & \textbf{Handshake (ms)} \\
+\midrule
+\multicolumn{6}{l}{\textbf{ML-KEM}}\\
+cs-mlkem1024-aesgcm-falcon1024 & 0.48 & 0.13 & 3.56 & 4.17 & 15.00 \\
+cs-mlkem1024-aesgcm-mldsa87 & 0.94 & 0.10 & 0.66 & 1.70 & 10.62 \\
+cs-mlkem1024-aesgcm-sphincs256fsha2 & 0.12 & 0.10 & 96.03 & 96.25 & 124.93 \\
+\multicolumn{6}{l}{\textbf{HQC}}\\
+cs-hqc128-aesgcm-falcon512 & 7.18 & 10.71 & 2.96 & 20.86 & 101.06 \\
+cs-hqc128-chacha20poly1305-falcon51 & 177.88 & 31.91 & 96.25 & 306.04 & 1390.99 \\
+cs-hqc192-aesgcm-mldsa65 & 5.25 & 17.19 & 0.41 & 22.85 & 172.90 \\
+\multicolumn{6}{l}{\textbf{FrodoKEM}}\\
+cs-frodokem640aes-aesgcm-mldsa44 & 7.30 & 2.38 & 2.46 & 12.13 & 54.51 \\
+cs-frodokem640aes-chacha20poly1305- & 163.65 & 18.58 & 19.48 & 201.71 & 652.13 \\
+cs-frodokem976aes-aesgcm-mldsa65 & 3.65 & 2.04 & 0.34 & 6.04 & 58.68 \\
+\multicolumn{6}{l}{\textbf{Classic-McEliece}}\\
+cs-classicmceliece348864-aesgcm-sph & 394.12 & 39.84 & 96.40 & 530.36 & 1090.40 \\
+cs-classicmceliece348864-chacha20po & 324.54 & 30.77 & 68.83 & 424.15 & 524.76 \\
+cs-classicmceliece460896-aesgcm-mld & 136.76 & 45.44 & 1.53 & 183.74 & 293.67 \\
+\bottomrule
+\end{tabular}
+\end{table}

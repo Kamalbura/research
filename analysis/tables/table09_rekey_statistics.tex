@@ -1,0 +1,28 @@
+\begin{table}[htbp]
+\centering
+\caption{Rekey Statistics Across All Modes}
+\label{tab:rekey_stats}
+\small
+\begin{tabular}{@{}lccccccc@{}}
+\toprule
+\textbf{Suite} & \multicolumn{3}{c}{\textbf{Rekey Window (ms)}} & \textbf{Rekeys} & \textbf{Rekeys} & \textbf{Success} \\
+ & B & L & T & \textbf{OK} & \textbf{Fail} & \textbf{Rate (\%)} \\
+\midrule
+cs-classicmceliece348864-aesgc & 6483 & 5216 & 2562 & 9 & 0 & 100.0 \\
+cs-classicmceliece348864-chach & 5573 & 5132 & 2003 & 10 & 0 & 100.0 \\
+cs-classicmceliece460896-aesgc & 4875 & 4930 & 2855 & 16 & 0 & 100.0 \\
+cs-classicmceliece460896-chach & 5037 & 5278 & 4394 & 17 & 0 & 100.0 \\
+cs-classicmceliece8192128-aesg & 4991 & 5123 & 4938 & 26 & 0 & 100.0 \\
+cs-classicmceliece8192128-chac & 3372 & 4801 & 5170 & 27 & 0 & 100.0 \\
+cs-frodokem640aes-aesgcm-mldsa & 5341 & 2819 & 5401 & 7 & 0 & 100.0 \\
+cs-frodokem640aes-chacha20poly & 4790 & 2411 & 5361 & 8 & 0 & 100.0 \\
+cs-frodokem976aes-aesgcm-mldsa & 2716 & 2910 & 1737 & 14 & 0 & 100.0 \\
+cs-frodokem976aes-chacha20poly & 3064 & 4777 & 2788 & 15 & 0 & 100.0 \\
+cs-hqc128-aesgcm-falcon512 & 4738 & 2702 & 2606 & 11 & 0 & 100.0 \\
+cs-hqc128-chacha20poly1305-fal & 8177 & 2753 & 5090 & 12 & 0 & 100.0 \\
+cs-hqc192-aesgcm-mldsa65 & 2415 & 5012 & 5054 & 18 & 0 & 100.0 \\
+cs-hqc192-chacha20poly1305-mld & 2992 & 2924 & 5079 & 19 & 0 & 100.0 \\
+cs-hqc256-aesgcm-mldsa87 & 5292 & 3083 & 3395 & 28 & 0 & 100.0 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,36 @@
+\begin{table}[htbp]
+\centering
+\caption{Resource Utilization (Baseline Mode)}
+\label{tab:resource_util}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Suite} & \textbf{CPU Max} & \textbf{RSS} & \textbf{Power} & \textbf{Energy} \\
+ & \textbf{(\%)} & \textbf{(MiB)} & \textbf{(W)} & \textbf{(J)} \\
+\midrule
+cs-mlkem1024-aesgcm-mldsa87 & 74.3 & 272.9 & 4.35 & 195.8 \\
+cs-hqc192-aesgcm-mldsa65 & 75.0 & 273.7 & 4.35 & 195.8 \\
+cs-classicmceliece8192128-aesgcm-sphincs & 78.4 & 278.4 & 4.35 & 195.7 \\
+cs-classicmceliece460896-aesgcm-mldsa65 & 73.0 & 273.1 & 4.35 & 195.7 \\
+cs-mlkem1024-aesgcm-falcon1024 & 78.0 & 274.2 & 4.34 & 195.5 \\
+cs-mlkem1024-aesgcm-sphincs256fsha2 & 74.4 & 277.2 & 4.34 & 195.4 \\
+cs-classicmceliece8192128-chacha20poly13 & 76.3 & 280.8 & 4.33 & 195.1 \\
+cs-frodokem976aes-aesgcm-mldsa65 & 76.3 & 271.5 & 4.32 & 194.5 \\
+cs-hqc256-chacha20poly1305-mldsa87 & 81.6 & 282.2 & 4.32 & 194.3 \\
+cs-hqc256-aesgcm-mldsa87 & 79.5 & 281.2 & 4.32 & 194.2 \\
+\midrule
+\multicolumn{5}{c}{...}\\
+\midrule
+cs-frodokem640aes-aesgcm-mldsa44 & 75.0 & 265.5 & 4.23 & 190.3 \\
+cs-mlkem768-aesgcm-mldsa65 & 77.8 & 267.8 & 4.22 & 189.8 \\
+cs-mlkem512-aesgcm-falcon512 & 73.7 & 267.3 & 4.21 & 189.7 \\
+cs-mlkem512-chacha20poly1305-falcon512 & 76.3 & 268.2 & 4.21 & 189.3 \\
+cs-mlkem512-aesgcm-mldsa44 & 75.0 & 266.2 & 4.20 & 189.1 \\
+cs-frodokem640aes-chacha20poly1305-mldsa & 70.3 & 267.5 & 4.16 & 187.2 \\
+cs-hqc128-chacha20poly1305-falcon512 & 80.0 & 269.1 & 4.13 & 185.9 \\
+cs-classicmceliece348864-chacha20poly130 & 73.8 & 268.8 & 4.12 & 185.2 \\
+cs-hqc128-aesgcm-falcon512 & 79.5 & 267.9 & 4.11 & 185.1 \\
+cs-mlkem512-chacha20poly1305-mldsa44 & 74.4 & 268.4 & 4.08 & 183.6 \\
+\bottomrule
+\end{tabular}
+\end{table}
