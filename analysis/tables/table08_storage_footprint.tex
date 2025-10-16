@@ -1,0 +1,21 @@
+\begin{table}[htbp]
+\centering
+\caption{Storage Footprint and Handshake Complexity (Selected Suites)}
+\label{tab:storage_footprint}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Suite} & \textbf{KEM Family} & \textbf{NIST Level} & \textbf{Handshake} & \textbf{Complexity} \\
+ &  &  & \textbf{(ms)} & \textbf{Class} \\
+\midrule
+cs-classicmceliece348864-aesgcm-sph & Classic-McEliece & 5.0 & 1090.4 & High \\
+cs-classicmceliece348864-chacha20po & Classic-McEliece & 5.0 & 524.8 & High \\
+cs-frodokem640aes-aesgcm-mldsa44 & FrodoKEM & nan & 54.5 & Medium \\
+cs-frodokem640aes-chacha20poly1305- & FrodoKEM & nan & 652.1 & High \\
+cs-hqc128-aesgcm-falcon512 & HQC & 1.0 & 101.1 & Medium \\
+cs-hqc128-chacha20poly1305-falcon51 & HQC & 1.0 & 1391.0 & High \\
+cs-mlkem1024-aesgcm-falcon1024 & ML-KEM & 5.0 & 15.0 & Low \\
+cs-mlkem1024-aesgcm-mldsa87 & ML-KEM & 5.0 & 10.6 & Low \\
+\bottomrule
+\end{tabular}
+\end{table}

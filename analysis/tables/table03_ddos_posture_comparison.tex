@@ -1,0 +1,15 @@
+\begin{table}[htbp]
+\centering
+\caption{DDOS Detection Posture Comparison}
+\label{tab:ddos_comparison}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Mode} & \textbf{Avg Throughput} & \textbf{Median Loss} & \textbf{Peak Power} & \textbf{CPU Avg} & \textbf{Impact vs} \\
+ & \textbf{(Mb/s)} & \textbf{(\%)} & \textbf{(W)} & \textbf{(\%)} & \textbf{Baseline (\%)} \\
+\midrule
+Baseline & 7.54 & 0.186 & 4.35 & 77.2 & +0.0 \\
+Lightweight & 7.89 & 0.177 & 4.37 & 78.5 & +4.6 \\
+Transformer & 7.65 & 3.135 & 4.70 & 90.6 & +1.5 \\
+\bottomrule
+\end{tabular}
+\end{table}

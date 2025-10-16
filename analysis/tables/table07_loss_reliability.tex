@@ -1,0 +1,36 @@
+\begin{table}[htbp]
+\centering
+\caption{Loss and Reliability Metrics}
+\label{tab:loss_reliability}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Suite} & \textbf{Loss B} & \textbf{Loss L} & \textbf{Loss T} & \textbf{Adaptive} & \textbf{Resilience} \\
+ & \textbf{(\%)} & \textbf{(\%)} & \textbf{(\%)} & \textbf{(Y/N)} & \textbf{Score (0--100)} \\
+\midrule
+cs-mlkem1024-chacha20poly1305-mldsa & 0.189 & 0.112 & 1.606 & Y & 82.9 \\
+cs-classicmceliece8192128-chacha20p & 0.327 & 0.086 & 1.552 & Y & 82.4 \\
+cs-hqc128-aesgcm-falcon512 & 0.095 & 0.071 & 2.107 & Y & 79.7 \\
+cs-mlkem768-chacha20poly1305-mldsa6 & 0.125 & 0.151 & 2.117 & N & 78.6 \\
+cs-classicmceliece348864-chacha20po & 0.198 & 0.120 & 2.190 & Y & 77.6 \\
+cs-hqc192-chacha20poly1305-mldsa65 & 0.013 & 0.038 & 2.736 & N & 75.1 \\
+cs-mlkem512-aesgcm-mldsa44 & 0.013 & 0.525 & 2.357 & N & 74.1 \\
+cs-mlkem1024-chacha20poly1305-falco & 0.143 & 0.117 & 2.723 & Y & 73.3 \\
+cs-mlkem768-aesgcm-mldsa65 & 0.019 & 0.025 & 3.070 & N & 72.1 \\
+cs-mlkem512-aesgcm-sphincs128fsha2 & 0.256 & 0.195 & 2.696 & Y & 71.9 \\
+\midrule
+\multicolumn{6}{c}{...}\\
+\midrule
+cs-hqc192-aesgcm-mldsa65 & 0.172 & 0.941 & 3.962 & N & 54.6 \\
+cs-mlkem512-chacha20poly1305-mldsa4 & 0.226 & 0.092 & 4.895 & Y & 53.4 \\
+cs-frodokem640aes-chacha20poly1305- & 0.886 & 2.459 & 2.206 & N & 50.3 \\
+cs-mlkem512-chacha20poly1305-sphinc & 0.193 & 0.064 & 5.901 & Y & 44.9 \\
+cs-hqc128-chacha20poly1305-falcon51 & 3.138 & 0.175 & 3.071 & Y & 42.9 \\
+cs-classicmceliece348864-aesgcm-sph & 0.040 & 0.099 & 6.447 & N & 41.1 \\
+cs-classicmceliece460896-aesgcm-mld & 1.488 & 0.279 & 4.823 & Y & 41.1 \\
+cs-mlkem1024-aesgcm-mldsa87 & 0.101 & 2.021 & 4.666 & N & 39.3 \\
+cs-mlkem1024-aesgcm-falcon1024 & 0.090 & 1.015 & 6.406 & N & 32.8 \\
+cs-hqc256-aesgcm-mldsa87 & 2.394 & 3.226 & 5.560 & N & 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}

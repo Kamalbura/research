@@ -1,0 +1,50 @@
+\begin{table}[htbp]
+\centering
+\caption{Per-Suite Performance Metrics Across All DDOS Detection Modes. Data extracted from results/benchmarks without-ddos detectetion.txt (Baseline), results/results with ddos detection (lightweight).txt (Lightweight), and results/results benchmarks with ddos detectetion time series trandssformer heavy.txt (Transformer).}
+\label{tab:per_suite_metrics}
+\small
+\begin{tabular}{@{}llccccccccc@{}}
+\toprule
+\textbf{Suite} & \textbf{KEM} & \multicolumn{3}{c}{\textbf{Throughput (Mb/s)}} & \multicolumn{3}{c}{\textbf{Loss (\%)}} & \textbf{Handshake} & \multicolumn{2}{c}{\textbf{Power (W)}} \\
+ &  & B & L & T & B & L & T & \textbf{(ms)} & B & T \\
+\midrule
+\multicolumn{11}{l}{\textbf{Classic-McEliece}}\\
+classicmceliece348864-A-sphincs1... & 5.0 & 7.25 & 7.93 & 7.37 & 0.040 & 0.099 & 6.447 & 1090.4 & 4.23 & 4.58 \\
+classicmceliece348864-C-sphincs1... & 5.0 & 6.89 & 7.94 & 7.74 & 0.198 & 0.120 & 2.190 & 524.8 & 4.12 & 4.64 \\
+classicmceliece460896-A-mldsa65 & 5.0 & 7.83 & 7.92 & 7.55 & 1.488 & 0.279 & 4.823 & 293.7 & 4.35 & 4.66 \\
+classicmceliece460896-C-mldsa65 & 5.0 & 7.93 & 7.93 & 7.62 & 0.210 & 0.224 & 3.343 & 541.1 & 4.30 & 4.63 \\
+classicmceliece8192128-A-sphincs... & 1.0 & 7.91 & 7.88 & 7.68 & 0.141 & 0.556 & 3.295 & 902.4 & 4.35 & 4.67 \\
+classicmceliece8192128-C-sphincs... & 1.0 & 7.88 & 7.91 & 7.79 & 0.327 & 0.086 & 1.552 & 1031.7 & 4.33 & 4.66 \\
+\midrule
+\multicolumn{11}{l}{\textbf{FrodoKEM}}\\
+frodokem640aes-A-mldsa44 & nan & 7.15 & 7.91 & 7.68 & 0.146 & 0.179 & 3.335 & 54.5 & 4.23 & 4.61 \\
+frodokem640aes-C-mldsa44 & nan & 6.97 & 7.75 & 7.78 & 0.886 & 2.459 & 2.206 & 652.1 & 4.16 & 4.63 \\
+frodokem976aes-A-mldsa65 & 5.0 & 7.91 & 7.94 & 7.69 & 0.450 & 0.101 & 3.147 & 58.7 & 4.32 & 4.66 \\
+frodokem976aes-C-mldsa65 & 5.0 & 7.93 & 7.91 & 7.64 & 0.155 & 0.356 & 3.865 & 59.2 & 4.29 & 4.58 \\
+\midrule
+\multicolumn{11}{l}{\textbf{HQC}}\\
+hqc128-A-falcon512 & 1.0 & 6.75 & 7.94 & 7.76 & 0.095 & 0.071 & 2.107 & 101.1 & 4.11 & 4.70 \\
+hqc128-C-falcon512 & 1.0 & 7.33 & 7.93 & 7.68 & 3.138 & 0.175 & 3.071 & 1391.0 & 4.13 & 4.61 \\
+hqc192-A-mldsa65 & 3.0 & 7.92 & 7.87 & 7.60 & 0.172 & 0.941 & 3.962 & 172.9 & 4.35 & 4.62 \\
+hqc192-C-mldsa65 & 3.0 & 7.94 & 7.93 & 7.71 & 0.013 & 0.038 & 2.736 & 168.7 & 4.29 & 4.62 \\
+hqc256-A-mldsa87 & 3.0 & 7.73 & 7.66 & 7.44 & 2.394 & 3.226 & 5.560 & 297.3 & 4.32 & 4.68 \\
+hqc256-C-mldsa87 & 3.0 & 7.88 & 7.91 & 7.68 & 0.183 & 0.116 & 3.124 & 310.2 & 4.32 & 4.64 \\
+\midrule
+\multicolumn{11}{l}{\textbf{ML-KEM}}\\
+mlkem1024-A-falcon1024 & 5.0 & 7.93 & 7.86 & 7.42 & 0.090 & 1.015 & 6.406 & 15.0 & 4.34 & 4.67 \\
+mlkem1024-A-mldsa87 & 5.0 & 7.93 & 7.78 & 7.53 & 0.101 & 2.021 & 4.666 & 10.6 & 4.35 & 4.67 \\
+mlkem1024-A-sphincs256fsha2 & 5.0 & 7.92 & 7.76 & 7.72 & 0.059 & 1.860 & 2.722 & 124.9 & 4.34 & 4.68 \\
+mlkem1024-C-falcon1024 & 5.0 & 7.92 & 7.90 & 7.71 & 0.143 & 0.117 & 2.723 & 9.7 & 4.31 & 4.63 \\
+mlkem1024-C-mldsa87 & 5.0 & 7.93 & 7.93 & 7.81 & 0.189 & 0.112 & 1.606 & 10.7 & 4.28 & 4.66 \\
+mlkem1024-C-sphincs256fsha2 & 5.0 & 7.89 & 7.92 & 7.63 & 0.201 & 0.024 & 3.731 & 120.3 & 4.31 & 4.63 \\
+mlkem512-A-falcon512 & 1.0 & 7.03 & 7.90 & 7.68 & 1.306 & 0.254 & 3.332 & 20.3 & 4.21 & 4.61 \\
+mlkem512-A-mldsa44 & 1.0 & 6.99 & 7.90 & 7.76 & 0.013 & 0.525 & 2.357 & 521.9 & 4.20 & 4.62 \\
+mlkem512-A-sphincs128fsha2 & 1.0 & 7.09 & 7.93 & 7.68 & 0.256 & 0.195 & 2.696 & 115.0 & 4.24 & 4.65 \\
+mlkem512-C-falcon512 & 1.0 & 7.02 & 7.86 & 7.76 & 0.502 & 1.070 & 2.263 & 18.5 & 4.21 & 4.64 \\
+mlkem512-C-mldsa44 & 1.0 & 6.69 & 7.94 & 7.56 & 0.226 & 0.092 & 4.895 & 36.0 & 4.08 & 4.54 \\
+mlkem512-C-sphincs128fsha2 & 1.0 & 7.36 & 7.87 & 7.48 & 0.193 & 0.064 & 5.901 & 92.9 & 4.23 & 4.62 \\
+mlkem768-A-mldsa65 & 3.0 & 7.42 & 7.95 & 7.68 & 0.019 & 0.025 & 3.070 & 19.4 & 4.22 & 4.61 \\
+mlkem768-C-mldsa65 & 3.0 & 7.94 & 7.94 & 7.74 & 0.125 & 0.151 & 2.117 & 13.0 & 4.30 & 4.64 \\
+\bottomrule
+\end{tabular}
+\end{table}
